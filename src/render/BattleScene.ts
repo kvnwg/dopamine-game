@@ -1,69 +1,122 @@
 /**
- * Alley battle view. Reads GameState every frame and plays effects from core events.
- * Placeholder art is generated in code (textures.ts) and follows docs/ART_DIRECTION.md.
+ * The battle view (Phaser). Reads GameState every frame and choreographs core events:
+ * the raccoon closes in, winds up and swings (slash trail, impact star, hit-stop on crits,
+ * knockback), enemies lunge back, HP bars sit under every fighter, and coins arc up to the
+ * gold counter. Combat results always come from core; this file only animates them.
  */
 import Phaser from 'phaser';
-import { DATA, SLOTS, type Rarity, type Slot } from '../data';
-import { computeStats, neighborhoodFor, rarityAtLeast, type CoreEvent, type GameState } from '../core';
+import { BAL, DATA, SLOTS, type Rarity } from '../data';
+import { computeStats, formatNumber, rarityAtLeast, type CoreEvent, type GameState } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
-import { enemyPlaceholder, hexToNum, rarityColorNum } from './art';
-import {
-  BG_TILE_W, enemyTexBox, enemyTexKey, ensureGearTexture, generateBackground, generateTextures, OUTLINE, RACCOON_FEET,
-  RACCOON_TEX, SIGN_BOARD,
-} from './textures';
-import { BACK_SLOTS } from './paint/gear';
+import { rarityColorNum } from './art';
+import { BG_TILE_W, FRONT_ORDER, HERO, enemyTex, gearTex, generateTextures, heroBody, heroPaw, texSize, weaponTex } from './textures';
 
 export const BATTLE_W = 1080;
-export const BATTLE_H = 768;
-const GROUND_Y = 640;
-const RACCOON_X = 270;
-const ENEMY_FRONT_LEFT = 400;
-const COIN_TARGET = { x: 660, y: -60 };
-const DUMPSTER_TARGET = { x: 170, y: BATTLE_H + 120 };
+export const BATTLE_H = 820;
+const FEET_Y = 704;
+const HERO_WALK_X = 290;
+const HERO_FIGHT_X = 330;
+/** Where the front enemy's leading edge stands while fighting. */
+const ENGAGE_EDGE = 470;
+const COIN_TARGET = { x: 694, y: 58 };
+const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
 const FONT = '"Lilita One", "Trebuchet MS", sans-serif';
-const PAL = DATA.assets.placeholders.palette;
+const INK = '#2E2523';
+const INK_N = 0x2e2523;
+/** Weapon angles in degrees (0 = pointing up, clockwise positive). */
+const REST = 22;
+const WIND = -100;
+const STRIKE = 128;
+const HAND = { x: HERO.hand.x - HERO.feet.x, y: HERO.hand.y - HERO.feet.y };
 
-interface EnemySprite {
+type Kind = 'regular' | 'miniboss' | 'boss';
+
+interface Foe {
   uid: number;
-  container: Phaser.GameObjects.Container;
-  image: Phaser.GameObjects.Image;
-  hpBar: Phaser.GameObjects.Graphics;
-  size: number;
+  id: string;
+  kind: Kind;
+  c: Phaser.GameObjects.Container;
+  rig: Phaser.GameObjects.Container;
+  img: Phaser.GameObjects.Image;
+  bar: Phaser.GameObjects.Graphics;
+  num: Phaser.GameObjects.Text;
+  front: number;
+  back: number;
+  height: number;
+  x: number;
+  lunge: number;
+  knock: number;
+  knockV: number;
+  shownHp: number;
+  ghostHp: number;
+  maxHp: number;
+  /** Visual hits still on their way (so the sprite outlives its core death until the blow lands). */
+  pending: number;
+  dead: boolean;
   dying: boolean;
+  burnT: number;
 }
+
+interface Swing {
+  targetUid: number;
+  amount: number;
+  crit: boolean;
+  echo: boolean;
+  killed: boolean;
+  /** Effects that ride on this blow (chain lightning, explosions). */
+  riders: Array<() => void>;
+}
+
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+const easeOutQuad = (k: number) => 1 - (1 - k) * (1 - k);
+const easeInQuad = (k: number) => k * k;
+const easeOutBack = (k: number) => {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+};
 
 export class BattleScene extends Phaser.Scene {
   private far!: Phaser.GameObjects.TileSprite;
   private mid!: Phaser.GameObjects.TileSprite;
-  private props!: Phaser.GameObjects.TileSprite;
   private ground!: Phaser.GameObjects.TileSprite;
   private fg!: Phaser.GameObjects.TileSprite;
-  private sign!: Phaser.GameObjects.Container;
-  private signLetters: Phaser.GameObjects.Text[] = [];
-  private raccoon!: Phaser.GameObjects.Container;
-  private raccoonBody!: Phaser.GameObjects.Container;
-  private raccoonImg!: Phaser.GameObjects.Image;
+  private clouds: Array<{ img: Phaser.GameObjects.Image; speed: number }> = [];
+  private hero!: Phaser.GameObjects.Container;
+  private rig!: Phaser.GameObjects.Container;
+  private heroImg!: Phaser.GameObjects.Image;
   private gearBack!: Phaser.GameObjects.Container;
   private gearFront!: Phaser.GameObjects.Container;
+  private arm!: Phaser.GameObjects.Container;
+  private weapon!: Phaser.GameObjects.Image;
   private aura!: Phaser.GameObjects.Graphics;
-  private playerHpBar!: Phaser.GameObjects.Graphics;
+  private heroBar!: Phaser.GameObjects.Graphics;
+  private heroNum!: Phaser.GameObjects.Text;
   private bossBar!: Phaser.GameObjects.Graphics;
   private bossName!: Phaser.GameObjects.Text;
   private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private critShards!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private bigSparks!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private dust!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private flames!: Phaser.GameObjects.Particles.ParticleEmitter;
   private confetti: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
-  private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private motes!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private enemies = new Map<number, EnemySprite>();
-  private gearSig = '';
-  private bgId = '';
+  private foes = new Map<number, Foe>();
+  private kills = new Map<number, { kind: Kind; coins: number }>();
+  private swingQueue: Swing[] = [];
+  private swinging = false;
+  private heroX = HERO_WALK_X;
+  private heroDx = 0;
+  private heroKnock = 0;
+  private walkT = 0;
   private dead = false;
-  private attacking = false;
-  private flying = 0;
-  private unsub?: () => void;
+  private gearSig = '';
   private hpCache: { key: unknown; hp: number } = { key: null, hp: 1 };
+  private shownHeroHp = 0;
+  private healAcc = 0;
+  private healTimer = 0;
+  private coinsFlying = 0;
+  private unsub?: () => void;
 
   constructor() {
     super('Battle');
@@ -77,116 +130,90 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    generateTextures(this);
+    generateTextures(this, BATTLE_W, BATTLE_H);
     this.buildBackground();
-    this.buildRaccoon();
+    this.buildHero();
     this.buildEffects();
-    this.playerHpBar = this.add.graphics().setDepth(40);
+    this.heroBar = this.add.graphics().setDepth(40);
+    this.heroNum = this.label(0, 0, 22).setDepth(41);
     this.bossBar = this.add.graphics().setDepth(40);
-    this.bossName = this.add
-      .text(BATTLE_W / 2 + 40, 84, '', { fontFamily: FONT, fontSize: '30px', color: '#ffffff' })
-      .setOrigin(0.5, 0)
-      .setDepth(41)
-      .setStroke(PAL.outline, 8);
+    this.bossName = this.label(BATTLE_W / 2, 262, 32).setOrigin(0.5, 1).setDepth(41);
+    this.shownHeroHp = gameStore.getState().game.battle.playerHp;
     this.unsub = bus.on((events) => this.onEvents(events));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsub?.());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.unsub?.());
-    // Text drawn before the display font loaded gets redrawn once it is ready.
     document.fonts?.ready.then(() => {
       if (!this.sys.isActive()) return;
-      this.signLetters.forEach((l) => l.setFontFamily(FONT));
-      this.bossName.setFontFamily(FONT);
-      this.layoutSign();
+      for (const tx of [this.heroNum, this.bossName]) tx.setFontFamily(FONT);
     });
   }
 
-  // ------------------------------------------------------------------ background
+  private label(x: number, y: number, size: number): Phaser.GameObjects.Text {
+    return this.add
+      .text(x, y, '', { fontFamily: FONT, fontSize: `${size}px`, color: '#ffffff' })
+      .setOrigin(0.5)
+      .setStroke(INK, Math.max(5, size / 4.5));
+  }
+
+  // ------------------------------------------------------------------ scenery
   private buildBackground() {
-    const g = gameStore.getState().game;
-    const bgKey = neighborhoodFor(g.battle.stage).background;
-    this.bgId = bgKey;
-    const c = DATA.assets.placeholders.backgrounds[bgKey];
-    generateBackground(this, bgKey, BATTLE_W, BATTLE_H);
-
-    this.add.image(0, 0, `${bgKey}_sky`).setOrigin(0, 0).setDepth(0);
-    this.far = this.add.tileSprite(0, 80, BATTLE_W, 520, `${bgKey}_far`).setOrigin(0, 0).setDepth(1);
-    this.mid = this.add.tileSprite(0, 260, BATTLE_W, 380, `${bgKey}_mid`).setOrigin(0, 0).setDepth(2);
-    this.buildSign(c.neon, c.neon2, t(c.sign), t(c.signSub), bgKey);
-    this.props = this.add.tileSprite(0, 420, BATTLE_W, 200, `${bgKey}_props`).setOrigin(0, 0).setDepth(4);
-    this.ground = this.add.tileSprite(0, 600, BATTLE_W, 220, `${bgKey}_ground`).setOrigin(0, 0).setDepth(5);
-    this.fg = this.add.tileSprite(0, 0, BATTLE_W, BATTLE_H, `${bgKey}_fg`).setOrigin(0, 0).setDepth(26).setAlpha(0.85);
-    // Neighborhood grading ties every layer together; paper grain sits over the whole picture.
-    this.add.rectangle(0, 0, BATTLE_W, BATTLE_H, hexToNum(c.grade), c.gradeAlpha).setOrigin(0, 0).setDepth(25);
-    this.add.tileSprite(0, 0, BATTLE_W, BATTLE_H, 'paper_grain').setOrigin(0, 0).setDepth(48).setAlpha(0.6).setTileScale(2.2, 2.2);
-  }
-
-  /** Neon sign that scrolls with the mid layer. One letter is always broken and flickers. */
-  private buildSign(neon: string, neon2: string, text: string, sub: string, bgKey: string) {
-    this.sign = this.add.container(0, 0).setDepth(3);
-    const board = this.add.image(0, -8, `${bgKey}_sign`).setOrigin(0.5, 0.5);
-    this.sign.add(board);
-    this.signLetters = [...text].map((ch) =>
-      this.add
-        .text(0, -30, ch, { fontFamily: FONT, fontSize: '50px', color: neon })
-        .setOrigin(0, 0.5)
-        .setShadow(0, 0, neon, 18, true, true),
-    );
-    this.sign.add(this.signLetters);
-    const subText = this.add
-      .text(0, 26, sub, { fontFamily: FONT, fontSize: '26px', color: neon2 })
-      .setOrigin(0.5, 0.5)
-      .setShadow(0, 0, neon2, 12, true, true);
-    this.sign.add(subText);
-    void SIGN_BOARD;
-    this.layoutSign();
-    const broken = this.signLetters.length > 6 ? this.signLetters[6] : this.signLetters[0];
-    const flicker = () => {
-      if (!this.sys.isActive()) return;
-      broken.setAlpha(broken.alpha > 0.5 ? 0.15 : 1);
-      this.time.delayedCall(Phaser.Math.Between(80, broken.alpha > 0.5 ? 2600 : 260), flicker);
-    };
-    flicker();
-  }
-
-  private layoutSign() {
-    const total = this.signLetters.reduce((w, l) => w + l.width, 0);
-    let x = -total / 2;
-    for (const l of this.signLetters) {
-      l.setX(x);
-      x += l.width;
+    this.add.image(0, 0, 'bg_sky').setOrigin(0, 0).setDepth(0);
+    const cloudY = [86, 132, 60, 170];
+    for (let i = 0; i < 4; i++) {
+      const img = this.add.image(120 + i * 330, cloudY[i], `bg_cloud${i % 3}`).setDepth(1).setScale(i === 3 ? 0.7 : 1);
+      this.clouds.push({ img, speed: 6 + i * 3 });
     }
+    const far = texSize('bg_far');
+    const mid = texSize('bg_mid');
+    const ground = texSize('bg_ground');
+    const fg = texSize('bg_fg');
+    this.far = this.add.tileSprite(0, 202, BATTLE_W, far.h, 'bg_far').setOrigin(0, 0).setDepth(2);
+    this.far.tilePositionX = 260;
+    this.mid = this.add.tileSprite(0, 224, BATTLE_W, mid.h, 'bg_mid').setOrigin(0, 0).setDepth(3);
+    this.mid.tilePositionX = 40;
+    this.ground = this.add.tileSprite(0, 580, BATTLE_W, ground.h, 'bg_ground').setOrigin(0, 0).setDepth(4);
+    this.ground.tilePositionX = 500;
+    this.fg = this.add.tileSprite(0, 700, BATTLE_W, fg.h, 'bg_fg').setOrigin(0, 0).setDepth(30);
+    this.fg.tilePositionX = 700;
   }
 
-  // ------------------------------------------------------------------ raccoon
-  private buildRaccoon() {
-    this.raccoon = this.add.container(RACCOON_X, GROUND_Y).setDepth(12);
+  // ------------------------------------------------------------------ hero
+  private buildHero() {
+    const body = heroBody(this);
+    const paw = heroPaw(this);
+    this.hero = this.add.container(HERO_WALK_X, FEET_Y).setDepth(20);
+    const shadow = this.add.ellipse(0, 2, 160, 30, INK_N, 0.18);
     this.aura = this.add.graphics();
-    this.raccoonBody = this.add.container(0, 0);
+    this.rig = this.add.container(0, 0);
     this.gearBack = this.add.container(0, 0);
+    this.heroImg = this.add.image(0, 0, body.key).setOrigin(body.ox, body.oy);
     this.gearFront = this.add.container(0, 0);
-    this.raccoonImg = this.add
-      .image(0, 0, 'raccoon_base')
-      .setOrigin(RACCOON_FEET.x / RACCOON_TEX.w, RACCOON_FEET.y / RACCOON_TEX.h);
-    const shadow = this.add.ellipse(0, 4, 150, 26, 0x000000, 0.35);
-    this.raccoonBody.add([this.gearBack, this.raccoonImg, this.gearFront]);
-    this.raccoon.add([shadow, this.aura, this.raccoonBody]);
-    this.tweens.add({ targets: this.raccoonBody, scaleY: 1.03, y: -3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.arm = this.add.container(HAND.x, HAND.y);
+    const w = weaponTex(this, null);
+    this.weapon = this.add.image(0, 0, w.key).setOrigin(w.ox, w.oy).setAngle(REST);
+    const pawImg = this.add.image(0, 0, paw.key).setOrigin(paw.ox, paw.oy);
+    this.arm.add([this.weapon, pawImg]);
+    this.rig.add([this.gearBack, this.heroImg, this.gearFront, this.arm]);
+    this.hero.add([shadow, this.aura, this.rig]);
   }
 
-  /** Painted gear overlays at ~1.3x real scale, breaking the silhouette on purpose. */
   private drawGear(g: GameState) {
     this.gearBack.removeAll(true);
     this.gearFront.removeAll(true);
-    const ox = RACCOON_FEET.x / RACCOON_TEX.w;
-    const oy = RACCOON_FEET.y / RACCOON_TEX.h;
-    const order: Slot[] = ['backpack', 'jacket', 'sneakers', 'bling', 'shield', 'weapon', 'gloves', 'ring', 'mask', 'hat'];
-    for (const slot of order) {
+    const pack = g.equipped.backpack;
+    if (pack) {
+      const i = gearTex(this, 'backpack', pack.rarity);
+      this.gearBack.add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
+    }
+    for (const slot of FRONT_ORDER) {
       const it = g.equipped[slot];
       if (!it) continue;
-      const img = this.add.image(0, 0, ensureGearTexture(this, slot, it.rarity)).setOrigin(ox, oy);
-      (BACK_SLOTS.includes(slot) ? this.gearBack : this.gearFront).add(img);
+      const i = gearTex(this, slot, it.rarity);
+      this.gearFront.add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
     }
-    // Aura for Legendary-or-better gear.
+    const w = weaponTex(this, g.equipped.weapon?.rarity ?? null);
+    this.weapon.setTexture(w.key).setOrigin(w.ox, w.oy);
+    // A soft aura for Legendary-or-better gear.
     let best: Rarity | null = null;
     for (const s of SLOTS) {
       const it = g.equipped[s];
@@ -195,237 +222,540 @@ export class BattleScene extends Phaser.Scene {
     this.aura.clear();
     this.tweens.killTweensOf(this.aura);
     if (best) {
-      for (let r = 170; r > 40; r -= 26) {
-        this.aura.fillStyle(rarityColorNum(best), 0.07);
-        this.aura.fillEllipse(10, -150, r * 1.5, r * 2);
+      for (let r = 190; r > 50; r -= 28) {
+        this.aura.fillStyle(rarityColorNum(best), 0.06);
+        this.aura.fillEllipse(0, -150, r * 1.4, r * 1.9);
       }
       this.aura.setAlpha(0.6);
       this.tweens.add({ targets: this.aura, alpha: 1, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
   }
 
+  /** The swing pose at progress k (0..1). Fast swings skip most of the wind-up. */
+  private pose(k: number, fast: boolean) {
+    const a = fast ? 0.14 : 0.32;
+    const b = fast ? 0.34 : 0.5;
+    if (k < a) {
+      const u = easeOutQuad(k / a);
+      return { angle: lerp(REST, WIND, u), dx: lerp(0, -18, u), lean: lerp(0, -7, u), sx: lerp(1, 1.06, u), sy: lerp(1, 0.94, u) };
+    }
+    if (k < b) {
+      const u = easeInQuad((k - a) / (b - a));
+      return { angle: lerp(WIND, STRIKE, u), dx: lerp(-18, 62, u), lean: lerp(-7, 9, u), sx: lerp(1.06, 0.94, u), sy: lerp(0.94, 1.08, u) };
+    }
+    const u = easeOutBack((k - b) / (1 - b));
+    return { angle: lerp(STRIKE, REST, u), dx: lerp(62, 0, u), lean: lerp(9, 0, u), sx: lerp(0.94, 1, u), sy: lerp(1.08, 1, u) };
+  }
+
+  private swingMs(): number {
+    const spd = Math.max(0.2, computeStats(gameStore.getState().game).ATK_SPD);
+    return Phaser.Math.Clamp((1000 / spd) * 0.85, 170, 360);
+  }
+
+  private nextSwing() {
+    const s = this.swingQueue.shift();
+    if (!s) {
+      this.swinging = false;
+      return;
+    }
+    this.swinging = true;
+    const dur = s.echo ? 200 : this.swingMs();
+    const fast = dur < 250;
+    const impactAt = fast ? 0.27 : 0.43;
+    let landed = false;
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: dur,
+      onUpdate: (tw) => {
+        const k = tw.getValue() ?? 0;
+        const p = this.pose(k, fast);
+        this.weapon.setAngle(p.angle);
+        this.heroDx = this.reduceMotion ? 0 : p.dx;
+        this.rig.setAngle(this.reduceMotion ? 0 : p.lean).setScale(p.sx, p.sy);
+        if (!landed && k >= impactAt) {
+          landed = true;
+          this.impact(s);
+        }
+      },
+      onComplete: () => {
+        if (!landed) this.impact(s);
+        this.weapon.setAngle(REST);
+        this.rig.setAngle(0).setScale(1);
+        this.heroDx = 0;
+        this.nextSwing();
+      },
+    });
+  }
+
+  private queueSwing(s: Swing) {
+    const foe = this.foes.get(s.targetUid);
+    if (foe) foe.pending++;
+    if (this.swingQueue.length >= 3) {
+      // Too many blows queued (very fast attacks): land the oldest at once.
+      const old = this.swingQueue.shift()!;
+      this.impact(old);
+    }
+    this.swingQueue.push(s);
+    if (!this.swinging) this.nextSwing();
+  }
+
   // ------------------------------------------------------------------ effects
   private buildEffects() {
-    const base = { emitting: false, lifespan: 150 } as const;
     this.sparks = this.add
-      .particles(0, 0, 'p_star', { ...base, speed: { min: 260, max: 520 }, scale: { start: 0.9, end: 0 }, blendMode: 'ADD', maxAliveParticles: 40 })
-      .setDepth(32);
-    this.critShards = this.add
-      .particles(0, 0, 'p_star', {
-        ...base, lifespan: 300, speed: { min: 320, max: 700 }, scale: { start: 1.3, end: 0 }, tint: 0xffd54f,
-        rotate: { min: 0, max: 360 }, blendMode: 'ADD', maxAliveParticles: 40,
+      .particles(0, 0, 'fx_sparkle', {
+        emitting: false, lifespan: { min: 220, max: 380 }, speed: { min: 240, max: 560 }, scale: { start: 0.9, end: 0 },
+        rotate: { min: 0, max: 180 }, maxAliveParticles: 60,
       })
-      .setDepth(32);
-    for (const key of ['c_peel', 'c_cap', 'c_paper', 'c_crust']) {
-      this.confetti.push(
-        this.add
-          .particles(0, 0, key, {
-            emitting: false, lifespan: { min: 450, max: 700 }, speed: { min: 260, max: 620 }, angle: { min: -165, max: -15 },
-            gravityY: 1300, rotate: { start: 0, end: 540 }, scale: { start: 1.3, end: 0.9 }, alpha: { start: 1, end: 0 },
-            maxAliveParticles: 25,
-          })
-          .setDepth(31),
-      );
-    }
-    this.smoke = this.add
-      .particles(0, 0, 'p_smoke', {
-        emitting: false, lifespan: 500, speed: { min: 20, max: 90 }, scale: { start: 0.8, end: 2.2 }, alpha: { start: 0.8, end: 0 },
-        maxAliveParticles: 20,
+      .setDepth(34);
+    this.bigSparks = this.add
+      .particles(0, 0, 'fx_sparkle', {
+        emitting: false, lifespan: { min: 400, max: 700 }, speed: { min: 380, max: 900 }, scale: { start: 1.6, end: 0 },
+        rotate: { min: 0, max: 360 }, tint: [0xffe14a, 0xffffff, 0xffb300], maxAliveParticles: 60,
       })
-      .setDepth(30);
-    this.motes = this.add
-      .particles(0, 0, 'p_dot', {
-        emitting: false, lifespan: 1000, speedY: { min: -260, max: -120 }, speedX: { min: -80, max: 80 },
-        scale: { start: 0.9, end: 0 }, tint: hexToNum(PAL.gold), blendMode: 'ADD', maxAliveParticles: 40,
+      .setDepth(34);
+    this.dust = this.add
+      .particles(0, 0, 'fx_puff', {
+        emitting: false, lifespan: { min: 380, max: 600 }, speed: { min: 40, max: 160 }, angle: { min: 180, max: 360 },
+        scale: { start: 0.55, end: 1.1 }, alpha: { start: 0.9, end: 0 }, maxAliveParticles: 30,
       })
       .setDepth(33);
+    this.flames = this.add
+      .particles(0, 0, 'fx_sparkle', {
+        emitting: false, lifespan: { min: 300, max: 520 }, speedY: { min: -220, max: -120 }, speedX: { min: -40, max: 40 },
+        scale: { start: 0.8, end: 0 }, tint: [0xff7043, 0xffb300, 0xffe14a], maxAliveParticles: 50,
+      })
+      .setDepth(34);
+    for (let k = 0; k < 4; k++) {
+      this.confetti.push(
+        this.add
+          .particles(0, 0, `fx_conf${k}`, {
+            emitting: false, lifespan: { min: 900, max: 1500 }, speed: { min: 320, max: 760 }, angle: { min: 200, max: 340 },
+            gravityY: 900, rotate: { start: 0, end: 720 }, scale: { start: 1, end: 0.8 }, maxAliveParticles: 40,
+          })
+          .setDepth(35),
+      );
+    }
   }
 
-  private floatText(x: number, y: number, text: string, color: string, size: number, linger = 800) {
+  /** Pop-up number: bounces in, floats up, fades. */
+  private number(x: number, y: number, text: string, opts: { size?: number; color?: string; grad?: [string, string]; life?: number } = {}) {
+    const size = opts.size ?? 52;
     const tx = this.add
-      .text(x + Phaser.Math.Between(-24, 24), y, text, { fontFamily: FONT, fontSize: `${size}px`, color })
+      .text(x + Phaser.Math.Between(-22, 22), y, text, { fontFamily: FONT, fontSize: `${size}px`, color: opts.color ?? '#ffffff' })
       .setOrigin(0.5)
       .setDepth(45)
-      .setStroke(PAL.outline, Math.max(6, size / 6))
-      .setScale(0.4);
-    this.tweens.add({ targets: tx, scale: 1, duration: 120, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: tx, y: y - 120, alpha: 0, delay: 120, duration: linger, ease: 'Cubic.easeOut', onComplete: () => tx.destroy() });
+      .setStroke(INK, Math.max(7, size / 5.5))
+      .setScale(0.3);
+    if (opts.grad) {
+      const g = tx.context.createLinearGradient(0, 0, 0, tx.height);
+      g.addColorStop(0.15, opts.grad[0]);
+      g.addColorStop(0.85, opts.grad[1]);
+      tx.setFill(g);
+    }
+    this.tweens.add({ targets: tx, scale: 1, duration: 160, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: tx, y: y - 110, duration: opts.life ?? 800, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: tx, alpha: 0, delay: (opts.life ?? 800) * 0.55, duration: (opts.life ?? 800) * 0.45, onComplete: () => tx.destroy() });
   }
 
-  private stamp(x: number, y: number, text: string, color: string) {
+  private stamp(x: number, y: number, text: string, color: string, size = 44) {
     const tx = this.add
-      .text(x, y, text, { fontFamily: FONT, fontSize: '46px', color })
+      .text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, color })
       .setOrigin(0.5)
       .setDepth(46)
-      .setStroke(PAL.outline, 9)
-      .setAngle(-12)
-      .setScale(2);
-    this.tweens.add({ targets: tx, scale: 1, duration: 140, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: tx, alpha: 0, delay: 260, duration: 200, onComplete: () => tx.destroy() });
+      .setStroke(INK, 10)
+      .setAngle(-10)
+      .setScale(2.2);
+    this.tweens.add({ targets: tx, scale: 1, duration: 150, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: tx, alpha: 0, y: y - 30, delay: 420, duration: 240, onComplete: () => tx.destroy() });
   }
 
-  private ring(x: number, y: number, color: number, toScale: number, duration: number) {
-    const r = this.add.image(x, y, 'p_ring').setDepth(33).setTint(color).setScale(0.2).setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: r, scale: toScale, alpha: 0, duration, ease: 'Cubic.easeOut', onComplete: () => r.destroy() });
-  }
-
-  private coinsToCounter(x: number, y: number, n: number) {
-    for (let i = 0; i < n && this.flying < 40; i++) {
-      this.flying++;
-      const c = this.add.image(x, y, 'p_coin').setDepth(34);
-      const midX = x + Phaser.Math.Between(-60, 60);
-      const midY = y - Phaser.Math.Between(80, 160);
-      this.tweens.add({ targets: c, scaleX: { from: 1, to: 0.2 }, duration: 120, yoyo: true, repeat: 3 });
-      this.tweens.addCounter({
-        from: 0, to: 1, duration: 500 + i * 40, ease: 'Quad.easeIn',
-        onUpdate: (tw) => {
-          const k = tw.getValue() ?? 0;
-          const u = 1 - k;
-          c.setPosition(u * u * x + 2 * u * k * midX + k * k * COIN_TARGET.x, u * u * y + 2 * u * k * midY + k * k * COIN_TARGET.y);
-        },
-        onComplete: () => {
-          c.destroy();
-          this.flying--;
-        },
-      });
-    }
-  }
-
-  private bagDrop(count: number) {
-    for (let i = 0; i < Math.min(count, 5); i++) {
-      const bag = this.add.image(RACCOON_X + 110 + i * 34, GROUND_Y - 260, 'p_bag').setDepth(34).setScale(0.9);
-      this.tweens.add({ targets: bag, y: GROUND_Y - 30, duration: 420, ease: 'Bounce.easeOut', delay: i * 60 });
-      this.time.delayedCall(80 + i * 60 + 380, () => this.sparks.explode(2, bag.x + 4, bag.y - 26));
-      this.tweens.add({
-        targets: bag, x: DUMPSTER_TARGET.x, y: DUMPSTER_TARGET.y, scale: 0.6, duration: 360, ease: 'Quad.easeIn', delay: 520 + i * 60,
-        onComplete: () => bag.destroy(),
-      });
-    }
+  /** Big title that sweeps in with a smear and sweeps out ("FIGHT!", "BOSS!", "VICTORY!"). */
+  private banner(text: string, grad: [string, string], y = 420) {
+    const make = (alpha: number) => {
+      const tx = this.add
+        .text(-300, y, text, { fontFamily: FONT, fontSize: '128px', color: '#ffffff' })
+        .setOrigin(0.5)
+        .setDepth(50)
+        .setStroke(INK, 18)
+        .setShadow(0, 10, INK, 0, true, false)
+        .setAlpha(alpha)
+        .setAngle(-6);
+      const g = tx.context.createLinearGradient(0, 0, 0, tx.height);
+      g.addColorStop(0.2, grad[0]);
+      g.addColorStop(0.8, grad[1]);
+      tx.setFill(g);
+      return tx;
+    };
+    const smears = this.reduceMotion ? [] : [make(0.25), make(0.45)];
+    const main = make(1);
+    smears.forEach((s, i) => {
+      this.tweens.add({ targets: s, x: BATTLE_W / 2 - 70 + i * 30, duration: 240, ease: 'Cubic.easeOut' });
+      this.tweens.add({ targets: s, alpha: 0, delay: 200, duration: 160, onComplete: () => s.destroy() });
+    });
+    this.tweens.add({ targets: main, x: BATTLE_W / 2, duration: 260, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: main, scale: { from: 1.08, to: 1 }, delay: 260, duration: 220, ease: 'Sine.easeOut' });
+    this.tweens.add({
+      targets: main, x: BATTLE_W + 500, alpha: 0, delay: 900, duration: 260, ease: 'Cubic.easeIn',
+      onComplete: () => main.destroy(),
+    });
   }
 
   private shake(duration: number, intensity: number) {
     if (!this.reduceMotion) this.cameras.main.shake(duration, intensity);
   }
 
-  private punch() {
+  private hitStop(ms: number) {
     if (this.reduceMotion) return;
-    const cam = this.cameras.main;
-    this.tweens.killTweensOf(cam);
-    cam.setZoom(1);
-    this.tweens.add({ targets: cam, zoom: 1.03, duration: 60, yoyo: true, ease: 'Quad.easeOut' });
+    this.tweens.timeScale = 0.04;
+    setTimeout(() => {
+      if (this.sys.isActive()) this.tweens.timeScale = 1;
+    }, ms);
   }
 
-  /** ~100 ms wind-up, 33 ms strike, 150 ms bouncy follow-through. */
-  private attackAnim() {
-    if (this.attacking) return;
-    this.attacking = true;
-    this.tweens.chain({
-      targets: this.raccoon,
-      tweens: [
-        { x: RACCOON_X - 14, duration: 100, ease: 'Quad.easeOut' },
-        { x: RACCOON_X + 46, duration: 33, ease: 'Linear' },
-        { x: RACCOON_X, duration: 150, ease: 'Back.easeOut' },
-      ],
+  private flash(img: Phaser.GameObjects.Image, color: number, ms: number) {
+    if (this.reduceFlashing) return;
+    img.setTintFill(color);
+    this.time.delayedCall(ms, () => img.clearTint());
+  }
+
+  private foeHitPoint(f: Foe): { x: number; y: number } {
+    return { x: f.c.x - f.front * 0.45, y: FEET_Y - f.height * 0.48 };
+  }
+
+  /** The blow lands: slash trail, impact star, sparks, number, knockback, maybe a kill. */
+  private impact(s: Swing) {
+    const f = this.foes.get(s.targetUid);
+    const handX = this.hero.x + HAND.x;
+    const handY = FEET_Y + HAND.y;
+    const slash = this.add
+      .image(handX, handY, 'fx_slash')
+      .setOrigin(98 / 300, 154 / 300)
+      .setDepth(32)
+      .setScale(s.crit ? 1.45 : 1.25)
+      .setAlpha(1);
+    if (s.echo) slash.setTint(0xc9a6ff);
+    this.tweens.add({ targets: slash, alpha: 0, scale: slash.scale * 1.12, angle: 12, duration: 240, ease: 'Quad.easeOut', onComplete: () => slash.destroy() });
+    if (!f) {
+      for (const r of s.riders) r();
+      return;
+    }
+    f.pending = Math.max(0, f.pending - 1);
+    const p = this.foeHitPoint(f);
+    const star = this.add.image(p.x, p.y, 'fx_impact').setDepth(33).setScale(0.35).setAngle(Phaser.Math.Between(0, 45));
+    this.tweens.add({ targets: star, scale: s.crit ? 1.5 : 1.1, duration: 70, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: star, alpha: 0, scale: s.crit ? 1.8 : 1.3, delay: 70, duration: 150, onComplete: () => star.destroy() });
+    this.flash(f.img, 0xffffff, 60);
+    f.knockV += s.crit ? 900 : 560;
+    if (!this.reduceMotion) {
+      this.tweens.add({ targets: f.rig, scaleX: 1.14, scaleY: 0.86, duration: 60, yoyo: true, ease: 'Quad.easeOut' });
+    }
+    f.shownHp = Math.max(0, f.shownHp - s.amount);
+    if (s.crit) {
+      this.bigSparks.explode(14, p.x, p.y);
+      this.number(p.x, p.y - 70, formatNumber(s.amount), { size: 76, grad: ['#fff6a8', '#ff9a1a'], life: 950 });
+      this.stamp(p.x + 10, p.y - 160, t('battle.crit'), '#FFD54F', 40);
+      this.shake(110, 0.006);
+      this.hitStop(70);
+    } else {
+      this.sparks.explode(7, p.x, p.y);
+      this.number(p.x, p.y - 60, formatNumber(s.amount), { size: s.echo ? 44 : 54, color: s.echo ? '#e2ccff' : '#ffffff' });
+    }
+    for (const r of s.riders) r();
+    if (s.killed || this.kills.has(f.uid)) this.die(f);
+  }
+
+  private die(f: Foe) {
+    if (f.dying) return;
+    f.dying = true;
+    f.bar.clear();
+    f.num.setVisible(false);
+    const info = this.kills.get(f.uid);
+    this.kills.delete(f.uid);
+    const p = this.foeHitPoint(f);
+    this.dust.explode(info && info.kind !== 'regular' ? 10 : 5, p.x, p.y + 20);
+    const coins = info ? (info.kind === 'boss' ? 16 : info.kind === 'miniboss' ? 9 : 3) : 2;
+    this.coinBurst(p.x, p.y, coins);
+    if (info && info.kind !== 'regular') {
+      this.shake(320, 0.014);
+      this.confetti.forEach((em) => em.explode(10, p.x, p.y));
+    }
+    this.flash(f.img, 0xffffff, 90);
+    this.tweens.add({
+      targets: f.c,
+      x: f.c.x + 700,
+      y: f.c.y - 380,
+      angle: 540,
+      scale: 0.55,
+      duration: 650,
+      ease: 'Quad.easeOut',
       onComplete: () => {
-        this.attacking = false;
+        f.c.destroy();
+        f.num.destroy();
+        this.foes.delete(f.uid);
       },
     });
   }
 
-  private hitReact(s: EnemySprite, crit: boolean) {
-    if (!this.reduceFlashing) {
-      s.image.setTintFill(0xffffff);
-      this.time.delayedCall(40, () => s.image.clearTint());
+  /** Coins pop out, bounce once, then fly up to the gold counter. */
+  private coinBurst(x: number, y: number, n: number) {
+    for (let i = 0; i < n && this.coinsFlying < 50; i++) {
+      this.coinsFlying++;
+      const c = this.add.image(x, y, 'fx_coin').setDepth(36).setScale(0.9);
+      const vx = Phaser.Math.Between(-260, 260);
+      const landX = x + vx * 0.45;
+      const peak = y - Phaser.Math.Between(90, 190);
+      this.tweens.add({ targets: c, scaleX: { from: 0.9, to: 0.25 }, duration: 110, yoyo: true, repeat: 5 });
+      this.tweens.chain({
+        targets: c,
+        tweens: [
+          { x: landX, duration: 420, ease: 'Linear' },
+          { x: COIN_TARGET.x, y: COIN_TARGET.y, scale: 0.55, duration: 420 + i * 35, ease: 'Cubic.easeIn' },
+        ],
+        onComplete: () => {
+          c.destroy();
+          this.coinsFlying--;
+        },
+      });
+      this.tweens.add({ targets: c, y: peak, duration: 200, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: c, y: FEET_Y - 10, delay: 200, duration: 220, ease: 'Bounce.easeOut' });
     }
-    if (!this.reduceMotion) {
-      this.tweens.add({ targets: s.image, scaleX: 1.12, scaleY: 0.88, duration: 50, yoyo: true, ease: 'Quad.easeOut' });
-      s.container.x += crit ? 34 : 20;
+  }
+
+  private bagBurst(count: number) {
+    const from = { x: ENGAGE_EDGE + 80, y: FEET_Y - 120 };
+    for (let i = 0; i < Math.min(count, 6); i++) {
+      const bag = this.add.image(from.x + i * 30, from.y, 'fx_bag').setDepth(36).setScale(0.2);
+      this.tweens.add({ targets: bag, scale: 1, y: from.y - 120, duration: 260, ease: 'Back.easeOut', delay: i * 70 });
+      this.tweens.add({
+        targets: bag, x: BAG_TARGET.x, y: BAG_TARGET.y, scale: 0.5, angle: -40, duration: 520, ease: 'Cubic.easeIn',
+        delay: 380 + i * 70, onComplete: () => bag.destroy(),
+      });
     }
+  }
+
+  private lightning(a: { x: number; y: number }, b: { x: number; y: number }) {
+    const g = this.add.graphics().setDepth(35);
+    const pts: Phaser.Math.Vector2[] = [];
+    const n = 7;
+    for (let i = 0; i <= n; i++) {
+      const k = i / n;
+      const jitter = i === 0 || i === n ? 0 : Phaser.Math.Between(-26, 26);
+      pts.push(new Phaser.Math.Vector2(lerp(a.x, b.x, k), lerp(a.y, b.y, k) + jitter));
+    }
+    g.lineStyle(16, INK_N, 1).strokePoints(pts);
+    g.lineStyle(10, 0xffe14a, 1).strokePoints(pts);
+    g.lineStyle(4, 0xffffff, 1).strokePoints(pts);
+    this.tweens.add({ targets: g, alpha: 0, duration: 220, delay: 60, onComplete: () => g.destroy() });
+  }
+
+  private boom(x: number, y: number) {
+    const ring = this.add.image(x, y, 'fx_puff').setDepth(34).setScale(0.4).setTint(0xff8a3d);
+    this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 380, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+    this.bigSparks.explode(10, x, y);
+    this.flames.explode(10, x, y);
+    this.shake(140, 0.008);
+  }
+
+  private heroHurt(amount: number, heavy: boolean) {
+    this.flashHero(0xff8a8a, 110);
+    this.heroKnock = this.reduceMotion ? 0 : heavy ? -40 : -18;
+    const p = { x: this.hero.x + 10, y: FEET_Y - 170 };
+    if (heavy) {
+      const star = this.add.image(p.x + 40, p.y, 'fx_impact').setDepth(33).setScale(0.4).setTint(0xffb3a8);
+      this.tweens.add({ targets: star, scale: 1.3, alpha: 0, duration: 220, onComplete: () => star.destroy() });
+      this.shake(220, 0.012);
+    }
+    this.number(p.x - 30, p.y - 60, `-${formatNumber(amount)}`, { size: heavy ? 58 : 44, color: '#ff8a80' });
+  }
+
+  private lungeAt(f: Foe, contact: () => void, heavy: boolean) {
+    if (this.reduceMotion) {
+      contact();
+      return;
+    }
+    const dist = heavy ? 90 : 56;
+    this.tweens.chain({
+      targets: f,
+      tweens: [
+        { lunge: 14, duration: 90, ease: 'Quad.easeOut' },
+        { lunge: -dist, duration: 80, ease: 'Quad.easeIn', onComplete: contact },
+        { lunge: 0, duration: 200, ease: 'Back.easeOut' },
+      ],
+    });
+  }
+
+  /** Runs `run` when `swing` lands (or now). The target stays on screen until then. */
+  private attachRider(swing: Swing | null, targetUid: number, run: () => void) {
+    if (!swing) {
+      run();
+      return;
+    }
+    const f = this.foes.get(targetUid);
+    if (f) f.pending++;
+    swing.riders.push(() => {
+      if (f) f.pending = Math.max(0, f.pending - 1);
+      run();
+    });
+  }
+
+  /** Tints the whole hero (body, gear, weapon) for a moment; a multiply tint keeps the drawing readable. */
+  private flashHero(color: number, ms: number) {
+    if (this.reduceFlashing) return;
+    const imgs = [this.heroImg, this.weapon, ...(this.gearBack.list as Phaser.GameObjects.Image[]), ...(this.gearFront.list as Phaser.GameObjects.Image[])];
+    for (const i of imgs) i.setTint(color);
+    this.time.delayedCall(ms, () => imgs.forEach((i) => i.active && i.clearTint()));
   }
 
   private onEvents(events: CoreEvent[]) {
     if (!this.sys.isActive()) return;
+    // Kills arrive with the blow that caused them; remember them so the death plays when the blow lands.
+    for (const e of events) if (e.type === 'kill') this.kills.set(e.enemyUid, { kind: e.kind, coins: e.coins });
+    let lastSwing: Swing | null = null;
     for (const e of events) {
       switch (e.type) {
         case 'playerHit': {
-          this.attackAnim();
-          const s = this.enemies.get(e.enemyUid);
-          if (!s) break;
-          const hx = s.container.x - s.size * 0.25;
-          const hy = s.container.y - s.size * 0.5;
-          this.hitReact(s, e.crit);
-          if (e.crit) {
-            this.critShards.explode(12, hx, hy);
-            this.ring(hx, hy, 0xffd54f, 1.6, 300);
-            this.stamp(hx, hy - s.size * 0.5 - 30, t('battle.crit'), '#FFD54F');
-            this.floatText(hx, hy - s.size * 0.3, Math.round(e.amount).toString(), '#FFD54F', 64, 1000);
-            this.shake(90, 0.004);
-            this.punch();
-          } else {
-            this.sparks.explode(5, hx, hy);
-            this.floatText(hx, hy - s.size * 0.3, Math.round(e.amount).toString(), '#FFFFFF', 42);
-          }
+          lastSwing = { targetUid: e.targetUid, amount: e.amount, crit: e.crit, echo: e.echo, killed: e.killed, riders: [] };
+          this.queueSwing(lastSwing);
+          break;
+        }
+        case 'chain': {
+          const run = () => {
+            const a = this.foes.get(e.fromUid);
+            const b = this.foes.get(e.toUid);
+            if (!b) return;
+            const pa = a ? this.foeHitPoint(a) : { x: this.hero.x + 120, y: FEET_Y - 160 };
+            const pb = this.foeHitPoint(b);
+            this.lightning(pa, pb);
+            this.flash(b.img, 0xfff3a0, 70);
+            b.shownHp = Math.max(0, b.shownHp - e.amount);
+            b.knockV += 300;
+            this.number(pb.x, pb.y - 50, formatNumber(e.amount), { size: 42, color: '#ffe14a' });
+            if (this.kills.has(b.uid)) this.die(b);
+          };
+          this.attachRider(lastSwing, e.toUid, run);
+          break;
+        }
+        case 'explode': {
+          const run = () => {
+            const a = this.foes.get(e.fromUid);
+            const b = this.foes.get(e.toUid);
+            const pa = a ? this.foeHitPoint(a) : b ? this.foeHitPoint(b) : null;
+            if (pa) this.boom(pa.x, pa.y);
+            if (b) {
+              const pb = this.foeHitPoint(b);
+              b.shownHp = Math.max(0, b.shownHp - e.amount);
+              b.knockV += 500;
+              this.number(pb.x, pb.y - 50, formatNumber(e.amount), { size: 46, color: '#ffab70' });
+              if (this.kills.has(b.uid)) this.die(b);
+            }
+          };
+          this.attachRider(lastSwing, e.toUid, run);
+          break;
+        }
+        case 'burn': {
+          const f = this.foes.get(e.enemyUid);
+          if (!f) break;
+          const p = this.foeHitPoint(f);
+          this.flames.explode(6, p.x, p.y + 20);
+          f.shownHp = Math.max(0, f.shownHp - e.amount);
+          this.number(p.x + 30, p.y - 30, formatNumber(e.amount), { size: 34, color: '#ff9e5e', life: 600 });
+          if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           break;
         }
         case 'enemyHit': {
-          const s = this.enemies.get(e.enemyUid);
-          if (s && !this.reduceMotion) this.tweens.add({ targets: s.container, x: s.container.x - 36, duration: 60, yoyo: true, ease: 'Quad.easeOut' });
-          if (!this.reduceFlashing) {
-            this.raccoonImg.setTintFill(0xff6b6b);
-            this.time.delayedCall(70, () => this.raccoonImg.clearTint());
-          }
-          this.floatText(RACCOON_X, GROUND_Y - 270, `-${Math.round(e.amount)}`, '#FF8A80', e.heavy ? 54 : 34);
-          if (e.heavy) {
-            this.shake(200, 0.012);
-            this.punch();
-          }
+          const f = this.foes.get(e.enemyUid);
+          if (f) this.lungeAt(f, () => this.heroHurt(e.amount, e.heavy), e.heavy);
+          else this.heroHurt(e.amount, e.heavy);
           break;
         }
-        case 'playerDodge':
-          this.floatText(RACCOON_X, GROUND_Y - 270, t('battle.dodge'), PAL.neonCyan, 34);
+        case 'thorns': {
+          const f = this.foes.get(e.enemyUid);
+          if (!f) break;
+          this.time.delayedCall(170, () => {
+            const p = this.foeHitPoint(f);
+            this.sparks.explode(5, p.x, p.y);
+            f.shownHp = Math.max(0, f.shownHp - e.amount);
+            this.number(p.x, p.y - 40, formatNumber(e.amount), { size: 36, color: '#9cff8a' });
+            if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
+          });
           break;
+        }
+        case 'playerDodge': {
+          const f = this.foes.get(e.enemyUid);
+          const dodge = () => {
+            this.heroKnock = this.reduceMotion ? 0 : -46;
+            this.number(this.hero.x, FEET_Y - 260, t('battle.dodge'), { size: 40, color: '#7fe9ff' });
+          };
+          if (f) this.lungeAt(f, dodge, false);
+          else dodge();
+          break;
+        }
         case 'heal':
-          if (e.amount >= 1) this.floatText(RACCOON_X - 60, GROUND_Y - 230, `+${Math.round(e.amount)}`, PAL.heal, 30);
+          if (e.source === 'lifesteal') this.healAcc += e.amount;
+          else this.number(this.hero.x - 40, FEET_Y - 250, `+${formatNumber(e.amount)}`, { size: 38, color: '#7ef08f' });
           break;
         case 'bossSpecial': {
-          const s = this.enemies.get(e.enemyUid);
-          if (s) this.stamp(s.container.x, s.container.y - s.size - 30, `${e.name}!`, '#FF9800');
+          const f = this.foes.get(e.enemyUid);
+          if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 40, `${e.name}!`, '#FF9800', 46);
           break;
         }
         case 'kill': {
-          const s = this.enemies.get(e.enemyUid);
-          if (s) {
-            const x = s.container.x;
-            const y = s.container.y - s.size * 0.45;
-            const n = e.kind === 'regular' ? 4 : 10;
-            this.confetti.forEach((em) => em.explode(n, x, y));
-            this.smoke.explode(e.kind === 'regular' ? 3 : 8, x, y);
-            this.coinsToCounter(x, y, e.kind === 'boss' ? 14 : e.kind === 'miniboss' ? 7 : 2);
-            if (!s.dying) this.knockOff(s);
-          }
-          if (e.kind !== 'regular') this.shake(300, 0.014);
+          const f = this.foes.get(e.enemyUid);
+          // Deaths from burns, thorns or splash damage play right away; sword kills wait for the blow.
+          if (f && f.pending === 0) this.die(f);
           break;
         }
         case 'bagDrop':
-          this.bagDrop(e.count);
+          this.time.delayedCall(250, () => this.bagBurst(e.count));
           break;
-        case 'levelUp':
-          this.ring(RACCOON_X, GROUND_Y - 120, hexToNum(PAL.gold), 4, 1000);
-          this.motes.explode(30, RACCOON_X, GROUND_Y - 80);
-          this.floatText(RACCOON_X, GROUND_Y - 330, t('battle.levelUp'), PAL.gold, 48, 1000);
+        case 'waveStart': {
+          const g = gameStore.getState().game;
+          const boss = g.battle.enemies.some((x) => x.kind !== 'regular');
+          if (boss) this.time.delayedCall(700, () => this.banner(t('battle.bossIncoming'), ['#ffd0c0', '#ff4d3d']));
+          else if (e.wave === 0) this.time.delayedCall(700, () => this.banner(t('battle.fight'), ['#fff6a8', '#ffa21a']));
+          break;
+        }
+        case 'bossWin':
+          this.banner(t('battle.victory'), ['#fff6a8', '#ffa21a'], 400);
+          this.confetti.forEach((em) => em.explode(16, BATTLE_W / 2, 300));
+          break;
+        case 'levelUp': {
+          const ring = this.add.image(this.hero.x, FEET_Y - 140, 'fx_puff').setDepth(33).setScale(0.3).setTint(0xffe14a);
+          this.tweens.add({ targets: ring, scale: 3.2, alpha: 0, duration: 700, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+          this.bigSparks.explode(16, this.hero.x, FEET_Y - 160);
+          this.number(this.hero.x, FEET_Y - 320, t('battle.levelUp'), { size: 54, grad: ['#fff6a8', '#ffa21a'], life: 1100 });
+          break;
+        }
+        case 'equip': {
+          const c = rarityColorNum(e.item.rarity);
+          this.sparks.setParticleTint(c);
+          this.sparks.explode(rarityAtLeast(e.item.rarity, 'epic') ? 16 : 6, this.hero.x, FEET_Y - 160);
+          this.time.delayedCall(400, () => this.sparks.setParticleTint(0xffffff));
+          break;
+        }
+        case 'luckBoost':
+          this.flames.setParticleTint(0x46d36b);
+          this.flames.explode(20, this.hero.x, FEET_Y - 120);
+          this.time.delayedCall(600, () => this.flames.setParticleTint([0xff7043, 0xffb300, 0xffe14a]));
+          this.number(this.hero.x, FEET_Y - 330, t('battle.luckUp', { mult: BAL.luck.potion.mult }), { size: 50, grad: ['#d8ffd0', '#2fb150'], life: 1200 });
           break;
         case 'playerDeath':
           this.dead = true;
-          this.tweens.killTweensOf(this.raccoon);
-          this.attacking = false;
-          this.tweens.add({ targets: this.raccoon, angle: -90, y: GROUND_Y - 30, alpha: 0.6, duration: 400 });
+          this.swingQueue = [];
+          this.tweens.add({ targets: this.rig, angle: -88, duration: 380, ease: 'Bounce.easeOut' });
+          this.tweens.add({ targets: this.hero, alpha: 0.55, duration: 380 });
+          this.stamp(this.hero.x, FEET_Y - 240, t('battle.ko'), '#FF8A80', 64);
           break;
         case 'stageStart':
-          this.clearEnemies();
+          this.clearFoes();
           if (this.dead) {
             this.dead = false;
-            this.tweens.killTweensOf(this.raccoon);
-            this.raccoon.setAngle(0).setAlpha(1).setPosition(RACCOON_X, GROUND_Y);
+            this.tweens.killTweensOf(this.rig);
+            this.tweens.killTweensOf(this.hero);
+            this.rig.setAngle(0).setScale(1);
+            this.hero.setAlpha(0);
+            this.tweens.add({ targets: this.hero, alpha: 1, duration: 300 });
           }
           break;
       }
@@ -433,91 +763,100 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ enemies
-  private makeEnemy(enemyId: string, kind: string, index: number): EnemySprite {
-    const ph = enemyPlaceholder(enemyId);
-    const size = ph.size;
-    const box = enemyTexBox(size);
-    const container = this.add.container(BATTLE_W + size + index * 80, GROUND_Y).setDepth(11 - index * 0.01);
-    const shadow = this.add.ellipse(0, 4, size * 0.9, size * 0.14, 0x000000, 0.35);
-    const image = this.add.image(0, 0, enemyTexKey(enemyId)).setOrigin(0.5, (box.h - box.pad) / box.h);
-    const hpBar = this.add.graphics();
-    container.add([shadow, image, hpBar]);
-    if (kind === 'regular') {
-      const label = this.add
-        .text(0, -size - 14, ph.label, { fontFamily: FONT, fontSize: '22px', color: '#FFFFFF' })
-        .setOrigin(0.5, 1)
-        .setStroke(PAL.outline, 6);
-      container.add(label);
-    }
+  private makeFoe(uid: number, enemyId: string, kind: Kind, hp: number, maxHp: number, startX: number): Foe {
+    const tex = enemyTex(this, enemyId);
+    const c = this.add.container(startX, FEET_Y).setDepth(18);
+    const shadow = this.add.ellipse(0, 2, Math.max(90, tex.w * 0.6), 26, INK_N, 0.18);
+    const rig = this.add.container(0, 0);
+    const img = this.add.image(0, 0, tex.key).setOrigin(tex.ox, tex.oy);
+    rig.add(img);
+    const bar = this.add.graphics();
+    c.add([shadow, rig, bar]);
+    const num = this.label(0, 0, 21).setDepth(41);
     // Idle breathing so nothing sits perfectly still.
-    this.tweens.add({ targets: image, scaleY: 1.04, duration: 500 + index * 70, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    return { uid: 0, container, image, hpBar, size, dying: false };
+    this.tweens.add({ targets: img, scaleY: 1.035, duration: 520 + (uid % 5) * 60, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    return {
+      uid, id: enemyId, kind, c, rig, img, bar, num, front: tex.front, back: tex.back, height: tex.oy * tex.h,
+      x: startX, lunge: 0, knock: 0, knockV: 0, shownHp: hp, ghostHp: hp, maxHp, pending: 0, dead: false, dying: false, burnT: 0,
+    };
   }
 
-  private syncEnemies(g: GameState, dtMs: number) {
+  private syncFoes(g: GameState, dt: number) {
     const alive = new Set<number>();
-    let slotX = ENEMY_FRONT_LEFT;
+    let edge = ENGAGE_EDGE;
     g.battle.enemies.forEach((e, i) => {
       alive.add(e.uid);
-      let s = this.enemies.get(e.uid);
-      if (!s) {
-        s = this.makeEnemy(e.enemyId, e.kind, i);
-        s.uid = e.uid;
-        this.enemies.set(e.uid, s);
+      let f = this.foes.get(e.uid);
+      if (!f) {
+        f = this.makeFoe(e.uid, e.enemyId, e.kind, e.hp, e.maxHp, BATTLE_W + 160 + i * 120);
+        this.foes.set(e.uid, f);
       }
-      const targetX = slotX + s.size * 0.45;
-      slotX += s.size * 0.85 + 12;
-      if (s.dying) return;
-      const k = 1 - Math.pow(0.004, dtMs / 1000);
-      s.container.x += (targetX - s.container.x) * k;
-      s.hpBar.clear();
-      if (e.kind === 'regular') {
-        const w = Math.max(70, s.size * 0.7);
-        s.hpBar.fillStyle(OUTLINE, 0.85).fillRoundedRect(-w / 2, 10, w, 14, 6);
-        s.hpBar.fillStyle(hexToNum(PAL.danger), 1).fillRoundedRect(-w / 2 + 3, 13, (w - 6) * Math.max(0, e.hp / e.maxHp), 8, 4);
-      }
+      const target = edge + f.front;
+      edge = target + f.back * 0.55 + 8;
+      if (f.dying) return;
+      f.maxHp = e.maxHp;
+      // Heals and resets show at once; damage waits until its blow visibly lands.
+      if (e.hp > f.shownHp) f.shownHp = e.hp;
+      else if (f.pending === 0) f.shownHp = Math.max(0, e.hp);
+      const k = 1 - Math.pow(0.002, dt);
+      f.x += (target - f.x) * k;
+      f.c.setDepth(18 - i * 0.01);
     });
-    for (const [uid, s] of this.enemies) {
-      if (!alive.has(uid) && !s.dying) this.knockOff(s);
+    for (const [uid, f] of this.foes) {
+      if (!alive.has(uid) && !f.dying && f.pending === 0 && !this.swingQueue.some((s) => s.targetUid === uid)) {
+        // Gone from core without a visible blow (e.g. a stage reset): just remove it.
+        if (this.kills.has(uid)) this.die(f);
+        else {
+          f.c.destroy();
+          f.num.destroy();
+          this.foes.delete(uid);
+        }
+      }
     }
-    const boss = g.battle.enemies.find((e) => e.kind !== 'regular');
-    this.bossBar.clear();
-    if (boss) {
-      const w = 520;
-      const x = (BATTLE_W - w) / 2 + 40;
-      this.bossBar.fillStyle(OUTLINE, 0.9).fillRoundedRect(x - 6, 36, w + 12, 40, 12);
-      this.bossBar
-        .fillStyle(boss.kind === 'boss' ? hexToNum(PAL.gold) : hexToNum(PAL.danger), 1)
-        .fillRoundedRect(x, 42, w * Math.max(0, boss.hp / boss.maxHp), 28, 9);
-      this.bossBar.fillStyle(0xffffff, 0.3).fillRoundedRect(x + 8, 46, Math.max(0, w * (boss.hp / boss.maxHp) - 16), 7, 4);
-      this.bossName.setText(DATA.enemiesById.get(boss.enemyId)?.name ?? '');
-    } else {
-      this.bossName.setText('');
+    for (const f of this.foes.values()) {
+      if (f.dying) {
+        f.num.setVisible(false);
+        continue;
+      }
+      // Knockback spring.
+      f.knockV += -f.knock * 260 * dt - f.knockV * 16 * dt;
+      f.knock += f.knockV * dt;
+      f.c.x = f.x + f.lunge + (this.reduceMotion ? 0 : f.knock);
+      f.ghostHp = f.ghostHp > f.shownHp ? Math.max(f.shownHp, f.ghostHp - f.maxHp * 0.9 * dt) : f.shownHp;
+      const regular = f.kind === 'regular';
+      const w = regular ? Phaser.Math.Clamp((f.front + f.back) * 0.55, 96, 170) : 0;
+      f.bar.clear();
+      if (regular) {
+        this.drawBar(f.bar, 0, 22, w, 16, f.shownHp / f.maxHp, f.ghostHp / f.maxHp, 0xff4d5e);
+        f.num.setText(formatNumber(Math.ceil(Math.max(0, f.shownHp)))).setPosition(f.c.x, FEET_Y + 30).setVisible(true);
+      } else {
+        f.num.setVisible(false);
+      }
     }
   }
 
-  /** Deaths spin off screen; never a lingering body. */
-  private knockOff(s: EnemySprite) {
-    s.dying = true;
-    s.hpBar.clear();
-    this.tweens.add({
-      targets: s.container,
-      x: s.container.x + 760,
-      y: s.container.y - 420,
-      angle: 560,
-      scale: 0.6,
-      duration: 650,
-      ease: 'Quad.easeOut',
-      onComplete: () => {
-        s.container.destroy();
-        this.enemies.delete(s.uid);
-      },
-    });
+  private drawBar(g: Phaser.GameObjects.Graphics, cx: number, y: number, w: number, h: number, pct: number, ghost: number, color: number) {
+    const x = cx - w / 2;
+    const r = h / 2;
+    g.fillStyle(INK_N, 1).fillRoundedRect(x - 4, y - 4, w + 8, h + 8, r + 4);
+    g.fillStyle(0x4a3b38, 1).fillRoundedRect(x, y, w, h, r);
+    const gw = w * Phaser.Math.Clamp(ghost, 0, 1);
+    if (gw > 2) g.fillStyle(0xffffff, 0.95).fillRoundedRect(x, y, gw, h, Math.min(r, gw / 2));
+    const fw = w * Phaser.Math.Clamp(pct, 0, 1);
+    if (fw > 2) {
+      g.fillStyle(color, 1).fillRoundedRect(x, y, fw, h, Math.min(r, fw / 2));
+      g.fillStyle(0xffffff, 0.35).fillRoundedRect(x + 3, y + 2, Math.max(0, fw - 6), h * 0.32, Math.min(r * 0.5, fw / 4));
+    }
   }
 
-  private clearEnemies() {
-    for (const s of this.enemies.values()) s.container.destroy();
-    this.enemies.clear();
+  private clearFoes() {
+    for (const f of this.foes.values()) {
+      f.c.destroy();
+      f.num.destroy();
+    }
+    this.foes.clear();
+    this.kills.clear();
+    this.swingQueue = [];
   }
 
   private maxHp(g: GameState): number {
@@ -525,44 +864,86 @@ export class BattleScene extends Phaser.Scene {
     return this.hpCache.hp;
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, deltaMs: number) {
+    const dt = Math.min(0.05, deltaMs / 1000);
     const g = gameStore.getState().game;
     const b = g.battle;
-    if (neighborhoodFor(b.stage).background !== this.bgId) {
-      this.scene.restart();
-      return;
+    const walking = b.phase === 'walking' && !this.dead;
+
+    // Parallax while walking; clouds always drift.
+    const speed = walking ? 330 : 0;
+    this.far.tilePositionX += speed * 0.18 * dt;
+    this.mid.tilePositionX += speed * 0.5 * dt;
+    this.ground.tilePositionX += speed * dt;
+    this.fg.tilePositionX += speed * 1.3 * dt;
+    for (const c of this.clouds) {
+      c.img.x -= (c.speed + speed * 0.05) * dt;
+      if (c.img.x < -220) c.img.x = BATTLE_W + 220;
     }
-    if (b.phase === 'walking') {
-      const speed = delta * 0.4;
-      this.far.tilePositionX += speed * 0.2;
-      this.mid.tilePositionX += speed * 0.5;
-      this.props.tilePositionX += speed * 0.5;
-      this.ground.tilePositionX += speed;
-      this.fg.tilePositionX += speed * 1.3;
-      if (!this.reduceMotion && !this.dead) this.raccoonBody.setAngle(Math.sin(this.time.now / 90) * 3);
-    } else {
-      this.raccoonBody.setAngle(0);
-    }
-    // The neon sign rides the mid layer and wraps around.
-    let sx = 820 - (this.mid.tilePositionX % BG_TILE_W);
-    if (sx < -300) sx += BG_TILE_W;
-    this.sign.setPosition(sx, 360);
+    void BG_TILE_W;
 
     const sig = SLOTS.map((s) => `${g.equipped[s]?.uid ?? 0}`).join(',');
     if (sig !== this.gearSig) {
       this.gearSig = sig;
       this.drawGear(g);
     }
-    this.syncEnemies(g, delta);
 
+    // Hero: walks in place, closes in to fight, bobs while idle.
+    const targetX = b.phase === 'fighting' ? HERO_FIGHT_X : HERO_WALK_X;
+    this.heroX += (targetX - this.heroX) * (1 - Math.pow(0.001, dt));
+    this.heroKnock += (0 - this.heroKnock) * (1 - Math.pow(0.0005, dt));
+    this.hero.x = this.heroX + this.heroDx + this.heroKnock;
+    if (!this.dead && !this.swinging) {
+      if (walking && !this.reduceMotion) {
+        this.walkT += dt * 11;
+        const s = Math.abs(Math.sin(this.walkT));
+        this.rig.y = -s * 16;
+        this.rig.setAngle(Math.sin(this.walkT) * 3.5);
+        this.rig.setScale(1 + (1 - s) * 0.04, 1 - (1 - s) * 0.05);
+        this.weapon.setAngle(REST + Math.sin(this.walkT * 2) * 4);
+        if (Math.floor(this.walkT / Math.PI) !== Math.floor((this.walkT - dt * 11) / Math.PI)) this.dust.explode(1, this.hero.x - 30, FEET_Y - 6);
+      } else {
+        this.rig.y = 0;
+        const br = Math.sin(time / 380);
+        this.rig.setAngle(0);
+        this.rig.setScale(1 - br * 0.008, 1 + br * 0.018);
+      }
+    } else if (!this.dead) {
+      this.rig.y = 0;
+    }
+
+    this.syncFoes(g, dt);
+
+    // Lifesteal heals are batched into one number.
+    this.healTimer -= dt;
+    if (this.healAcc >= 1 && this.healTimer <= 0) {
+      this.number(this.hero.x - 50, FEET_Y - 250, `+${formatNumber(this.healAcc)}`, { size: 34, color: '#7ef08f', life: 600 });
+      this.healAcc = 0;
+      this.healTimer = 0.5;
+    }
+
+    // Hero HP bar.
     const maxHp = Math.max(1, b.playerHp, this.maxHp(g));
-    this.playerHpBar.clear();
-    if (b.phase !== 'dead') {
-      const w = 170;
-      const x = RACCOON_X - w / 2;
-      const y = GROUND_Y + 24;
-      this.playerHpBar.fillStyle(OUTLINE, 0.85).fillRoundedRect(x - 4, y - 4, w + 8, 22, 8);
-      this.playerHpBar.fillStyle(hexToNum(PAL.heal), 1).fillRoundedRect(x, y, w * Math.max(0, b.playerHp / maxHp), 14, 6);
+    this.shownHeroHp += (b.playerHp - this.shownHeroHp) * (1 - Math.pow(0.0001, dt));
+    this.heroBar.clear();
+    if (!this.dead) {
+      this.drawBar(this.heroBar, this.hero.x - 4, FEET_Y + 22, 160, 16, b.playerHp / maxHp, this.shownHeroHp / maxHp, 0x5bd23a);
+      this.heroNum.setText(formatNumber(Math.max(0, Math.ceil(b.playerHp)))).setPosition(this.hero.x - 4, FEET_Y + 30).setVisible(true);
+    } else {
+      this.heroNum.setVisible(false);
+    }
+
+    // Boss bar under the stage name.
+    const boss = b.enemies.find((e) => e.kind !== 'regular');
+    this.bossBar.clear();
+    if (boss) {
+      const f = this.foes.get(boss.uid);
+      const shown = f ? f.shownHp : boss.hp;
+      const ghost = f ? f.ghostHp : boss.hp;
+      this.drawBar(this.bossBar, BATTLE_W / 2, 272, 640, 30, shown / boss.maxHp, ghost / boss.maxHp, boss.kind === 'boss' ? 0xffb300 : 0xff4d5e);
+      this.bossName.setText(`${DATA.enemiesById.get(boss.enemyId)?.name ?? ''}  ${formatNumber(Math.max(0, Math.ceil(shown)))}`);
+    } else {
+      this.bossName.setText('');
     }
   }
 }
@@ -573,9 +954,10 @@ export function createBattleGame(parent: HTMLElement): Phaser.Game {
     parent,
     width: BATTLE_W,
     height: BATTLE_H,
-    backgroundColor: DATA.assets.placeholders.palette.nightSky,
+    backgroundColor: '#35C6F7',
     scale: { mode: Phaser.Scale.NONE },
-    render: { antialias: true, pixelArt: false },
+    render: { antialias: true, pixelArt: false, roundPixels: false },
+    fps: { target: 60, smoothStep: true },
     input: { mouse: false, touch: false, keyboard: false, gamepad: false },
     audio: { noAudio: true },
     banner: false,

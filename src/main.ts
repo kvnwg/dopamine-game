@@ -1,12 +1,11 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/lilita-one/latin-400.css';
-import '@fontsource/nunito/latin-600.css';
 import '@fontsource/nunito/latin-800.css';
 import './ui/global.css';
 import { DATA } from './data'; // validates every JSON file at boot
 import { boot } from './app/session';
-import { getGame } from './app/store';
+import { dispatch, getGame } from './app/store';
 import { serialize } from './core';
 import { App } from './ui/App';
 import { applyPaletteToCss } from './ui/palette';
@@ -26,6 +25,8 @@ async function main(data?: unknown) {
   await boot(typeof save === 'string' ? save : undefined);
   hot?.snapshot?.(() => ({ save: serialize(getGame()) }));
   createRoot(document.getElementById('root')!).render(createElement(App));
+  // Test hook for browser automation in dev builds only.
+  if (import.meta.env.DEV) (window as unknown as { __dl: unknown }).__dl = { getGame, dispatch };
 }
 
 const start = (data?: unknown) =>

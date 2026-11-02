@@ -1,67 +1,58 @@
 import type { CSSProperties } from 'react';
 import { DATA, type Slot } from '../../data';
-import { rarityAtLeast, type Item } from '../../core';
+import { formatNumber, rarityAtLeast, type Item } from '../../core';
+import { emptyIconUrl, itemIconUrl } from '../../render/icons';
 import { rarityColor } from '../../render/art';
-import { emptySlotUrl, gearIconUrl } from '../../render/paint/gear';
-import { t } from '../i18n';
+import { CheckIcon, LockIcon } from './Icons';
 import s from './ItemIcon.module.css';
 
 interface Props {
   item: Item | null;
   slot?: Slot;
   size?: number;
-  showLevel?: boolean;
+  showPower?: boolean;
+  equipped?: boolean;
+  onClick?: () => void;
+  className?: string;
+  style?: CSSProperties;
 }
 
-const GEMS: Partial<Record<Item['rarity'], number[]>> = {
-  decent: [50],
-  shiny: [36, 64],
-  epic: [28, 50, 72],
-};
+export function enchantColor(id: string): string {
+  return DATA.enchantsById.get(id)?.color ?? '#ffffff';
+}
 
-/** Placeholder item icon inside a rarity frame. Real icons drop in via assets.json later. */
-export function ItemIcon({ item, slot, size = 150, showLevel = true }: Props) {
+/** An item tile: rarity-colored card, item art, power badge, enchant gems, lock/equipped badges. */
+export function ItemIcon({ item, slot, size = 150, showPower = true, equipped, onClick, className, style }: Props) {
   const theSlot = item?.slot ?? slot ?? 'hat';
-  const label = DATA.assets.placeholders.slots[theSlot];
-  const style = { ['--s' as string]: `${size}px` } as CSSProperties;
+  const vars = { ['--s' as string]: `${size}px`, ...style } as CSSProperties;
   if (!item) {
     return (
-      <div className={`${s.icon} ${s.empty}`} style={style} title={label}>
-        <img className={s.art} src={emptySlotUrl(theSlot)} alt="" draggable={false} />
+      <div className={`${s.tile} ${s.empty} ${className ?? ''}`} style={vars} onClick={onClick}>
+        <img className={s.ghost} src={emptyIconUrl(theSlot)} alt="" draggable={false} />
       </div>
     );
   }
   const r = item.rarity;
-  (style as Record<string, string>)['--c'] = rarityColor(r);
-  const gems = GEMS[r] ?? [];
+  (vars as Record<string, string>)['--c'] = rarityColor(r);
   return (
-    <div className={`${s.icon} ${s[r] ?? ''}`} style={style} data-rarity={r} title={label}>
-      {r === 'mythic' && (
-        <>
-          <span className={`${s.wing} ${s.wingL}`} />
-          <span className={`${s.wing} ${s.wingR}`} />
-        </>
+    <div
+      className={[s.tile, s[r] ?? '', rarityAtLeast(r, 'epic') ? s.shine : '', onClick ? s.tappable : '', className ?? ''].join(' ')}
+      style={vars}
+      data-rarity={r}
+      onClick={onClick}
+    >
+      <span className={s.glow} />
+      <img className={s.art} src={itemIconUrl(item.slot, r)} alt="" draggable={false} />
+      {item.enchants.length > 0 && (
+        <span className={s.pips}>
+          {item.enchants.map((en) => (
+            <span key={en.id} className={s.pip} style={{ background: enchantColor(en.id) }} data-tier={en.tier} />
+          ))}
+        </span>
       )}
-      <span className={`${s.clip} ${rarityAtLeast(r, 'epic') ? s.glint : ''}`} />
-      <img className={s.art} src={gearIconUrl(item.slot, r)} alt="" draggable={false} />
-      {showLevel && <span className={s.lv}>{t('item.levelShort', { level: item.level })}</span>}
-      {r === 'junk' && <span className={s.patch} />}
-      {gems.map((x) => (
-        <span key={x} className={s.gem} style={{ left: `${x}%` }} />
-      ))}
-      {r === 'epic' && ['ctl', 'ctr', 'cbl', 'cbr'].map((c) => <span key={c} className={`${s.corner} ${s[c]}`} />)}
-      {r === 'legendary' && (
-        <>
-          <span className={s.crown} />
-          <span className={s.cap} />
-        </>
-      )}
-      {r === 'mint' && (
-        <>
-          <span className={s.hanger} />
-          <span className={s.price}>{t('item.priceTag')}</span>
-        </>
-      )}
+      {equipped && <CheckIcon className={s.corner} size={Math.round(size * 0.27)} />}
+      {!equipped && item.locked && <LockIcon className={s.corner} size={Math.round(size * 0.25)} />}
+      {showPower && <span className={s.power}>{formatNumber(item.power)}</span>}
     </div>
   );
 }

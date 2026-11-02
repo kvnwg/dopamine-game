@@ -10,14 +10,14 @@ import { BAL } from '../data';
 import type { Rng } from './rng';
 import type { GameState } from './state';
 import type { CoreEvent, GameAction, StepResult } from './types';
-import { MS_PER_MINUTE } from './time';
 import { bossStageAvailable, canPushStage, combatTick, startStage } from './systems/combat';
-import {
-  autoDiveTick, checkUpgrade, dive, equipPending, recyclePending, speedupWithAd, speedupWithGems, startUpgrade,
-} from './systems/dumpster';
+import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './systems/dumpster';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { addXp } from './systems/progression';
+import { doRebirth } from './systems/rebirth';
+import { addLuckBoost, equipFromBag, rollTick, scrapFromBag, toggleLock } from './systems/roller';
 import { maxStage } from './systems/stages';
+import { buyUpgrade } from './systems/upgrades';
 import { clamp } from './util';
 
 export const TICK_MS = 1000 / BAL.tickRate;
@@ -38,13 +38,10 @@ export function tick(state: GameState, input: { ticks: number }, rng: Rng, now: 
     for (let i = 0; i < input.ticks; i++) {
       d.playTimeMs += TICK_MS;
       combatTick(d, rng, now, ev, TICK_SECONDS);
-      autoDiveTick(d, rng, ev, TICK_SECONDS);
+      rollTick(d, rng, now, ev, TICK_SECONDS);
     }
     checkUpgrade(d, now, ev);
-    if (!d.autoDive.unlocked && d.playTimeMs >= BAL.autoDive.unlockPlayMinutes * MS_PER_MINUTE) {
-      d.autoDive.unlocked = true;
-      ev.push({ type: 'autoDiveUnlocked' });
-    }
+    if (d.luckBoostEndsAt !== null && now >= d.luckBoostEndsAt) d.luckBoostEndsAt = null;
     d.lastActiveAt = Math.max(d.lastActiveAt, now);
   });
 }
@@ -52,14 +49,23 @@ export function tick(state: GameState, input: { ticks: number }, rng: Rng, now: 
 export function applyAction(state: GameState, action: GameAction, rng: Rng, now: number): StepResult<GameState> {
   return run(state, rng, (d, ev) => {
     switch (action.type) {
-      case 'dive':
-        dive(d, rng, ev, false);
+      case 'equipItem':
+        equipFromBag(d, action.uid, ev);
         break;
-      case 'equipPending':
-        equipPending(d, ev);
+      case 'scrapItem':
+        scrapFromBag(d, action.uid, ev);
         break;
-      case 'recyclePending':
-        recyclePending(d, ev);
+      case 'toggleLock':
+        toggleLock(d, action.uid);
+        break;
+      case 'setAutoEquip':
+        d.autoEquip = action.enabled;
+        break;
+      case 'buyUpgrade':
+        buyUpgrade(d, action.id, ev);
+        break;
+      case 'rebirth':
+        doRebirth(d, ev);
         break;
       case 'fightBoss': {
         const stage = bossStageAvailable(d);
@@ -77,16 +83,6 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         startStage(d, d.stage.highestCleared + 1, ev, true);
         break;
       }
-      case 'setAutoDive':
-        if (d.autoDive.unlocked) d.autoDive.enabled = action.enabled;
-        break;
-      case 'setAutoDiveFilters':
-        d.autoDive.keepMinRarity = action.keepMinRarity;
-        d.autoDive.keepSubstats = [...action.keepSubstats];
-        break;
-      case 'acknowledgeAutoDiveUnlock':
-        d.autoDive.unlockSeen = true;
-        break;
       case 'startDumpsterUpgrade':
         startUpgrade(d, now, ev);
         break;
@@ -119,13 +115,13 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         d.settings[action.key] = action.value;
         break;
       case 'cheat':
-        applyCheat(d, action.cheat, ev);
+        applyCheat(d, action.cheat, ev, now);
         break;
     }
   });
 }
 
-function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>['cheat'], ev: CoreEvent[]): void {
+function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>['cheat'], ev: CoreEvent[], now: number): void {
   switch (cheat.kind) {
     case 'addCurrency':
       d.currencies.coins += cheat.coins ?? 0;
@@ -147,9 +143,8 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
     case 'forceRarity':
       d.dumpster.forcedRarity = cheat.rarity;
       break;
-    case 'unlockAll':
-      d.autoDive.unlocked = true;
-      d.dumpster.firstDiveDone = true;
+    case 'luckBoost':
+      addLuckBoost(d, now, cheat.seconds, ev);
       break;
     case 'skipToLastWave':
       d.battle.wave = BAL.stages.wavesPerStage - 1;

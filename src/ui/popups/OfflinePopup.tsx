@@ -20,10 +20,10 @@ export function OfflinePopup({ pending }: { pending: PendingOffline }) {
       <div className={s.pile}>🗑️🗑️🗑️</div>
       <div className={s.rewardList}>
         <div className={s.rewardRow}>
-          <BagIcon /> {t('offline.bags', { n: formatNumber(pending.bags) })}
+          <BagIcon size={56} /> {t('offline.bags', { n: formatNumber(pending.bags) })}
         </div>
         <div className={s.rewardRow}>
-          <CoinIcon /> {formatNumber(pending.coins)}
+          <CoinIcon size={56} /> {formatNumber(pending.coins)}
         </div>
         <div className={s.rewardRow}>
           <span style={{ width: 64, textAlign: 'center' }}>⭐</span> {t('offline.xp', { n: formatNumber(pending.xp) })}
@@ -34,7 +34,7 @@ export function OfflinePopup({ pending }: { pending: PendingOffline }) {
           {t('offline.collect')}
         </button>
         {pending.canDouble && (
-          <button className="btn alt" onClick={() => collect(true)}>
+          <button className="btn blue" onClick={() => collect(true)}>
             📺 {t('offline.collectDouble')}
           </button>
         )}

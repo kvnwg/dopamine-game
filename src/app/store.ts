@@ -59,8 +59,14 @@ export function runTicks(ticks: number): CoreEvent[] {
 function trackEvents(events: CoreEvent[], state: GameState) {
   for (const e of events) {
     switch (e.type) {
-      case 'dive':
-        analytics.track('dive', { rarity: e.item.rarity, dumpsterLevel: state.dumpster.level, auto: e.auto });
+      case 'roll':
+        analytics.track('roll', { rarity: e.item.rarity, dumpsterLevel: state.dumpster.level, source: e.source, lucky: e.lucky, luck: e.luck });
+        break;
+      case 'upgradeBought':
+        analytics.track('upgrade_bought', { id: e.id, level: e.level });
+        break;
+      case 'rebirth':
+        analytics.track('rebirth', { count: e.count });
         break;
       case 'stageClear':
         if (e.firstTime) analytics.track('stage_reached', { stage: e.stage + 1 });
@@ -76,9 +82,6 @@ function trackEvents(events: CoreEvent[], state: GameState) {
         break;
       case 'offlineCollected':
         analytics.track('offline_collect', { minutes: e.minutes, doubled: e.doubled });
-        break;
-      case 'autoDiveUnlocked':
-        analytics.track('system_unlocked', { system: 'auto_dive' });
         break;
     }
   }

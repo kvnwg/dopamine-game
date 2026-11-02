@@ -78,8 +78,11 @@ export function installSound(): () => void {
         case 'equip':
           if (!e.auto) audio.equip();
           break;
-        case 'recycle':
+        case 'scrap':
           audio.recycle(e.auto);
+          break;
+        case 'upgradeBought':
+          audio.coin();
           break;
         case 'offlineCollected':
           audio.collect();

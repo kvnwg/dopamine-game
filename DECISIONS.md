@@ -2,6 +2,29 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
+## Redesign (Nov 2): always-rolling RNG loop
+
+Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, items carry a power number, a limited bag keeps the best ones, extra luck sources, an upgrade grid, rebirths that raise luck, and enchantments. These rows replace the older ones marked *superseded* below.
+
+| # | Decision | Why |
+|---|---|---|
+| R1 | No dive button. A free roll happens every 2.0 s (the Roll Speed upgrade brings it down to 0.4 s), and Trash Bags won in fights are spent automatically as bonus rolls, 3 per second. | "Constantly rolling without having to click." |
+| R2 | Rarities are "1 in X" chances: Decent 3, Shiny 10, Epic 50, Legendary 400, Mythic 5,000, Mint in Box 100,000. A roll tries the rarest tier first, then each lower tier, and each try succeeds with chance min(1, luck / X). The Luck popup lists the exact per-roll chances, computed by the same function the roller uses. | The RNG-game convention. The odds shown are always the real ones (playbook). |
+| R3 | Luck = (1 + Luck upgrades + 0.05 per Dumpster Level above 1 + Lucky enchantments) x rebirth multiplier x Luck Potion. Bad-luck protection is unchanged: from Dumpster Level 3, after 40 rolls with nothing Epic or better, the next roll is guaranteed Epic or better. | Dumpster upgrades still help, plus several new luck sources. |
+| R4 | Every 10th roll is a Lucky Roll at x2 luck, shown on a meter. The Lucky Rolls upgrade lowers 10 to as few as 4. | A visible "something good is coming" beat between rare pulls. |
+| R5 | Items have a power number. A roll is equipped automatically when it beats the equipped item's power (Auto-equip can be switched off in the Bag); otherwise it goes in the bag. The bag holds 20 items (+2 per Bag Space level), sorted by power. When it is full, the weakest unlocked item, or the new roll if it is weaker still, is scrapped for gold and XP. Locked items are never scrapped automatically. | "Keeps the highest-rated items." |
+| R6 | Scrapping pays half the old recycle coins (times gold multipliers) and a quarter of the XP. Enchanted items pay +50% per enchantment tier. | Constant rolling would otherwise flood the economy. |
+| R7 | The upgrade grid costs gold: Luck, Gold Gain, Roll Speed, Bag Space, Lucky Rolls, Enchanting, Strength (ATK%), Toughness (HP%), Bag Finder. Cost = base x growth^level, with a level cap per upgrade. Holding the buy button keeps buying. Upgrades reset on rebirth. | |
+| R8 | Rebirth needs stage 10 cleared (+5 stages per rebirth, capped at the last stage) and 5,000 gold in hand (x4 per rebirth). Each rebirth gives luck x(1 + 0.25 per rebirth) and gold x(1 + 0.2 per rebirth), and resets stage progress, gold and upgrades. Items, the bag, player level, Dumpster Level, the Codex and Gems are kept. It takes two taps to confirm. | Keeping the bag and level makes rebirths feel like a boost instead of a loss. |
+| R9 | Enchantments: each roll has a 5% chance (+1.5% per Enchanting level) of 1 to 3 enchantments (80/17/3%), each of tier I, II or III (70/25/5%). Every tier adds 15/30/55% item power. Lucky and Golden add luck and gold; Swift, Vampiric, Giant and Magnetic add attack speed, lifesteal, HP and bag find; Flaming burns, Thundering zaps the next enemy, Echoing strikes twice, Explosive makes kills splash, Thorny reflects damage, and Prismatic raises the item's rarity by 1 or 2 tiers. All of it is in `enchants.json`. | "Add power level and rarity, but also do interesting things." |
+| R10 | Luck Potions give x2 luck for 60 s. One drops from every mini-boss and boss kill, and there is a 0.5% chance per regular wave. A new potion adds its time to one that is still running. | One more luck source, tied to fights. |
+| R11 | Enemies got x2.4 HP and x1.7 ATK. | With a constant stream of gear, fights were over too fast to read and stages fell too quickly (simulator). |
+| R12 | Save version 2. The migration moves an undecided dive item into the bag, adds the enchantment and lock fields, and drops Auto-Dive. | |
+| R13 | Legendary and better rolls get a short build-up (the dumpster shakes and glows in the rarity's color, then a silence drop) and a full-screen reveal. Big rolls that land during a reveal wait their turn, up to 3. Epic gets a sting and a burst; lower rarities get a pop from the dumpster. | Big moments stay big, even when rolls are constant. |
+| R14 | The look is now a bright, clean cel-shaded cartoon, matching the clean mobile-RPG style Kevin referenced (Capybara Go!), with our own characters and props. It replaces the painterly placeholder set. | Kevin's request. |
+| R15 | Battle choreography: the raccoon closes to melee range, winds up and swings. Hit effects (slash trail, impact star, numbers, knockback, hit-stop on crits) play at the swing's impact frame, about 0.1 s after core resolves the hit, and an enemy stays on screen until its killing blow lands. HP bars with numbers sit under every fighter; FIGHT!, BOSS! and VICTORY! banners sweep across. | "Not just the character bumping into the other one." |
+| R16 | Screen layout: battle (with the top HUD over the sky), a stat strip (Power, HP, ATK, DEF, Luck), then four tabs: Roll, Bag, Upgrades, Rebirth. The Shop tab is a placeholder. | |
+
 ## Combat and stages
 
 | # | Decision | Why |
@@ -30,8 +53,8 @@ Choices made where the spec was silent or ambiguous (spec instruction: pick the 
 | I6 | Mint in Box "unique perk" = one of 5 perks in `affixes.json` (`mintPerks`), each a set of stat bonuses. | |
 | I7 | Legendary and better items show the base item's `legendaryName`; lower rarities show `name`. | Matches the example item data. |
 | I8 | Item level cap and player level cap are both 100. | Spec's `levelCap` is unspecified. |
-| I9 | Equipping an item recycles the one it replaces. There is no inventory in M1. | Simplest loop; the spec never mentions a stash. |
-| I10 | Items matching the keep filters pause Auto-Dive and open the compare card instead of going to a stash. The default keep filter is "Legendary+" (which already pauses), so there are no extra pauses until the player sets one. | No inventory in M1 (I9). |
+| I9 | *Superseded by R5.* Equipping an item recycles the one it replaces. There is no inventory in M1. | Simplest loop; the spec never mentions a stash. |
+| I10 | *Superseded by R5.* Items matching the keep filters pause Auto-Dive and open the compare card instead of going to a stash. The default keep filter is "Legendary+" (which already pauses), so there are no extra pauses until the player sets one. | No inventory in M1 (I9). |
 | I11 | Max HP gained from a level-up or a new item is also added to current HP. | Equips should feel immediate. |
 | I12 | The scripted first dive is the Legendary Traffic Cone of Destiny at item level 1 with 3 rolled substats. | |
 
@@ -41,10 +64,10 @@ Choices made where the spec was silent or ambiguous (spec instruction: pick the 
 |---|---|---|
 | D1 | Upgrade cost and time use the current level: going from level L to L+1 costs 400 x 1.85^(L-1) coins and takes 60 s x 1.65^(L-1). | |
 | D2 | The bad-luck counter counts every dive since the last Epic-or-better and only *triggers* from Dumpster Level 3. The guaranteed roll uses the table restricted to Epic and up. | |
-| D3 | The near-miss gold tease (10% of Epic rolls) is rolled in core with the seeded Rng and sent in the dive event. Free dives only, per the Dopamine Playbook. | Keeps it deterministic and testable. |
+| D3 | *Superseded by R1 (no manual dives).* The near-miss gold tease (10% of Epic rolls) is rolled in core with the seeded Rng and sent in the dive event. Free dives only, per the Dopamine Playbook. | Keeps it deterministic and testable. |
 | D4 | Ad speedups reset at local midnight. | Same as other daily caps. |
 | D5 | New players start with 3 Trash Bags, 50 Gems, 0 coins. | So the first tap can dive. |
-| D6 | Auto-Dive unlocks at 8 minutes of cumulative play time (not wall time) and shows an explainer with "Turn it on". | |
+| D6 | *Superseded by R1.* Auto-Dive unlocks at 8 minutes of cumulative play time (not wall time) and shows an explainer with "Turn it on". | |
 
 ## Offline progress
 
@@ -72,24 +95,26 @@ Choices made where the spec was silent or ambiguous (spec instruction: pick the 
 | U1 | The 1080 x 1920 logical stage is scaled with a CSS transform to fit the screen (letterboxed), inside safe-area padding. Phaser renders only the battle panel; React renders everything else. | Spec: React overlay on a Phaser canvas. |
 | U2 | Player-facing UI text lives in `strings.en.json`. Content text (item names, flavor, enemy names) lives with the content JSON; M6 localization will key it by id. | |
 | U3 | Rattle beats scale with rarity: 3 for Junk to Shiny, 4 Epic, 5 Legendary, 6 Mythic and Mint (Dopamine Playbook). The manual build-up stays 0.95 s for common pulls (spec) and stretches for rare ones. Tapping during a reveal skips it. | |
-| U4 | The compare card appears once the reveal lands. Popup priority: offline rewards, then the compare card, then the Auto-Dive unlock, then menus. Level-ups are non-blocking toasts. | |
-| U5 | Art follows `docs/ART_DIRECTION.md`. The main screen uses *dark* cardboard so the dumpster stays the only accent ("everything else stays dark and quiet"); popups use full kraft. | The doc asks for both cardboard panels and a quiet screen. |
-| U6 | Buttons: lime for go, gold for spending coins or gems, gray for secondary. "Collect" is primary and "Collect x2" (ad) is secondary. | Art direction button system. |
-| U7 | Bosses are drawn about 2x the raccoon's height, not 3x, so they fit the 768 px battle panel. | |
+| U4 | *Superseded by R5 and R13.* The compare card appears once the reveal lands. Popup priority: offline rewards, then the compare card, then the Auto-Dive unlock, then menus. Level-ups are non-blocking toasts. | |
+| U5 | *Superseded by R14.* Art follows `docs/ART_DIRECTION.md`. The main screen uses *dark* cardboard so the dumpster stays the only accent ("everything else stays dark and quiet"); popups use full kraft. | The doc asks for both cardboard panels and a quiet screen. |
+| U6 | *Superseded by R14 (green for go, gold for featured actions, red for danger and bosses, blue for secondary, gray when unavailable).* Buttons: lime for go, gold for spending coins or gems, gray for secondary. "Collect" is primary and "Collect x2" (ad) is secondary. | Art direction button system. |
+| U7 | Bosses are drawn about 1.3 to 1.5x the raccoon's height (the battle panel is 820 px). Earlier: bosses are drawn about 2x the raccoon's height, not 3x, so they fit the 768 px battle panel. | |
 | U8 | Mint in Box color is `#FFF4D6` and the Gem icon is sea glass, from the art doc. Item art IDs are `<item_id>_icon` and `<item_id>_overlay` (the doc's naming), mapped to files in `assets.json`. | The art doc is newer and more specific than the spec's example. |
 | U9 | Fonts (Lilita One, Nunito) are bundled with `@fontsource` so they work offline in the native app. | |
 | U10 | Sound and music are synthesized with the Web Audio API (no audio files) and start on the first tap, as browsers require: a lo-fi loop in C major, rarity-scaled rattle, riser and reveal stings, a silence drop before Legendary+, pitch-stacked coins, button pops. Real recorded audio replaces it in M5. Haptics use Capacitor's presets; custom patterns need a native plugin (playbook note). | Kevin asked for sound before M5. |
-| U12 | Placeholder art follows the painterly storybook direction (`docs/ART_DIRECTION.md`, Nov 2 update): everything is painted in code on canvases with a brush toolkit, then registered as textures or data URLs. | Kevin's style update. |
+| U12 | *Superseded by R14.* Placeholder art follows the painterly storybook direction (`docs/ART_DIRECTION.md`, Nov 2 update): everything is painted in code on canvases with a brush toolkit, then registered as textures or data URLs. | Kevin's style update. |
 | U11 | The dev cheat panel shows in dev builds, or in any build made with `VITE_CHEATS=true`. Extra helpers beyond the spec: "Last wave" (jump to a stage's boss wave) and "Set dumpster Lv". | |
 
 ## Balance
 
-The simulator (`npm run sim`) plays the real core with a bot that dives every 1.6 s before Auto-Dive unlocks, equips upgrades, upgrades the dumpster when it can afford it, and fights bosses when ready (retrying when its power grows or after 90 s). With the current numbers, across 6 seeds:
+The simulator (`npm run sim`) plays the real core with a bot that lets the dumpster roll (equipped automatically, bag kept by power), buys the cheapest upgrade it can afford every second, upgrades the dumpster when it can, fights bosses when ready, and rebirths as soon as it is allowed. With the current numbers, across 4 seeds over 80 minutes:
 
-- Stage 20 reached (stage 19 cleared) at 32 to 52 minutes, median about 45.
-- Stage 20 boss beaten at 55 to 68 minutes.
-- Walls at the mini-bosses while the bot keeps diving and upgrading: about 4 to 12 minutes at stage 10, and 12 to 26 minutes at stage 15 (the longest stretch without a new stage; the first thing to retune after playtesting).
-- The stage 5 mini-boss is usually beaten on the first try (about 2.5 to 3 minutes in). The first-session script wants most players to lose the first try; that tuning belongs to M5 with the scripted opening.
+- First rebirth at 30 to 37 minutes, second at 66 to 80 minutes.
+- Stage 20 reached (stage 19 cleared) at 26 to 47 minutes, median about 29.
+- Stage 20 boss beaten at 46 to 62 minutes.
+- Per 80 minutes: about 4,500 rolls, 28 to 48 Legendaries (one every 2 to 3 minutes), 3 to 5 Mythics, no Mint in Box. 14 to 26 deaths, mostly at the mini-boss walls (stages 10 and 15), which is where the upgrade grid and rebirths take over.
+
+Earlier results for the tap-to-dive version (Nov 1) are in the git history.
 
 ## Tech
 

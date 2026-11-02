@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, type Slot } from '../data';
 import type { Item } from './types';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export const SubstatSchema = z.object({
   affixId: z.string(),
@@ -14,6 +14,8 @@ export const SubstatSchema = z.object({
   mode: z.enum(['flat', 'pct']),
   value: z.number(),
 });
+
+export const ItemEnchantSchema = z.object({ id: z.string(), tier: z.number().int().min(1).max(3) });
 
 export const ItemSchema = z.object({
   uid: z.number().int(),
@@ -25,6 +27,8 @@ export const ItemSchema = z.object({
   subs: z.array(SubstatSchema),
   bonus: z.array(ModSchema),
   mintPerkId: z.string().nullable(),
+  enchants: z.array(ItemEnchantSchema),
+  locked: z.boolean(),
   power: z.number(),
 });
 
@@ -40,6 +44,9 @@ export const EnemyStateSchema = z.object({
   atkProgress: z.number(),
   specialTimer: z.number(),
   enraged: z.boolean(),
+  burnDps: z.number(),
+  burnTime: z.number(),
+  burnShown: z.number(),
 });
 
 export const BattleSchema = z.object({
@@ -79,7 +86,9 @@ export const GameStateSchema = z.object({
   player: z.object({ level: z.number().int().positive(), xp: z.number().nonnegative() }),
   currencies: z.object({ coins: z.number(), gems: z.number(), bags: z.number() }),
   equipped: z.record(SlotSchema, ItemSchema.nullable()),
-  pendingItem: ItemSchema.nullable(),
+  /** Items in the bag (not equipped). Capacity is limited; the best items are kept. */
+  inventory: z.array(ItemSchema),
+  autoEquip: z.boolean(),
   nextItemUid: z.number().int(),
   stage: z.object({
     current: z.number().int().positive(),
@@ -100,14 +109,16 @@ export const GameStateSchema = z.object({
     adSpeedupDay: z.string(),
     adSpeedupsUsed: z.number().int().nonnegative(),
   }),
-  autoDive: z.object({
-    unlocked: z.boolean(),
-    unlockSeen: z.boolean(),
-    enabled: z.boolean(),
-    keepMinRarity: RaritySchema,
-    keepSubstats: z.array(z.string()),
+  roll: z.object({
     timer: z.number(),
+    bagTimer: z.number(),
+    count: z.number().int().nonnegative(),
+    sinceLucky: z.number().int().nonnegative(),
   }),
+  upgrades: z.record(z.string(), z.number().int().nonnegative()),
+  rebirths: z.number().int().nonnegative(),
+  luckBoostEndsAt: z.number().nullable(),
+  records: z.object({ bestOdds: z.number(), bestItemName: z.string(), bestRarity: RaritySchema.nullable() }),
   codex: z.object({ entries: z.array(z.string()) }),
   offline: z.object({
     buckets: z.array(RewardBucketSchema),
@@ -154,7 +165,8 @@ export function createInitialState(now: number, seed: number): GameState {
     player: { level: 1, xp: 0 },
     currencies: { coins: start.coins, gems: start.gems, bags: start.bags },
     equipped: emptyEquipment(),
-    pendingItem: null,
+    inventory: [],
+    autoEquip: true,
     nextItemUid: 1,
     stage: { current: 1, highestCleared: 0, mode: 'push', powerAtDeath: null, showToughHint: false },
     battle: {
@@ -178,14 +190,11 @@ export function createInitialState(now: number, seed: number): GameState {
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },
-    autoDive: {
-      unlocked: false,
-      unlockSeen: false,
-      enabled: false,
-      keepMinRarity: BAL.autoDive.defaultKeepMinRarity,
-      keepSubstats: [],
-      timer: 0,
-    },
+    roll: { timer: 0, bagTimer: 0, count: 0, sinceLucky: 0 },
+    upgrades: {},
+    rebirths: 0,
+    luckBoostEndsAt: null,
+    records: { bestOdds: 0, bestItemName: '', bestRarity: null },
     codex: { entries: [] },
     offline: { buckets: [], trackingSince: null, pausedRate: null, paused: false, pending: null },
     neighborhoodsCleared: [],

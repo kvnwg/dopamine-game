@@ -1,20 +1,19 @@
-/** UI-only state (animations, popups, toasts). Never saved; GameState stays the single source of truth. */
+/** UI-only state (tabs, animations, popups, toasts). Never saved; GameState stays the single source of truth. */
 import { create } from 'zustand';
-import type { Item } from '../core';
+import type { Item, RollPlacement } from '../core';
 import type { AdPlacement } from '../services';
 
-export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'filters' | 'itemDetail';
+export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck';
+export type Tab = 'alley' | 'bag' | 'upgrades' | 'rebirth';
 
-export interface Flip {
+export interface RollView {
   id: number;
   item: Item;
-  full: boolean;
-  tease: boolean;
-  startedAt: number;
-  /** Time (ms after start) at which the lid pops and the item is revealed. */
-  popAt: number;
-  /** Total length including the reveal celebration. */
-  endAt: number;
+  odds: number;
+  lucky: boolean;
+  placed: RollPlacement;
+  newRecord: boolean;
+  at: number;
 }
 
 export interface Toast {
@@ -24,40 +23,46 @@ export interface Toast {
 }
 
 interface UiState {
+  tab: Tab;
   popup: PopupKind | null;
-  detailSlot: string | null;
-  flip: Flip | null;
-  /** Uid of the pending item whose compare card may be shown (after its reveal finished). */
-  revealedUid: number | null;
-  /** Big celebration overlay (Epic+) for the most recent reveal. */
-  celebrate: { id: number; item: Item } | null;
-  lastItem: Item | null;
+  /** Item uid (bag or equipped) for the detail popup. */
+  detailUid: number | null;
+  lastRoll: RollView | null;
+  recent: RollView[];
+  /** Big reveal overlay for rare rolls. */
+  celebrate: RollView | null;
+  /** Building up to a big reveal (dumpster shakes and glows). */
+  charging: RollView | null;
+  rebirthFx: number | null;
   toasts: Toast[];
   adPlaying: AdPlacement | null;
   equipPulse: { slot: string; id: number } | null;
-  /** Codex keys found for the first time this session (for the NEW! stamp). */
   newCodexKeys: string[];
-  openPopup: (p: PopupKind | null, detailSlot?: string) => void;
+  setTab: (t: Tab) => void;
+  openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
 }
 
 let toastId = 1;
 
 export const useUi = create<UiState>((set) => ({
+  tab: 'alley',
   popup: null,
-  detailSlot: null,
-  flip: null,
-  revealedUid: null,
+  detailUid: null,
+  lastRoll: null,
+  recent: [],
   celebrate: null,
-  lastItem: null,
+  charging: null,
+  rebirthFx: null,
   toasts: [],
   adPlaying: null,
   equipPulse: null,
   newCodexKeys: [],
-  openPopup: (p, detailSlot) => set({ popup: p, detailSlot: detailSlot ?? null }),
+  setTab: (tab) => set({ tab }),
+  openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),
   toast: (text, tone = 'info') => {
     const id = toastId++;
-    set((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, tone }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), 2600);
+    set((s) => ({ toasts: [...s.toasts.slice(-2), { id, text, tone }] }));
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), 2400);
   },
 }));

@@ -20,7 +20,7 @@ export function CodexPopup({ onClose }: { onClose: () => void }) {
   for (const b of bonuses) sum.set(`${b.stat}:${b.mode}`, (sum.get(`${b.stat}:${b.mode}`) ?? 0) + b.value);
 
   return (
-    <Modal title={t('codex.title')} subtitle={t('codex.progress', { n: entries.length, total })} onClose={onClose}>
+    <Modal title={t('codex.title')} tone="gold" subtitle={t('codex.progress', { n: entries.length, total })} onClose={onClose}>
       <p className={s.note}>
         {t('codex.next', { n: nextAt - entries.length, bonus: `${formatStatValue(nextBonus.stat, nextBonus.mode, nextBonus.value)} ${t(`stat.${nextBonus.stat}`)}`, gems: BAL.codex.gemsPerBonus })}
       </p>
@@ -41,7 +41,7 @@ export function CodexPopup({ onClose }: { onClose: () => void }) {
             const any = rarities.some((r) => found.has(codexKey(i.id, r)));
             return (
               <div key={i.id} className={s.codexRow}>
-                <span className={s.codexName} style={{ color: any ? 'var(--text)' : '#4a5280' }}>
+                <span className={s.codexName} style={{ color: any ? 'var(--ink)' : '#b5a68d' }}>
                   {any ? (i.unique ? `★ ${i.name}` : i.name) : '???'}
                 </span>
                 {rarities.map((r) => (

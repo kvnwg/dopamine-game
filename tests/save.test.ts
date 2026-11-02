@@ -8,9 +8,9 @@ import { freshState, T0 } from './helpers';
 function played(): GameState {
   const rng = new Rng(1);
   let st = freshState();
-  st = applyAction(st, { type: 'dive' }, rng, T0).state;
-  st = applyAction(st, { type: 'equipPending' }, rng, T0).state;
   st = tick(st, { ticks: 300 }, rng, T0 + 30_000).state;
+  st = applyAction(st, { type: 'cheat', cheat: { kind: 'addCurrency', coins: 500 } }, rng, T0 + 30_000).state;
+  st = applyAction(st, { type: 'buyUpgrade', id: 'luck' }, rng, T0 + 30_000).state;
   return st;
 }
 
@@ -57,5 +57,24 @@ describe('save / load', () => {
 
   it('is deterministic: same seed and inputs produce the same state', () => {
     expect(played()).toEqual(played());
+  });
+
+  it('migrates a version 1 save to version 2', () => {
+    const v1 = JSON.parse(serialize(played())) as Record<string, unknown>;
+    // Turn it back into the old shape.
+    v1.saveVersion = 1;
+    v1.pendingItem = null;
+    v1.autoDive = { unlocked: true, unlockSeen: true, enabled: true, keepMinRarity: 'legendary', keepSubstats: [], timer: 0 };
+    for (const k of ['inventory', 'autoEquip', 'roll', 'upgrades', 'rebirths', 'luckBoostEndsAt', 'records']) delete v1[k];
+    const eq = v1.equipped as Record<string, Record<string, unknown> | null>;
+    for (const it of Object.values(eq)) if (it) { delete it.enchants; delete it.locked; }
+    const battle = v1.battle as { enemies: Array<Record<string, unknown>> };
+    for (const e of battle.enemies) { delete e.burnDps; delete e.burnTime; delete e.burnShown; }
+    const loaded = deserialize(JSON.stringify(v1));
+    expect(loaded).not.toBeNull();
+    expect(loaded!.saveVersion).toBe(2);
+    expect(loaded!.inventory).toEqual([]);
+    expect(loaded!.rebirths).toBe(0);
+    expect(loaded!.equipped.hat?.enchants).toEqual([]);
   });
 });

@@ -344,7 +344,20 @@ Milestone 1 uses code-drawn placeholder art that follows this doc, so real art c
 
 Not yet (later milestones): skeletal rigs, expression sheet, idle variants and rare idles, puddle reflections that wobble, moths and rain, holo foil, real bloom, Heist interiors, cardboard torn edges.
 
-## Style update (Nov 2): painterly storybook
+## Style update (Nov 2, later): bright clean cel-shaded cartoon
+
+Kevin's latest direction, which replaces the painterly update below: match the premium, clean look of mobile RPGs like Capybara Go! (his reference recording), with our own characters.
+
+How the code-drawn placeholders follow it (`src/render/cel/`, previewed at `tools/cel-preview.html`):
+
+- **Lines**: one uniform dark outline color `#2E2523` (about 5 px on the raccoon, scaled to size on enemies and icons).
+- **Shading**: flat fills, one hard-edged shadow tone, one small soft highlight. No textures or paper grain.
+- **Palette**: sunny daytime suburbs: sky blue with puffy clouds, round green trees, blue- and red-roofed cottages, a sandy road and a stone wall with grass. Rarity colors are saturated and clear.
+- **Characters**: a chibi raccoon (about 230 px tall in the 820 px battle panel) facing right, with every gear slot drawn as an overlay in its rarity look. The weapon is a separate sprite that rotates about the paw for real swings. Enemies (rat, pigeon, punk raccoon, Big Earl, Vinnie, Officer Dale) face left.
+- **Effects**: a flaming crescent slash, a white impact star, dust puffs, sparkles, spinning coins, trash bags and confetti.
+- **UI**: navy chrome, cream cards with thick dark outlines, chunky beveled pill buttons that squash, Lilita One display text with a dark outline and drop shadow, and gradient-filled titles ("LEGENDARY!", "FIGHT!").
+
+## Style update (Nov 2): painterly storybook (superseded)
 
 Kevin's newer direction for the look, used as the base style from here on (and as the base prompt for any AI-generated assets):
 

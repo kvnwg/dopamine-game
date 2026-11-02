@@ -88,25 +88,17 @@ export const BalanceSchema = z.object({
   }),
   dumpster: z.object({
     maxLevel: z.number().int().positive(),
-    rarityTable: z
-      .array(z.object({ level: z.number().int().positive(), weights: rarityRecord(nonNeg) }))
-      .min(1),
     slotWeights: slotRecord(nonNeg),
     upgradeCost: z.object({ base: positive, growth: positive }),
     upgradeTime: z.object({ baseSeconds: positive, growth: positive, capSeconds: positive }),
     gemSpeedup: z.object({ minutesPerGem: positive, minGems: nonNeg }),
     adSpeedup: z.object({ minutes: positive, perDay: z.number().int().nonnegative() }),
     badLuck: z.object({ minDumpsterLevel: z.number().int().positive(), drySpell: z.number().int().positive(), minRarity: RaritySchema }),
-    nearMissTeaseChance: z.number().min(0).max(1),
     uniqueLegendaryChance: z.number().min(0).max(1),
     tutorialItem: z.object({ baseId: z.string(), rarity: RaritySchema, level: z.number().int().positive() }),
-    fullFlipMinRarity: RaritySchema,
     defaultTheme: z.string(),
-  }),
-  autoDive: z.object({
-    unlockPlayMinutes: nonNeg,
-    intervalSeconds: positive,
-    defaultKeepMinRarity: RaritySchema,
+    luckPerLevel: nonNeg,
+    bigRevealMinRarity: RaritySchema,
   }),
   codex: z.object({
     entriesPerBonus: z.number().int().positive(),
@@ -125,6 +117,51 @@ export const BalanceSchema = z.object({
     maxTickGapSeconds: positive,
   }),
   start: z.object({ coins: nonNeg, gems: nonNeg, bags: nonNeg }),
+  roll: z.object({
+    baseIntervalSeconds: positive,
+    minIntervalSeconds: positive,
+    speedPerLevel: z.number().min(0).max(1),
+    bagRollsPerSecond: positive,
+    maxRollsPerTick: z.number().int().positive(),
+    luckyRollEvery: z.number().int().positive(),
+    luckyRollMinEvery: z.number().int().positive(),
+    luckyRollMult: positive,
+  }),
+  /** Base odds as "1 in X" for every rarity above Junk. */
+  rarityOdds: z.object({ decent: positive, shiny: positive, epic: positive, legendary: positive, mythic: positive, mint: positive }),
+  luck: z.object({
+    potion: z.object({ mult: positive, seconds: positive, waveDropChance: z.number().min(0).max(1) }),
+  }),
+  inventory: z.object({ baseCapacity: z.number().int().positive() }),
+  economy: z.object({ scrapGoldMult: nonNeg, scrapXpMult: nonNeg }),
+  rebirth: z.object({
+    baseStage: z.number().int().positive(),
+    stagePer: z.number().int().nonnegative(),
+    goldBase: nonNeg,
+    goldGrowth: positive,
+    luckPer: nonNeg,
+    goldMultPer: nonNeg,
+  }),
+  upgrades: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        effect: z.enum(['luck', 'goldPct', 'rollSpeed', 'capacity', 'luckyEvery', 'enchantChance', 'atkPct', 'hpPct', 'bagFind']),
+        perLevel: positive,
+        max: z.number().int().positive(),
+        cost: z.object({ base: positive, growth: positive }),
+      }),
+    )
+    .min(1),
+  enchant: z.object({
+    baseChance: z.number().min(0).max(1),
+    countWeights: z.array(nonNeg).length(3),
+    tierWeights: z.array(nonNeg).length(3),
+    powerPerTier: z.array(nonNeg).length(3),
+    burnSeconds: positive,
+    chainDamage: nonNeg,
+    burnEventSeconds: positive,
+  }),
   save: z.object({ autosaveSeconds: positive, backups: z.number().int().nonnegative() }),
   feel: z.object({
     lidFlipSeconds: positive,
@@ -179,6 +216,28 @@ export const AffixesFileSchema = z.object({
   affixes: z.array(AffixSchema).length(12),
   mintPerks: z.array(MintPerkSchema).min(1),
 });
+
+export const EnchantEffectSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('luck'), values: z.array(nonNeg).length(3) }),
+  z.object({ type: z.literal('goldPct'), values: z.array(nonNeg).length(3) }),
+  z.object({ type: z.literal('mod'), stat: StatIdSchema, mode: ModModeSchema, values: z.array(nonNeg).length(3) }),
+  z.object({ type: z.literal('burn'), values: z.array(nonNeg).length(3) }),
+  z.object({ type: z.literal('chain'), values: z.array(z.number().min(0).max(1)).length(3) }),
+  z.object({ type: z.literal('echo'), values: z.array(z.number().min(0).max(1)).length(3) }),
+  z.object({ type: z.literal('explode'), values: z.array(nonNeg).length(3) }),
+  z.object({ type: z.literal('thorns'), values: z.array(nonNeg).length(3) }),
+  z.object({ type: z.literal('rarityUp'), values: z.array(z.number().int().nonnegative()).length(3) }),
+]);
+export type EnchantEffect = z.infer<typeof EnchantEffectSchema>;
+export const EnchantSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  weight: positive,
+  effect: EnchantEffectSchema,
+});
+export type EnchantDef = z.infer<typeof EnchantSchema>;
+export const EnchantsSchema = z.array(EnchantSchema).min(1);
 
 export const ThemeSchema = z.object({
   id: z.string().min(1),

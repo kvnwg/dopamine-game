@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 40%, #151a30, #05060b);
+  background: radial-gradient(circle at 50% 30%, #1d2135, #0d0f19);
 }
 
 .frame {
@@ -27,26 +27,20 @@
   width: 1080px;
   height: 1920px;
   transform-origin: 50% 50%;
-  background: var(--bg);
+  background: var(--navy);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Visible paper grain over everything: the whole screen reads as one painted page. */
-.stage::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 95;
-  pointer-events: none;
-  background-image: var(--paper-grain);
-  background-size: 620px 620px;
-  opacity: 0.5;
+.battle { height: 820px; flex: none; position: relative; }
+.strip { height: 92px; flex: none; position: relative; z-index: 2; }
+.lower {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 60%),
+    linear-gradient(180deg, #2c2e45, #232538);
 }
-
-.top { height: 7%; flex: none; }
-.battle { height: 40%; flex: none; position: relative; }
-.dumpster { height: 20%; flex: none; }
-.gear { height: 23%; flex: none; }
-.nav { height: 10%; flex: none; }
+.nav { height: 160px; flex: none; position: relative; z-index: 2; }

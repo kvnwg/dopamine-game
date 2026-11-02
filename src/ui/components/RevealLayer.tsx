@@ -1,62 +1,159 @@
-/** Full-screen celebration for Epic and better. Intensity jumps at every rarity tier. */
-import { useMemo } from 'react';
-import { BAL } from '../../data';
-import { itemFlavor, itemName, rarityAtLeast } from '../../core';
+/**
+ * Full-screen moment for Legendary and better: a short build-up (the dumpster shakes and glows in
+ * the rarity's color), then the reveal with rays, confetti, the item, its "1 in X" odds and enchants.
+ * Also hosts the rebirth celebration.
+ */
+import { useMemo, type CSSProperties } from 'react';
+import { DATA } from '../../data';
+import { itemName, rebirthGoldMult, rebirthLuckMult } from '../../core';
 import { useGame } from '../../app/store';
+import { dumpsterArt } from '../../render/icons';
 import { rarityColor } from '../../render/art';
-import { skipFlip } from '../flipController';
+import { skipReveal } from '../rollController';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
-import { ItemIcon } from './ItemIcon';
+import { enchantLabel, fmtOdds } from './AlleyPanel';
+import { Chunky, type Grad } from './Chunky';
+import { enchantColor, ItemIcon } from './ItemIcon';
 import s from './overlays.module.css';
 
-export function RevealLayer() {
-  const celebrate = useUi((u) => u.celebrate);
+const GRAD: Partial<Record<string, Grad>> = { epic: 'purple', legendary: 'gold', mythic: 'rainbow', mint: 'white' };
+const CONFETTI = ['#ff5252', '#ffc233', '#5bc236', '#42a5f5', '#c48bff', '#ffffff'];
+
+function Confetti({ n }: { n: number }) {
+  const bits = useMemo(
+    () =>
+      Array.from({ length: n }, (_, i) => ({
+        left: (i * 137.5) % 100,
+        delay: (i * 53) % 900,
+        dur: 1500 + ((i * 97) % 1100),
+        color: CONFETTI[i % CONFETTI.length],
+        rot: (i * 47) % 360,
+        w: 14 + ((i * 7) % 12),
+      })),
+    [n],
+  );
+  return (
+    <div className={s.confetti}>
+      {bits.map((b, i) => (
+        <span
+          key={i}
+          style={{
+            left: `${b.left}%`,
+            width: b.w,
+            height: b.w * 0.6,
+            background: b.color,
+            animationDelay: `${b.delay}ms`,
+            animationDuration: `${b.dur}ms`,
+            ['--rot' as string]: `${b.rot}deg`,
+          } as CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
+function enchantDesc(id: string, tier: number): string {
+  const def = DATA.enchantsById.get(id);
+  if (!def) return '';
+  const e = def.effect;
+  const raw = e.values[tier - 1];
+  const pct = ['burn', 'chain', 'echo', 'explode', 'thorns'].includes(e.type);
+  const v = pct ? Math.round(raw * 100) : raw;
+  if (e.type === 'mod') return t(`enchant.mod.${e.stat}`, { v });
+  return t(`enchant.${e.type}`, { v });
+}
+export { enchantDesc };
+
+function Charging() {
+  const charging = useUi((u) => u.charging);
+  const art = dumpsterArt();
+  if (!charging) return null;
+  const color = rarityColor(charging.item.rarity);
+  return (
+    <div className={s.charge} style={{ ['--c' as string]: color } as CSSProperties}>
+      <div className={s.chargeGlow} />
+      <div className={s.chargeBin}>
+        <img className={s.chargeBody} src={art.body} alt="" draggable={false} />
+        <img className={s.chargeLid} src={art.lid} alt="" draggable={false} />
+      </div>
+      <span className={s.chargeBang}>!!!</span>
+    </div>
+  );
+}
+
+function Celebrate() {
+  const view = useUi((u) => u.celebrate);
   const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
   const reduceMotion = useGame((g) => g.settings.reduceMotion);
-  const coins = useMemo(
-    () => Array.from({ length: 26 }, (_, i) => ({ left: (i * 397) % 1040, delay: (i * 83) % 900, dur: 1100 + ((i * 131) % 700) })),
-    [],
-  );
-  if (!celebrate) return null;
-  const { item } = celebrate;
-  const color = rarityColor(item.rarity);
-  const legendary = rarityAtLeast(item.rarity, 'legendary');
-  const mythic = rarityAtLeast(item.rarity, 'mythic');
-  const mint = item.rarity === 'mint';
-  const seconds = BAL.feel.revealSecondsByRarity[item.rarity];
-
+  if (!view) return null;
+  const it = view.item;
+  const color = rarityColor(it.rarity);
+  const title = it.rarity === 'mint' ? t('reveal.mintStamp') : `${t(`rarity.${it.rarity}`).toUpperCase()}!`;
   return (
-    <div className={`${s.reveal} ${!reduceMotion ? s.shake : ''}`} key={celebrate.id} onClick={() => skipFlip()}>
-      <div className={s.tint} style={{ background: `radial-gradient(circle, ${color}55, rgba(5,6,12,${legendary ? 0.85 : 0.5}) 70%)` }} />
-      <div className={s.edge} style={{ boxShadow: `inset 0 0 160px 30px ${color}`, animationDuration: `${Math.min(1, seconds)}s` }} />
-      {legendary && !reduceMotion && (
-        <div className={s.rays} style={{ background: `repeating-conic-gradient(${color} 0deg 10deg, transparent 10deg 24deg)` }} />
-      )}
-      {legendary &&
-        !reduceMotion &&
-        coins.map((c, i) => (
-          <span key={i} className={s.coin} style={{ left: c.left, animationDelay: `${c.delay}ms`, animationDuration: `${c.dur}ms` }} />
-        ))}
-      {mythic && <div className={s.rainbowFrame} />}
-      {mint && <div className={s.stamp}>{t('reveal.mintStamp')}</div>}
+    <div className={s.reveal} onClick={() => skipReveal()} style={{ ['--c' as string]: color } as CSSProperties}>
+      <div className={s.backdrop} />
+      {!reduceMotion && <div className={s.rays} />}
+      {!reduceMotion && <Confetti n={it.rarity === 'legendary' ? 40 : 70} />}
       <div className={s.center}>
-        <ItemIcon item={item} size={legendary ? 300 : 220} />
-        {legendary && (
-          <div className={s.banner} style={{ borderColor: color }}>
-            <div className={s.bannerRarity} style={{ color }}>{t(`rarity.${item.rarity}`)}!</div>
-            <div className={`${s.bannerName} ${mythic ? s.rainbowText : ''}`} style={{ color: mythic ? undefined : '#fff' }}>
-              {itemName(item)}
-            </div>
-            <div className={s.bannerFlavor}>“{itemFlavor(item)}”</div>
+        <div className={s.title}>
+          <Chunky text={title} size={it.rarity === 'mint' ? 96 : 116} grad={GRAD[it.rarity] ?? 'gold'} />
+        </div>
+        <div className={s.itemWrap}>
+          <ItemIcon item={it} size={320} />
+        </div>
+        <span className={s.name}>{itemName(it)}</span>
+        <span className={s.odds}>{t('reveal.oneIn', { odds: fmtOdds(view.odds) })}</span>
+        <div className={s.tags}>
+          {view.lucky && <span className={`${s.tag} ${s.tagLucky}`}>{t('reveal.lucky')}</span>}
+          {view.newRecord && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
+          {view.placed === 'equipped' && <span className={`${s.tag} ${s.tagEquip}`}>{t('reveal.equipped')}</span>}
+        </div>
+        {it.enchants.length > 0 && (
+          <div className={s.enchants}>
+            {it.enchants.map((en) => (
+              <div key={en.id} className={s.enchant}>
+                <span className={s.enchantName} style={{ background: enchantColor(en.id) }}>
+                  {enchantLabel(en.id, en.tier)}
+                </span>
+                <span className={s.enchantDesc}>{enchantDesc(en.id, en.tier)}</span>
+              </div>
+            ))}
           </div>
         )}
-        {!legendary && (
-          <div className={s.bannerRarity} style={{ color, textShadow: '0 4px 0 #000' }}>{t(`rarity.${item.rarity}`)}!</div>
-        )}
       </div>
-      {legendary && !reduceFlashing && <div className={s.flash} />}
-      <span className={s.tapHint}>{t('reveal.tapToSkip')}</span>
+      {!reduceFlashing && <div className={s.flash} />}
+      <span className={s.tap}>{t('reveal.tap')}</span>
     </div>
+  );
+}
+
+function RebirthFx() {
+  const n = useUi((u) => u.rebirthFx);
+  const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
+  if (n === null) return null;
+  return (
+    <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties}>
+      <div className={s.backdrop} />
+      <div className={s.rays} />
+      <Confetti n={60} />
+      <div className={s.center}>
+        <Chunky text={t('rebirth.done', { n })} size={124} grad="purple" className={s.title} />
+        <span className={s.name}>
+          {t('rebirth.doneSub', { luck: rebirthLuckMult(n).toFixed(2), gold: rebirthGoldMult(n).toFixed(1) })}
+        </span>
+      </div>
+      {!reduceFlashing && <div className={s.flash} />}
+    </div>
+  );
+}
+
+export function RevealLayer() {
+  return (
+    <>
+      <Charging />
+      <Celebrate />
+      <RebirthFx />
+    </>
   );
 }

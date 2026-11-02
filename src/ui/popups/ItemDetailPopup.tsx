@@ -1,48 +1,133 @@
-import type { Slot } from '../../data';
-import { DATA } from '../../data';
-import { formatNumber, formatStatValue, itemFlavor, itemName } from '../../core';
-import { useGame } from '../../app/store';
+import { DATA, SLOTS } from '../../data';
+import { formatNumber, formatStatValue, itemFlavor, itemName, RARITY_ODDS, scrapValue, type Item } from '../../core';
+import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
-import { ItemIcon } from '../components/ItemIcon';
+import { haptics } from '../../services';
+import { enchantLabel, fmtOdds } from '../components/AlleyPanel';
+import { CheckIcon, LockIcon, PowerIcon, TrashIcon } from '../components/Icons';
+import { enchantColor, ItemIcon } from '../components/ItemIcon';
+import { enchantDesc } from '../components/RevealLayer';
 import { t } from '../i18n';
 import { Modal } from './Modal';
 import { statLines } from './statRows';
 import s from './popups.module.css';
 
-export function ItemDetailPopup({ slot, onClose }: { slot: Slot; onClose: () => void }) {
-  const item = useGame((g) => g.equipped[slot]);
+function findItem(equipped: Record<string, Item | null>, bag: Item[], uid: number): { item: Item | null; equipped: boolean } {
+  for (const slot of SLOTS) if (equipped[slot]?.uid === uid) return { item: equipped[slot], equipped: true };
+  return { item: bag.find((x) => x.uid === uid) ?? null, equipped: false };
+}
+
+export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => void }) {
+  const g = useGame((x) => x);
+  const equippedMap = g.equipped;
+  const bag = g.inventory;
+  const { item, equipped } = findItem(equippedMap, bag, uid);
   if (!item) {
     return (
-      <Modal title={t(`slot.${slot}`)} onClose={onClose}>
-        <p className={s.subtitle}>{t('detail.empty')}</p>
+      <Modal title={t('item.equipped')} onClose={onClose}>
+        <p className={s.subtitle}>{t('item.emptySlot')}</p>
       </Modal>
     );
   }
   const color = rarityColor(item.rarity);
+  const cur = equippedMap[item.slot];
+  const diff = !equipped && cur ? item.power - cur.power : null;
   const perk = item.mintPerkId ? DATA.mintPerksById.get(item.mintPerkId) : null;
+  const scrapGold = scrapValue(g, item).coins;
   return (
-    <Modal onClose={onClose}>
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <span className={s.ribbon} style={{ background: color }}>{t(`rarity.${item.rarity}`)}</span>
-      </div>
+    <Modal title={t(`rarity.${item.rarity}`)} tone={item.rarity === 'legendary' || item.rarity === 'mint' ? 'gold' : item.rarity === 'epic' ? 'purple' : item.rarity === 'mythic' ? 'red' : item.rarity === 'decent' ? 'green' : 'blue'} onClose={onClose}>
       <div className={s.itemHead}>
-        <ItemIcon item={item} size={190} />
+        <ItemIcon item={item} size={200} equipped={equipped} showPower={false} />
         <div className={s.itemHeadText}>
-          <span className={s.itemName} style={{ color }}>{itemName(item)}</span>
-          <span className={s.meta}>{t('compare.meta', { slot: t(`slot.${item.slot}`), level: item.level })}</span>
-          <span className={s.flavor}>“{itemFlavor(item)}”</span>
+          <span className={s.itemName} style={{ color }}>
+            {itemName(item)}
+          </span>
+          <span className={s.meta}>
+            {t('item.meta', { slot: t(`slot.${item.slot}`), level: item.level })} · {t('roll.oneIn', { odds: fmtOdds(RARITY_ODDS[item.rarity]) })}
+          </span>
+          <div className={s.powerBig}>
+            <PowerIcon size={54} />
+            {formatNumber(item.power)}
+            {diff !== null && (
+              <span className={diff > 0 ? s.up : diff < 0 ? s.down : s.same}>
+                {diff > 0 ? t('item.better', { n: formatNumber(diff) }) : diff < 0 ? t('item.worse', { n: `-${formatNumber(-diff)}` }) : t('item.same')}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <div className={s.stats}>
         {statLines(item).map((l) => (
           <div key={l.key} className={s.statRow}>
-            <span className={l.main ? s.statMain : s.statSub}>{t(`stat.${l.stat}`)}{l.mode === 'pct' ? ' %' : ''}</span>
+            <span className={l.main ? s.statMain : s.statSub}>
+              {t(`stat.${l.stat}`)}
+              {l.mode === 'pct' ? ' %' : ''}
+            </span>
             <span>{formatStatValue(l.stat, l.mode, l.value)}</span>
           </div>
         ))}
-        {perk && <div className={s.mintPerk}>✨ {perk.name}: {perk.text}</div>}
+        {perk && (
+          <div className={s.mintPerk}>
+            ✨ {perk.name}: {perk.text}
+          </div>
+        )}
       </div>
-      <div className={s.powerRow}>⚡ {formatNumber(item.power)}</div>
+      {item.enchants.length > 0 && (
+        <div className={s.enchantList}>
+          {item.enchants.map((en) => (
+            <div key={en.id} className={s.enchantRow}>
+              <span className={s.enchantChip} style={{ background: enchantColor(en.id) }}>
+                {enchantLabel(en.id, en.tier)}
+              </span>
+              <span>{enchantDesc(en.id, en.tier)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className={s.flavor}>“{itemFlavor(item)}”</p>
+      <div className={s.actions}>
+        {equipped ? (
+          <span className={s.equippedTag}>
+            <CheckIcon size={48} /> {t('item.equipped')}
+          </span>
+        ) : (
+          <>
+            <button
+              className="btn"
+              onClick={() => {
+                haptics.impact('medium');
+                dispatch({ type: 'equipItem', uid: item.uid });
+                onClose();
+              }}
+            >
+              {t('item.equip')}
+            </button>
+            <button
+              className="btn blue"
+              onClick={() => {
+                haptics.impact('light');
+                dispatch({ type: 'toggleLock', uid: item.uid });
+              }}
+            >
+              <LockIcon size={44} />
+              {item.locked ? t('item.unlock') : t('item.lock')}
+            </button>
+            <button
+              className="btn red"
+              disabled={item.locked}
+              onClick={() => {
+                haptics.impact('medium');
+                dispatch({ type: 'scrapItem', uid: item.uid });
+                onClose();
+              }}
+            >
+              <TrashIcon size={44} />
+              {t('item.scrap')} {formatNumber(scrapGold)}
+            </button>
+          </>
+        )}
+      </div>
+      {!equipped && <p className={s.note}>{t('item.lockedNote')}</p>}
     </Modal>
   );
 }

@@ -10,10 +10,12 @@ import enemiesJson from './enemies.json';
 import neighborhoodsJson from './neighborhoods.json';
 import stringsJson from './strings.en.json';
 import assetsJson from './assets.json';
+import enchantsJson from './enchants.json';
 import {
-  AffixesFileSchema, AssetsSchema, BalanceSchema, EnemiesSchema, ItemsSchema, NeighborhoodsSchema,
+  AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, ItemsSchema, NeighborhoodsSchema,
   RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
-  type Affix, type Assets, type Balance, type BaseItem, type EnemyDef, type MintPerk, type Neighborhood, type Theme,
+  type Affix, type Assets, type Balance, type BaseItem, type EnchantDef, type EnemyDef, type MintPerk, type Neighborhood,
+  type Theme,
 } from './schemas';
 import type { z } from 'zod';
 
@@ -33,6 +35,8 @@ export interface GameData {
   neighborhoods: Neighborhood[];
   strings: Record<string, string>;
   assets: Assets;
+  enchants: EnchantDef[];
+  enchantsById: Map<string, EnchantDef>;
 }
 
 function parse<T extends z.ZodTypeAny>(name: string, schema: T, raw: unknown): z.infer<T> {
@@ -50,7 +54,7 @@ function fail(msg: string): never {
 
 export function buildGameData(raw: {
   balance: unknown; items: unknown; affixes: unknown; themes: unknown; enemies: unknown;
-  neighborhoods: unknown; strings: unknown; assets: unknown;
+  neighborhoods: unknown; strings: unknown; assets: unknown; enchants: unknown;
 }): GameData {
   const balance = parse('balance.json', BalanceSchema, raw.balance);
   const items = parse('items.json', ItemsSchema, raw.items);
@@ -60,6 +64,14 @@ export function buildGameData(raw: {
   const neighborhoods = parse('neighborhoods.json', NeighborhoodsSchema, raw.neighborhoods);
   const strings = parse('strings.en.json', StringsSchema, raw.strings);
   const assets = parse('assets.json', AssetsSchema, raw.assets);
+  const enchants = parse('enchants.json', EnchantsSchema, raw.enchants);
+  const enchantsById = new Map(enchants.map((e) => [e.id, e]));
+  if (enchantsById.size !== enchants.length) fail('duplicate enchant id');
+  const upgradeIds = new Set(balance.upgrades.map((u) => u.id));
+  if (upgradeIds.size !== balance.upgrades.length) fail('duplicate upgrade id');
+  const odds = balance.rarityOdds;
+  const order = [odds.decent, odds.shiny, odds.epic, odds.legendary, odds.mythic, odds.mint];
+  for (let i = 1; i < order.length; i++) if (order[i] <= order[i - 1]) fail('rarityOdds must get rarer with each tier');
 
   // Records keyed by enums must be complete.
   for (const s of STAT_IDS) {
@@ -70,20 +82,11 @@ export function buildGameData(raw: {
   }
   for (const r of RARITIES) {
     if (!balance.rarities[r]) fail(`balance.rarities missing ${r}`);
-    for (const row of balance.dumpster.rarityTable) {
-      if (row.weights[r] === undefined) fail(`rarityTable level ${row.level} missing ${r}`);
-    }
     if (!assets.placeholders.rarities[r]) fail(`assets rarity placeholder missing ${r}`);
   }
   for (const key of ['outline', 'nightSky', 'shadow', 'dumpster', 'kraft', 'tape', 'neonLime', 'gold']) {
     if (!assets.placeholders.palette[key]) fail(`assets palette missing ${key}`);
   }
-  const table = balance.dumpster.rarityTable;
-  if (table[0].level !== 1) fail('rarityTable must start at level 1');
-  for (let i = 1; i < table.length; i++) {
-    if (table[i].level <= table[i - 1].level) fail('rarityTable levels must be strictly increasing');
-  }
-  if (table[table.length - 1].level !== balance.dumpster.maxLevel) fail('rarityTable must end at dumpster.maxLevel');
 
   const itemsById = new Map<string, BaseItem>();
   for (const it of items) {
@@ -148,6 +151,8 @@ export function buildGameData(raw: {
     neighborhoods,
     strings,
     assets,
+    enchants,
+    enchantsById,
   };
 }
 
@@ -161,6 +166,7 @@ export const DATA: GameData = buildGameData({
   neighborhoods: neighborhoodsJson,
   strings: stringsJson,
   assets: assetsJson,
+  enchants: enchantsJson,
 });
 
 export const BAL = DATA.balance;

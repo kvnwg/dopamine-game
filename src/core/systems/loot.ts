@@ -1,7 +1,8 @@
 /** Item generation, power score, recycling, and display names. */
 import { BAL, DATA, RARITIES, type BaseItem, type Mod, type Rarity, type Slot } from '../../data';
 import type { Rng } from '../rng';
-import type { Item, Substat } from '../types';
+import type { Item, ItemEnchant, Substat } from '../types';
+import { enchantPowerMult } from './enchants';
 import { rarityAtLeast, round2 } from '../util';
 import { itemMods, modsPower } from './stats';
 
@@ -29,11 +30,14 @@ export function rollSubstats(count: number, itemLevel: number, themeId: string, 
   return out;
 }
 
+/** Power = weighted stat sum x (1 + enchantment power bonus). */
 export function computeItemPower(item: Omit<Item, 'power'>): number {
-  return modsPower(itemMods({ ...item, power: 0 }));
+  return Math.round(modsPower(itemMods({ ...item, power: 0 })) * (1 + enchantPowerMult(item.enchants)));
 }
 
-export function createItem(base: BaseItem, rarity: Rarity, level: number, themeId: string, rng: Rng, uid: number): Item {
+export function createItem(
+  base: BaseItem, rarity: Rarity, level: number, themeId: string, rng: Rng, uid: number, enchants: ItemEnchant[] = [],
+): Item {
   const main: Mod[] = BAL.items.slots[base.slot].main.map((m) => ({
     stat: m.stat,
     mode: 'flat' as const,
@@ -41,7 +45,7 @@ export function createItem(base: BaseItem, rarity: Rarity, level: number, themeI
   }));
   const subs = rollSubstats(BAL.rarities[rarity].substats, level, themeId, rng);
   const mintPerkId = rarity === 'mint' ? rng.pick(DATA.mintPerks).id : null;
-  const partial = { uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId };
+  const partial = { uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false };
   return { ...partial, power: computeItemPower(partial) };
 }
 

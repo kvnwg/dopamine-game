@@ -1,232 +1,156 @@
-/* Rarity frames: the frame SHAPE also signals rarity so colorblind players can read it. */
-.icon {
-  --u: calc(var(--s) / 100);
+/* Item tile: chunky cel card. Every size derives from --s. */
+.tile {
+  --c: #9e9e9e;
+  --bw: max(3px, calc(var(--s) * 0.034));
   position: relative;
   flex: none;
   width: var(--s);
   height: var(--s);
-  border-radius: 22% 27% 20% 25% / 25% 20% 27% 22%;
-  border: calc(var(--u) * 5 + 2px) solid var(--outline);
+  border-radius: calc(var(--s) * 0.2);
+  border: var(--bw) solid var(--ink);
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink);
   background:
-    radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--c) 55%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--c) 30%, var(--shadow)), var(--shadow));
-  box-shadow: inset 0 0 0 calc(var(--u) * 4) var(--c), 0 calc(var(--u) * 4) 0 var(--outline);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.clip {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0 44%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 72%, #fff) 0%, var(--c) 52%, color-mix(in srgb, var(--c) 66%, #000) 100%);
   overflow: hidden;
-  pointer-events: none;
+  isolation: isolate;
+}
+.tappable {
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tappable:active {
+  transform: scale(0.92);
+}
+.glow {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 68%);
+  z-index: 0;
 }
 .art {
   position: absolute;
-  left: 4%;
-  top: 2%;
-  width: 92%;
-  height: 92%;
+  left: 7%;
+  top: 3%;
+  width: 86%;
+  height: 86%;
   object-fit: contain;
   z-index: 1;
+  filter: drop-shadow(0 calc(var(--s) * 0.02) 0 rgba(46, 37, 35, 0.35));
   pointer-events: none;
-  user-select: none;
 }
-.label {
-  font-family: var(--font-display);
-  font-size: calc(var(--u) * 26);
+.power {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--s) * 0.035);
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 0 calc(var(--s) * 0.07);
+  border-radius: 999px;
+  background: rgba(36, 28, 27, 0.82);
   color: #fff;
-  -webkit-text-stroke: calc(var(--u) * 5) var(--outline);
-  paint-order: stroke fill;
-  letter-spacing: 1px;
-  z-index: 1;
-}
-.lv {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  text-align: center;
   font-family: var(--font-display);
-  font-size: calc(var(--u) * 16);
-  color: #fff;
-  background: color-mix(in srgb, var(--outline) 70%, transparent);
-  z-index: 1;
+  font-size: max(15px, calc(var(--s) * 0.17));
+  line-height: 1.25;
+  white-space: nowrap;
 }
-.empty {
-  border: calc(var(--u) * 4 + 1px) dashed color-mix(in srgb, var(--kraft) 40%, var(--shadow));
-  background: color-mix(in srgb, var(--shadow) 70%, transparent);
-  box-shadow: none;
-}
-.empty .art {
-  opacity: 0.9;
-}
-.emptyLabel {
-  color: color-mix(in srgb, var(--kraft) 40%, var(--shadow));
-  -webkit-text-stroke: 0;
-}
-
-/* Junk: plain square, a little dented, patched with tape. */
-.junk {
-  border-radius: calc(var(--u) * 14) calc(var(--u) * 26) calc(var(--u) * 12) calc(var(--u) * 22);
-  transform: rotate(-1.5deg);
-}
-.patch {
+.pips {
   position: absolute;
-  right: calc(var(--u) * -6);
-  top: calc(var(--u) * 14);
-  width: calc(var(--u) * 34);
-  height: calc(var(--u) * 12);
-  background: color-mix(in srgb, var(--tape) 85%, transparent);
-  transform: rotate(38deg);
-  z-index: 2;
-}
-
-/* Gems on the top edge: Decent 1, Shiny 2, Epic 3. */
-.gem {
-  position: absolute;
-  top: calc(var(--u) * -9);
-  width: calc(var(--u) * 15);
-  height: calc(var(--u) * 15);
-  margin-left: calc(var(--u) * -7.5);
-  transform: rotate(45deg);
-  border-radius: calc(var(--u) * 3);
-  background: linear-gradient(135deg, #fff, var(--c) 45%);
-  border: calc(var(--u) * 2.5 + 1px) solid var(--outline);
+  left: calc(var(--s) * 0.06);
+  top: calc(var(--s) * 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--s) * 0.025);
   z-index: 3;
 }
-
-/* Epic: ornate corners. */
+.pip {
+  width: calc(var(--s) * 0.13);
+  height: calc(var(--s) * 0.13);
+  border-radius: 50%;
+  border: max(2px, calc(var(--s) * 0.022)) solid var(--ink);
+  box-shadow: inset 0 calc(var(--s) * -0.02) 0 rgba(0, 0, 0, 0.25);
+}
+.pip[data-tier='2'] {
+  border-radius: 28%;
+  transform: rotate(45deg);
+}
+.pip[data-tier='3'] {
+  border-radius: 18%;
+  box-shadow: 0 0 calc(var(--s) * 0.06) #fff, inset 0 calc(var(--s) * -0.02) 0 rgba(0, 0, 0, 0.25);
+}
 .corner {
   position: absolute;
-  width: calc(var(--u) * 18);
-  height: calc(var(--u) * 18);
-  border: calc(var(--u) * 2.5 + 1px) solid var(--outline);
-  background: var(--c);
-  transform: rotate(45deg);
-  border-radius: calc(var(--u) * 4);
+  right: calc(var(--s) * 0.04);
+  top: calc(var(--s) * 0.04);
   z-index: 3;
 }
-.ctl { left: calc(var(--u) * -10); top: calc(var(--u) * -10); }
-.ctr { right: calc(var(--u) * -10); top: calc(var(--u) * -10); }
-.cbl { left: calc(var(--u) * -10); bottom: calc(var(--u) * -10); }
-.cbr { right: calc(var(--u) * -10); bottom: calc(var(--u) * -10); }
 
-/* Legendary: gold frame topped with a bottle-cap crown. */
-.legendary {
-  box-shadow: inset 0 0 0 calc(var(--u) * 4) var(--c), inset 0 0 0 calc(var(--u) * 7) #fff3b0, 0 calc(var(--u) * 4) 0 var(--outline),
-    0 0 calc(var(--u) * 16) color-mix(in srgb, var(--c) 70%, transparent);
-}
-.crown {
-  position: absolute;
-  top: calc(var(--u) * -26);
-  left: 50%;
-  width: calc(var(--u) * 50);
-  height: calc(var(--u) * 28);
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, #fff3b0, var(--gold));
-  clip-path: polygon(0 100%, 0 30%, 20% 60%, 35% 0, 50% 50%, 65% 0, 80% 60%, 100% 30%, 100% 100%);
-  filter: drop-shadow(0 0 0 var(--outline));
-  z-index: 3;
-}
-.cap {
-  position: absolute;
-  top: calc(var(--u) * -8);
-  left: 50%;
-  width: calc(var(--u) * 14);
-  height: calc(var(--u) * 14);
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: #e53935;
-  border: calc(var(--u) * 2 + 1px) dashed #fff3b0;
-  z-index: 4;
-}
-
-/* Mythic: winged frame with a rainbow border. */
-.mythic {
-  border-image: var(--r-mythic-gradient) 1;
-  border-radius: 0;
-}
-.wing {
-  position: absolute;
-  top: calc(var(--u) * 14);
-  width: calc(var(--u) * 26);
-  height: calc(var(--u) * 46);
-  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--c) 60%, #fff));
-  border: calc(var(--u) * 2.5 + 1px) solid var(--outline);
-  z-index: 0;
-}
-.wingL {
-  left: calc(var(--u) * -22);
-  border-radius: 90% 10% 40% 60%;
-  transform: rotate(-14deg);
-}
-.wingR {
-  right: calc(var(--u) * -22);
-  border-radius: 10% 90% 60% 40%;
-  transform: rotate(14deg);
-}
-
-/* Mint in Box: toy package with a hang tab and a price tag. */
-.mint {
-  border-radius: calc(var(--u) * 8);
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 40%),
-    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 70%, transparent), transparent 70%),
-    linear-gradient(180deg, #4a3f6b, var(--shadow));
-}
-.hanger {
-  position: absolute;
-  top: calc(var(--u) * -18);
-  left: 50%;
-  width: calc(var(--u) * 40);
-  height: calc(var(--u) * 18);
-  transform: translateX(-50%);
-  background: var(--c);
-  border: calc(var(--u) * 2.5 + 1px) solid var(--outline);
-  border-bottom: 0;
-  border-radius: calc(var(--u) * 8) calc(var(--u) * 8) 0 0;
-  z-index: 3;
-}
-.hanger::after {
+/* Rarity flourishes. */
+.shine::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 30%;
-  width: 50%;
-  height: 36%;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: var(--outline);
-}
-.price {
-  position: absolute;
-  right: calc(var(--u) * -10);
-  bottom: calc(var(--u) * 18);
-  padding: 0 calc(var(--u) * 4);
-  font-family: var(--font-display);
-  font-size: calc(var(--u) * 13);
-  color: var(--outline);
-  background: #ffeb3b;
-  border: calc(var(--u) * 2 + 1px) solid var(--outline);
-  border-radius: calc(var(--u) * 3);
-  transform: rotate(-12deg);
-  z-index: 3;
-}
-
-/* Permanent glint: a diagonal shine sweeps across rare icons every 3 s (0.6 s sweep). */
-@keyframes glint {
-  0%, 80% { transform: translateX(-180%) rotate(25deg); }
-  100% { transform: translateX(320%) rotate(25deg); }
-}
-.glint::after {
-  content: '';
-  position: absolute;
-  top: -40%;
+  top: -20%;
+  bottom: -20%;
   left: 0;
-  width: 32%;
-  height: 180%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
-  animation: glint 3s ease-in-out infinite;
+  width: 34%;
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
+  transform: translateX(-180%) skewX(-20deg);
+  animation: sweep 3.2s ease-in-out infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+@keyframes sweep {
+  0%, 62% { transform: translateX(-180%) skewX(-20deg); }
+  100% { transform: translateX(400%) skewX(-20deg); }
+}
+.legendary {
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.14) rgba(255, 196, 40, 0.75);
+}
+.mythic {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0 44%, rgba(255, 255, 255, 0) 44%) padding-box,
+    linear-gradient(160deg, #ff7a8a, #ff4f6d 50%, #b8203f) padding-box,
+    conic-gradient(from var(--spin, 0deg), #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #ff5252) border-box;
+  animation: spin 3s linear infinite;
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.16) rgba(255, 79, 163, 0.8);
+}
+.mint {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 44%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(160deg, #ffffff, #fff1c7 45%, #ffcf4a);
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.2) rgba(255, 236, 160, 0.95);
+}
+@property --spin {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes spin {
+  to { --spin: 360deg; }
+}
+
+.empty {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  border-style: dashed;
+  box-shadow: none;
+}
+.ghost {
+  position: absolute;
+  inset: 18%;
+  width: 64%;
+  height: 64%;
+  object-fit: contain;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine::after,
+  .mythic {
+    animation: none;
+  }
 }

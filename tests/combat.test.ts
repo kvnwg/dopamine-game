@@ -51,7 +51,7 @@ describe('player stats', () => {
       uid: 1, baseId: 'weapon_bbq_spatula', slot: 'weapon', rarity: 'junk', level: 1,
       main: [{ stat: 'ATK', mode: 'flat', value: 5 }],
       subs: [{ affixId: 'ATK_PCT', stat: 'ATK', mode: 'pct', value: 10 }, { affixId: 'CRIT', stat: 'CRIT', mode: 'flat', value: 500 }],
-      bonus: [], mintPerkId: null, power: 0,
+      bonus: [], mintPerkId: null, enchants: [], locked: false, power: 0,
     };
     const s = computeStats(st);
     expect(s.HP).toBeCloseTo(100 + 12 * 10);
@@ -123,7 +123,11 @@ describe('alley progression', () => {
     const { state, events } = run(freshState(), 60, rng);
     expect(state.stage.highestCleared).toBeGreaterThanOrEqual(1);
     expect(events.filter((e) => e.type === 'waveClear').length).toBeGreaterThanOrEqual(5);
-    expect(state.currencies.bags).toBeGreaterThan(BAL.start.bags);
+    // Every wave drops at least one Trash Bag, which the roller spends right away as a bonus roll.
+    const dropped = events.reduce((n, e) => n + (e.type === 'bagDrop' ? e.count : 0), 0);
+    expect(dropped).toBeGreaterThanOrEqual(5);
+    expect(events.filter((e) => e.type === 'roll' && e.source === 'bag').length).toBeGreaterThanOrEqual(BAL.start.bags);
+    expect(state.roll.count).toBeGreaterThan(dropped);
   });
 
   it('stops before a mini-boss stage and waits for Fight Boss', () => {

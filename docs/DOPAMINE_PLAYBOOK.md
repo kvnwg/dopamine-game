@@ -261,17 +261,17 @@ A few tricks raise spending for a week, then bring refunds, store rejections, re
 
 ## Status in the build
 
-What Milestone 1 already does from this playbook (the rest is scheduled in `DECISIONS.md`):
+What the build already does from this playbook (the rest is scheduled in `DECISIONS.md`):
 
-- Scripted Legendary on the very first dive (first 10 seconds).
-- Rising rattle: 3 beats for Junk/Decent/Shiny, 4 for Epic, 5 for Legendary, 6 for Mythic and Mint.
-- Color ladder: the glow climbs the rarity colors to the rolled rarity, holding a little longer on each step.
-- Light leaks through the lid: beam count grows with rarity.
-- Reveal intensity scales by tier (puff → sparkle → burst → shake + tint → white flash + banner + gold rays).
+- Scripted Legendary on the very first roll (first few seconds).
+- Constant small wins: a roll pops out of the dumpster every 2 seconds, faster with upgrades and Trash Bag bonus rolls.
+- A visible variable-ratio beat: the Lucky Roll meter fills toward a x2-luck roll.
+- Legendary and better: the dumpster shakes and glows in the rarity's color with rising rattle beats, a riser and a silence drop, then a full-screen reveal (rays, confetti, "1 in X" odds, NEW BEST FIND!). Big rolls never get lost; they queue.
+- Reveal intensity scales by tier (pop → sting + burst for Epic → full reveal for Legendary, Mythic and Mint).
 - Haptics per tier using Capacitor presets (custom patterns need the native plugin in M5).
-- Near-miss gold flash on 10% of Epic rolls; free dives only.
-- Hot dumpster: smoke/glow driven by the real bad-luck counter, with a visible "Epic+ guaranteed in N" pity readout.
-- Squash on every button press; instant (< 100 ms) visual response on tap.
-- Flash safety: at most one flash per reveal; a Reduce Flashing setting removes it.
-- Breathing upgrade button when the Dumpster upgrade is affordable.
-- Odds screen generated from the same table the code rolls from.
+- Bad-luck protection with a visible "Epic+ guaranteed in N" readout.
+- Every hit lands with a slash, an impact star and a number; crits add hit-stop, a bigger number and a shake; coins arc up into the gold counter.
+- Squash on every button press; instant (< 100 ms) visual response on tap; count-up numbers.
+- Flash safety: at most one flash per reveal; Reduce Flashing removes it, Reduce Motion removes shakes and lunges.
+- Breathing buttons when a boss fight or a Dumpster upgrade is ready, and "!" badges on tabs with something to do.
+- Odds screen generated from the same function the code rolls with; the odds shown are the real ones.

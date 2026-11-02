@@ -1,21 +1,35 @@
 import type { ReactNode } from 'react';
+import { t } from '../i18n';
 import s from './popups.module.css';
 
-/** Popup on a kraft cardboard panel held on with tape. */
-export function Modal({ title, subtitle, onClose, children }: { title?: ReactNode; subtitle?: ReactNode; onClose?: () => void; children: ReactNode }) {
+/** Popup card: colored title ribbon, cream body, round red close button. */
+export function Modal({
+  title, subtitle, onClose, children, tone = 'blue', wide,
+}: {
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  onClose?: () => void;
+  children: ReactNode;
+  tone?: 'blue' | 'gold' | 'green' | 'purple' | 'red';
+  wide?: boolean;
+}) {
   return (
     <div className={s.overlay} onClick={onClose}>
-      <div className={`${s.card} cardboard`} onClick={(e) => e.stopPropagation()}>
-        <span className="tape tl" />
-        <span className="tape br" />
+      <div className={`${s.card} ${wide ? s.wide : ''}`} onClick={(e) => e.stopPropagation()}>
+        {title && (
+          <div className={`${s.ribbon} ${s[tone]}`}>
+            <span className={s.title}>{title}</span>
+          </div>
+        )}
         {onClose && (
-          <button className={s.close} onClick={onClose} aria-label="close">
+          <button className={s.close} onClick={onClose} aria-label={t('common.close')}>
             ✕
           </button>
         )}
-        {title && <h2 className={s.title}>{title}</h2>}
-        {subtitle && <p className={s.subtitle}>{subtitle}</p>}
-        {children}
+        <div className={s.body}>
+          {subtitle && <p className={s.subtitle}>{subtitle}</p>}
+          {children}
+        </div>
       </div>
     </div>
   );

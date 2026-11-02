@@ -6,7 +6,9 @@ import { dispatch, useGame } from '../../app/store';
 import { createBattleGame } from '../../render/BattleScene';
 import { haptics } from '../../services';
 import { t } from '../i18n';
-import s from './panels.module.css';
+import { SkullIcon, SwordIcon } from './Icons';
+import { TopHud } from './TopHud';
+import s from './hud.module.css';
 
 export function stageLabel(stage: number): string {
   const info = stageInfo(stage);
@@ -30,41 +32,31 @@ export function BattlePanel() {
   const highest = useGame((g) => g.stage.highestCleared);
   const info = stageInfo(stage);
   const waves = BAL.stages.wavesPerStage;
-  const farming = stage <= highest;
 
   return (
     <div className={s.battle}>
       <div className={s.canvasHost} ref={host} />
-      <div className={s.vignette} />
-      <div className={s.stageLabel}>
+      <TopHud />
+      <div className={s.stageBox}>
         <span className={s.stageName}>{stageLabel(stage)}</span>
-        <div className={s.waveDots}>
-          {Array.from({ length: waves }, (_, i) => (
-            <span
-              key={i}
-              className={[
-                s.waveDot,
-                i < wave ? s.waveDotDone : '',
-                i === wave ? s.waveDotNow : '',
-                i === waves - 1 && info.kind !== 'regular' ? s.waveDotBoss : '',
-              ].join(' ')}
-            />
-          ))}
+        <div className={s.waveTrack}>
+          {Array.from({ length: waves }, (_, i) => {
+            const boss = i === waves - 1 && info.kind !== 'regular';
+            return (
+              <span key={i} className={s.waveSeg}>
+                {i > 0 && <span className={`${s.waveLine} ${i <= wave ? s.waveLineDone : ''}`} />}
+                {boss ? (
+                  <SkullIcon size={i === wave ? 50 : 40} className={i < wave ? s.waveDone : ''} />
+                ) : (
+                  <span className={[s.waveDot, i < wave ? s.waveDotDone : '', i === wave ? s.waveDotNow : ''].join(' ')} />
+                )}
+              </span>
+            );
+          })}
         </div>
-        {farming && <span className={s.farmTag}>{t(mode === 'farm' ? 'battle.farming' : 'battle.replaying')}</span>}
+        {mode === 'farm' && stage <= highest && <span className={s.farmTag}>{t('battle.farming')}</span>}
       </div>
       <div className={s.battleActions}>
-        {bossStage !== null && (
-          <button
-            className={`btn ${s.fightBoss}`}
-            onClick={() => {
-              haptics.impact('medium');
-              dispatch({ type: 'fightBoss' });
-            }}
-          >
-            {t(stageInfo(bossStage).kind === 'boss' ? 'battle.fightBoss' : 'battle.fightMiniBoss')}
-          </button>
-        )}
         {canPush && (
           <button
             className="btn small"
@@ -73,15 +65,24 @@ export function BattlePanel() {
               dispatch({ type: 'pushStage' });
             }}
           >
-            {t('battle.tryAgain', { stage: stageLabel(highest + 1) })}
+            {t('battle.tryNext', { stage: stageLabel(highest + 1) })}
+          </button>
+        )}
+        <span style={{ flex: 1 }} />
+        {bossStage !== null && (
+          <button
+            className="btn red breathe"
+            onClick={() => {
+              haptics.impact('medium');
+              dispatch({ type: 'fightBoss' });
+            }}
+          >
+            <SwordIcon size={50} />
+            {t(stageInfo(bossStage).kind === 'boss' ? 'battle.fightBoss' : 'battle.fightMiniBoss')}
           </button>
         )}
       </div>
-      {hint && (
-        <div className={s.hint}>
-          {t('battle.toughHint')} <span className={s.hintArrow}>👇</span>
-        </div>
-      )}
+      {hint && <div className={s.hint}>{t('battle.toughHint')}</div>}
     </div>
   );
 }

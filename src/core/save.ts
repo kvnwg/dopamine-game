@@ -16,8 +16,33 @@ export const backupKey = (i: number) => `${SAVE_KEY}_backup_${i}`;
 /** Migration from version N to N+1, keyed by N. Add one for every saveVersion bump. */
 export type Migration = (save: Record<string, unknown>) => Record<string, unknown>;
 export const MIGRATIONS: Record<number, Migration> = {
-  // Example for the next bump:
-  // 1: (s) => ({ ...s, newField: defaultValue, saveVersion: 2 }),
+  /** v1 -> v2: the RNG-roller redesign (inventory, luck, upgrades, rebirth, enchantments). */
+  1: (s) => {
+    type AnyItem = Record<string, unknown>;
+    const fixItem = (it: AnyItem | null) => (it ? { enchants: [], locked: false, ...it } : null);
+    const equipped = Object.fromEntries(
+      Object.entries((s.equipped ?? {}) as Record<string, AnyItem | null>).map(([k, v]) => [k, fixItem(v)]),
+    );
+    const pending = s.pendingItem as AnyItem | null | undefined;
+    const battle = { ...(s.battle as Record<string, unknown>) };
+    battle.enemies = ((battle.enemies ?? []) as AnyItem[]).map((e) => ({ burnDps: 0, burnTime: 0, burnShown: 0, ...e }));
+    const rest = { ...s };
+    delete rest.pendingItem;
+    delete rest.autoDive;
+    return {
+      ...rest,
+      saveVersion: 2,
+      equipped,
+      battle,
+      inventory: pending ? [fixItem(pending)] : [],
+      autoEquip: true,
+      roll: { timer: 0, bagTimer: 0, count: 0, sinceLucky: 0 },
+      upgrades: {},
+      rebirths: 0,
+      luckBoostEndsAt: null,
+      records: { bestOdds: 0, bestItemName: '', bestRarity: null },
+    };
+  },
 };
 
 export function migrate(

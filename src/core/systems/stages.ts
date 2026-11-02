@@ -84,6 +84,9 @@ function makeEnemy(def: EnemyDef, stage: number, uid: number): EnemyState {
     atkProgress: 0,
     specialTimer: 0,
     enraged: false,
+    burnDps: 0,
+    burnTime: 0,
+    burnShown: 0,
   };
 }
 

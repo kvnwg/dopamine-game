@@ -8,8 +8,9 @@ import enemies from '../src/data/enemies.json';
 import neighborhoods from '../src/data/neighborhoods.json';
 import strings from '../src/data/strings.en.json';
 import assets from '../src/data/assets.json';
+import enchants from '../src/data/enchants.json';
 
-const raw = { balance, items, affixes, themes, enemies, neighborhoods, strings, assets };
+const raw = { balance, items, affixes, themes, enemies, neighborhoods, strings, assets, enchants };
 
 describe('game data', () => {
   it('validates at boot', () => {

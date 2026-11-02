@@ -1,8 +1,8 @@
 /** Dev cheat panel (dev builds, or VITE_CHEATS=true). Never shipped in release builds. */
 import { useState } from 'react';
 import { RARITIES, type Rarity } from '../data';
-import { computeStats, playerPower, type Cheat } from '../core';
-import { dispatch, getGame, useGame } from '../app/store';
+import { computeStats, currentLuck, playerPower, type Cheat } from '../core';
+import { clock, dispatch, getGame, useGame } from '../app/store';
 import { resetSave, saveNow, skipTime } from '../app/session';
 import s from './dev.module.css';
 
@@ -70,7 +70,7 @@ export function DevPanel() {
         <div className={s.group}>
           <div className={s.label}>Systems / Save</div>
           <div className={s.row}>
-            <button className={s.b} onClick={() => cheat({ kind: 'unlockAll' })}>Unlock all</button>
+            <button className={s.b} onClick={() => cheat({ kind: 'luckBoost', seconds: 60 })}>Luck potion 60s</button>
             <button className={s.b} onClick={() => void saveNow()}>Save now</button>
             <button
               className={s.b}
@@ -93,7 +93,7 @@ export function DevPanel() {
           {st.ATK_SPD.toFixed(2)} · CRIT {st.CRIT.toFixed(1)}% · CDMG {st.CRIT_DMG.toFixed(0)}% · DODGE {st.DODGE.toFixed(1)}% · LS{' '}
           {st.LIFESTEAL.toFixed(1)}% · REGEN {st.REGEN.toFixed(1)} · BAG {st.BAG_FIND.toFixed(1)}%
           <br />
-          power {playerPower(getGame())} · dives {g.dumpster.totalDives} · dry streak {g.dumpster.dryStreak} · play{' '}
+          power {playerPower(getGame())} · rolls {g.roll.count} · luck ×{currentLuck(g, clock.now()).toFixed(2)} · rebirths {g.rebirths} · dry streak {g.dumpster.dryStreak} · play{' '}
           {(g.playTimeMs / 60000).toFixed(1)}m · mode {g.stage.mode} · best {g.stage.highestCleared}
         </div>
       </div>

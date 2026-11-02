@@ -3,6 +3,8 @@ import { BAL, DATA, STAT_IDS, SLOTS, type Mod, type StatId } from '../../data';
 import type { GameState } from '../state';
 import type { Item, Stats } from '../types';
 import { codexBonusMods } from './codex';
+import { enchantMods } from './enchants';
+import { upgradeEffects } from './upgrades';
 
 export function zeroStats(): Stats {
   return Object.fromEntries(STAT_IDS.map((s) => [s, 0])) as Stats;
@@ -15,6 +17,7 @@ export function itemMods(item: Item): Mod[] {
     const perk = DATA.mintPerksById.get(item.mintPerkId);
     if (perk) mods.push(...perk.mods);
   }
+  mods.push(...enchantMods(item.enchants ?? []));
   return mods;
 }
 
@@ -23,7 +26,9 @@ export interface StatBreakdown {
   pct: Stats;
 }
 
-export function statSources(state: Pick<GameState, 'player' | 'equipped' | 'codex' | 'neighborhoodsCleared'>): StatBreakdown {
+type StatState = Pick<GameState, 'player' | 'equipped' | 'codex' | 'neighborhoodsCleared'> & Partial<Pick<GameState, 'upgrades'>>;
+
+export function statSources(state: StatState): StatBreakdown {
   const flat = zeroStats();
   const pct = zeroStats();
   const lvl = state.player.level - 1;
@@ -38,10 +43,14 @@ export function statSources(state: Pick<GameState, 'player' | 'equipped' | 'code
   }
   codexBonusMods(state.codex.entries.length).forEach(apply);
   flat.BAG_FIND += state.neighborhoodsCleared.length * BAL.stages.neighborhoodClearBonus.bagFind;
+  const up = upgradeEffects({ upgrades: state.upgrades ?? {} });
+  pct.ATK += up.atkPct;
+  pct.HP += up.hpPct;
+  flat.BAG_FIND += up.bagFind;
   return { flat, pct };
 }
 
-export function computeStats(state: Pick<GameState, 'player' | 'equipped' | 'codex' | 'neighborhoodsCleared'>): Stats {
+export function computeStats(state: StatState): Stats {
   const { flat, pct } = statSources(state);
   const out = zeroStats();
   for (const s of STAT_IDS) out[s] = flat[s] * (1 + pct[s] / 100);

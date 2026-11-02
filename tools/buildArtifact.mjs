@@ -25,12 +25,13 @@ const css = readFileSync(join(dir, cssRef[1]), 'utf8');
 if (/<\/style/i.test(css)) throw new Error('Stylesheet contains </style>');
 if (/url\((?!["']?data:)/.test(css)) throw new Error('Stylesheet still references external files');
 
-const page = `<title>Dumpster Legend</title>
+const page = `<meta charset="utf-8">
+<title>Dumpster Legend</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-  /* One deliberate visual world: the game is always night-time dark, in either viewer theme. */
+  /* The game keeps its own look in either viewer theme, letterboxed on a dark navy background. */
   :root { color-scheme: dark; --gutter-x: 16px; }
-  html, body { height: 100%; background: #07080f; color: #f6efe2; }
+  html, body { height: 100%; background: #0d0f19; color: #f6efe2; }
 </style>
 <style>
 ${css}

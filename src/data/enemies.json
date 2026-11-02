@@ -1,0 +1,62 @@
+[
+  {
+    "id": "alley_rat",
+    "name": "Alley Rat",
+    "kind": "regular",
+    "hp": 12,
+    "atk": 6.5,
+    "def": 0,
+    "atkSpd": 1
+  },
+  {
+    "id": "porch_pigeon",
+    "name": "Porch Pigeon",
+    "kind": "regular",
+    "hp": 9,
+    "atk": 5.5,
+    "def": 0,
+    "atkSpd": 1.4
+  },
+  {
+    "id": "punk_raccoon",
+    "name": "Punk Raccoon",
+    "kind": "regular",
+    "hp": 16,
+    "atk": 8.5,
+    "def": 1,
+    "atkSpd": 0.9
+  },
+  {
+    "id": "big_earl",
+    "name": "Big Earl the Rat King",
+    "kind": "miniboss",
+    "hp": 30,
+    "atk": 10,
+    "def": 2,
+    "atkSpd": 0.8
+  },
+  {
+    "id": "vinnie_two_lids",
+    "name": "Vinnie \"Two Lids\"",
+    "kind": "miniboss",
+    "hp": 30,
+    "atk": 9,
+    "def": 3,
+    "atkSpd": 1
+  },
+  {
+    "id": "officer_dale",
+    "name": "Officer Dale, Animal Control",
+    "kind": "boss",
+    "hp": 12,
+    "atk": 4,
+    "def": 4,
+    "atkSpd": 0.8,
+    "special": {
+      "type": "heavyHit",
+      "name": "Catch Pole",
+      "everySeconds": 6,
+      "damageMult": 2.5
+    }
+  }
+]

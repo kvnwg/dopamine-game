@@ -1,0 +1,63 @@
+{
+  "files": {},
+  "placeholders": {
+    "palette": {
+      "nightSky": "#1B1E3C",
+      "shadow": "#12142A",
+      "walls": "#4A3A5C",
+      "ground": "#2E3A4A",
+      "dumpster": "#2F6B4F",
+      "fur": "#8C8C99",
+      "mask": "#2A2A33",
+      "belly": "#E8E0D0",
+      "window": "#FFB347",
+      "neonPink": "#FF3EA5",
+      "neonCyan": "#2EE6FF",
+      "neonLime": "#B6FF3B",
+      "kraft": "#C49A6C",
+      "tape": "#F2E6C9",
+      "outline": "#1A1022",
+      "gold": "#FFB300",
+      "danger": "#FF5A5A",
+      "heal": "#69F0AE"
+    },
+    "rarities": {
+      "junk":      { "color": "#9E9E9E" },
+      "decent":    { "color": "#4CAF50" },
+      "shiny":     { "color": "#2196F3" },
+      "epic":      { "color": "#9C27B0" },
+      "legendary": { "color": "#FFB300" },
+      "mythic":    { "color": "#FF4FA3", "gradient": ["#FF5252", "#FFB300", "#69F0AE", "#40C4FF", "#E040FB"] },
+      "mint":      { "color": "#FFF4D6", "gradient": ["#FFFFFF", "#FFF4D6", "#FFD54F", "#FFFFFF"] }
+    },
+    "enemies": {
+      "alley_rat":       { "shape": "rat",         "color": "#7A6A72", "accent": "#D9A1AE", "size": 120, "label": "RAT" },
+      "porch_pigeon":    { "shape": "pigeon",      "color": "#8E9AAF", "accent": "#5FB49C", "size": 120, "label": "PIGEON" },
+      "punk_raccoon":    { "shape": "raccoon",     "color": "#77707F", "accent": "#E53935", "size": 170, "label": "PUNK" },
+      "big_earl":        { "shape": "ratKing",     "color": "#6A5A62", "accent": "#C49A6C", "size": 330, "label": "BIG EARL" },
+      "vinnie_two_lids": { "shape": "raccoonBoss", "color": "#6E6878", "accent": "#7E57C2", "size": 340, "label": "VINNIE" },
+      "officer_dale":    { "shape": "officer",     "color": "#2B4C7E", "accent": "#F2C14E", "size": 440, "label": "ANIMAL CONTROL" }
+    },
+    "backgrounds": {
+      "bg_suburbs": {
+        "sky": "#1B1E3C",
+        "skyLow": "#3A2C4E",
+        "skyline": "#151733",
+        "walls": "#4A3A5C",
+        "ground": "#2E3A4A",
+        "neon": "#FF3EA5",
+        "neon2": "#2EE6FF",
+        "window": "#FFB347",
+        "grade": "#4A3A5C",
+        "gradeAlpha": 0.12,
+        "sign": "bg.suburbs.sign",
+        "signSub": "bg.suburbs.signSub"
+      }
+    },
+    "raccoon": { "body": "#8C8C99", "mask": "#2A2A33", "belly": "#E8E0D0", "tail": "#8C8C99", "brow": "#C9C9D6" },
+    "slots": {
+      "hat": "HAT", "mask": "MSK", "jacket": "JKT", "weapon": "WPN", "shield": "SHD",
+      "gloves": "GLV", "sneakers": "SNK", "backpack": "BAG", "bling": "BLG", "ring": "RNG"
+    }
+  }
+}

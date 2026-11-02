@@ -1,0 +1,145 @@
+{
+  "tickRate": 10,
+  "player": {
+    "base": {
+      "HP": 100, "ATK": 10, "DEF": 0, "ATK_SPD": 1.0, "CRIT": 5, "CRIT_DMG": 150,
+      "DODGE": 0, "LIFESTEAL": 0, "REGEN": 1, "BAG_FIND": 0, "COIN_FIND": 0, "BOSS_DMG": 0
+    },
+    "perLevel": {
+      "HP": 12, "ATK": 1.5, "DEF": 0.5, "ATK_SPD": 0, "CRIT": 0, "CRIT_DMG": 0,
+      "DODGE": 0, "LIFESTEAL": 0, "REGEN": 0.1, "BAG_FIND": 0, "COIN_FIND": 0, "BOSS_DMG": 0
+    },
+    "caps": { "CRIT": 75, "DODGE": 60, "ATK_SPD": 5.0 },
+    "levelCap": 100,
+    "xpCurve": { "base": 60, "exponent": 1.7 }
+  },
+  "combat": {
+    "damageVariance": { "min": 0.95, "max": 1.05 },
+    "defConstant": 100,
+    "engagedEnemies": 1,
+    "walkSeconds": 1.2,
+    "deathSeconds": 1.5,
+    "waveHealPct": 20,
+    "minDamage": 1
+  },
+  "stages": {
+    "wavesPerStage": 5,
+    "enemiesPerWave": { "min": 3, "max": 5 },
+    "miniBossLocalStages": [5, 10, 15],
+    "bossLocalStage": 20,
+    "scaling": { "hp": 1.13, "atk": 1.10, "def": 1.08 },
+    "miniBoss": { "hpMult": 5, "atkMult": 1.5, "bags": 5, "xpMult": 5 },
+    "boss": { "hpMult": 10, "atkMult": 2, "bags": 15, "xpMult": 10, "coinBurstKills": 20 },
+    "neighborhoodClearBonus": { "offlinePct": 10, "bagFind": 10 }
+  },
+  "drops": {
+    "killCoins": { "base": 5, "growth": 1.10 },
+    "killXp": { "base": 3, "growth": 1.09 },
+    "bagsPerWave": 1
+  },
+  "rarities": {
+    "junk":      { "mult": 1.0,  "substats": 0, "recycleXp": 5,    "recycleCoins": 10 },
+    "decent":    { "mult": 1.25, "substats": 1, "recycleXp": 12,   "recycleCoins": 25 },
+    "shiny":     { "mult": 1.6,  "substats": 1, "recycleXp": 30,   "recycleCoins": 60 },
+    "epic":      { "mult": 2.1,  "substats": 2, "recycleXp": 80,   "recycleCoins": 150 },
+    "legendary": { "mult": 2.8,  "substats": 3, "recycleXp": 250,  "recycleCoins": 450 },
+    "mythic":    { "mult": 3.8,  "substats": 4, "recycleXp": 800,  "recycleCoins": 1400 },
+    "mint":      { "mult": 5.2,  "substats": 4, "recycleXp": 2500, "recycleCoins": 4000 }
+  },
+  "recycle": { "perItemLevel": 0.05 },
+  "items": {
+    "levelScalePerLevel": 0.09,
+    "substatLevelScale": 0.05,
+    "levelOffset": { "min": -2, "max": 1 },
+    "levelCap": 100,
+    "slots": {
+      "hat":      { "main": [{ "stat": "HP", "base": 30 }] },
+      "mask":     { "main": [{ "stat": "CRIT", "base": 1.5 }] },
+      "jacket":   { "main": [{ "stat": "HP", "base": 18 }, { "stat": "DEF", "base": 2 }] },
+      "weapon":   { "main": [{ "stat": "ATK", "base": 6 }] },
+      "shield":   { "main": [{ "stat": "DEF", "base": 3 }] },
+      "gloves":   { "main": [{ "stat": "ATK_SPD", "base": 0.04 }] },
+      "sneakers": { "main": [{ "stat": "DODGE", "base": 1.2 }] },
+      "backpack": { "main": [{ "stat": "BAG_FIND", "base": 2 }] },
+      "bling":    { "main": [{ "stat": "CRIT_DMG", "base": 6 }] },
+      "ring":     { "main": [{ "stat": "LIFESTEAL", "base": 1 }] }
+    }
+  },
+  "power": {
+    "flat": {
+      "HP": 1, "ATK": 6, "DEF": 4, "ATK_SPD": 250, "CRIT": 8, "CRIT_DMG": 2,
+      "DODGE": 8, "LIFESTEAL": 10, "REGEN": 15, "BAG_FIND": 6, "COIN_FIND": 3, "BOSS_DMG": 3
+    },
+    "pct": {
+      "HP": 6, "ATK": 8, "DEF": 4, "ATK_SPD": 8, "CRIT": 0, "CRIT_DMG": 0,
+      "DODGE": 0, "LIFESTEAL": 0, "REGEN": 0, "BAG_FIND": 0, "COIN_FIND": 0, "BOSS_DMG": 0
+    },
+    "perPlayerLevel": 10
+  },
+  "dumpster": {
+    "maxLevel": 30,
+    "rarityTable": [
+      { "level": 1,  "weights": { "junk": 72, "decent": 24, "shiny": 3.6, "epic": 0.4, "legendary": 0,    "mythic": 0,    "mint": 0 } },
+      { "level": 5,  "weights": { "junk": 55, "decent": 32, "shiny": 10,  "epic": 2.6, "legendary": 0.4,  "mythic": 0,    "mint": 0 } },
+      { "level": 10, "weights": { "junk": 38, "decent": 35, "shiny": 18,  "epic": 7,   "legendary": 1.8,  "mythic": 0.2,  "mint": 0 } },
+      { "level": 15, "weights": { "junk": 25, "decent": 33, "shiny": 24,  "epic": 13,  "legendary": 4.3,  "mythic": 0.65, "mint": 0.05 } },
+      { "level": 20, "weights": { "junk": 15, "decent": 28, "shiny": 28,  "epic": 19,  "legendary": 8,    "mythic": 1.8,  "mint": 0.2 } },
+      { "level": 25, "weights": { "junk": 8,  "decent": 22, "shiny": 30,  "epic": 24,  "legendary": 12.5, "mythic": 3.2,  "mint": 0.3 } },
+      { "level": 30, "weights": { "junk": 4,  "decent": 16, "shiny": 30,  "epic": 28,  "legendary": 17,   "mythic": 4.5,  "mint": 0.5 } }
+    ],
+    "slotWeights": {
+      "hat": 1, "mask": 1, "jacket": 1, "weapon": 1, "shield": 1,
+      "gloves": 1, "sneakers": 1, "backpack": 1, "bling": 1, "ring": 1
+    },
+    "upgradeCost": { "base": 400, "growth": 1.85 },
+    "upgradeTime": { "baseSeconds": 60, "growth": 1.65, "capSeconds": 86400 },
+    "gemSpeedup": { "minutesPerGem": 2, "minGems": 1 },
+    "adSpeedup": { "minutes": 30, "perDay": 3 },
+    "badLuck": { "minDumpsterLevel": 3, "drySpell": 40, "minRarity": "epic" },
+    "nearMissTeaseChance": 0.1,
+    "uniqueLegendaryChance": 0.15,
+    "tutorialItem": { "baseId": "hat_traffic_cone", "rarity": "legendary", "level": 1 },
+    "fullFlipMinRarity": "legendary",
+    "defaultTheme": "curbside"
+  },
+  "autoDive": {
+    "unlockPlayMinutes": 8,
+    "intervalSeconds": 0.6,
+    "defaultKeepMinRarity": "legendary"
+  },
+  "codex": {
+    "entriesPerBonus": 10,
+    "gemsPerBonus": 10,
+    "bonusCycle": [
+      { "stat": "ATK", "mode": "pct", "value": 1 },
+      { "stat": "HP", "mode": "pct", "value": 1 },
+      { "stat": "BAG_FIND", "mode": "flat", "value": 1 }
+    ]
+  },
+  "offline": {
+    "capHours": 8,
+    "efficiency": 0.75,
+    "rateWindowMinutes": 10,
+    "minRateMinutes": 1,
+    "fallbackStageSeconds": 75,
+    "fallbackEnemiesPerWave": 4,
+    "adDoubleMinAwayMinutes": 30,
+    "minAwaySecondsForPopup": 60,
+    "maxTickGapSeconds": 5
+  },
+  "start": { "coins": 0, "gems": 50, "bags": 3 },
+  "save": { "autosaveSeconds": 30, "backups": 2 },
+  "feel": {
+    "lidFlipSeconds": 0.95,
+    "lidRattleSeconds": 0.45,
+    "teaseFlashSeconds": 0.15,
+    "autoFlipSeconds": 0.25,
+    "legendarySlowMoSeconds": 0.3,
+    "rattleBeatSeconds": 0.15,
+    "rattleBeatsByRarity": { "junk": 3, "decent": 3, "shiny": 3, "epic": 4, "legendary": 5, "mythic": 6, "mint": 6 },
+    "revealSecondsByRarity": { "junk": 0.2, "decent": 0.3, "shiny": 0.5, "epic": 1.0, "legendary": 2.5, "mythic": 3.5, "mint": 5.0 },
+    "hotDumpsterStartPct": 50,
+    "maxCatchUpTicksPerFrame": 50
+  },
+  "mockAds": { "watchSeconds": 1.5 }
+}

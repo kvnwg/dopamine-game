@@ -1,0 +1,48 @@
+{
+  "affixes": [
+    { "id": "ATK_PCT",     "stat": "ATK",       "mode": "pct",  "min": 2,   "max": 4 },
+    { "id": "HP_PCT",      "stat": "HP",        "mode": "pct",  "min": 2,   "max": 5 },
+    { "id": "DEF_PCT",     "stat": "DEF",       "mode": "pct",  "min": 2,   "max": 5 },
+    { "id": "ATK_SPD_PCT", "stat": "ATK_SPD",   "mode": "pct",  "min": 1,   "max": 3 },
+    { "id": "CRIT",        "stat": "CRIT",      "mode": "flat", "min": 1,   "max": 2.5 },
+    { "id": "CRIT_DMG",    "stat": "CRIT_DMG",  "mode": "flat", "min": 4,   "max": 10 },
+    { "id": "DODGE",       "stat": "DODGE",     "mode": "flat", "min": 0.8, "max": 2 },
+    { "id": "LIFESTEAL",   "stat": "LIFESTEAL", "mode": "flat", "min": 0.5, "max": 1.5 },
+    { "id": "REGEN",       "stat": "REGEN",     "mode": "flat", "min": 0.3, "max": 1 },
+    { "id": "BAG_FIND",    "stat": "BAG_FIND",  "mode": "flat", "min": 1,   "max": 3 },
+    { "id": "COIN_FIND",   "stat": "COIN_FIND", "mode": "flat", "min": 2,   "max": 6 },
+    { "id": "BOSS_DMG",    "stat": "BOSS_DMG",  "mode": "flat", "min": 3,   "max": 8 }
+  ],
+  "mintPerks": [
+    {
+      "id": "collectors_aura",
+      "name": "Collector's Aura",
+      "text": "Never opened. Never defeated.",
+      "mods": [{ "stat": "ATK", "mode": "pct", "value": 8 }, { "stat": "HP", "mode": "pct", "value": 8 }]
+    },
+    {
+      "id": "original_packaging",
+      "name": "Original Packaging",
+      "text": "The twist ties alone are worth a fortune.",
+      "mods": [{ "stat": "DEF", "mode": "pct", "value": 15 }]
+    },
+    {
+      "id": "limited_edition",
+      "name": "Limited Edition",
+      "text": "Only 12 were ever thrown away.",
+      "mods": [{ "stat": "BAG_FIND", "mode": "flat", "value": 5 }, { "stat": "COIN_FIND", "mode": "flat", "value": 10 }]
+    },
+    {
+      "id": "still_has_tags",
+      "name": "Still Has Tags",
+      "text": "Returnable. Not that you would.",
+      "mods": [{ "stat": "ATK_SPD", "mode": "pct", "value": 10 }]
+    },
+    {
+      "id": "certificate_of_authenticity",
+      "name": "Certificate of Authenticity",
+      "text": "Signed by a very official raccoon.",
+      "mods": [{ "stat": "CRIT", "mode": "flat", "value": 3 }, { "stat": "CRIT_DMG", "mode": "flat", "value": 15 }]
+    }
+  ]
+}

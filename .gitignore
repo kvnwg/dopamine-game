@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+coverage/
+.vite/
+# Capacitor native build outputs (native projects themselves are committed)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/

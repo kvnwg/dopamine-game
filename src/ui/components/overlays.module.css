@@ -1,0 +1,226 @@
+.reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-12px, 6px); }
+  40% { transform: translate(10px, -8px); }
+  60% { transform: translate(-6px, 4px); }
+  80% { transform: translate(4px, -2px); }
+}
+.shake {
+  animation: shake 300ms ease-out;
+}
+@keyframes tintIn {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0.85; }
+}
+.tint {
+  position: absolute;
+  inset: 0;
+  animation: tintIn 400ms ease-out forwards;
+}
+@keyframes edge {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: edge 1s ease-out forwards;
+}
+/* Screen flash: 1 to 2 frames of white, never longer (art direction + flash safety). */
+@keyframes flash {
+  0%, 99% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  pointer-events: none;
+  animation: flash 34ms linear forwards;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.rays {
+  position: absolute;
+  width: 1500px;
+  height: 1500px;
+  border-radius: 50%;
+  animation: spin 9s linear infinite;
+  opacity: 0.55;
+  mask-image: radial-gradient(circle, #000 20%, transparent 65%);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 65%);
+}
+@keyframes itemSlam {
+  0% { transform: scale(0.2); opacity: 0; }
+  55% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  animation: itemSlam 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes bannerIn {
+  0% { transform: scaleX(0); }
+  70% { transform: scaleX(1.06); }
+  100% { transform: scaleX(1); }
+}
+.banner {
+  padding: 22px 44px;
+  max-width: 980px;
+  border-radius: 30px;
+  background: color-mix(in srgb, var(--shadow) 88%, transparent);
+  border: 8px solid;
+  box-shadow: 0 10px 0 var(--outline);
+  text-align: center;
+  animation: bannerIn 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 160ms;
+}
+.bannerRarity {
+  font-family: var(--font-display);
+  font-size: 46px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  -webkit-text-stroke: 8px var(--outline);
+  paint-order: stroke fill;
+}
+.bannerName {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 66px;
+  line-height: 1.05;
+  -webkit-text-stroke: 10px var(--outline);
+  paint-order: stroke fill;
+  text-shadow: 0 6px 0 var(--outline);
+}
+.bannerFlavor {
+  margin-top: 12px;
+  font-size: 32px;
+  font-style: italic;
+  color: #e0e3f2;
+}
+@keyframes rainbowName {
+  0% { color: #ff5252; }
+  25% { color: #ffb300; }
+  50% { color: #69f0ae; }
+  75% { color: #40c4ff; }
+  100% { color: #e040fb; }
+}
+.rainbowText {
+  animation: rainbowName 1.2s linear infinite alternate;
+}
+@keyframes rainbowBorder {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+.rainbowFrame {
+  position: absolute;
+  inset: 0;
+  border: 18px solid #ff4fa3;
+  box-shadow: inset 0 0 60px #ff4fa3;
+  pointer-events: none;
+  animation: rainbowBorder 1.5s linear infinite;
+}
+@keyframes fall {
+  0% { transform: translateY(-120px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(2000px) rotate(720deg); opacity: 1; }
+}
+.coin {
+  position: absolute;
+  top: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff3b0, #ffd54f 45%, #c79100);
+  border: 5px solid #8d6e00;
+  animation: fall linear forwards;
+}
+.stamp {
+  position: absolute;
+  top: 300px;
+  padding: 10px 30px;
+  border: 8px solid var(--r-mint);
+  border-radius: 20px;
+  color: var(--r-mint);
+  font-family: var(--font-display);
+  font-size: 68px;
+  transform: rotate(-10deg);
+  text-shadow: 0 0 20px #ffd54f;
+}
+.tapHint {
+  position: absolute;
+  bottom: 260px;
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.toasts {
+  position: absolute;
+  top: 150px;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+@keyframes toastIn {
+  0% { transform: translateY(-30px) scale(0.8); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+/* Toasts are strips of masking tape slapped on the screen. */
+.toast {
+  padding: 12px 34px 16px;
+  background: color-mix(in srgb, var(--tape) 95%, transparent);
+  color: var(--outline);
+  font-family: var(--font-display);
+  font-size: 38px;
+  transform: rotate(-1.5deg);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
+  border-left: 14px solid var(--muted);
+  animation: toastIn 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toastGood {
+  border-left-color: var(--neon-lime);
+}
+.toastWarn {
+  border-left-color: var(--danger);
+}
+
+.ad {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  background: color-mix(in srgb, var(--shadow) 94%, transparent);
+  font-family: var(--font-display);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  font-size: 48px;
+  font-weight: 900;
+}
+.adSub {
+  font-size: 30px;
+  color: var(--muted);
+  font-weight: 600;
+}

@@ -4,7 +4,7 @@ import type { Rng } from '../rng';
 import type { GameState } from '../state';
 import type { CoreEvent, DiveOutcome, Item } from '../types';
 import { dayKey, MS_PER_MINUTE } from '../time';
-import { clamp, rarityAtLeast, rarityIndex, snap } from '../util';
+import { clamp, rarityAtLeast, snap } from '../util';
 import { registerCodex } from './codex';
 import { createItem, pickBaseItem, recycleRewards } from './loot';
 import { addXp } from './progression';
@@ -247,4 +247,3 @@ export function speedupWithAd(d: GameState, now: number, ev: CoreEvent[]): boole
   return true;
 }
 
-export { rarityIndex };

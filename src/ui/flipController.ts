@@ -4,7 +4,7 @@
  * reveal celebration scales by tier. The compare card only shows once the reveal lands.
  */
 import { BAL, RARITIES } from '../data';
-import { itemName, rarityIndex, type CoreEvent, type Item } from '../core';
+import { rarityIndex, type CoreEvent, type Item } from '../core';
 import { bus } from '../app/eventBus';
 import { getGame } from '../app/store';
 import { haptics } from '../services';
@@ -150,4 +150,3 @@ export function installFlipController(): () => void {
   });
 }
 
-export { itemName };

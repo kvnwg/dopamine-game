@@ -87,7 +87,7 @@ The simulator (`npm run sim`) plays the real core with a bot that dives every 1.
 
 - Stage 20 reached (stage 19 cleared) at 32 to 52 minutes, median about 45.
 - Stage 20 boss beaten at 55 to 68 minutes.
-- Walls at the stage 10 and 15 mini-bosses of roughly 4 to 15 minutes, while the bot keeps diving and upgrading.
+- Walls at the mini-bosses while the bot keeps diving and upgrading: about 4 to 12 minutes at stage 10, and 12 to 26 minutes at stage 15 (the longest stretch without a new stage; the first thing to retune after playtesting).
 - The stage 5 mini-boss is usually beaten on the first try (about 2.5 to 3 minutes in). The first-session script wants most players to lose the first try; that tuning belongs to M5 with the scripted opening.
 
 ## Tech

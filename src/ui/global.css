@@ -15,7 +15,7 @@
   --neon-lime: #b6ff3b;
   --kraft: #c49a6c;
   --tape: #f2e6c9;
-  --outline: #1a1022;
+  --outline: #3e1f42;
   --gold: #ffb300;
   --danger: #ff5a5a;
   --heal: #69f0ae;
@@ -94,7 +94,7 @@ button {
   gap: 12px;
   min-height: 100px;
   padding: 0 36px;
-  border-radius: 30px;
+  border-radius: 30px 38px 28px 36px / 36px 28px 38px 30px;
   font-family: var(--font-display);
   font-size: 42px;
   letter-spacing: 0.5px;
@@ -144,7 +144,10 @@ button {
 .cardboard {
   position: relative;
   background:
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.06) 0 3px, rgba(0, 0, 0, 0) 3px 14px),
+    radial-gradient(ellipse 45% 35% at 20% 18%, rgba(255, 236, 200, 0.35), transparent 70%),
+    radial-gradient(ellipse 40% 45% at 85% 80%, rgba(120, 70, 60, 0.18), transparent 70%),
+    radial-gradient(ellipse 30% 30% at 65% 35%, rgba(150, 90, 70, 0.1), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 3px, rgba(0, 0, 0, 0) 3px 14px),
     linear-gradient(180deg, color-mix(in srgb, var(--kraft) 100%, #fff 8%), var(--kraft));
   color: var(--outline);
   border: 6px solid var(--outline);
@@ -152,7 +155,10 @@ button {
 .cardboard-dark {
   position: relative;
   background:
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0 3px, rgba(0, 0, 0, 0) 3px 14px),
+    radial-gradient(ellipse 40% 60% at 18% 30%, rgba(176, 92, 138, 0.14), transparent 70%),
+    radial-gradient(ellipse 35% 70% at 78% 60%, rgba(46, 230, 255, 0.05), transparent 70%),
+    radial-gradient(ellipse 50% 80% at 55% 10%, rgba(255, 179, 71, 0.07), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 3px, rgba(0, 0, 0, 0) 3px 14px),
     linear-gradient(180deg, var(--card-dark), var(--card-darker));
 }
 .tape {

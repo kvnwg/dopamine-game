@@ -33,6 +33,18 @@
   flex-direction: column;
 }
 
+/* Visible paper grain over everything: the whole screen reads as one painted page. */
+.stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 95;
+  pointer-events: none;
+  background-image: var(--paper-grain);
+  background-size: 620px 620px;
+  opacity: 0.5;
+}
+
 .top { height: 7%; flex: none; }
 .battle { height: 40%; flex: none; position: relative; }
 .dumpster { height: 20%; flex: none; }

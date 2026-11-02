@@ -78,7 +78,8 @@ Choices made where the spec was silent or ambiguous (spec instruction: pick the 
 | U7 | Bosses are drawn about 2x the raccoon's height, not 3x, so they fit the 768 px battle panel. | |
 | U8 | Mint in Box color is `#FFF4D6` and the Gem icon is sea glass, from the art doc. Item art IDs are `<item_id>_icon` and `<item_id>_overlay` (the doc's naming), mapped to files in `assets.json`. | The art doc is newer and more specific than the spec's example. |
 | U9 | Fonts (Lilita One, Nunito) are bundled with `@fontsource` so they work offline in the native app. | |
-| U10 | Sound and music are not in M1 (settings toggles exist). Haptics use Capacitor's presets; custom patterns need a native plugin (playbook note). | M5 scope. |
+| U10 | Sound and music are synthesized with the Web Audio API (no audio files) and start on the first tap, as browsers require: a lo-fi loop in C major, rarity-scaled rattle, riser and reveal stings, a silence drop before Legendary+, pitch-stacked coins, button pops. Real recorded audio replaces it in M5. Haptics use Capacitor's presets; custom patterns need a native plugin (playbook note). | Kevin asked for sound before M5. |
+| U12 | Placeholder art follows the painterly storybook direction (`docs/ART_DIRECTION.md`, Nov 2 update): everything is painted in code on canvases with a brush toolkit, then registered as textures or data URLs. | Kevin's style update. |
 | U11 | The dev cheat panel shows in dev builds, or in any build made with `VITE_CHEATS=true`. Extra helpers beyond the spec: "Last wave" (jump to a stage's boss wave) and "Set dumpster Lv". | |
 
 ## Balance

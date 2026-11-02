@@ -8,6 +8,8 @@ import { rarityIndex, type CoreEvent, type Item } from '../core';
 import { bus } from '../app/eventBus';
 import { getGame } from '../app/store';
 import { haptics } from '../services';
+import { audio, type Material } from '../services/audio';
+import { DATA } from '../data';
 import { t } from './i18n';
 import { useUi, type Flip } from './uiStore';
 
@@ -76,18 +78,34 @@ function startFlip(item: Item, full: boolean, tease: boolean, pending: boolean) 
   timers.forEach(clearTimeout);
   timers = [];
   useUi.setState({ flip });
+  const tier = rarityIndex(item.rarity);
+  const material = (DATA.itemsById.get(item.baseId)?.material ?? 'plastic') as Material;
   if (full) {
-    // Rattle heartbeat: from Epic up, each beat thumps (players learn to feel the omen).
+    // Rising rattle (sound + heartbeat haptics from Epic up), then the riser under the color ladder.
+    const beatMs = BAL.feel.rattleBeatSeconds * 1000;
     const beats = BAL.feel.rattleBeatsByRarity[item.rarity];
-    if (rarityIndex(item.rarity) >= rarityIndex('epic')) {
-      for (let b = 1; b < beats; b++) {
-        timers.push(setTimeout(() => haptics.impact('light'), b * BAL.feel.rattleBeatSeconds * 1000));
-      }
+    const heavy = tier >= rarityIndex('epic');
+    audio.lidClunk();
+    for (let b = 0; b < beats; b++) {
+      timers.push(
+        setTimeout(() => {
+          audio.rattle(b, beats, heavy);
+          if (heavy && b > 0) haptics.impact('light');
+        }, b * beatMs),
+      );
     }
+    timers.push(setTimeout(() => audio.riser((popAt - beats * beatMs) / 1000, tier), beats * beatMs));
+    if (tier >= rarityIndex('legendary')) timers.push(setTimeout(() => audio.silenceDrop(0.2), Math.max(0, popAt - 200)));
   }
   timers.push(
     setTimeout(() => {
       useUi.setState({ lastItem: item });
+      if (full) {
+        audio.material(material);
+        audio.reveal(item.rarity);
+      } else {
+        audio.autoPop(item.rarity);
+      }
       if (full) {
         revealHaptics(item);
         if (rarityIndex(item.rarity) >= rarityIndex('epic')) useUi.setState({ celebrate: { id: flip.id, item } });
@@ -107,6 +125,10 @@ export function skipFlip(): boolean {
   if (elapsed < 150) return false; // ignore the tap that started it
   timers.forEach(clearTimeout);
   timers = [];
+  if (elapsed < flip.popAt) {
+    audio.material((DATA.itemsById.get(flip.item.baseId)?.material ?? 'plastic') as Material);
+    audio.reveal(flip.item.rarity);
+  }
   useUi.setState({ lastItem: flip.item, celebrate: null });
   finishFlip(flip, getGame().pendingItem?.uid === flip.item.uid);
   return true;

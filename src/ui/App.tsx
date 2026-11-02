@@ -11,6 +11,7 @@ import { Toasts } from './components/Toasts';
 import { AdOverlay } from './components/AdOverlay';
 import { DevPanel } from '../dev/DevPanel';
 import { installFlipController } from './flipController';
+import { installSound } from './soundController';
 
 const W = 1080;
 const H = 1920;
@@ -31,6 +32,7 @@ export function App() {
   }, []);
 
   useEffect(() => installFlipController(), []);
+  useEffect(() => installSound(), []);
 
   return (
     <div className={styles.viewport}>

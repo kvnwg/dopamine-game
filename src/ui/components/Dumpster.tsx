@@ -115,7 +115,7 @@ export function Dumpster() {
 
   return (
     <div className={s.bin}>
-      <button className={s.binButton} onClick={onTap} aria-label={t('dumpster.dive')}
+      <button className={s.binButton} onClick={onTap} aria-label={t('dumpster.dive')} data-no-tap-sound
         style={{ transform: v && !reduceMotion ? `translateX(${v.shakeX}px)` : undefined }}>
         {hot && <div className={s.heat} style={{ opacity: heat }} />}
         {hot && !reduceMotion &&

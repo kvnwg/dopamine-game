@@ -10,8 +10,10 @@ import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
 import { enemyPlaceholder, hexToNum, rarityColorNum } from './art';
 import {
-  BG_TILE_W, enemyTexBox, enemyTexKey, generateBackground, generateTextures, OUTLINE, RACCOON_FEET, RACCOON_TEX,
+  BG_TILE_W, enemyTexBox, enemyTexKey, ensureGearTexture, generateBackground, generateTextures, OUTLINE, RACCOON_FEET,
+  RACCOON_TEX, SIGN_BOARD,
 } from './textures';
+import { BACK_SLOTS } from './paint/gear';
 
 export const BATTLE_W = 1080;
 export const BATTLE_H = 768;
@@ -104,47 +106,38 @@ export class BattleScene extends Phaser.Scene {
     const bgKey = neighborhoodFor(g.battle.stage).background;
     this.bgId = bgKey;
     const c = DATA.assets.placeholders.backgrounds[bgKey];
-    generateBackground(this, bgKey);
+    generateBackground(this, bgKey, BATTLE_W, BATTLE_H);
 
-    const sky = this.add.graphics().setDepth(0);
-    sky.fillGradientStyle(hexToNum(c.sky), hexToNum(c.sky), hexToNum(c.skyLow), hexToNum(c.skyLow), 1);
-    sky.fillRect(0, 0, BATTLE_W, BATTLE_H);
-
-    this.far = this.add.tileSprite(0, 40, BATTLE_W, 560, `${bgKey}_far`).setOrigin(0, 0).setDepth(1);
+    this.add.image(0, 0, `${bgKey}_sky`).setOrigin(0, 0).setDepth(0);
+    this.far = this.add.tileSprite(0, 80, BATTLE_W, 520, `${bgKey}_far`).setOrigin(0, 0).setDepth(1);
     this.mid = this.add.tileSprite(0, 260, BATTLE_W, 380, `${bgKey}_mid`).setOrigin(0, 0).setDepth(2);
-    this.buildSign(c.neon, c.neon2, t(c.sign), t(c.signSub));
+    this.buildSign(c.neon, c.neon2, t(c.sign), t(c.signSub), bgKey);
     this.props = this.add.tileSprite(0, 420, BATTLE_W, 200, `${bgKey}_props`).setOrigin(0, 0).setDepth(4);
     this.ground = this.add.tileSprite(0, 600, BATTLE_W, 220, `${bgKey}_ground`).setOrigin(0, 0).setDepth(5);
-    this.fg = this.add.tileSprite(0, 0, BATTLE_W, BATTLE_H, `${bgKey}_fg`).setOrigin(0, 0).setDepth(26).setAlpha(0.75);
-    // Neighborhood grading: one color overlay ties every layer together.
+    this.fg = this.add.tileSprite(0, 0, BATTLE_W, BATTLE_H, `${bgKey}_fg`).setOrigin(0, 0).setDepth(26).setAlpha(0.85);
+    // Neighborhood grading ties every layer together; paper grain sits over the whole picture.
     this.add.rectangle(0, 0, BATTLE_W, BATTLE_H, hexToNum(c.grade), c.gradeAlpha).setOrigin(0, 0).setDepth(25);
+    this.add.tileSprite(0, 0, BATTLE_W, BATTLE_H, 'paper_grain').setOrigin(0, 0).setDepth(48).setAlpha(0.6).setTileScale(2.2, 2.2);
   }
 
   /** Neon sign that scrolls with the mid layer. One letter is always broken and flickers. */
-  private buildSign(neon: string, neon2: string, text: string, sub: string) {
+  private buildSign(neon: string, neon2: string, text: string, sub: string, bgKey: string) {
     this.sign = this.add.container(0, 0).setDepth(3);
-    const board = this.add.graphics();
-    board.fillStyle(hexToNum('#221A33'), 0.95);
-    board.fillRoundedRect(-170, -70, 340, 130, 16);
-    board.lineStyle(6, OUTLINE, 1);
-    board.strokeRoundedRect(-170, -70, 340, 130, 16);
-    for (let r = 200; r > 60; r -= 20) {
-      board.fillStyle(hexToNum(neon), 0.025);
-      board.fillCircle(0, -10, r);
-    }
+    const board = this.add.image(0, -8, `${bgKey}_sign`).setOrigin(0.5, 0.5);
     this.sign.add(board);
     this.signLetters = [...text].map((ch) =>
       this.add
         .text(0, -30, ch, { fontFamily: FONT, fontSize: '50px', color: neon })
         .setOrigin(0, 0.5)
-        .setShadow(0, 0, neon, 16, true, true),
+        .setShadow(0, 0, neon, 18, true, true),
     );
     this.sign.add(this.signLetters);
     const subText = this.add
       .text(0, 26, sub, { fontFamily: FONT, fontSize: '26px', color: neon2 })
       .setOrigin(0.5, 0.5)
-      .setShadow(0, 0, neon2, 10, true, true);
+      .setShadow(0, 0, neon2, 12, true, true);
     this.sign.add(subText);
+    void SIGN_BOARD;
     this.layoutSign();
     const broken = this.signLetters.length > 6 ? this.signLetters[6] : this.signLetters[0];
     const flicker = () => {
@@ -180,84 +173,19 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: this.raccoonBody, scaleY: 1.03, y: -3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
-  /** Gear overlays at ~1.3x real scale, breaking the silhouette on purpose. */
+  /** Painted gear overlays at ~1.3x real scale, breaking the silhouette on purpose. */
   private drawGear(g: GameState) {
     this.gearBack.removeAll(true);
     this.gearFront.removeAll(true);
-    const add = (slot: Slot, layer: Phaser.GameObjects.Container, draw: (gr: Phaser.GameObjects.Graphics, c: number) => void) => {
+    const ox = RACCOON_FEET.x / RACCOON_TEX.w;
+    const oy = RACCOON_FEET.y / RACCOON_TEX.h;
+    const order: Slot[] = ['backpack', 'jacket', 'sneakers', 'bling', 'shield', 'weapon', 'gloves', 'ring', 'mask', 'hat'];
+    for (const slot of order) {
       const it = g.equipped[slot];
-      if (!it) return;
-      const gr = this.add.graphics();
-      draw(gr, rarityColorNum(it.rarity));
-      layer.add(gr);
-    };
-    const ol = (gr: Phaser.GameObjects.Graphics, w = 6) => gr.lineStyle(w, OUTLINE, 1);
-    const shine = (gr: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number) => {
-      gr.fillStyle(0xffffff, 0.35);
-      gr.fillEllipse(x, y, w, h);
-    };
-    add('backpack', this.gearBack, (gr, c) => {
-      gr.fillStyle(c, 1); ol(gr);
-      gr.fillRoundedRect(-104, -150, 62, 92, 16); gr.strokeRoundedRect(-104, -150, 62, 92, 16);
-      gr.lineBetween(-104, -122, -42, -122);
-      shine(gr, -86, -138, 18, 8);
-    });
-    add('jacket', this.gearFront, (gr, c) => {
-      gr.fillStyle(c, 1); ol(gr);
-      gr.fillRoundedRect(-60, -126, 52, 92, 20); gr.strokeRoundedRect(-60, -126, 52, 92, 20);
-      gr.fillRoundedRect(22, -126, 40, 92, 18); gr.strokeRoundedRect(22, -126, 40, 92, 18);
-      gr.fillStyle(0xffffff, 0.8); gr.fillCircle(-16, -96, 4); gr.fillCircle(-16, -74, 4);
-      shine(gr, -40, -112, 20, 8);
-    });
-    add('sneakers', this.gearFront, (gr, c) => {
-      gr.fillStyle(c, 1); ol(gr, 5);
-      gr.fillRoundedRect(-50, -24, 54, 26, 10); gr.strokeRoundedRect(-50, -24, 54, 26, 10);
-      gr.fillRoundedRect(0, -24, 54, 26, 10); gr.strokeRoundedRect(0, -24, 54, 26, 10);
-      gr.fillStyle(0xffffff, 0.9); gr.fillRect(-46, -6, 46, 5); gr.fillRect(4, -6, 46, 5);
-    });
-    add('shield', this.gearFront, (gr, c) => {
-      gr.fillStyle(c, 1); ol(gr);
-      gr.fillCircle(-58, -84, 46); gr.strokeCircle(-58, -84, 46);
-      gr.lineStyle(5, 0xffffff, 0.45); gr.strokeCircle(-58, -84, 30);
-      shine(gr, -72, -102, 24, 12);
-    });
-    add('weapon', this.gearFront, (gr, c) => {
-      gr.lineStyle(22, OUTLINE, 1); gr.lineBetween(54, -64, 150, -316);
-      gr.lineStyle(13, c, 1); gr.lineBetween(54, -64, 150, -316);
-      gr.fillStyle(c, 1); ol(gr);
-      gr.fillCircle(152, -322, 22); gr.strokeCircle(152, -322, 22);
-      shine(gr, 146, -330, 12, 6);
-    });
-    add('gloves', this.gearFront, (gr, c) => {
-      gr.fillStyle(c, 1); ol(gr);
-      gr.fillCircle(56, -74, 26); gr.strokeCircle(56, -74, 26);
-      shine(gr, 48, -84, 12, 6);
-    });
-    add('mask', this.gearFront, (gr, c) => {
-      gr.lineStyle(8, c, 1);
-      gr.strokeCircle(10, -177, 21); gr.strokeCircle(46, -177, 21);
-      gr.lineBetween(-34, -176, -11, -178); gr.lineBetween(31, -178, 25, -178);
-      gr.lineStyle(3, OUTLINE, 1);
-      gr.strokeCircle(10, -177, 25); gr.strokeCircle(46, -177, 25);
-    });
-    add('hat', this.gearFront, (gr, c) => {
-      // Towers above the head (a traffic cone should break the silhouette).
-      gr.fillStyle(c, 1); ol(gr);
-      const pts = [{ x: -26, y: -212 }, { x: 62, y: -212 }, { x: 18, y: -350 }];
-      gr.fillPoints(pts, true, true); gr.strokePoints(pts, true, true);
-      gr.fillRoundedRect(-40, -222, 116, 20, 8); gr.strokeRoundedRect(-40, -222, 116, 20, 8);
-      gr.fillStyle(0xffffff, 0.85); gr.fillRect(0, -268, 36, 12); gr.fillRect(8, -302, 20, 10);
-    });
-    add('bling', this.gearFront, (gr, c) => {
-      gr.lineStyle(5, c, 1);
-      gr.beginPath(); gr.arc(18, -132, 30, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(150), false); gr.strokePath();
-      gr.fillStyle(c, 1); ol(gr, 4); gr.fillCircle(18, -100, 12); gr.strokeCircle(18, -100, 12);
-      gr.fillStyle(0xffffff, 0.9); gr.fillCircle(14, -104, 4);
-    });
-    add('ring', this.gearFront, (gr, c) => {
-      gr.fillStyle(c, 1); ol(gr, 3); gr.fillCircle(70, -88, 8); gr.strokeCircle(70, -88, 8);
-      gr.fillStyle(0xffffff, 1); gr.fillCircle(68, -90, 3);
-    });
+      if (!it) continue;
+      const img = this.add.image(0, 0, ensureGearTexture(this, slot, it.rarity)).setOrigin(ox, oy);
+      (BACK_SLOTS.includes(slot) ? this.gearBack : this.gearFront).add(img);
+    }
     // Aura for Legendary-or-better gear.
     let best: Rarity | null = null;
     for (const s of SLOTS) {

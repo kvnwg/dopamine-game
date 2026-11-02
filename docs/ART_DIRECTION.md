@@ -343,3 +343,20 @@ Milestone 1 uses code-drawn placeholder art that follows this doc, so real art c
 - **Settings**: Reduce Motion turns off shake, zoom punch and knockback; Reduce Flashing turns off hit flashes and the 1 to 2 frame Legendary screen flash.
 
 Not yet (later milestones): skeletal rigs, expression sheet, idle variants and rare idles, puddle reflections that wobble, moths and rain, holo foil, real bloom, Heist interiors, cardboard torn edges.
+
+## Style update (Nov 2): painterly storybook
+
+Kevin's newer direction for the look, used as the base style from here on (and as the base prompt for any AI-generated assets):
+
+```text
+hand-drawn 2D game art, hand-inked outlines with varied line weight in dark plum (not black), gouache and watercolor brush textures, visible paper grain, painterly shading with soft and hard edges, cozy night lighting with warm lamp glow and pink and cyan neon, storybook illustration quality, slightly imperfect handmade lines
+```
+
+How the code-drawn placeholders follow it (`src/render/paint/`):
+
+- **Ink**: dark plum `#3E1F42` lines whose width follows a pressure curve, with tapered ends, a slight wobble, a sketchy overshoot where a shape closes, and a faint second pass. UI outlines use the same plum.
+- **Paint**: gouache/watercolor fills with a bleed halo, uneven pigment blooms, granulation, and a darker wet edge.
+- **Shading**: a hard-edged shadow crescent away from the light plus a soft warm pool of lamp light from the top left; shadows lean plum.
+- **Light**: cyan neon rim light on the raccoon, pink on its foes, amber rim from the windows; porch lamps, lit windows and puddle reflections glow.
+- **Paper**: grain over the battle canvas and over the whole UI.
+- **Everything painted**: raccoon, enemies and bosses, gear overlays and gear-grid icons (with rarity treatments), empty-slot silhouettes, sky and moon, skyline, houses, props, wet asphalt, foreground wires and steam, the dumpster.

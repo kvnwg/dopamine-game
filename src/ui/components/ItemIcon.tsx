@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { DATA, type Slot } from '../../data';
 import { rarityAtLeast, type Item } from '../../core';
 import { rarityColor } from '../../render/art';
+import { emptySlotUrl, gearIconUrl } from '../../render/paint/gear';
 import { t } from '../i18n';
 import s from './ItemIcon.module.css';
 
@@ -25,8 +26,8 @@ export function ItemIcon({ item, slot, size = 150, showLevel = true }: Props) {
   const style = { ['--s' as string]: `${size}px` } as CSSProperties;
   if (!item) {
     return (
-      <div className={`${s.icon} ${s.empty}`} style={style}>
-        <span className={`${s.label} ${s.emptyLabel}`}>{label}</span>
+      <div className={`${s.icon} ${s.empty}`} style={style} title={label}>
+        <img className={s.art} src={emptySlotUrl(theSlot)} alt="" draggable={false} />
       </div>
     );
   }
@@ -34,7 +35,7 @@ export function ItemIcon({ item, slot, size = 150, showLevel = true }: Props) {
   (style as Record<string, string>)['--c'] = rarityColor(r);
   const gems = GEMS[r] ?? [];
   return (
-    <div className={`${s.icon} ${s[r] ?? ''}`} style={style} data-rarity={r}>
+    <div className={`${s.icon} ${s[r] ?? ''}`} style={style} data-rarity={r} title={label}>
       {r === 'mythic' && (
         <>
           <span className={`${s.wing} ${s.wingL}`} />
@@ -42,7 +43,7 @@ export function ItemIcon({ item, slot, size = 150, showLevel = true }: Props) {
         </>
       )}
       <span className={`${s.clip} ${rarityAtLeast(r, 'epic') ? s.glint : ''}`} />
-      <span className={s.label}>{label}</span>
+      <img className={s.art} src={gearIconUrl(item.slot, r)} alt="" draggable={false} />
       {showLevel && <span className={s.lv}>{t('item.levelShort', { level: item.level })}</span>}
       {r === 'junk' && <span className={s.patch} />}
       {gems.map((x) => (

@@ -5,7 +5,7 @@
   flex: none;
   width: var(--s);
   height: var(--s);
-  border-radius: calc(var(--u) * 20);
+  border-radius: 22% 27% 20% 25% / 25% 20% 27% 22%;
   border: calc(var(--u) * 5 + 2px) solid var(--outline);
   background:
     radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--c) 55%, transparent), transparent 70%),
@@ -21,6 +21,17 @@
   border-radius: inherit;
   overflow: hidden;
   pointer-events: none;
+}
+.art {
+  position: absolute;
+  left: 4%;
+  top: 2%;
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
 }
 .label {
   font-family: var(--font-display);
@@ -44,9 +55,12 @@
   z-index: 1;
 }
 .empty {
-  border: calc(var(--u) * 4 + 1px) dashed color-mix(in srgb, var(--kraft) 45%, var(--shadow));
+  border: calc(var(--u) * 4 + 1px) dashed color-mix(in srgb, var(--kraft) 40%, var(--shadow));
   background: color-mix(in srgb, var(--shadow) 70%, transparent);
   box-shadow: none;
+}
+.empty .art {
+  opacity: 0.9;
 }
 .emptyLabel {
   color: color-mix(in srgb, var(--kraft) 40%, var(--shadow));

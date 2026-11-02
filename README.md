@@ -18,7 +18,7 @@ npm run dev
 
 Open http://localhost:5173. The game is portrait, so use a narrow window or your browser's device toolbar (for example, a 412 x 915 phone). The dev server also prints a Network URL you can open on a phone on the same Wi-Fi.
 
-Your save lives in the browser's localStorage. Close the tab, come back later, and you get offline rewards.
+Your save lives in the browser's localStorage. Close the tab, come back later, and you get offline rewards. Sound and music (synthesized in code) start on your first tap; Settings has toggles for each.
 
 ### Play it on claude.ai
 

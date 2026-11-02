@@ -1,7 +1,9 @@
 .viewport {
   position: fixed;
   inset: 0;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  padding-left: max(var(--gutter-x, 0px), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter-x, 0px), env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
   justify-content: center;

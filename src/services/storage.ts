@@ -12,10 +12,18 @@ export class LocalStorageService implements KeyValueStorage {
     }
   }
   async set(key: string, value: string) {
-    window.localStorage.setItem(key, value);
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      /* storage blocked or full: the game keeps running, it just cannot save */
+    }
   }
   async remove(key: string) {
-    window.localStorage.removeItem(key);
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      /* storage blocked */
+    }
   }
 }
 

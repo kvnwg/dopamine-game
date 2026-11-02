@@ -20,6 +20,16 @@ Open http://localhost:5173. The game is portrait, so use a narrow window or your
 
 Your save lives in the browser's localStorage. Close the tab, come back later, and you get offline rewards.
 
+### Play it on claude.ai
+
+There's a playable copy published as a private artifact: https://claude.ai/artifact/4hn2fn8aPTkS15gtidCg6s (it includes the cheat panel). To rebuild that single-file page from the current code:
+
+```bash
+npm run build:artifact
+```
+
+It writes `artifact/dumpster-legend.html` (one self-contained page: fonts and code inlined).
+
 ### Dev cheat panel
 
 The red **DEV** button (bottom left, dev builds only) can add coins, Gems, bags and XP, jump to any stage or straight to a stage's boss wave, set the Dumpster Level, force the next dive's rarity, skip time by 30 min to 24 h (to test offline rewards and upgrade timers), unlock Auto-Dive, and reset the save. It also shows your live stats.

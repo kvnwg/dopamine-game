@@ -12,6 +12,7 @@ export function DevPanel() {
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState('10');
   const [dl, setDl] = useState('5');
+  const [armReset, setArmReset] = useState(false);
   const forced = useGame((g) => g.dumpster.forcedRarity);
   const g = useGame((x) => x);
   if (!open) {
@@ -74,10 +75,16 @@ export function DevPanel() {
             <button
               className={s.b}
               onClick={() => {
-                if (confirm('Reset save? This wipes all progress.')) void resetSave();
+                if (!armReset) {
+                  setArmReset(true);
+                  setTimeout(() => setArmReset(false), 3000);
+                  return;
+                }
+                setArmReset(false);
+                void resetSave();
               }}
             >
-              Reset save
+              {armReset ? 'Tap again to wipe ALL progress' : 'Reset save'}
             </button>
           </div>
         </div>

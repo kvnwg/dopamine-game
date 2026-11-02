@@ -3,7 +3,7 @@
  */
 import { App as CapApp } from '@capacitor/app';
 import { BAL } from '../data';
-import { createInitialState, SaveManager, TICK_MS, offlineCapMs, MS_PER_HOUR } from '../core';
+import { createInitialState, deserialize, SaveManager, TICK_MS, offlineCapMs, MS_PER_HOUR } from '../core';
 import { analytics, createStorage, notifications } from '../services';
 import { isNative } from '../services/platform';
 import { t } from '../ui/i18n';
@@ -97,8 +97,10 @@ export async function resetSave(): Promise<void> {
   replaceGame(createInitialState(clock.now(), newSeed()));
 }
 
-export async function boot(): Promise<void> {
-  const loaded = await saveManager.load();
+/** `snapshot` is a serialized save handed over when the page is hot-updated in place. */
+export async function boot(snapshot?: string): Promise<void> {
+  const fromSnapshot = snapshot ? deserialize(snapshot) : null;
+  const loaded = fromSnapshot ? { state: fromSnapshot, source: 'main' as const } : await saveManager.load();
   if (loaded) {
     replaceGame(loaded.state);
     dispatch({ type: 'boot' });

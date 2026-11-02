@@ -29,27 +29,40 @@
   {
     "id": "big_earl",
     "name": "Big Earl the Rat King",
-    "kind": "miniboss",
-    "hp": 72.0,
-    "atk": 17.0,
+    "kind": "boss",
+    "hp": 64,
+    "atk": 13,
     "def": 2,
-    "atkSpd": 0.8
+    "atkSpd": 0.8,
+    "special": {
+      "type": "heavyHit",
+      "name": "Belly Flop",
+      "everySeconds": 7,
+      "damageMult": 2.0
+    }
   },
   {
     "id": "vinnie_two_lids",
     "name": "Vinnie \"Two Lids\"",
-    "kind": "miniboss",
-    "hp": 72.0,
-    "atk": 15.3,
+    "kind": "boss",
+    "hp": 60,
+    "atk": 13,
     "def": 3,
-    "atkSpd": 1
+    "atkSpd": 0.9,
+    "special": {
+      "type": "enrage",
+      "name": "Lid Flurry",
+      "belowHpPct": 40,
+      "atkMult": 1.2,
+      "atkSpdMult": 1.5
+    }
   },
   {
     "id": "officer_dale",
     "name": "Officer Dale, Animal Control",
     "kind": "boss",
-    "hp": 28.8,
-    "atk": 6.8,
+    "hp": 58,
+    "atk": 11,
     "def": 4,
     "atkSpd": 0.8,
     "special": {

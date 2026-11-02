@@ -7,14 +7,14 @@ import itemsJson from './items.json';
 import affixesJson from './affixes.json';
 import themesJson from './themes.json';
 import enemiesJson from './enemies.json';
-import neighborhoodsJson from './neighborhoods.json';
+import worldsJson from './worlds.json';
 import stringsJson from './strings.en.json';
 import assetsJson from './assets.json';
 import enchantsJson from './enchants.json';
 import {
-  AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, ItemsSchema, NeighborhoodsSchema,
+  AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, ItemsSchema, WorldsSchema,
   RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
-  type Affix, type Assets, type Balance, type BaseItem, type EnchantDef, type EnemyDef, type MintPerk, type Neighborhood,
+  type Affix, type Assets, type Balance, type BaseItem, type EnchantDef, type EnemyDef, type MintPerk, type WorldDef,
   type Theme,
 } from './schemas';
 import type { z } from 'zod';
@@ -32,7 +32,8 @@ export interface GameData {
   themes: Theme[];
   enemies: EnemyDef[];
   enemiesById: Map<string, EnemyDef>;
-  neighborhoods: Neighborhood[];
+  /** World 1 is worlds[0]. */
+  worlds: WorldDef[];
   strings: Record<string, string>;
   assets: Assets;
   enchants: EnchantDef[];
@@ -54,14 +55,14 @@ function fail(msg: string): never {
 
 export function buildGameData(raw: {
   balance: unknown; items: unknown; affixes: unknown; themes: unknown; enemies: unknown;
-  neighborhoods: unknown; strings: unknown; assets: unknown; enchants: unknown;
+  worlds: unknown; strings: unknown; assets: unknown; enchants: unknown;
 }): GameData {
   const balance = parse('balance.json', BalanceSchema, raw.balance);
   const items = parse('items.json', ItemsSchema, raw.items);
   const affixFile = parse('affixes.json', AffixesFileSchema, raw.affixes);
   const themes = parse('themes.json', ThemesSchema, raw.themes);
   const enemies = parse('enemies.json', EnemiesSchema, raw.enemies);
-  const neighborhoods = parse('neighborhoods.json', NeighborhoodsSchema, raw.neighborhoods);
+  const worlds = parse('worlds.json', WorldsSchema, raw.worlds);
   const strings = parse('strings.en.json', StringsSchema, raw.strings);
   const assets = parse('assets.json', AssetsSchema, raw.assets);
   const enchants = parse('enchants.json', EnchantsSchema, raw.enchants);
@@ -114,27 +115,16 @@ export function buildGameData(raw: {
 
   const enemiesById = new Map(enemies.map((e) => [e.id, e]));
   if (enemiesById.size !== enemies.length) fail('duplicate enemy id');
-  let expectedFirst = 1;
-  for (const n of neighborhoods) {
-    if (n.firstStage !== expectedFirst) fail(`neighborhood ${n.id} must start at stage ${expectedFirst}`);
-    if (n.lastStage - n.firstStage + 1 !== balance.stages.bossLocalStage) {
-      fail(`neighborhood ${n.id} must have ${balance.stages.bossLocalStage} stages`);
+  const worldIds = new Set<string>();
+  for (const w of worlds) {
+    if (worldIds.has(w.id)) fail(`duplicate world id ${w.id}`);
+    worldIds.add(w.id);
+    if (!themes.some((t) => t.id === w.theme)) fail(`world ${w.id} unknown theme ${w.theme}`);
+    for (const foe of [...w.enemies, w.boss]) {
+      if (!enemiesById.has(foe.id)) fail(`world ${w.id} references unknown enemy ${foe.id}`);
+      if (!assets.placeholders.enemies[foe.id]) fail(`enemy ${foe.id} has no placeholder art`);
     }
-    expectedFirst = n.lastStage + 1;
-    if (!themes.some((t) => t.id === n.theme)) fail(`neighborhood ${n.id} unknown theme ${n.theme}`);
-    if (n.miniBosses.length !== balance.stages.miniBossLocalStages.length) {
-      fail(`neighborhood ${n.id} needs one mini-boss per mini-boss stage`);
-    }
-    for (const id of [...n.enemies, ...n.miniBosses, n.boss]) {
-      if (!enemiesById.has(id)) fail(`neighborhood ${n.id} references unknown enemy ${id}`);
-      if (!assets.placeholders.enemies[id]) fail(`enemy ${id} has no placeholder art`);
-    }
-    for (const id of n.enemies) if (enemiesById.get(id)!.kind !== 'regular') fail(`${id} is not a regular enemy`);
-    for (const id of n.miniBosses) if (enemiesById.get(id)!.kind !== 'miniboss') fail(`${id} is not a miniboss`);
-    if (enemiesById.get(n.boss)!.kind !== 'boss') fail(`${n.boss} is not a boss`);
-    const bg = assets.placeholders.backgrounds[n.background];
-    if (!bg) fail(`missing background ${n.background}`);
-    for (const key of [bg.sign, bg.signSub]) if (strings[key] === undefined) fail(`background ${n.background} string ${key} missing`);
+    for (const foe of w.enemies) if (enemiesById.get(foe.id)!.kind !== 'regular') fail(`${foe.id} is not a regular enemy`);
   }
 
   return {
@@ -148,7 +138,7 @@ export function buildGameData(raw: {
     themes,
     enemies,
     enemiesById,
-    neighborhoods,
+    worlds,
     strings,
     assets,
     enchants,
@@ -163,7 +153,7 @@ export const DATA: GameData = buildGameData({
   affixes: affixesJson,
   themes: themesJson,
   enemies: enemiesJson,
-  neighborhoods: neighborhoodsJson,
+  worlds: worldsJson,
   strings: stringsJson,
   assets: assetsJson,
   enchants: enchantsJson,

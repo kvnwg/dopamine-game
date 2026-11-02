@@ -29,7 +29,7 @@ function runTicks(st: GameState, ticks: number, rng: Rng, now = T0) {
 function makeItem(over: Partial<Item>): Item {
   return {
     uid: 1, baseId: 'hat_lawn_gnome', slot: 'hat', rarity: 'junk', level: 1, main: [], subs: [], bonus: [],
-    mintPerkId: null, enchants: [], locked: false, power: 10, ...over,
+    mintPerkId: null, enchants: [], locked: false, tier: 1, power: 10, ...over,
   };
 }
 
@@ -50,18 +50,22 @@ describe('luck odds ("1 in X")', () => {
   });
 
   for (const luck of [1, 3, 25]) {
-    it(`10,000 rolls at luck ${luck} land within 1% of the computed chances`, () => {
+    it(`10,000 rolls at luck ${luck} land within 4 standard errors of the computed chances`, () => {
       const rng = new Rng(500 + luck);
       const h = histogram(N, () => rollRarity(luck, rng));
       const c = rarityChances(luck);
-      for (const r of RARITIES) expect(Math.abs((h.get(r) ?? 0) / N - c[r]), r).toBeLessThan(0.01);
+      for (const r of RARITIES) {
+        const se = Math.sqrt((c[r] * (1 - c[r])) / N);
+        expect(Math.abs((h.get(r) ?? 0) / N - c[r]), r).toBeLessThan(4 * se + 0.001);
+      }
     });
   }
 
   it('higher luck makes common rarities rarer and rare ones likelier', () => {
     expect(rarityChances(10).junk).toBeLessThan(rarityChances(1).junk);
     expect(rarityChances(10).epic).toBeGreaterThan(rarityChances(1).epic);
-    expect(rarityChances(4).junk).toBe(0); // 4 / 4 = a guaranteed Decent or better
+    // At luck >= the Decent odds, Decent-or-better is guaranteed.
+    expect(rarityChances(BAL.rarityOdds.decent).junk).toBe(0);
   });
 
   it('a minimum rarity floor never rolls below it (10,000 rolls)', () => {
@@ -201,12 +205,12 @@ describe('upgrade grid', () => {
 });
 
 describe('rebirth', () => {
-  it('requires the stage and gold, then resets progress and multiplies luck and gold', () => {
+  it('requires the world and gold, then resets progress and multiplies luck and gold', () => {
     const rng = new Rng(10);
     let st = rollingState();
     const req = rebirthRequirement(0);
     expect(canRebirth(st)).toBe(false);
-    st.stage.highestCleared = req.stage;
+    st.stage.highestCleared = req.world;
     st.currencies.coins = req.gold;
     st.upgrades.luck = 4;
     st.equipped.hat = makeItem({ uid: 5, power: 99 });
@@ -222,7 +226,9 @@ describe('rebirth', () => {
     expect(st.player.level).toBe(9);
     expect(currentLuck(st, T0)).toBeCloseTo(1 + BAL.rebirth.luckPer);
     expect(goldMult(st)).toBeCloseTo(1 + BAL.rebirth.goldMultPer);
-    expect(rebirthRequirement(1).stage).toBeGreaterThan(req.stage);
+    expect(rebirthRequirement(1).world).toBeGreaterThan(req.world);
+    expect(rebirthRequirement(1).gold).toBeGreaterThan(req.gold);
+    expect(rebirthRequirement(99).world).toBe(DATA.worlds.length);
   });
 });
 

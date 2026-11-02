@@ -58,16 +58,28 @@ export const BalanceSchema = z.object({
   stages: z.object({
     wavesPerStage: z.number().int().positive(),
     enemiesPerWave: range,
-    miniBossLocalStages: z.array(z.number().int().positive()),
-    bossLocalStage: z.number().int().positive(),
-    scaling: z.object({ hp: positive, atk: positive, def: positive }),
-    miniBoss: z.object({ hpMult: positive, atkMult: positive, bags: nonNeg, xpMult: positive }),
-    boss: z.object({ hpMult: positive, atkMult: positive, bags: nonNeg, xpMult: positive, coinBurstKills: nonNeg }),
-    neighborhoodClearBonus: z.object({ offlinePct: nonNeg, bagFind: nonNeg }),
+  }),
+  /** Worlds: everything scales by growth^(world - 1). */
+  worlds: z.object({
+    enemyGrowth: z.object({ hp: positive, atk: positive, def: positive }),
+    /** The DEF constant in the damage formula scales too, so DEF stays meaningful in every world. */
+    defConstantGrowth: positive,
+    /** Items rolled in world W have their flat HP/ATK/DEF/REGEN multiplied by itemGrowth^(W-1). */
+    itemGrowth: positive,
+    goldGrowth: positive,
+    xpGrowth: positive,
+    boss: z.object({
+      hpMult: positive, atkMult: positive, xpMult: positive, coinMult: positive, bags: nonNeg,
+      potionChance: z.number().min(0).max(1),
+    }),
+    firstClearGems: nonNeg,
+    firstClearGemsPerWorld: nonNeg,
+    /** Threat: margin = (your HP x your DPS) / (their HP x their DPS); under 1 you lose, at easyMargin+ it's easy. */
+    threat: z.object({ waveSize: positive, easyMargin: positive }),
   }),
   drops: z.object({
-    killCoins: z.object({ base: positive, growth: positive }),
-    killXp: z.object({ base: positive, growth: positive }),
+    killCoins: z.object({ base: positive }),
+    killXp: z.object({ base: positive }),
     bagsPerWave: nonNeg,
   }),
   rarities: rarityRecord(
@@ -135,10 +147,11 @@ export const BalanceSchema = z.object({
   inventory: z.object({ baseCapacity: z.number().int().positive() }),
   economy: z.object({ scrapGoldMult: nonNeg, scrapXpMult: nonNeg }),
   rebirth: z.object({
-    baseStage: z.number().int().positive(),
-    stagePer: z.number().int().nonnegative(),
+    baseWorld: z.number().int().positive(),
+    worldPer: z.number().int().nonnegative(),
+    /** Gold needed = goldBase x worlds.goldGrowth^(required world - 1) x goldPerRebirth^rebirths. */
     goldBase: nonNeg,
-    goldGrowth: positive,
+    goldPerRebirth: positive,
     luckPer: nonNeg,
     goldMultPer: nonNeg,
   }),
@@ -267,26 +280,35 @@ export const EnemySchema = z.object({
 export type EnemyDef = z.infer<typeof EnemySchema>;
 export const EnemiesSchema = z.array(EnemySchema).min(1);
 
-export const NeighborhoodSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  firstStage: z.number().int().positive(),
-  lastStage: z.number().int().positive(),
-  theme: z.string().min(1),
-  enemies: z.array(z.string()).min(1),
-  miniBosses: z.array(z.string()).min(1),
-  boss: z.string(),
-  background: z.string(),
-});
-export type Neighborhood = z.infer<typeof NeighborhoodSchema>;
-export const NeighborhoodsSchema = z.array(NeighborhoodSchema).min(1);
-
 export const StringsSchema = z.record(z.string(), z.string());
 
 export const EnemyShapeSchema = z.enum(['rat', 'pigeon', 'raccoon', 'ratKing', 'raccoonBoss', 'officer']);
 export type EnemyShape = z.infer<typeof EnemyShapeSchema>;
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'expected a #RRGGBB color');
+
+/** An enemy as it appears in one world: base enemy id plus that world's name and colors. */
+const WorldFoeSchema = z.object({ id: z.string().min(1), name: z.string().min(1), color: hex, accent: hex });
+export type WorldFoe = z.infer<typeof WorldFoeSchema>;
+
+export const WorldSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  theme: z.string().min(1),
+  enemies: z.array(WorldFoeSchema).min(1),
+  boss: WorldFoeSchema,
+  /** Sky gradient plus a hue/saturation/brightness grade applied to the scenery art. */
+  look: z.object({
+    skyTop: hex,
+    skyBottom: hex,
+    hue: z.number().min(-360).max(360),
+    sat: z.number().nonnegative(),
+    bright: z.number().positive(),
+    night: z.boolean(),
+  }),
+});
+export type WorldDef = z.infer<typeof WorldSchema>;
+export const WorldsSchema = z.array(WorldSchema).min(1);
 
 export const AssetsSchema = z.object({
   files: z.record(z.string(), z.string()),
@@ -296,13 +318,6 @@ export const AssetsSchema = z.object({
     enemies: z.record(
       z.string(),
       z.object({ shape: EnemyShapeSchema, color: hex, accent: hex, size: positive, label: z.string() }),
-    ),
-    backgrounds: z.record(
-      z.string(),
-      z.object({
-        sky: hex, skyLow: hex, skyline: hex, walls: hex, ground: hex, neon: hex, neon2: hex, window: hex,
-        grade: hex, gradeAlpha: z.number().min(0).max(1), sign: z.string(), signSub: z.string(),
-      }),
     ),
     raccoon: z.object({ body: hex, mask: hex, belly: hex, tail: hex, brow: hex }),
     slots: slotRecord(z.string()),

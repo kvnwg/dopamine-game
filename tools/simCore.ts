@@ -1,21 +1,22 @@
 /**
  * Headless balance simulator: plays the real core logic with a bot.
- * The roller runs on its own; the bot buys the cheapest upgrade it can afford, upgrades the
- * dumpster, fights bosses when ready, and rebirths as soon as it is allowed.
+ * The roller runs on its own and the battle pushes through worlds by itself. The bot buys the
+ * cheapest upgrade it can afford, upgrades the dumpster, rebirths as soon as it is allowed, and
+ * (like a player watching the Worlds tab) jumps ahead to the hardest world that looks easy.
  */
 import {
-  applyAction, bossStageAvailable, canRebirth, computeStats, createInitialState, currentLuck, playerPower, Rng, tick,
-  upgradeCost, upgradeCostAt, upgradeLevel, TICK_MS, type CoreEvent, type GameAction, type GameState,
+  applyAction, canRebirth, computeStats, createInitialState, currentLuck, Rng, tick, upgradeCost, upgradeCostAt,
+  upgradeLevel, worldCount, worldThreat, TICK_MS, type CoreEvent, type GameAction, type GameState,
 } from '../src/core';
 import { BAL, RARITIES } from '../src/data';
 
 export interface SimOptions {
   minutes: number;
   seed: number;
-  /** Seconds to farm after a boss loss before retrying even without new power. */
-  bossRetrySeconds?: number;
   /** Rebirth whenever allowed (default true). */
   rebirth?: boolean;
+  /** Jump ahead to the hardest world that looks easy (default true). */
+  jump?: boolean;
   startTime?: number;
   sampleEverySeconds?: number;
 }
@@ -38,18 +39,17 @@ export interface SimSample {
 
 export interface SimResult {
   samples: SimSample[];
-  /** Minute at which each stage was first cleared (any rebirth). */
+  /** Minute at which each world was first cleared (any rebirth). */
   clearedAt: Record<number, number>;
   rebirthAt: number[];
   deaths: number;
-  bossAttempts: number;
+  jumps: number;
   bossWins: number;
   final: GameState;
   rarityCounts: Record<string, number>;
 }
 
 export function simulate(opts: SimOptions): SimResult {
-  const bossRetry = opts.bossRetrySeconds ?? 90;
   const sampleEvery = (opts.sampleEverySeconds ?? 60) * 1000;
   let now = opts.startTime ?? Date.UTC(2026, 0, 5, 12, 0, 0);
   let state = createInitialState(now, Rng.hashSeed(opts.seed));
@@ -59,24 +59,17 @@ export function simulate(opts: SimOptions): SimResult {
   const samples: SimSample[] = [];
   const rarityCounts: Record<string, number> = Object.fromEntries(RARITIES.map((r) => [r, 0]));
   let deaths = 0;
-  let bossAttempts = 0;
+  let jumps = 0;
   let bossWins = 0;
   let elapsed = 0;
-  let lastBossLossPower: number | null = null;
-  let lastBossLossAt = 0;
   let nextSample = 0;
   let nextShop = 0;
+  let nextJump = 0;
 
   const onEvents = (events: CoreEvent[]) => {
     for (const e of events) {
       if (e.type === 'stageClear' && clearedAt[e.stage] === undefined) clearedAt[e.stage] = elapsed / 60000;
-      if (e.type === 'playerDeath') {
-        deaths++;
-        if (e.stage === state.stage.highestCleared + 1) {
-          lastBossLossPower = playerPower(state);
-          lastBossLossAt = elapsed;
-        }
-      }
+      if (e.type === 'playerDeath') deaths++;
       if (e.type === 'bossWin') bossWins++;
       if (e.type === 'roll') rarityCounts[e.item.rarity]++;
       if (e.type === 'rebirth') rebirthAt.push(elapsed / 60000);
@@ -98,10 +91,7 @@ export function simulate(opts: SimOptions): SimResult {
 
     if (elapsed >= nextShop) {
       nextShop = elapsed + 1000;
-      if (opts.rebirth !== false && canRebirth(state)) {
-        act({ type: 'rebirth' });
-        lastBossLossPower = null;
-      }
+      if (opts.rebirth !== false && canRebirth(state)) act({ type: 'rebirth' });
       if (state.dumpster.upgradeEndsAt === null && state.dumpster.level < BAL.dumpster.maxLevel
         && state.currencies.coins >= upgradeCost(state.dumpster.level)) {
         act({ type: 'startDumpsterUpgrade' });
@@ -120,12 +110,18 @@ export function simulate(opts: SimOptions): SimResult {
       }
     }
 
-    const boss = bossStageAvailable(state);
-    if (boss !== null && state.battle.phase !== 'dead') {
-      const p = playerPower(state);
-      if (lastBossLossPower === null || p > lastBossLossPower || elapsed - lastBossLossAt > bossRetry * 1000) {
-        bossAttempts++;
-        act({ type: 'fightBoss' });
+    if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead') {
+      nextJump = elapsed + 10_000;
+      let target = 0;
+      for (let w = worldCount(); w > state.battle.stage; w--) {
+        if (worldThreat(state, w).level === 'easy') {
+          target = w;
+          break;
+        }
+      }
+      if (target > state.battle.stage) {
+        jumps++;
+        act({ type: 'travel', world: target });
       }
     }
 
@@ -151,5 +147,5 @@ export function simulate(opts: SimOptions): SimResult {
       });
     }
   }
-  return { samples, clearedAt, rebirthAt, deaths, bossAttempts, bossWins, final: state, rarityCounts };
+  return { samples, clearedAt, rebirthAt, deaths, jumps, bossWins, final: state, rarityCounts };
 }

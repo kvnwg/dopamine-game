@@ -1,0 +1,782 @@
+[
+  {
+    "id": "sunny_suburbs",
+    "name": "Sunny Suburbs",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Alley Rat",
+        "color": "#7A6A72",
+        "accent": "#D9A1AE"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Porch Pigeon",
+        "color": "#8E9AAF",
+        "accent": "#5FB49C"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Punk Raccoon",
+        "color": "#77707F",
+        "accent": "#E53935"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Officer Dale",
+      "color": "#2B4C7E",
+      "accent": "#F2C14E"
+    },
+    "look": {
+      "skyTop": "#2FB8F0",
+      "skyBottom": "#C8F0FF",
+      "hue": 0,
+      "sat": 1.0,
+      "bright": 1.0,
+      "night": false
+    }
+  },
+  {
+    "id": "pinecone_park",
+    "name": "Pinecone Park",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Picnic Rat",
+        "color": "#8A7560",
+        "accent": "#E6B07A"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Park Pigeon",
+        "color": "#7FA88C",
+        "accent": "#E8D35A"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Scout Raccoon",
+        "color": "#7B7466",
+        "accent": "#3FA34D"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Big Earl",
+      "color": "#6A5A62",
+      "accent": "#C49A6C"
+    },
+    "look": {
+      "skyTop": "#3CC4F2",
+      "skyBottom": "#DDF7FF",
+      "hue": -12,
+      "sat": 1.15,
+      "bright": 1.03,
+      "night": false
+    }
+  },
+  {
+    "id": "drizzle_downtown",
+    "name": "Drizzle Downtown",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Gutter Rat",
+        "color": "#5E6670",
+        "accent": "#9FB4C7"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Rain Pigeon",
+        "color": "#6F7F99",
+        "accent": "#4FC3F7"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Slicker Punk",
+        "color": "#636A78",
+        "accent": "#FFD54F"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie \"Two Lids\"",
+      "color": "#6E6878",
+      "accent": "#7E57C2"
+    },
+    "look": {
+      "skyTop": "#7F9BC0",
+      "skyBottom": "#D3DEEB",
+      "hue": 8,
+      "sat": 0.55,
+      "bright": 0.92,
+      "night": false
+    }
+  },
+  {
+    "id": "boardwalk_beach",
+    "name": "Boardwalk Beach",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Sand Rat",
+        "color": "#C9A27A",
+        "accent": "#FF8A65"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Seagull",
+        "color": "#E8ECF2",
+        "accent": "#FFB300"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Surfer Punk",
+        "color": "#8C7F70",
+        "accent": "#26C6DA"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Lifeguard Lou",
+      "color": "#E53935",
+      "accent": "#FFEB3B"
+    },
+    "look": {
+      "skyTop": "#1FC2FF",
+      "skyBottom": "#FFF1C4",
+      "hue": 12,
+      "sat": 1.2,
+      "bright": 1.06,
+      "night": false
+    }
+  },
+  {
+    "id": "autumn_avenue",
+    "name": "Autumn Avenue",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Leaf Rat",
+        "color": "#9C6B47",
+        "accent": "#F4A259"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Harvest Pigeon",
+        "color": "#A0785A",
+        "accent": "#E76F51"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Pumpkin Punk",
+        "color": "#7D6450",
+        "accent": "#F77F00"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Earl of Acorns",
+      "color": "#7A4E2D",
+      "accent": "#E9C46A"
+    },
+    "look": {
+      "skyTop": "#FFB86B",
+      "skyBottom": "#FFE6B8",
+      "hue": -38,
+      "sat": 1.15,
+      "bright": 1.0,
+      "night": false
+    }
+  },
+  {
+    "id": "neon_night",
+    "name": "Neon Night Market",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Neon Rat",
+        "color": "#5B4B8A",
+        "accent": "#FF3EA5"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Disco Pigeon",
+        "color": "#4E5BA8",
+        "accent": "#2EE6FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Glowstick Punk",
+        "color": "#5A4E6E",
+        "accent": "#B6FF3B"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie Neon",
+      "color": "#3E2F6B",
+      "accent": "#FF3EA5"
+    },
+    "look": {
+      "skyTop": "#120F3A",
+      "skyBottom": "#4B2A7A",
+      "hue": 18,
+      "sat": 1.25,
+      "bright": 0.58,
+      "night": true
+    }
+  },
+  {
+    "id": "snowy_summit",
+    "name": "Snowy Summit",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Snow Rat",
+        "color": "#E8EEF5",
+        "accent": "#90CAF9"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Frost Pigeon",
+        "color": "#B8D4EA",
+        "accent": "#4FC3F7"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Yeti Punk",
+        "color": "#DDE6EE",
+        "accent": "#64B5F6"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Ranger Frost",
+      "color": "#4E7FB5",
+      "accent": "#E3F2FD"
+    },
+    "look": {
+      "skyTop": "#9FD8FF",
+      "skyBottom": "#FFFFFF",
+      "hue": 0,
+      "sat": 0.3,
+      "bright": 1.22,
+      "night": false
+    }
+  },
+  {
+    "id": "dusty_dunes",
+    "name": "Dusty Dunes",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Dune Rat",
+        "color": "#C8A26E",
+        "accent": "#8D6E63"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Desert Pigeon",
+        "color": "#D9B98C",
+        "accent": "#26A69A"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Cactus Punk",
+        "color": "#A68A64",
+        "accent": "#43A047"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Sultan of Sand",
+      "color": "#B8864B",
+      "accent": "#FFD54F"
+    },
+    "look": {
+      "skyTop": "#FFC86B",
+      "skyBottom": "#FFF3D1",
+      "hue": -55,
+      "sat": 0.9,
+      "bright": 1.08,
+      "night": false
+    }
+  },
+  {
+    "id": "toxic_bayou",
+    "name": "Toxic Bayou",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Sludge Rat",
+        "color": "#5C7A4A",
+        "accent": "#B6FF3B"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Swamp Pigeon",
+        "color": "#5E8F6A",
+        "accent": "#C0CA33"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Bog Punk",
+        "color": "#4F6B4A",
+        "accent": "#76FF03"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Gator Vinnie",
+      "color": "#3E6B3A",
+      "accent": "#C6FF00"
+    },
+    "look": {
+      "skyTop": "#7FD46A",
+      "skyBottom": "#E3FFB0",
+      "hue": 55,
+      "sat": 1.3,
+      "bright": 0.86,
+      "night": false
+    }
+  },
+  {
+    "id": "lava_landfill",
+    "name": "Lava Landfill",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Magma Rat",
+        "color": "#5A3A3A",
+        "accent": "#FF7043"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Ember Pigeon",
+        "color": "#6E4A4A",
+        "accent": "#FFB300"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Scorch Punk",
+        "color": "#4A3434",
+        "accent": "#FF3D00"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Fire Marshal Dale",
+      "color": "#B71C1C",
+      "accent": "#FFD54F"
+    },
+    "look": {
+      "skyTop": "#FF5A3A",
+      "skyBottom": "#FFB36B",
+      "hue": -95,
+      "sat": 1.3,
+      "bright": 0.82,
+      "night": false
+    }
+  },
+  {
+    "id": "candy_corner",
+    "name": "Candy Corner",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Gummy Rat",
+        "color": "#F48FB1",
+        "accent": "#FFF59D"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Sprinkle Pigeon",
+        "color": "#CE93D8",
+        "accent": "#80DEEA"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Taffy Punk",
+        "color": "#F8BBD0",
+        "accent": "#FF4081"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Baron Bonbon",
+      "color": "#E91E63",
+      "accent": "#FFEB3B"
+    },
+    "look": {
+      "skyTop": "#FFB3E6",
+      "skyBottom": "#FFF0FA",
+      "hue": 165,
+      "sat": 1.1,
+      "bright": 1.1,
+      "night": false
+    }
+  },
+  {
+    "id": "haunted_hollow",
+    "name": "Haunted Hollow",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Ghost Rat",
+        "color": "#C5CAE9",
+        "accent": "#7E57C2"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Spooky Pigeon",
+        "color": "#9FA8DA",
+        "accent": "#B388FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Zombie Punk",
+        "color": "#8BA88A",
+        "accent": "#6A1B9A"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Count Vinnie",
+      "color": "#4A148C",
+      "accent": "#E53935"
+    },
+    "look": {
+      "skyTop": "#2A1F3A",
+      "skyBottom": "#5C4A7E",
+      "hue": 200,
+      "sat": 0.6,
+      "bright": 0.62,
+      "night": true
+    }
+  },
+  {
+    "id": "glacier_gulch",
+    "name": "Glacier Gulch",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Ice Rat",
+        "color": "#B3E5FC",
+        "accent": "#0288D1"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Glacier Pigeon",
+        "color": "#81D4FA",
+        "accent": "#E1F5FE"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Frostbite Punk",
+        "color": "#90A4AE",
+        "accent": "#00B8D4"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Captain Icicle",
+      "color": "#0277BD",
+      "accent": "#B3E5FC"
+    },
+    "look": {
+      "skyTop": "#8FE3FF",
+      "skyBottom": "#EAFBFF",
+      "hue": 95,
+      "sat": 0.8,
+      "bright": 1.15,
+      "night": false
+    }
+  },
+  {
+    "id": "mushroom_marsh",
+    "name": "Mushroom Marsh",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Spore Rat",
+        "color": "#A1887F",
+        "accent": "#E040FB"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Puffball Pigeon",
+        "color": "#BCAAA4",
+        "accent": "#FF5252"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Toadstool Punk",
+        "color": "#8D6E63",
+        "accent": "#FF1744"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "King Fungus",
+      "color": "#6D4C41",
+      "accent": "#D500F9"
+    },
+    "look": {
+      "skyTop": "#C6A6FF",
+      "skyBottom": "#F3EAFF",
+      "hue": 125,
+      "sat": 1.2,
+      "bright": 1.0,
+      "night": false
+    }
+  },
+  {
+    "id": "crystal_caverns",
+    "name": "Crystal Caverns",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Crystal Rat",
+        "color": "#7986CB",
+        "accent": "#18FFFF"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Geode Pigeon",
+        "color": "#9575CD",
+        "accent": "#FF80AB"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Quartz Punk",
+        "color": "#5C6BC0",
+        "accent": "#EA80FC"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie the Gem",
+      "color": "#311B92",
+      "accent": "#18FFFF"
+    },
+    "look": {
+      "skyTop": "#2E1F66",
+      "skyBottom": "#8A5AD8",
+      "hue": 140,
+      "sat": 1.35,
+      "bright": 0.75,
+      "night": true
+    }
+  },
+  {
+    "id": "thunder_plateau",
+    "name": "Thunder Plateau",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Storm Rat",
+        "color": "#78909C",
+        "accent": "#FFEA00"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Thunder Pigeon",
+        "color": "#607D8B",
+        "accent": "#FFD600"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Static Punk",
+        "color": "#546E7A",
+        "accent": "#00E5FF"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Sergeant Spark",
+      "color": "#263238",
+      "accent": "#FFEA00"
+    },
+    "look": {
+      "skyTop": "#4A5A7A",
+      "skyBottom": "#A5B3CF",
+      "hue": 25,
+      "sat": 0.7,
+      "bright": 0.78,
+      "night": false
+    }
+  },
+  {
+    "id": "golden_gardens",
+    "name": "Golden Gardens",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Gilded Rat",
+        "color": "#D4AF37",
+        "accent": "#FFF59D"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Golden Pigeon",
+        "color": "#E6C35C",
+        "accent": "#FF6F00"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Bling Punk",
+        "color": "#B8973A",
+        "accent": "#E040FB"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Earl the Opulent",
+      "color": "#C9A227",
+      "accent": "#7B1FA2"
+    },
+    "look": {
+      "skyTop": "#FFE08A",
+      "skyBottom": "#FFF9DC",
+      "hue": -42,
+      "sat": 1.45,
+      "bright": 1.12,
+      "night": false
+    }
+  },
+  {
+    "id": "moon_junkyard",
+    "name": "Moon Junkyard",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Moon Rat",
+        "color": "#CFD8DC",
+        "accent": "#90A4AE"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Lunar Pigeon",
+        "color": "#B0BEC5",
+        "accent": "#80D8FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Astro Punk",
+        "color": "#ECEFF1",
+        "accent": "#FF6E40"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie Moonwalker",
+      "color": "#90A4AE",
+      "accent": "#40C4FF"
+    },
+    "look": {
+      "skyTop": "#070B1F",
+      "skyBottom": "#262E52",
+      "hue": 0,
+      "sat": 0.15,
+      "bright": 0.85,
+      "night": true
+    }
+  },
+  {
+    "id": "cosmic_compactor",
+    "name": "Cosmic Compactor",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Comet Rat",
+        "color": "#5E35B1",
+        "accent": "#FFD740"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Nebula Pigeon",
+        "color": "#8E24AA",
+        "accent": "#18FFFF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Star Punk",
+        "color": "#4527A0",
+        "accent": "#FF4081"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Commander Dale",
+      "color": "#1A237E",
+      "accent": "#FFD740"
+    },
+    "look": {
+      "skyTop": "#1A0A3A",
+      "skyBottom": "#6A1A8A",
+      "hue": 185,
+      "sat": 1.45,
+      "bright": 0.72,
+      "night": true
+    }
+  },
+  {
+    "id": "trash_dimension",
+    "name": "The Trash Dimension",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Void Rat",
+        "color": "#3A3350",
+        "accent": "#E040FB"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Rift Pigeon",
+        "color": "#37474F",
+        "accent": "#00E5FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Glitch Punk",
+        "color": "#2F3540",
+        "accent": "#76FF03"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "The Trash Titan",
+      "color": "#2D2440",
+      "accent": "#FF1744"
+    },
+    "look": {
+      "skyTop": "#FF4FA3",
+      "skyBottom": "#5A3AFF",
+      "hue": 250,
+      "sat": 1.6,
+      "bright": 0.88,
+      "night": false
+    }
+  }
+]

@@ -3,6 +3,7 @@ import {
   applyAction, backupKey, deserialize, MemoryStorage, migrate, Rng, SAVE_KEY, SaveManager, serialize, tick,
   type GameState,
 } from '../src/core';
+import { SAVE_VERSION } from '../src/core/state';
 import { freshState, T0 } from './helpers';
 
 function played(): GameState {
@@ -59,7 +60,7 @@ describe('save / load', () => {
     expect(played()).toEqual(played());
   });
 
-  it('migrates a version 1 save to version 2', () => {
+  it('migrates a version 1 save all the way to the current version', () => {
     const v1 = JSON.parse(serialize(played())) as Record<string, unknown>;
     // Turn it back into the old shape.
     v1.saveVersion = 1;
@@ -72,9 +73,28 @@ describe('save / load', () => {
     for (const e of battle.enemies) { delete e.burnDps; delete e.burnTime; delete e.burnShown; }
     const loaded = deserialize(JSON.stringify(v1));
     expect(loaded).not.toBeNull();
-    expect(loaded!.saveVersion).toBe(2);
+    expect(loaded!.saveVersion).toBe(SAVE_VERSION);
     expect(loaded!.inventory).toEqual([]);
     expect(loaded!.rebirths).toBe(0);
     expect(loaded!.equipped.hat?.enchants).toEqual([]);
+    expect(loaded!.equipped.hat?.tier).toBe(1);
+  });
+
+  it('migrates a version 2 save to worlds: 5 old stages per world, items become World 1 items', () => {
+    const v2 = JSON.parse(serialize(played())) as Record<string, unknown>;
+    v2.saveVersion = 2;
+    v2.neighborhoodsCleared = ['suburbs'];
+    v2.stage = { current: 13, highestCleared: 12, mode: 'push', powerAtDeath: null, showToughHint: false };
+    const eq = v2.equipped as Record<string, Record<string, unknown> | null>;
+    for (const it of Object.values(eq)) if (it) delete it.tier;
+    for (const it of v2.inventory as Array<Record<string, unknown>>) delete it.tier;
+    const loaded = deserialize(JSON.stringify(v2));
+    expect(loaded).not.toBeNull();
+    expect(loaded!.saveVersion).toBe(SAVE_VERSION);
+    expect(loaded!.stage.highestCleared).toBe(2);
+    expect(loaded!.battle.stage).toBe(2);
+    expect(loaded!.stage.mode).toBe('farm');
+    expect(loaded!.equipped.hat?.tier).toBe(1);
+    expect('neighborhoodsCleared' in loaded!).toBe(false);
   });
 });

@@ -43,6 +43,34 @@ export const MIGRATIONS: Record<number, Migration> = {
       records: { bestOdds: 0, bestItemName: '', bestRarity: null },
     };
   },
+  /**
+   * v2 -> v3: the 20 worlds. The old 20 Suburbs stages map to the first worlds (5 stages per world),
+   * every existing item becomes a World 1 item, and the neighborhood bonuses are gone.
+   */
+  2: (s) => {
+    type AnyItem = Record<string, unknown>;
+    const fixItem = (it: AnyItem | null) => (it ? { ...it, tier: 1 } : null);
+    const equipped = Object.fromEntries(
+      Object.entries((s.equipped ?? {}) as Record<string, AnyItem | null>).map(([k, v]) => [k, fixItem(v)]),
+    );
+    const inventory = ((s.inventory ?? []) as AnyItem[]).map((it) => fixItem(it));
+    const oldStage = (s.stage ?? {}) as Record<string, unknown>;
+    const highest = Math.floor(Number(oldStage.highestCleared ?? 0) / 5);
+    const world = Math.max(1, highest);
+    const battle = { ...(s.battle as Record<string, unknown>), stage: world, wave: 0, phase: 'walking', phaseTime: 1, enemies: [] };
+    const rest = { ...s };
+    delete rest.neighborhoodsCleared;
+    return {
+      ...rest,
+      saveVersion: 3,
+      equipped,
+      inventory,
+      stage: {
+        current: world, highestCleared: highest, mode: highest > 0 ? 'farm' : 'push', returnTo: world, powerAtDeath: null, showToughHint: false,
+      },
+      battle,
+    };
+  },
 };
 
 export function migrate(

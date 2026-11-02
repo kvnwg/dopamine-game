@@ -5,9 +5,10 @@
 import Phaser from 'phaser';
 import { DATA, type Rarity, type Slot } from '../data';
 import {
-  RACCOON_FRAME, bagSprite, cloudSprite, coinSprite, confetti, enemySprite, farLayer, fgLayer, gearOverlay, groundLayer,
-  impactStar, midLayer, puff, raccoonBody, raccoonPaw, sky, slashArc, sparkle, weaponSprite, type EnemyShape, type Pt,
+  RACCOON_FRAME, bagSprite, cloudSprite, coinSprite, confetti, enemySprite, gearOverlay, impactStar, puff, raccoonBody,
+  raccoonPaw, slashArc, sparkle, weaponSprite, type EnemyShape, type Pt,
 } from './cel';
+import { baseLayers, grade, skyCanvas } from './worldLook';
 
 export const HERO = RACCOON_FRAME;
 export const BG_TILE_W = 2048;
@@ -70,14 +71,57 @@ export function gearTex(scene: Phaser.Scene, slot: Exclude<Slot, 'weapon'>, rari
   return lazy(scene, `gear_${slot}_${rarity}`, () => ({ canvas: gearOverlay(slot, rarity), origin: HERO.feet }));
 }
 
-/** Enemy sprite with its feet as origin; `front` is how far the sprite reaches left of the feet. */
-export function enemyTex(scene: Phaser.Scene, enemyId: string): SpriteInfo & { front: number; back: number } {
+/**
+ * Enemy sprite in a world's colors, with its feet as origin; `front` is how far the sprite reaches
+ * left of the feet.
+ */
+export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): SpriteInfo & { front: number; back: number } {
   const ph = DATA.assets.placeholders.enemies[enemyId] ?? { shape: 'rat', color: '#888888', accent: '#bbbbbb', size: 110 };
-  const i = lazy(scene, `enemy_${enemyId}`, () => {
-    const s = enemySprite(ph.shape as EnemyShape, ph.size, ph.color, ph.accent);
+  const w = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
+  const foe = w.boss.id === enemyId ? w.boss : w.enemies.find((f) => f.id === enemyId);
+  const color = foe?.color ?? ph.color;
+  const accent = foe?.accent ?? ph.accent;
+  const i = lazy(scene, `enemy_${world}_${enemyId}`, () => {
+    const s = enemySprite(ph.shape as EnemyShape, ph.size, color, accent);
     return { canvas: s.canvas, origin: s.feet };
   });
   return { ...i, front: i.ox * i.w, back: (1 - i.ox) * i.w };
+}
+
+export interface WorldKeys {
+  sky: string;
+  far: string;
+  mid: string;
+  ground: string;
+  fg: string;
+}
+
+/** Sky and graded scenery tiles for a world (painted on first visit). */
+export function worldTextures(scene: Phaser.Scene, world: number, w: number, h: number): WorldKeys {
+  const def = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
+  const L = baseLayers();
+  const keys: WorldKeys = {
+    sky: `w${world}_sky`, far: `w${world}_far`, mid: `w${world}_mid`, ground: `w${world}_ground`, fg: `w${world}_fg`,
+  };
+  put(scene, keys.sky, skyCanvas(w, h, def.look), { x: 0, y: 0 });
+  if (!scene.textures.exists(keys.far)) put(scene, keys.far, grade(L.far, def.look), { x: 0, y: 0 });
+  if (!scene.textures.exists(keys.mid)) put(scene, keys.mid, grade(L.mid, def.look), { x: 0, y: 0 });
+  if (!scene.textures.exists(keys.ground)) put(scene, keys.ground, grade(L.ground, def.look), { x: 0, y: 0 });
+  if (!scene.textures.exists(keys.fg)) put(scene, keys.fg, grade(L.fg, def.look), { x: 0, y: 0 });
+  return keys;
+}
+
+/** Frees every world's scenery and enemy textures except `keep`'s. */
+export function releaseWorlds(scene: Phaser.Scene, keep: number): void {
+  for (const key of scene.textures.getTextureKeys()) {
+    const m = /^w(\d+)_|^enemy_(\d+)_/.exec(key);
+    if (!m) continue;
+    const world = Number(m[1] ?? m[2]);
+    if (world !== keep) {
+      scene.textures.remove(key);
+      info.delete(key);
+    }
+  }
 }
 
 export function generateTextures(scene: Phaser.Scene, w: number, h: number): void {
@@ -90,12 +134,9 @@ export function generateTextures(scene: Phaser.Scene, w: number, h: number): voi
   put(scene, 'fx_coin', coinSprite());
   put(scene, 'fx_bag', bagSprite());
   for (const k of [0, 1, 2, 3] as const) put(scene, `fx_conf${k}`, confetti(k));
-  put(scene, 'bg_sky', sky(w, h), { x: 0, y: 0 });
   for (const k of [0, 1, 2]) put(scene, `bg_cloud${k}`, cloudSprite(k));
-  put(scene, 'bg_far', farLayer(), { x: 0, y: 0 });
-  put(scene, 'bg_mid', midLayer(), { x: 0, y: 0 });
-  put(scene, 'bg_ground', groundLayer(), { x: 0, y: 0 });
-  put(scene, 'bg_fg', fgLayer(), { x: 0, y: 0 });
+  void w;
+  void h;
 }
 
 export function texSize(key: string): { w: number; h: number } {

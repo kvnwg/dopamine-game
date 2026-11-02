@@ -3,8 +3,7 @@
  * every button, maps core events to sounds, follows the Sound/Music settings, and goes quiet
  * while the app is in the background.
  */
-import { BAL } from '../data';
-import { stageInfo, type CoreEvent } from '../core';
+import { isBossWave, type CoreEvent } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore, getGame } from '../app/store';
 import { audio } from '../services/audio';
@@ -58,13 +57,13 @@ export function installSound(): () => void {
           audio.bossWarn();
           break;
         case 'waveStart':
-          if (e.wave === BAL.stages.wavesPerStage - 1 && stageInfo(e.stage).kind !== 'regular') audio.bossIntro();
+          if (isBossWave(e.wave)) audio.bossIntro();
           break;
         case 'playerDeath':
           audio.death();
           break;
-        case 'stageClear':
-          if (e.firstTime && stageInfo(e.stage).kind === 'regular') audio.stageClear();
+        case 'worldFirstClear':
+          audio.stageClear();
           break;
         case 'bossWin':
           audio.bossWin();

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, type Slot } from '../data';
 import type { Item } from './types';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export const SubstatSchema = z.object({
   affixId: z.string(),
@@ -29,6 +29,8 @@ export const ItemSchema = z.object({
   mintPerkId: z.string().nullable(),
   enchants: z.array(ItemEnchantSchema),
   locked: z.boolean(),
+  /** The world it was rolled in: its flat HP/ATK/DEF/REGEN scale with worlds.itemGrowth^(tier - 1). */
+  tier: z.number().int().positive(),
   power: z.number(),
 });
 
@@ -90,10 +92,13 @@ export const GameStateSchema = z.object({
   inventory: z.array(ItemSchema),
   autoEquip: z.boolean(),
   nextItemUid: z.number().int(),
+  /** Worlds: `current` is the world being fought in; `highestCleared` the best world whose boss is beaten. */
   stage: z.object({
     current: z.number().int().positive(),
     highestCleared: z.number().int().nonnegative(),
     mode: z.enum(['push', 'farm']),
+    /** Where to fall back to if the current push fails. */
+    returnTo: z.number().int().positive(),
     powerAtDeath: z.number().nullable(),
     showToughHint: z.boolean(),
   }),
@@ -127,7 +132,6 @@ export const GameStateSchema = z.object({
     paused: z.boolean(),
     pending: PendingOfflineSchema.nullable(),
   }),
-  neighborhoodsCleared: z.array(z.string()),
   lifetime: z.object({
     kills: z.number().int().nonnegative(),
     wavesCleared: z.number().int().nonnegative(),
@@ -168,7 +172,7 @@ export function createInitialState(now: number, seed: number): GameState {
     inventory: [],
     autoEquip: true,
     nextItemUid: 1,
-    stage: { current: 1, highestCleared: 0, mode: 'push', powerAtDeath: null, showToughHint: false },
+    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false },
     battle: {
       stage: 1,
       wave: 0,
@@ -197,7 +201,6 @@ export function createInitialState(now: number, seed: number): GameState {
     records: { bestOdds: 0, bestItemName: '', bestRarity: null },
     codex: { entries: [] },
     offline: { buckets: [], trackingSince: null, pausedRate: null, paused: false, pending: null },
-    neighborhoodsCleared: [],
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, reduceFlashing: false, reduceMotion: false },
   };

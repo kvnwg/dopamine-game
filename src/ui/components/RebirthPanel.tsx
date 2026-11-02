@@ -6,7 +6,6 @@ import {
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
-import { stageLabel } from './BattlePanel';
 import { Chunky } from './Chunky';
 import { CheckIcon, CloverIcon, CoinIcon, RebirthIcon } from './Icons';
 import s from './panels.module.css';
@@ -55,7 +54,7 @@ export function RebirthPanel() {
       </div>
       <div className={`${s.rbCard} card`}>
         <span className={s.cardLabel}>{t('rebirth.need')}</span>
-        <Req label={t('rebirth.reqStage', { stage: stageLabel(req.stage) })} have={highest} need={req.stage} done={highest >= req.stage} />
+        <Req label={t('rebirth.reqWorld', { n: req.world })} have={highest} need={req.world} done={highest >= req.world} />
         <Req label={t('rebirth.reqGold', { gold: formatNumber(req.gold) })} have={coins} need={req.gold} done={coins >= req.gold} />
       </div>
       <div className={`${s.rbCard} card`}>

@@ -248,3 +248,12 @@ export const SkullIcon = (p: P) => (
     <path d="M28 54v-6M36 54v-6" strokeWidth={4} />
   </Svg>
 );
+
+export const GlobeIcon = (p: P) => (
+  <Svg {...p}>
+    <circle cx="32" cy="32" r="26" fill="#42a5f5" />
+    <path d="M14 22c6-2 10 2 14 0s4-8 10-8c4 2 2 8 6 10s8 0 8 6-6 6-8 10-2 10-8 10c-4-2-2-8-6-10s-10 0-12-6 2-6-4-12z" fill="#5bc236" stroke="none" />
+    <circle cx="32" cy="32" r="26" />
+    <path d="M18 18c2-3 6-6 10-7" stroke="#d6f0ff" strokeWidth={4} />
+  </Svg>
+);

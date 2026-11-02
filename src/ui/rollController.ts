@@ -128,8 +128,9 @@ export function installRollController(): () => void {
         case 'bossWin':
           haptics.impact('heavy');
           break;
-        case 'neighborhoodCleared':
-          ui.toast(t('toast.neighborhoodCleared'), 'good');
+        case 'worldFirstClear':
+          ui.toast(t('toast.worldCleared', { n: e.world, gems: e.gems }), 'good');
+          haptics.impact('heavy');
           break;
         case 'clockWentBackward':
           ui.toast(t('toast.clockBackward'), 'warn');

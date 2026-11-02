@@ -393,3 +393,29 @@
 .switchOn::after {
   transform: translateX(62px);
 }
+
+/* ------------------------------------------------------------ world */
+.worldThumb {
+  display: block;
+  width: 100%;
+  border-radius: 22px;
+  border: 5px solid var(--ink);
+}
+.threatRow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 20px 0 14px;
+}
+.threatText {
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--ink);
+}
+.rewardLine {
+  margin: 18px 0 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: #b8860b;
+}

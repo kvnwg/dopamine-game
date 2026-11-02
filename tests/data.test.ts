@@ -5,12 +5,12 @@ import items from '../src/data/items.json';
 import affixes from '../src/data/affixes.json';
 import themes from '../src/data/themes.json';
 import enemies from '../src/data/enemies.json';
-import neighborhoods from '../src/data/neighborhoods.json';
+import worlds from '../src/data/worlds.json';
 import strings from '../src/data/strings.en.json';
 import assets from '../src/data/assets.json';
 import enchants from '../src/data/enchants.json';
 
-const raw = { balance, items, affixes, themes, enemies, neighborhoods, strings, assets, enchants };
+const raw = { balance, items, affixes, themes, enemies, worlds, strings, assets, enchants };
 
 describe('game data', () => {
   it('validates at boot', () => {
@@ -31,8 +31,19 @@ describe('game data', () => {
   });
 
   it('rejects broken cross-references', () => {
-    const badHood = [{ ...neighborhoods[0], boss: 'nobody' }];
-    expect(() => buildGameData({ ...raw, neighborhoods: badHood })).toThrow(/unknown enemy nobody/);
+    const badWorld = [{ ...worlds[0], boss: { ...worlds[0].boss, id: 'nobody' } }];
+    expect(() => buildGameData({ ...raw, worlds: badWorld })).toThrow(/unknown enemy nobody/);
+    const bossAsRegular = [{ ...worlds[0], enemies: [{ ...worlds[0].enemies[0], id: 'officer_dale' }] }];
+    expect(() => buildGameData({ ...raw, worlds: bossAsRegular })).toThrow(/not a regular enemy/);
+  });
+
+  it('has 20 worlds with unique ids, each with a roster and a boss', () => {
+    expect(DATA.worlds).toHaveLength(20);
+    expect(new Set(DATA.worlds.map((w) => w.id)).size).toBe(20);
+    for (const w of DATA.worlds) {
+      expect(w.enemies.length).toBeGreaterThan(0);
+      expect(DATA.enemiesById.get(w.boss.id)?.kind).toBe('boss');
+    }
   });
 
   it('every string value is non-empty', () => {

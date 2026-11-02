@@ -28,7 +28,7 @@ export type CoreEvent =
   | { type: 'waveClear'; stage: number; wave: number }
   | { type: 'stageClear'; stage: number; firstTime: boolean }
   | { type: 'bossWin'; stage: number }
-  | { type: 'neighborhoodCleared'; neighborhoodId: string }
+  | { type: 'worldFirstClear'; world: number; gems: number }
   | { type: 'playerDeath'; stage: number }
   | { type: 'stageStart'; stage: number; push: boolean }
   | { type: 'bossAttempt'; stage: number }
@@ -65,8 +65,7 @@ export type GameAction =
   | { type: 'setAutoEquip'; enabled: boolean }
   | { type: 'buyUpgrade'; id: string }
   | { type: 'rebirth' }
-  | { type: 'fightBoss' }
-  | { type: 'pushStage' }
+  | { type: 'travel'; world: number }
   | { type: 'startDumpsterUpgrade' }
   | { type: 'speedupDumpsterGems' }
   | { type: 'speedupDumpsterAd' }
@@ -83,6 +82,7 @@ export type SettingKey = 'haptics' | 'sound' | 'music' | 'reduceFlashing' | 'red
 export type Cheat =
   | { kind: 'addCurrency'; coins?: number; gems?: number; bags?: number }
   | { kind: 'addXp'; amount: number }
+  /** Jump to a world as if every world before it was beaten. */
   | { kind: 'setStage'; stage: number }
   | { kind: 'forceRarity'; rarity: Rarity | null }
   | { kind: 'luckBoost'; seconds: number }

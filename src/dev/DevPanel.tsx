@@ -10,7 +10,7 @@ const cheat = (c: Cheat) => dispatch({ type: 'cheat', cheat: c });
 
 export function DevPanel() {
   const [open, setOpen] = useState(false);
-  const [stage, setStage] = useState('10');
+  const [stage, setStage] = useState('3');
   const [dl, setDl] = useState('5');
   const [armReset, setArmReset] = useState(false);
   const forced = useGame((g) => g.dumpster.forcedRarity);
@@ -40,10 +40,10 @@ export function DevPanel() {
           </div>
         </div>
         <div className={s.group}>
-          <div className={s.label}>Stage / Dumpster</div>
+          <div className={s.label}>World / Dumpster</div>
           <div className={s.row}>
             <input className={s.input} value={stage} onChange={(e) => setStage(e.target.value)} inputMode="numeric" />
-            <button className={s.b} onClick={() => cheat({ kind: 'setStage', stage: Number(stage) || 1 })}>Set stage</button>
+            <button className={s.b} onClick={() => cheat({ kind: 'setStage', stage: Number(stage) || 1 })}>Set world</button>
             <button className={s.b} onClick={() => cheat({ kind: 'skipToLastWave' })}>Last wave</button>
             <input className={s.input} value={dl} onChange={(e) => setDl(e.target.value)} inputMode="numeric" />
             <button className={s.b} onClick={() => cheat({ kind: 'setDumpsterLevel', level: Number(dl) || 1 })}>Set dumpster Lv</button>

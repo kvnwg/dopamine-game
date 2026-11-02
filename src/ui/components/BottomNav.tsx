@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react';
-import { BAL } from '../../data';
-import { canRebirth, inventoryCapacity, upgradeCostAt, upgradeLevel } from '../../core';
+import { BAL, DATA } from '../../data';
+import { canRebirth, inventoryCapacity, upgradeCostAt, upgradeLevel, worldThreat } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { useUi, type Tab } from '../uiStore';
-import { ArrowUpIcon, BagIcon, CartIcon, DumpsterIcon, RebirthIcon } from './Icons';
+import { ArrowUpIcon, BagIcon, DumpsterIcon, GlobeIcon, RebirthIcon } from './Icons';
 import s from './nav.module.css';
 
 interface TabDef {
-  id: Tab | 'shop';
+  id: Tab;
   icon: (size: number) => ReactNode;
 }
 
@@ -18,7 +18,7 @@ const TABS: TabDef[] = [
   { id: 'bag', icon: (n) => <BagIcon size={n} /> },
   { id: 'upgrades', icon: (n) => <ArrowUpIcon size={n} /> },
   { id: 'rebirth', icon: (n) => <RebirthIcon size={n} /> },
-  { id: 'shop', icon: (n) => <CartIcon size={n} /> },
+  { id: 'worlds', icon: (n) => <GlobeIcon size={n} /> },
 ];
 
 export function BottomNav() {
@@ -28,27 +28,28 @@ export function BottomNav() {
   );
   const rebirth = useGame(canRebirth);
   const bagFull = useGame((g) => g.inventory.length >= inventoryCapacity(g));
-  const badge: Partial<Record<TabDef['id'], boolean>> = { upgrades: affordable, rebirth, bag: bagFull };
+  const easyNext = useGame((g) => {
+    const next = g.stage.highestCleared + 1;
+    return next <= DATA.worlds.length && g.battle.stage !== next && worldThreat(g, next).level === 'easy';
+  });
+  const badge: Partial<Record<TabDef['id'], boolean>> = { upgrades: affordable, rebirth, bag: bagFull, worlds: easyNext };
   return (
     <nav className={s.nav}>
       {TABS.map((d) => {
         const active = d.id === tab;
-        const locked = d.id === 'shop';
         return (
           <button
             key={d.id}
             aria-label={t(`tab.${d.id}`)}
-            className={[s.tab, active ? s.active : '', locked ? s.locked : ''].join(' ')}
+            className={[s.tab, active ? s.active : ''].join(' ')}
             onClick={() => {
               haptics.impact('light');
-              if (locked) useUi.getState().toast(t('tab.locked', { name: t(`tab.${d.id}`) }), 'info');
-              else useUi.getState().setTab(d.id as Tab);
+              useUi.getState().setTab(d.id);
             }}
           >
             <span className={s.icon}>{d.icon(active ? 96 : 76)}</span>
             <span className={s.label}>{t(`tab.${d.id}`)}</span>
             {badge[d.id] && <span className={s.badge}>!</span>}
-            {locked && <span className={s.soon}>{t('tab.soon')}</span>}
           </button>
         );
       })}

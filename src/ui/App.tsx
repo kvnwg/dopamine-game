@@ -6,6 +6,7 @@ import { AlleyPanel } from './components/AlleyPanel';
 import { InventoryPanel } from './components/InventoryPanel';
 import { UpgradesPanel } from './components/UpgradesPanel';
 import { RebirthPanel } from './components/RebirthPanel';
+import { WorldsPanel } from './components/WorldsPanel';
 import { BottomNav } from './components/BottomNav';
 import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
@@ -49,6 +50,7 @@ export function App() {
             {tab === 'bag' && <InventoryPanel />}
             {tab === 'upgrades' && <UpgradesPanel />}
             {tab === 'rebirth' && <RebirthPanel />}
+            {tab === 'worlds' && <WorldsPanel />}
           </div>
           <div className={styles.nav}><BottomNav /></div>
           <RevealLayer />

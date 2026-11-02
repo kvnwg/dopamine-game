@@ -101,22 +101,6 @@
         "label": "ANIMAL CONTROL"
       }
     },
-    "backgrounds": {
-      "bg_suburbs": {
-        "sky": "#1B1E3C",
-        "skyLow": "#3A2C4E",
-        "skyline": "#151733",
-        "walls": "#4A3A5C",
-        "ground": "#2E3A4A",
-        "neon": "#FF3EA5",
-        "neon2": "#2EE6FF",
-        "window": "#FFB347",
-        "grade": "#4A3A5C",
-        "gradeAlpha": 0.12,
-        "sign": "bg.suburbs.sign",
-        "signSub": "bg.suburbs.signSub"
-      }
-    },
     "raccoon": {
       "body": "#8C8C99",
       "mask": "#2A2A33",

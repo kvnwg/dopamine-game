@@ -3,8 +3,8 @@ import { create } from 'zustand';
 import type { Item, RollPlacement } from '../core';
 import type { AdPlacement } from '../services';
 
-export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck';
-export type Tab = 'alley' | 'bag' | 'upgrades' | 'rebirth';
+export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world';
+export type Tab = 'alley' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
 export interface RollView {
   id: number;
@@ -25,7 +25,7 @@ export interface Toast {
 interface UiState {
   tab: Tab;
   popup: PopupKind | null;
-  /** Item uid (bag or equipped) for the detail popup. */
+  /** Item uid (bag or equipped) for the detail popup, or the world number for the world popup. */
   detailUid: number | null;
   lastRoll: RollView | null;
   recent: RollView[];

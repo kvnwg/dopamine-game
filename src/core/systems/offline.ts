@@ -61,7 +61,7 @@ export function currentRate(state: GameState, now: number): Rate {
   return { bags: total.bags / coveredMin, coins: total.coins / coveredMin, xp: total.xp / coveredMin };
 }
 
-/** Pure offline reward math: rate x minutes x efficiency x (1 + neighborhood bonus). */
+/** Pure offline reward math: rate x minutes x efficiency x (1 + bonus%). */
 export function offlineReward(rate: Rate, elapsedMs: number, bonusPct: number): Rate {
   const mult = (elapsedMs / MS_PER_MINUTE) * BAL.offline.efficiency * (1 + bonusPct / 100);
   return {
@@ -71,8 +71,9 @@ export function offlineReward(rate: Rate, elapsedMs: number, bonusPct: number): 
   };
 }
 
-export function offlineBonusPct(state: GameState): number {
-  return state.neighborhoodsCleared.length * BAL.stages.neighborhoodClearBonus.offlinePct;
+/** Offline bonus %. None yet (neighborhood clear bonuses went away with the worlds); kept as the hook for later bonuses. */
+export function offlineBonusPct(_state: GameState): number {
+  return 0;
 }
 
 /** App going to background: remember when and how fast we were earning. */

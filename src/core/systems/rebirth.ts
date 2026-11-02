@@ -1,25 +1,24 @@
 /**
- * Rebirth: once you reach the required stage and gold, start over from stage 1 with permanent
- * luck and gold multipliers. Resets stage progress, gold and the upgrade grid. Keeps items,
- * level, Dumpster Level, Codex and Gems.
+ * Rebirth: once you beat the required world and hold enough gold, start over from World 1 with
+ * permanent luck and gold multipliers. Resets world progress, gold and the upgrade grid. Keeps
+ * items, level, Dumpster Level, Codex and Gems.
  */
 import { BAL } from '../../data';
 import type { GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { startStage } from './combat';
-import { maxStage } from './stages';
+import { growth, worldCount } from './stages';
 
-export function rebirthRequirement(rebirths: number): { stage: number; gold: number } {
+/** World to beat and gold to hold for the next rebirth. Gold follows the world's gold growth. */
+export function rebirthRequirement(rebirths: number): { world: number; gold: number } {
   const r = BAL.rebirth;
-  return {
-    stage: Math.min(maxStage(), r.baseStage + r.stagePer * rebirths),
-    gold: Math.round(r.goldBase * Math.pow(r.goldGrowth, rebirths)),
-  };
+  const world = Math.min(worldCount(), r.baseWorld + r.worldPer * rebirths);
+  return { world, gold: Math.round(r.goldBase * growth(BAL.worlds.goldGrowth, world) * Math.pow(r.goldPerRebirth, rebirths)) };
 }
 
 export function canRebirth(state: GameState): boolean {
   const req = rebirthRequirement(state.rebirths);
-  return state.stage.highestCleared >= req.stage && state.currencies.coins >= req.gold;
+  return state.stage.highestCleared >= req.world && state.currencies.coins >= req.gold;
 }
 
 export function rebirthLuckMult(rebirths: number): number {

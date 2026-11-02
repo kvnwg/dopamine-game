@@ -122,7 +122,7 @@ function LastRoll() {
           {itemName(it)}
         </span>
         <span className={s.lastMeta}>
-          {t(`rarity.${it.rarity}`)} · {t(`slot.${it.slot}`)}
+          {t(`rarity.${it.rarity}`)} · {t(`slot.${it.slot}`)} · {t('item.worldTier', { n: it.tier })}
         </span>
         <div className={s.chips}>
           <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>

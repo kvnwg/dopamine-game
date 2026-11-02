@@ -6,6 +6,7 @@ import { LuckPopup } from './LuckPopup';
 import { OfflinePopup } from './OfflinePopup';
 import { SettingsPopup } from './SettingsPopup';
 import { UpgradePopup } from './UpgradePopup';
+import { WorldPopup } from './WorldPopup';
 
 /** One popup at a time: offline rewards first, then whatever menu is open. */
 export function PopupLayer() {
@@ -27,6 +28,8 @@ export function PopupLayer() {
       return <UpgradePopup onClose={close} />;
     case 'itemDetail':
       return <ItemDetailPopup uid={detailUid ?? -1} onClose={close} />;
+    case 'world':
+      return <WorldPopup world={detailUid ?? 1} onClose={close} />;
     default:
       return null;
   }

@@ -1,18 +1,19 @@
 import { useEffect, useRef } from 'react';
 import type Phaser from 'phaser';
-import { BAL } from '../../data';
-import { bossStageAvailable, canPushStage, stageInfo } from '../../core';
+import { BAL, DATA } from '../../data';
+import { nextWorldAvailable, worldThreat } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { createBattleGame } from '../../render/BattleScene';
 import { haptics } from '../../services';
 import { t } from '../i18n';
-import { SkullIcon, SwordIcon } from './Icons';
+import { useUi } from '../uiStore';
+import { GlobeIcon, SkullIcon } from './Icons';
 import { TopHud } from './TopHud';
 import s from './hud.module.css';
 
-export function stageLabel(stage: number): string {
-  const info = stageInfo(stage);
-  return t('battle.stageLabel', { name: info.neighborhood.name, n: info.neighborhoodIndex, local: info.local });
+export function worldLabel(world: number): string {
+  const w = DATA.worlds[world - 1];
+  return t('battle.worldLabel', { n: world, name: w?.name ?? '' });
 }
 
 export function BattlePanel() {
@@ -23,25 +24,24 @@ export function BattlePanel() {
     return () => game?.destroy(true);
   }, []);
 
-  const stage = useGame((g) => g.battle.stage);
+  const world = useGame((g) => g.battle.stage);
   const wave = useGame((g) => g.battle.wave);
   const mode = useGame((g) => g.stage.mode);
   const hint = useGame((g) => g.stage.showToughHint);
-  const bossStage = useGame(bossStageAvailable);
-  const canPush = useGame(canPushStage);
   const highest = useGame((g) => g.stage.highestCleared);
-  const info = stageInfo(stage);
+  const next = useGame(nextWorldAvailable);
+  const nextThreat = useGame((g) => (next !== null ? worldThreat(g, next).level : null));
   const waves = BAL.stages.wavesPerStage;
 
   return (
     <div className={s.battle}>
       <div className={s.canvasHost} ref={host} />
       <TopHud />
-      <div className={s.stageBox}>
-        <span className={s.stageName}>{stageLabel(stage)}</span>
+      <button className={s.stageBox} onClick={() => useUi.getState().setTab('worlds')}>
+        <span className={s.stageName}>{worldLabel(world)}</span>
         <div className={s.waveTrack}>
           {Array.from({ length: waves }, (_, i) => {
-            const boss = i === waves - 1 && info.kind !== 'regular';
+            const boss = i === waves - 1;
             return (
               <span key={i} className={s.waveSeg}>
                 {i > 0 && <span className={`${s.waveLine} ${i <= wave ? s.waveLineDone : ''}`} />}
@@ -54,31 +54,22 @@ export function BattlePanel() {
             );
           })}
         </div>
-        {mode === 'farm' && stage <= highest && <span className={s.farmTag}>{t('battle.farming')}</span>}
-      </div>
+        {mode === 'farm' && world <= highest && <span className={s.farmTag}>{t('battle.farming')}</span>}
+      </button>
       <div className={s.battleActions}>
-        {canPush && (
-          <button
-            className="btn small"
-            onClick={() => {
-              haptics.impact('light');
-              dispatch({ type: 'pushStage' });
-            }}
-          >
-            {t('battle.tryNext', { stage: stageLabel(highest + 1) })}
-          </button>
-        )}
+        <button className={`btn small blue ${s.worldsBtn}`} onClick={() => useUi.getState().setTab('worlds')} aria-label={t('tab.worlds')}>
+          <GlobeIcon size={46} />
+        </button>
         <span style={{ flex: 1 }} />
-        {bossStage !== null && (
+        {next !== null && mode === 'farm' && (
           <button
-            className="btn red breathe"
+            className={`btn small ${nextThreat === 'easy' ? 'breathe' : nextThreat === 'tough' ? '' : 'red'}`}
             onClick={() => {
               haptics.impact('medium');
-              dispatch({ type: 'fightBoss' });
+              dispatch({ type: 'travel', world: next });
             }}
           >
-            <SwordIcon size={50} />
-            {t(stageInfo(bossStage).kind === 'boss' ? 'battle.fightBoss' : 'battle.fightMiniBoss')}
+            {t('battle.nextWorld', { n: next })}
           </button>
         )}
       </div>

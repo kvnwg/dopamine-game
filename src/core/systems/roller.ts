@@ -20,6 +20,7 @@ import { rebirthGoldMult } from './rebirth';
 import { computeStats } from './stats';
 import { upgradeEffects } from './upgrades';
 import { combatEffects } from './enchants';
+import { itemTierFor } from './worlds';
 
 export function rollInterval(state: GameState): number {
   const r = BAL.roll;
@@ -143,7 +144,7 @@ export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[]
     const enchants = rollEnchants(rng, enchantChance(d));
     rarity = bumpRarity(rarity, rarityBump(enchants));
     const base = pickBaseItem(slot, theme, rarity, rng);
-    item = createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants);
+    item = createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
   }
   d.roll.count += 1;
   dz.totalDives += 1;

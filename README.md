@@ -2,14 +2,15 @@
 
 Idle RPG roguelite for iOS and Android: a raccoon auto-battles its way through the city's alleys while its dumpster rolls for junk gear on its own, RNG-game style. Every item has a power number and a "1 in X" rarity, and the raccoon visibly wears whatever it equips.
 
-**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked (Nov 2) into an always-rolling loop: luck from several sources, Lucky Rolls every 10th roll, a bag that keeps your best items, a gold upgrade grid, rebirths that raise luck, and enchantments. The look is a bright, clean cel-shaded cartoon. The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16). Next up is Milestone 2 (Heists).
+**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked (Nov 2) into an always-rolling loop: luck from several sources, Lucky Rolls every 10th roll, a bag that keeps your best items, a gold upgrade grid, rebirths that raise luck, and enchantments. The look is a bright, clean cel-shaded cartoon. The battle now runs across 20 worlds of rising difficulty, all open from the start. The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16 and W1 to W11). Next up is Milestone 2 (Heists).
 
 ### How it plays
 
 - **Roll tab:** the dumpster rolls every 2 seconds without any taps, and Trash Bags won in fights become fast bonus rolls. It shows your luck (tap it for the exact odds), the Lucky Roll meter, the latest roll with its "1 in X" odds, recent rolls and your equipped gear. Legendary and better rolls get a full-screen reveal.
 - **Bag tab:** better rolls are equipped automatically; the rest go in the bag, which keeps the highest-power items. Tap any item to equip, lock or scrap it.
 - **Upgrades tab:** spend gold on Luck, Gold Gain, Roll Speed, Bag Space, Lucky Rolls, Enchanting, Strength, Toughness and Bag Finder. Hold a button to keep buying.
-- **Rebirth tab:** once you clear the required stage and hold enough gold, start over from stage 1 with permanently higher luck and gold.
+- **Rebirth tab:** once you beat the required world and hold enough gold, start over from World 1 with permanently higher luck and gold.
+- **Worlds tab:** all 20 worlds, each with its own look, enemies and boss, and every one open from the start. Each card shows how a world matches up against you right now (Easy, Tough, Deadly, or ONE-SHOT) and how much more it pays. Harder worlds pay proportionally more gold, and gear rolled there is stronger. Wander too far up and you get one-shot and sent back; roll something lucky and you can jump several worlds ahead.
 
 ## Run it
 
@@ -39,7 +40,7 @@ It writes `artifact/dumpster-legend.html` (one self-contained page: fonts and co
 
 ### Dev cheat panel
 
-The red **DEV** tab (right edge of the battle, dev builds only) can add coins, Gems, bags and XP, jump to any stage or straight to a stage's boss wave, set the Dumpster Level, force the next roll's rarity, start a Luck Potion, skip time by 30 min to 24 h (to test offline rewards and upgrade timers), and reset the save. It also shows your live stats, luck and roll count.
+The red **DEV** tab (right edge of the battle, dev builds only) can add coins, Gems, bags and XP, jump to any world (as if the ones before it were beaten) or straight to a world's boss wave, set the Dumpster Level, force the next roll's rarity, start a Luck Potion, skip time by 30 min to 24 h (to test offline rewards and upgrade timers), and reset the save. It also shows your live stats, luck and roll count.
 
 ## Tests and balance
 
@@ -47,13 +48,13 @@ The red **DEV** tab (right edge of the battle, dev builds only) can add coins, G
 npm test
 ```
 
-82 Vitest tests: damage and stat formulas; 10,000-roll distribution checks for every random system (rarity odds at luck 1, 3 and 25 within 1% of the exact chances, slots, item levels, substats, enchantment counts and tiers, crits, enemy counts, bag find); bad luck protection; the roller (first roll, timed and bonus rolls, Lucky Rolls, keep-the-best bag, scrapping, locks, auto-equip); the upgrade grid, rebirths, enchantment effects (burn, chain, explode, thorns) and luck boosts; Dumpster upgrades and speedups; the Codex; offline math and the clock-backward guard; save/load with backups and migrations (including v1 to v2); data validation; and one headless balance run.
+88 Vitest tests: damage and stat formulas; 10,000-roll distribution checks for every random system (rarity odds at luck 1, 3 and 25 within 1% of the exact chances, slots, item levels, substats, enchantment counts and tiers, crits, enemy counts, bag find); bad luck protection; the roller (first roll, timed and bonus rolls, Lucky Rolls, keep-the-best bag, scrapping, locks, auto-equip); the upgrade grid, rebirths, enchantment effects (burn, chain, explode, thorns) and luck boosts; worlds (scaling, proportional pay, boss waves, travel, one-shots and falling back, item tiers); Dumpster upgrades and speedups; the Codex; offline math and the clock-backward guard; save/load with backups and migrations (v1 to v2 to v3); data validation; and one headless balance run.
 
 ```bash
-npm run sim -- --minutes 80 --seeds 4
+npm run sim -- --minutes 120 --seeds 4
 ```
 
-The balance simulator plays the real game logic with a bot and prints a timeline, the minute each stage was first cleared, rebirth times and rarity counts. Current result: first rebirth at 30 to 37 minutes, stage 20 reached at 26 to 47 minutes, the stage 20 boss beaten at 46 to 62 minutes, and a Legendary every 2 to 3 minutes. Run it after every balance change.
+The balance simulator plays the real game logic with a bot and prints a timeline, the minute each world was first beaten, rebirth times and rarity counts. Current result: World 3 at 5 to 7 minutes, World 5 at 18 to 23, World 10 at about 100 to 107, rebirths at about 20 and 40 minutes, and roughly one Legendary a minute once luck builds up. Run it after every balance change.
 
 ```bash
 npm run typecheck

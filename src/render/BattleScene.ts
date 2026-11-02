@@ -5,13 +5,16 @@
  * gold counter. Combat results always come from core; this file only animates them.
  */
 import Phaser from 'phaser';
-import { BAL, DATA, SLOTS, type Rarity } from '../data';
-import { computeStats, formatNumber, rarityAtLeast, type CoreEvent, type GameState } from '../core';
+import { BAL, SLOTS, type Rarity } from '../data';
+import { computeStats, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
 import { rarityColorNum } from './art';
-import { BG_TILE_W, FRONT_ORDER, HERO, enemyTex, gearTex, generateTextures, heroBody, heroPaw, texSize, weaponTex } from './textures';
+import {
+  FRONT_ORDER, HERO, enemyTex, gearTex, generateTextures, heroBody, heroPaw, releaseWorlds, texSize, weaponTex, worldTextures,
+} from './textures';
+import { LAYER_Y, SCROLL0 } from './worldLook';
 
 export const BATTLE_W = 1080;
 export const BATTLE_H = 820;
@@ -79,6 +82,9 @@ const easeOutBack = (k: number) => {
 };
 
 export class BattleScene extends Phaser.Scene {
+  private sky!: Phaser.GameObjects.Image;
+  private cover!: Phaser.GameObjects.Rectangle;
+  private worldShown = 0;
   private far!: Phaser.GameObjects.TileSprite;
   private mid!: Phaser.GameObjects.TileSprite;
   private ground!: Phaser.GameObjects.TileSprite;
@@ -138,6 +144,7 @@ export class BattleScene extends Phaser.Scene {
     this.heroNum = this.label(0, 0, 22).setDepth(41);
     this.bossBar = this.add.graphics().setDepth(40);
     this.bossName = this.label(BATTLE_W / 2, 262, 32).setOrigin(0.5, 1).setDepth(41);
+    this.cover = this.add.rectangle(0, 0, BATTLE_W, BATTLE_H, 0xffffff, 1).setOrigin(0, 0).setDepth(60).setAlpha(0);
     this.shownHeroHp = gameStore.getState().game.battle.playerHp;
     this.unsub = bus.on((events) => this.onEvents(events));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsub?.());
@@ -157,24 +164,50 @@ export class BattleScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ scenery
   private buildBackground() {
-    this.add.image(0, 0, 'bg_sky').setOrigin(0, 0).setDepth(0);
+    const world = gameStore.getState().game.battle.stage;
+    const k = worldTextures(this, world, BATTLE_W, BATTLE_H);
+    this.worldShown = world;
+    this.sky = this.add.image(0, 0, k.sky).setOrigin(0, 0).setDepth(0);
     const cloudY = [86, 132, 60, 170];
     for (let i = 0; i < 4; i++) {
       const img = this.add.image(120 + i * 330, cloudY[i], `bg_cloud${i % 3}`).setDepth(1).setScale(i === 3 ? 0.7 : 1);
       this.clouds.push({ img, speed: 6 + i * 3 });
     }
-    const far = texSize('bg_far');
-    const mid = texSize('bg_mid');
-    const ground = texSize('bg_ground');
-    const fg = texSize('bg_fg');
-    this.far = this.add.tileSprite(0, 202, BATTLE_W, far.h, 'bg_far').setOrigin(0, 0).setDepth(2);
-    this.far.tilePositionX = 260;
-    this.mid = this.add.tileSprite(0, 224, BATTLE_W, mid.h, 'bg_mid').setOrigin(0, 0).setDepth(3);
-    this.mid.tilePositionX = 40;
-    this.ground = this.add.tileSprite(0, 580, BATTLE_W, ground.h, 'bg_ground').setOrigin(0, 0).setDepth(4);
-    this.ground.tilePositionX = 500;
-    this.fg = this.add.tileSprite(0, 700, BATTLE_W, fg.h, 'bg_fg').setOrigin(0, 0).setDepth(30);
-    this.fg.tilePositionX = 700;
+    this.far = this.add.tileSprite(0, LAYER_Y.far, BATTLE_W, texSize(k.far).h, k.far).setOrigin(0, 0).setDepth(2);
+    this.far.tilePositionX = SCROLL0.far;
+    this.mid = this.add.tileSprite(0, LAYER_Y.mid, BATTLE_W, texSize(k.mid).h, k.mid).setOrigin(0, 0).setDepth(3);
+    this.mid.tilePositionX = SCROLL0.mid;
+    this.ground = this.add.tileSprite(0, LAYER_Y.ground, BATTLE_W, texSize(k.ground).h, k.ground).setOrigin(0, 0).setDepth(4);
+    this.ground.tilePositionX = SCROLL0.ground;
+    this.fg = this.add.tileSprite(0, LAYER_Y.fg, BATTLE_W, texSize(k.fg).h, k.fg).setOrigin(0, 0).setDepth(30);
+    this.fg.tilePositionX = SCROLL0.fg;
+    this.tintClouds(world);
+  }
+
+  private tintClouds(world: number) {
+    const night = worldDef(world).look.night;
+    for (const c of this.clouds) c.img.setTint(night ? 0x7d84b8 : 0xffffff).setAlpha(night ? 0.55 : 1);
+  }
+
+  /** Swaps in another world's sky and scenery, revealed from under a sky-colored cover. */
+  private showWorld(world: number) {
+    if (world === this.worldShown) return;
+    this.worldShown = world;
+    const k = worldTextures(this, world, BATTLE_W, BATTLE_H);
+    this.sky.setTexture(k.sky);
+    this.far.setTexture(k.far);
+    this.mid.setTexture(k.mid);
+    this.ground.setTexture(k.ground);
+    this.fg.setTexture(k.fg);
+    this.tintClouds(world);
+    releaseWorlds(this, world);
+    this.tweens.killTweensOf(this.cover);
+    if (this.reduceMotion || this.reduceFlashing) {
+      this.cover.setAlpha(0);
+      return;
+    }
+    this.cover.setFillStyle(Phaser.Display.Color.HexStringToColor(worldDef(world).look.skyBottom).color, 1).setAlpha(1);
+    this.tweens.add({ targets: this.cover, alpha: 0, duration: 450, ease: 'Quad.easeOut' });
   }
 
   // ------------------------------------------------------------------ hero
@@ -559,6 +592,13 @@ export class BattleScene extends Phaser.Scene {
 
   private heroHurt(amount: number, heavy: boolean) {
     this.flashHero(0xff8a8a, 110);
+    if (amount >= this.maxHp(gameStore.getState().game)) {
+      // Way out of its league: make it obvious.
+      this.stamp(this.hero.x + 30, FEET_Y - 300, t('battle.oneShot'), '#FF5A5A', 72);
+      this.shake(320, 0.02);
+      const star = this.add.image(this.hero.x + 40, FEET_Y - 170, 'fx_impact').setDepth(33).setScale(0.5);
+      this.tweens.add({ targets: star, scale: 2.2, alpha: 0, duration: 320, onComplete: () => star.destroy() });
+    }
     this.heroKnock = this.reduceMotion ? 0 : heavy ? -40 : -18;
     const p = { x: this.hero.x + 10, y: FEET_Y - 170 };
     if (heavy) {
@@ -716,9 +756,12 @@ export class BattleScene extends Phaser.Scene {
           else if (e.wave === 0) this.time.delayedCall(700, () => this.banner(t('battle.fight'), ['#fff6a8', '#ffa21a']));
           break;
         }
+        case 'worldFirstClear':
+          this.banner(t('battle.worldCleared'), ['#fff6a8', '#ffa21a'], 400);
+          this.confetti.forEach((em) => em.explode(18, BATTLE_W / 2, 300));
+          break;
         case 'bossWin':
-          this.banner(t('battle.victory'), ['#fff6a8', '#ffa21a'], 400);
-          this.confetti.forEach((em) => em.explode(16, BATTLE_W / 2, 300));
+          if (!events.some((x) => x.type === 'worldFirstClear')) this.confetti.forEach((em) => em.explode(5, BATTLE_W / 2 + 120, 420));
           break;
         case 'levelUp': {
           const ring = this.add.image(this.hero.x, FEET_Y - 140, 'fx_puff').setDepth(33).setScale(0.3).setTint(0xffe14a);
@@ -763,8 +806,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ enemies
-  private makeFoe(uid: number, enemyId: string, kind: Kind, hp: number, maxHp: number, startX: number): Foe {
-    const tex = enemyTex(this, enemyId);
+  private makeFoe(uid: number, enemyId: string, kind: Kind, hp: number, maxHp: number, startX: number, world: number): Foe {
+    const tex = enemyTex(this, enemyId, world);
     const c = this.add.container(startX, FEET_Y).setDepth(18);
     const shadow = this.add.ellipse(0, 2, Math.max(90, tex.w * 0.6), 26, INK_N, 0.18);
     const rig = this.add.container(0, 0);
@@ -788,7 +831,7 @@ export class BattleScene extends Phaser.Scene {
       alive.add(e.uid);
       let f = this.foes.get(e.uid);
       if (!f) {
-        f = this.makeFoe(e.uid, e.enemyId, e.kind, e.hp, e.maxHp, BATTLE_W + 160 + i * 120);
+        f = this.makeFoe(e.uid, e.enemyId, e.kind, e.hp, e.maxHp, BATTLE_W + 160 + i * 120, g.battle.stage);
         this.foes.set(e.uid, f);
       }
       const target = edge + f.front;
@@ -880,7 +923,7 @@ export class BattleScene extends Phaser.Scene {
       c.img.x -= (c.speed + speed * 0.05) * dt;
       if (c.img.x < -220) c.img.x = BATTLE_W + 220;
     }
-    void BG_TILE_W;
+    if (b.stage !== this.worldShown) this.showWorld(b.stage);
 
     const sig = SLOTS.map((s) => `${g.equipped[s]?.uid ?? 0}`).join(',');
     if (sig !== this.gearSig) {
@@ -941,7 +984,7 @@ export class BattleScene extends Phaser.Scene {
       const shown = f ? f.shownHp : boss.hp;
       const ghost = f ? f.ghostHp : boss.hp;
       this.drawBar(this.bossBar, BATTLE_W / 2, 272, 640, 30, shown / boss.maxHp, ghost / boss.maxHp, boss.kind === 'boss' ? 0xffb300 : 0xff4d5e);
-      this.bossName.setText(`${DATA.enemiesById.get(boss.enemyId)?.name ?? ''}  ${formatNumber(Math.max(0, Math.ceil(shown)))}`);
+      this.bossName.setText(`${worldDef(b.stage).boss.name}  ${formatNumber(Math.max(0, Math.ceil(shown)))}`);
     } else {
       this.bossName.setText('');
     }
@@ -949,7 +992,7 @@ export class BattleScene extends Phaser.Scene {
 }
 
 export function createBattleGame(parent: HTMLElement): Phaser.Game {
-  return new Phaser.Game({
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
     width: BATTLE_W,
@@ -963,4 +1006,7 @@ export function createBattleGame(parent: HTMLElement): Phaser.Game {
     banner: false,
     scene: [BattleScene],
   });
+  // Test hook for browser automation in dev builds only.
+  if (import.meta.env.DEV) (window as unknown as { __phaser: Phaser.Game }).__phaser = game;
+  return game;
 }

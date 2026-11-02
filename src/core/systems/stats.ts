@@ -10,7 +10,15 @@ export function zeroStats(): Stats {
   return Object.fromEntries(STAT_IDS.map((s) => [s, 0])) as Stats;
 }
 
-/** Every stat modifier an item grants (main stats, substats, unique bonus, Mint perk). */
+/** Flat stats that grow with the world an item was rolled in (percent-style stats do not). */
+const TIERED: ReadonlySet<StatId> = new Set<StatId>(['HP', 'ATK', 'DEF', 'REGEN']);
+
+/** An item's world multiplier: worlds.itemGrowth^(tier - 1). */
+export function tierMult(tier: number): number {
+  return Math.pow(BAL.worlds.itemGrowth, Math.max(0, tier - 1));
+}
+
+/** Every stat modifier an item grants (main stats, substats, unique bonus, Mint perk), scaled by its world tier. */
 export function itemMods(item: Item): Mod[] {
   const mods: Mod[] = [...item.main, ...item.subs.map((s) => ({ stat: s.stat, mode: s.mode, value: s.value })), ...item.bonus];
   if (item.mintPerkId) {
@@ -18,7 +26,9 @@ export function itemMods(item: Item): Mod[] {
     if (perk) mods.push(...perk.mods);
   }
   mods.push(...enchantMods(item.enchants ?? []));
-  return mods;
+  const k = tierMult(item.tier ?? 1);
+  if (k === 1) return mods;
+  return mods.map((m) => (m.mode === 'flat' && TIERED.has(m.stat) ? { ...m, value: m.value * k } : m));
 }
 
 export interface StatBreakdown {
@@ -26,7 +36,7 @@ export interface StatBreakdown {
   pct: Stats;
 }
 
-type StatState = Pick<GameState, 'player' | 'equipped' | 'codex' | 'neighborhoodsCleared'> & Partial<Pick<GameState, 'upgrades'>>;
+type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades'>>;
 
 export function statSources(state: StatState): StatBreakdown {
   const flat = zeroStats();
@@ -42,7 +52,6 @@ export function statSources(state: StatState): StatBreakdown {
     if (it) itemMods(it).forEach(apply);
   }
   codexBonusMods(state.codex.entries.length).forEach(apply);
-  flat.BAG_FIND += state.neighborhoodsCleared.length * BAL.stages.neighborhoodClearBonus.bagFind;
   const up = upgradeEffects({ upgrades: state.upgrades ?? {} });
   pct.ATK += up.atkPct;
   pct.HP += up.hpPct;

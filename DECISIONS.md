@@ -2,6 +2,24 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
+## Worlds (Nov 2, later): 20 worlds of rising difficulty
+
+Kevin asked for about 20 worlds, all open from the start: the hard ones one-shot you, but they pay proportionally more, so a lucky roll lets you jump ahead. These rows replace the stage rows they mention.
+
+| # | Decision | Why |
+|---|---|---|
+| W1 | The 20 Suburbs stages became 20 worlds (`worlds.json`). A world is 4 regular waves, then its boss; while farming, the world loops. | Kevin's request; one difficulty step per world. |
+| W2 | Every world is open from the start. The Worlds tab (and the globe button on the battle) lists all 20 with a threat read-out: Easy, Tough, Deadly, or ONE-SHOT. The read-out comes from real combat math against your current stats, including the boss: ONE-SHOT means one regular hit is lethal; otherwise a margin compares (your HP x DPS) to theirs. Deadly and ONE-SHOT trips need a second tap. | "Access to all of them, but literally get one-shot on the difficult ones." |
+| W3 | Per world, enemy HP grows x3.0, ATK x2.6 and DEF x2.6. The DEF constant in the damage formula grows x2.6 too, so DEF keeps the same meaning in every world. Gold grows x3.0 per world (in step with enemy HP, so pay is proportional to difficulty); XP grows x1.35. | "They also pay proportionately more." |
+| W4 | Items carry a tier: the world they were rolled in, capped at one past the best world beaten (so a suicide trip to World 20 can't farm World 20 gear). An item's flat HP/ATK/DEF/REGEN are multiplied by 1.9^(tier - 1); percent stats are not. Every slot now has a flat stat too, so every item's power grows with its world. | Better worlds drop better gear, the RNG-game loop. |
+| W5 | Items grow slower than enemies (x1.9 against roughly x2.8 per world), so each world asks for better rarities, levels or upgrades than the last. Walls are broken by luck: a rare roll can carry you several worlds ahead. | "If the player gets lucky and rolls a really good item, they can advance." Without the gap, progress ran away (simulator: World 20 in 21 minutes). |
+| W6 | A failed push falls back to the world it started from; a death in a world already beaten steps down one world, and each further death steps down again. A pushing raccoon that clears a world moves on to the next; a farming one retries the next unbeaten world once it is stronger than when it last died there. A "World N" button offers the next unbeaten world at any time. | |
+| W7 | A world's first clear pays 10 + 5 x world Gems and a Luck Potion. Bosses pay 15x a regular kill's gold, 4x its XP, 3 Trash Bags, and drop a Luck Potion 15% of the time. | Bosses come every loop now, so potions can't be guaranteed. |
+| W8 | Rebirth needs World 5 beaten (+2 worlds per rebirth, up to 20) and 3,000 x 3^(world - 1) x 4^rebirths gold. Luck per rebirth is +0.15 (was +0.25). Rebirth resets world progress. | Keeps rebirths from snowballing (simulator: hundreds per hour before this). |
+| W9 | Rarities are rarer: Legendary 1 in 1,000, Mythic 1 in 25,000, Mint in Box 1 in 1,000,000 (Decent 3, Shiny 12, Epic 80). Rarity stat multipliers are wider: Junk 1, Decent 1.4, Shiny 2, Epic 3, Legendary 4.8, Mythic 8, Mint 14. Item level adds 6% per level (was 9%). Scrap XP no longer grows with the world. | Luck should decide progress, and big reveals should stay rare. |
+| W10 | Save version 3: old stages map to worlds at 5 stages per world, existing items become World 1 gear, and the neighborhood bonuses are gone. | |
+| W11 | Each world has its own sky (stars and a moon at night), a hue, saturation and brightness grade on the shared scenery (outlines are left untouched), enemy colors and names, and its own boss (Officer Dale, Big Earl or Vinnie in that world's colors). Changing worlds swaps the scene behind a quick sky-colored cover. A one-shot gets a "ONE SHOT!" stamp. | 20 worlds that look the same would feel like one. |
+
 ## Redesign (Nov 2): always-rolling RNG loop
 
 Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, items carry a power number, a limited bag keeps the best ones, extra luck sources, an upgrade grid, rebirths that raise luck, and enchantments. These rows replace the older ones marked *superseded* below.
@@ -9,13 +27,13 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 | # | Decision | Why |
 |---|---|---|
 | R1 | No dive button. A free roll happens every 2.0 s (the Roll Speed upgrade brings it down to 0.4 s), and Trash Bags won in fights are spent automatically as bonus rolls, 3 per second. | "Constantly rolling without having to click." |
-| R2 | Rarities are "1 in X" chances: Decent 3, Shiny 10, Epic 50, Legendary 400, Mythic 5,000, Mint in Box 100,000. A roll tries the rarest tier first, then each lower tier, and each try succeeds with chance min(1, luck / X). The Luck popup lists the exact per-roll chances, computed by the same function the roller uses. | The RNG-game convention. The odds shown are always the real ones (playbook). |
+| R2 | *Odds updated by W9.* Rarities are "1 in X" chances: Decent 3, Shiny 10, Epic 50, Legendary 400, Mythic 5,000, Mint in Box 100,000. A roll tries the rarest tier first, then each lower tier, and each try succeeds with chance min(1, luck / X). The Luck popup lists the exact per-roll chances, computed by the same function the roller uses. | The RNG-game convention. The odds shown are always the real ones (playbook). |
 | R3 | Luck = (1 + Luck upgrades + 0.05 per Dumpster Level above 1 + Lucky enchantments) x rebirth multiplier x Luck Potion. Bad-luck protection is unchanged: from Dumpster Level 3, after 40 rolls with nothing Epic or better, the next roll is guaranteed Epic or better. | Dumpster upgrades still help, plus several new luck sources. |
 | R4 | Every 10th roll is a Lucky Roll at x2 luck, shown on a meter. The Lucky Rolls upgrade lowers 10 to as few as 4. | A visible "something good is coming" beat between rare pulls. |
 | R5 | Items have a power number. A roll is equipped automatically when it beats the equipped item's power (Auto-equip can be switched off in the Bag); otherwise it goes in the bag. The bag holds 20 items (+2 per Bag Space level), sorted by power. When it is full, the weakest unlocked item, or the new roll if it is weaker still, is scrapped for gold and XP. Locked items are never scrapped automatically. | "Keeps the highest-rated items." |
 | R6 | Scrapping pays half the old recycle coins (times gold multipliers) and a quarter of the XP. Enchanted items pay +50% per enchantment tier. | Constant rolling would otherwise flood the economy. |
 | R7 | The upgrade grid costs gold: Luck, Gold Gain, Roll Speed, Bag Space, Lucky Rolls, Enchanting, Strength (ATK%), Toughness (HP%), Bag Finder. Cost = base x growth^level, with a level cap per upgrade. Holding the buy button keeps buying. Upgrades reset on rebirth. | |
-| R8 | Rebirth needs stage 10 cleared (+5 stages per rebirth, capped at the last stage) and 5,000 gold in hand (x4 per rebirth). Each rebirth gives luck x(1 + 0.25 per rebirth) and gold x(1 + 0.2 per rebirth), and resets stage progress, gold and upgrades. Items, the bag, player level, Dumpster Level, the Codex and Gems are kept. It takes two taps to confirm. | Keeping the bag and level makes rebirths feel like a boost instead of a loss. |
+| R8 | *Requirements updated by W8.* Rebirth needs stage 10 cleared (+5 stages per rebirth, capped at the last stage) and 5,000 gold in hand (x4 per rebirth). Each rebirth gives luck x(1 + 0.25 per rebirth) and gold x(1 + 0.2 per rebirth), and resets stage progress, gold and upgrades. Items, the bag, player level, Dumpster Level, the Codex and Gems are kept. It takes two taps to confirm. | Keeping the bag and level makes rebirths feel like a boost instead of a loss. |
 | R9 | Enchantments: each roll has a 5% chance (+1.5% per Enchanting level) of 1 to 3 enchantments (80/17/3%), each of tier I, II or III (70/25/5%). Every tier adds 15/30/55% item power. Lucky and Golden add luck and gold; Swift, Vampiric, Giant and Magnetic add attack speed, lifesteal, HP and bag find; Flaming burns, Thundering zaps the next enemy, Echoing strikes twice, Explosive makes kills splash, Thorny reflects damage, and Prismatic raises the item's rarity by 1 or 2 tiers. All of it is in `enchants.json`. | "Add power level and rarity, but also do interesting things." |
 | R10 | Luck Potions give x2 luck for 60 s. One drops from every mini-boss and boss kill, and there is a 0.5% chance per regular wave. A new potion adds its time to one that is still running. | One more luck source, tied to fights. |
 | R11 | Enemies got x2.4 HP and x1.7 ATK. | With a constant stream of gear, fights were over too fast to read and stages fell too quickly (simulator). |
@@ -23,23 +41,23 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 | R13 | Legendary and better rolls get a short build-up (the dumpster shakes and glows in the rarity's color, then a silence drop) and a full-screen reveal. Big rolls that land during a reveal wait their turn, up to 3. Epic gets a sting and a burst; lower rarities get a pop from the dumpster. | Big moments stay big, even when rolls are constant. |
 | R14 | The look is now a bright, clean cel-shaded cartoon, matching the clean mobile-RPG style Kevin referenced (Capybara Go!), with our own characters and props. It replaces the painterly placeholder set. | Kevin's request. |
 | R15 | Battle choreography: the raccoon closes to melee range, winds up and swings. Hit effects (slash trail, impact star, numbers, knockback, hit-stop on crits) play at the swing's impact frame, about 0.1 s after core resolves the hit, and an enemy stays on screen until its killing blow lands. HP bars with numbers sit under every fighter; FIGHT!, BOSS! and VICTORY! banners sweep across. | "Not just the character bumping into the other one." |
-| R16 | Screen layout: battle (with the top HUD over the sky), a stat strip (Power, HP, ATK, DEF, Luck), then four tabs: Roll, Bag, Upgrades, Rebirth. The Shop tab is a placeholder. | |
+| R16 | Screen layout: battle (with the top HUD over the sky), a stat strip (Power, HP, ATK, DEF, Luck), then five tabs: Roll, Bag, Upgrades, Rebirth, Worlds. (The Shop placeholder tab gave way to Worlds.) | |
 
 ## Combat and stages
 
 | # | Decision | Why |
 |---|---|---|
 | C1 | Only the front enemy fights at a time (`combat.engagedEnemies = 1`); the rest queue behind it. | Readable on a small battle panel. Bruiser's 2-enemy cleave (M3) can raise this. |
-| C2 | A mini-boss or boss stage is 4 regular waves, then the boss alone as wave 5. Tapping Fight Boss starts that stage from wave 1. | Spec: stages "end with" a mini-boss/boss. |
+| C2 | *Superseded by W1.* A mini-boss or boss stage is 4 regular waves, then the boss alone as wave 5. Tapping Fight Boss starts that stage from wave 1. | Spec: stages "end with" a mini-boss/boss. |
 | C3 | The boss wave pays the boss bags (5 or 15) instead of the normal 1 bag + BAG_FIND roll. Boss coin burst = 20 kills' worth of coins. Mini-boss/boss XP is x5/x10 a regular kill. | Spec gives the bag counts but not how they combine. |
 | C4 | The raccoon heals 20% of max HP between waves and starts every stage at full HP. | Without some healing, 5 waves in a row are a pure HP check. |
-| C5 | The farming stage is the highest cleared *regular* stage, never a boss stage. | Farming a boss stage would pay boss bags every loop. |
-| C6 | After a death on a regular stage, the raccoon farms and retries automatically once its power (gear power + 10 per level) beats its power at death. A "Try stage ▶" button allows a manual retry any time. | "Auto-advances while it can win" without hammering a wall it cannot pass. |
-| C7 | After the stage 20 boss (end of M1 content), the raccoon farms stage 19. | No stage 21 until M3. |
+| C5 | *Superseded by W6.* The farming stage is the highest cleared *regular* stage, never a boss stage. | Farming a boss stage would pay boss bags every loop. |
+| C6 | *Superseded by W6.* After a death on a regular stage, the raccoon farms and retries automatically once its power (gear power + 10 per level) beats its power at death. A "Try stage ▶" button allows a manual retry any time. | "Auto-advances while it can win" without hammering a wall it cannot pass. |
+| C7 | *Superseded by W1.* After the stage 20 boss (end of M1 content), the raccoon farms stage 19. | No stage 21 until M3. |
 | C8 | Enemies never crit. DODGE applies to enemy hits. Lifesteal uses damage actually dealt (overkill does not count). Minimum damage per hit is 1. | Simplest reading of section 5. |
 | C9 | Boss specials are data-driven (`heavyHit` or `enrage`). Officer Dale's "Catch Pole" hits for 2.5x every 6 seconds. | Spec: one special move defined in enemies.json. |
-| C10 | Neighborhood clear "+10% Trash Bag drops" is +10 BAG_FIND (same expected value); "+10% offline rewards" multiplies the offline payout. | |
-| C11 | Suburbs roster: Alley Rat, Porch Pigeon, Punk Raccoon; mini-bosses Big Earl (stages 5 and 15) and Vinnie "Two Lids" (stage 10); boss Officer Dale, Animal Control. | Spec: 3 regular, 2 mini-bosses, 1 boss, but 3 mini-boss stages, so one returns. |
+| C10 | *Removed by W10.* Neighborhood clear "+10% Trash Bag drops" is +10 BAG_FIND (same expected value); "+10% offline rewards" multiplies the offline payout. | |
+| C11 | *Superseded by W11 (every world has its own roster colors, names and boss).* Suburbs roster: Alley Rat, Porch Pigeon, Punk Raccoon; mini-bosses Big Earl (stages 5 and 15) and Vinnie "Two Lids" (stage 10); boss Officer Dale, Animal Control. | Spec: 3 regular, 2 mini-bosses, 1 boss, but 3 mini-boss stages, so one returns. |
 
 ## Stats and items
 
@@ -107,14 +125,13 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 
 ## Balance
 
-The simulator (`npm run sim`) plays the real core with a bot that lets the dumpster roll (equipped automatically, bag kept by power), buys the cheapest upgrade it can afford every second, upgrades the dumpster when it can, fights bosses when ready, and rebirths as soon as it is allowed. With the current numbers, across 4 seeds over 80 minutes:
+The simulator (`npm run sim`) plays the real core with a bot that lets the dumpster roll (equipped automatically, bag kept by power), lets the battle push through worlds on its own, buys the cheapest upgrade it can afford every second, upgrades the dumpster when it can, rebirths as soon as it is allowed, and every 10 seconds jumps to the hardest world that reads Easy. With the current numbers, across 4 seeds over 2 hours:
 
-- First rebirth at 30 to 37 minutes, second at 66 to 80 minutes.
-- Stage 20 reached (stage 19 cleared) at 26 to 47 minutes, median about 29.
-- Stage 20 boss beaten at 46 to 62 minutes.
-- Per 80 minutes: about 4,500 rolls, 28 to 48 Legendaries (one every 2 to 3 minutes), 3 to 5 Mythics, no Mint in Box. 14 to 26 deaths, mostly at the mini-boss walls (stages 10 and 15), which is where the upgrade grid and rebirths take over.
+- World 2 beaten at 1.5 to 3 minutes, World 3 at 5 to 7, World 4 at 10 to 14, World 5 at 18 to 23, World 7 at 38 to 44, World 8 at 54 to 65, World 9 at 81 to 105, World 10 at 100 to 107 (three of four seeds). Each world takes longer than the last, as intended; World 20 is long-term play.
+- Rebirths at about 20, 40, and 80 to 105 minutes.
+- Per 2 hours: about 13,000 rolls, 83 to 121 Legendaries (roughly one a minute once luck builds up), 3 to 9 Mythics, no Mint in Box. 38 to 51 deaths, nearly all failed pushes into the next world.
 
-Earlier results for the tap-to-dive version (Nov 1) are in the git history.
+Earlier results (the tap-to-dive version and the single-neighborhood roller) are in the git history.
 
 ## Tech
 

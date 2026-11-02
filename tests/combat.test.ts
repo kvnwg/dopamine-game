@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, computeDamage, computeStats, killRewards, rollAttack, rollExtraBags, Rng, scaledEnemyStats, stageInfo,
-  tick, generateWave, type GameState,
+  applyAction, computeDamage, computeStats, defConstant, isBossWave, itemTierFor, killRewards, rollAttack, rollExtraBags, Rng,
+  scaledEnemyStats, tick, generateWave, worldCount, worldThreat, type CoreEvent, type GameState,
 } from '../src/core';
 import { BAL, DATA } from '../src/data';
 import { freshState, histogram, T0 } from './helpers';
@@ -51,7 +51,7 @@ describe('player stats', () => {
       uid: 1, baseId: 'weapon_bbq_spatula', slot: 'weapon', rarity: 'junk', level: 1,
       main: [{ stat: 'ATK', mode: 'flat', value: 5 }],
       subs: [{ affixId: 'ATK_PCT', stat: 'ATK', mode: 'pct', value: 10 }, { affixId: 'CRIT', stat: 'CRIT', mode: 'flat', value: 500 }],
-      bonus: [], mintPerkId: null, enchants: [], locked: false, power: 0,
+      bonus: [], mintPerkId: null, enchants: [], locked: false, tier: 1, power: 0,
     };
     const s = computeStats(st);
     expect(s.HP).toBeCloseTo(100 + 12 * 10);
@@ -60,42 +60,58 @@ describe('player stats', () => {
   });
 });
 
-describe('stages and enemies', () => {
-  it('marks stages 5/10/15 as mini-boss and 20 as boss', () => {
-    expect(stageInfo(4).kind).toBe('regular');
-    expect(stageInfo(5).kind).toBe('miniboss');
-    expect(stageInfo(10).kind).toBe('miniboss');
-    expect(stageInfo(15).kind).toBe('miniboss');
-    expect(stageInfo(20).kind).toBe('boss');
-    expect(stageInfo(5).bossId).toBe('big_earl');
+describe('worlds and enemies', () => {
+  it('has 20 worlds, and the fifth wave of every world is its boss', () => {
+    expect(worldCount()).toBe(20);
+    expect(isBossWave(3)).toBe(false);
+    expect(isBossWave(4)).toBe(true);
+    const rng = new Rng(3);
+    for (const w of [1, 7, 20]) {
+      const wave = generateWave(w, 4, rng, 1);
+      expect(wave).toHaveLength(1);
+      expect(wave[0].kind).toBe('boss');
+      expect(wave[0].enemyId).toBe(DATA.worlds[w - 1].boss.id);
+    }
   });
 
-  it('scales enemy stats by 1.13 / 1.10 / 1.08 per stage, with boss multipliers', () => {
+  it('scales enemies by growth^(world - 1); bosses get the boss multipliers', () => {
+    const g = BAL.worlds.enemyGrowth;
     const rat = DATA.enemiesById.get('alley_rat')!;
-    const s10 = scaledEnemyStats(rat, 10);
-    expect(s10.hp).toBeCloseTo(rat.hp * 1.13 ** 9);
-    expect(s10.atk).toBeCloseTo(rat.atk * 1.1 ** 9);
+    const w5 = scaledEnemyStats(rat, 5, false);
+    expect(w5.hp).toBeCloseTo(rat.hp * g.hp ** 4);
+    expect(w5.atk).toBeCloseTo(rat.atk * g.atk ** 4);
+    expect(w5.def).toBeCloseTo(rat.def * g.def ** 4);
     const boss = DATA.enemiesById.get('officer_dale')!;
-    const b20 = scaledEnemyStats(boss, 20);
-    expect(b20.hp).toBeCloseTo(boss.hp * 1.13 ** 19 * 10);
-    expect(b20.atk).toBeCloseTo(boss.atk * 1.1 ** 19 * 2);
-    expect(b20.def).toBeCloseTo(boss.def * 1.08 ** 19);
+    const b3 = scaledEnemyStats(boss, 3, true);
+    expect(b3.hp).toBeCloseTo(boss.hp * g.hp ** 2 * BAL.worlds.boss.hpMult);
+    expect(b3.atk).toBeCloseTo(boss.atk * g.atk ** 2 * BAL.worlds.boss.atkMult);
   });
 
-  it('waves have 3-5 enemies (10,000 rolls) and the last wave of a boss stage is the boss', () => {
+  it('waves have 3-5 enemies from the world roster (10,000 rolls)', () => {
     const rng = new Rng(1);
-    const h = histogram(10_000, () => generateWave(3, 0, rng, 1).length);
+    const roster = new Set(DATA.worlds[2].enemies.map((f) => f.id));
+    const h = histogram(10_000, () => {
+      const wave = generateWave(3, 0, rng, 1);
+      for (const e of wave) expect(roster.has(e.enemyId)).toBe(true);
+      return wave.length;
+    });
     expect([...h.keys()].sort()).toEqual([3, 4, 5]);
     for (const v of h.values()) expect(Math.abs(v / 10_000 - 1 / 3)).toBeLessThan(0.02);
-    const bossWave = generateWave(20, 4, rng, 1);
-    expect(bossWave).toHaveLength(1);
-    expect(bossWave[0].enemyId).toBe('officer_dale');
   });
 
-  it('kill rewards follow 5 x 1.10^(s-1) coins and 3 x 1.09^(s-1) XP', () => {
-    const r = killRewards(11, 'regular', 20);
-    expect(r.coins).toBeCloseTo(5 * 1.1 ** 10 * 1.2);
-    expect(r.xp).toBeCloseTo(3 * 1.09 ** 10);
+  it('harder worlds pay proportionally more', () => {
+    const r6 = killRewards(6, 'regular', 20);
+    expect(r6.coins).toBeCloseTo(BAL.drops.killCoins.base * BAL.worlds.goldGrowth ** 5 * 1.2);
+    expect(r6.xp).toBeCloseTo(BAL.drops.killXp.base * BAL.worlds.xpGrowth ** 5);
+    expect(killRewards(6, 'boss', 0).coins).toBeCloseTo((r6.coins / 1.2) * BAL.worlds.boss.coinMult);
+    // Gold grows exactly as fast as enemy HP, so a world pays in proportion to how hard it is.
+    expect(killRewards(9, 'regular', 0).coins / killRewards(8, 'regular', 0).coins).toBeCloseTo(BAL.worlds.goldGrowth);
+  });
+
+  it('the DEF constant grows with the world, so the same ATK:DEF ratio deals the same share of damage', () => {
+    const g = BAL.worlds.defConstantGrowth ** 4;
+    expect(defConstant(5)).toBeCloseTo(BAL.combat.defConstant * g);
+    expect(computeDamage(100 * g, 50 * g, false, 150, 1, defConstant(5)) / g).toBeCloseTo(computeDamage(100, 50, false, 150, 1));
   });
 
   it('BAG_FIND gives a matching extra-bag chance (10,000 rolls)', () => {
@@ -117,40 +133,71 @@ function run(state: GameState, seconds: number, rng: Rng, now = T0) {
   return { state: st, events };
 }
 
-describe('alley progression', () => {
-  it('auto-advances through easy stages and drops Trash Bags per wave', () => {
+describe('world progression', () => {
+  it('waves keep coming and each drops Trash Bags that become bonus rolls', () => {
     const rng = new Rng(1);
     const { state, events } = run(freshState(), 60, rng);
-    expect(state.stage.highestCleared).toBeGreaterThanOrEqual(1);
-    expect(events.filter((e) => e.type === 'waveClear').length).toBeGreaterThanOrEqual(5);
-    // Every wave drops at least one Trash Bag, which the roller spends right away as a bonus roll.
+    expect(events.filter((e) => e.type === 'waveClear').length).toBeGreaterThanOrEqual(4);
     const dropped = events.reduce((n, e) => n + (e.type === 'bagDrop' ? e.count : 0), 0);
-    expect(dropped).toBeGreaterThanOrEqual(5);
+    expect(dropped).toBeGreaterThanOrEqual(4);
     expect(events.filter((e) => e.type === 'roll' && e.source === 'bag').length).toBeGreaterThanOrEqual(BAL.start.bags);
     expect(state.roll.count).toBeGreaterThan(dropped);
   });
 
-  it('stops before a mini-boss stage and waits for Fight Boss', () => {
+  it('beating a world boss clears the world, pays Gems and a Luck Potion, and moves on', () => {
     const rng = new Rng(1);
-    let st = freshState();
-    st.player.level = 30;
-    st = applyAction(st, { type: 'cheat', cheat: { kind: 'setStage', stage: 4 } }, rng, T0).state;
-    st = run(st, 60, rng).state;
-    expect(st.stage.highestCleared).toBe(4);
-    expect(st.battle.stage).toBe(4);
-    const fought = applyAction(st, { type: 'fightBoss' }, rng, T0);
-    expect(fought.state.battle.stage).toBe(5);
-    expect(fought.events.some((e) => e.type === 'bossAttempt')).toBe(true);
+    const st = freshState();
+    st.player.level = 40;
+    const { state, events } = run(st, 90, rng);
+    expect(state.stage.highestCleared).toBeGreaterThanOrEqual(1);
+    const first = events.find((e): e is Extract<CoreEvent, { type: 'worldFirstClear' }> => e.type === 'worldFirstClear');
+    expect(first?.world).toBe(1);
+    expect(first?.gems).toBe(BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld);
+    expect(events.some((e) => e.type === 'luckBoost')).toBe(true);
+    expect(events.some((e) => e.type === 'stageStart' && e.stage === 2 && e.push)).toBe(true);
   });
 
-  it('drops back to the last cleared stage on death and shows the hint', () => {
-    const rng = new Rng(1);
+  it('every world is open, but a fresh raccoon in World 10 is one-shot and sent home', () => {
+    const rng = new Rng(4);
     let st = freshState();
-    st = applyAction(st, { type: 'cheat', cheat: { kind: 'setStage', stage: 14 } }, rng, T0).state;
-    const { state, events } = run(st, 120, rng);
+    expect(worldThreat(st, 10).level).toBe('oneShot');
+    expect(worldThreat(st, 1).level).not.toBe('oneShot');
+    st = applyAction(st, { type: 'travel', world: 10 }, rng, T0).state;
+    expect(st.battle.stage).toBe(10);
+    expect(st.stage.mode).toBe('push');
+    const maxHp = computeStats(st).HP;
+    const { state, events } = run(structuredClone(st) as GameState, 15, rng);
+    const hits = events.filter((e) => e.type === 'enemyHit');
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].type === 'enemyHit' && hits[0].amount).toBeGreaterThanOrEqual(maxHp);
     expect(events.some((e) => e.type === 'playerDeath')).toBe(true);
+    expect(state.battle.stage).toBe(1);
     expect(state.stage.mode).toBe('farm');
-    expect(state.battle.stage).toBe(13);
     expect(state.stage.showToughHint).toBe(true);
+    expect(state.stage.powerAtDeath).not.toBeNull();
+  });
+
+  it('travelling to a beaten world farms it; travelling past the frontier pushes', () => {
+    const rng = new Rng(5);
+    const st = freshState();
+    st.stage.highestCleared = 4;
+    const farm = applyAction(st, { type: 'travel', world: 3 }, rng, T0).state;
+    expect(farm.battle.stage).toBe(3);
+    expect(farm.stage.mode).toBe('farm');
+    const push = applyAction(st, { type: 'travel', world: 7 }, rng, T0).state;
+    expect(push.battle.stage).toBe(7);
+    expect(push.stage.mode).toBe('push');
+    expect(applyAction(st, { type: 'travel', world: 21 }, rng, T0).state.battle.stage).toBe(1);
+  });
+
+  it('items take the tier of the world they are rolled in, at most one past the best world beaten', () => {
+    const st = freshState();
+    st.stage.highestCleared = 2;
+    st.battle.stage = 2;
+    expect(itemTierFor(st)).toBe(2);
+    st.battle.stage = 3;
+    expect(itemTierFor(st)).toBe(3);
+    st.battle.stage = 15;
+    expect(itemTierFor(st)).toBe(3);
   });
 });

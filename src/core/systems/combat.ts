@@ -2,6 +2,7 @@
  * Fixed-tick battle simulation (10 ticks per second). Shared by the Alley and,
  * later, Heists / Junkyard. Emits events that the renderer turns into animation.
  * Enchantments add burn, chain lightning, echo strikes, explosions and thorns.
+ * The battle runs in a world (battle.stage): 4 regular waves, then the world's boss.
  */
 import { BAL, DATA } from '../../data';
 import type { Rng } from '../rng';
@@ -11,12 +12,16 @@ import { combatEffects, type CombatEffects } from './enchants';
 import { addXp } from './progression';
 import { recordRewards } from './offline';
 import { addLuckBoost, goldMult } from './roller';
-import { farmStageFor, generateWave, killRewards, maxStage, stageInfo } from './stages';
+import { defConstant, generateWave, isBossWave, killRewards, worldCount } from './stages';
 import { computeStats, playerPower } from './stats';
 
-/** damage = ATK x (100 / (100 + DEF)) x (crit ? CRIT_DMG/100 : 1) x variance */
-export function computeDamage(atk: number, targetDef: number, isCrit: boolean, critDmgPct: number, variance: number): number {
-  const k = BAL.combat.defConstant;
+/**
+ * damage = ATK x (K / (K + DEF)) x (crit ? CRIT_DMG/100 : 1) x variance, where K is the DEF constant
+ * (100 in world 1; it grows with the world so DEF matters the same everywhere).
+ */
+export function computeDamage(
+  atk: number, targetDef: number, isCrit: boolean, critDmgPct: number, variance: number, k: number = BAL.combat.defConstant,
+): number {
   const dmg = atk * (k / (k + Math.max(0, targetDef))) * (isCrit ? critDmgPct / 100 : 1) * variance;
   return Math.max(BAL.combat.minDamage, dmg);
 }
@@ -25,9 +30,9 @@ export function rollVariance(rng: Rng): number {
   return rng.float(BAL.combat.damageVariance.min, BAL.combat.damageVariance.max);
 }
 
-export function rollAttack(atk: number, targetDef: number, critPct: number, critDmgPct: number, rng: Rng) {
+export function rollAttack(atk: number, targetDef: number, critPct: number, critDmgPct: number, rng: Rng, k: number = BAL.combat.defConstant) {
   const crit = rng.chance(critPct / 100);
-  return { amount: computeDamage(atk, targetDef, crit, critDmgPct, rollVariance(rng)), crit };
+  return { amount: computeDamage(atk, targetDef, crit, critDmgPct, rollVariance(rng), k), crit };
 }
 
 /** Extra bags from BAG_FIND: each full 100% is a guaranteed extra bag, the remainder is a chance. */
@@ -51,21 +56,11 @@ export function startStage(d: GameState, stage: number, ev: CoreEvent[], push: b
   ev.push({ type: 'stageStart', stage, push });
 }
 
-/** The next unbeaten stage, if it is a boss stage the player can challenge right now. */
-export function bossStageAvailable(state: GameState): number | null {
+/** The first unbeaten world, when the raccoon is somewhere else and could go try it. */
+export function nextWorldAvailable(state: GameState): number | null {
   const next = state.stage.highestCleared + 1;
-  if (next > maxStage()) return null;
-  if (stageInfo(next).kind === 'regular') return null;
-  if (state.battle.stage === next) return null;
-  return next;
-}
-
-/** True when the raccoon is farming after a death and a regular stage is waiting to be retried. */
-export function canPushStage(state: GameState): boolean {
-  const next = state.stage.highestCleared + 1;
-  if (next > maxStage()) return false;
-  if (stageInfo(next).kind !== 'regular') return false;
-  return state.battle.stage !== next && state.stage.mode === 'farm';
+  if (next > worldCount()) return null;
+  return state.battle.stage === next ? null : next;
 }
 
 interface Ctx {
@@ -81,14 +76,12 @@ function onKill(c: Ctx, e: EnemyState) {
   const { d, ev, now } = c;
   const stage = d.battle.stage;
   const r = killRewards(stage, e.kind, c.stats.COIN_FIND);
-  const mult = goldMult(d);
-  let coins = r.coins * mult;
-  if (e.kind === 'boss') coins += r.coins * mult * BAL.stages.boss.coinBurstKills;
+  const coins = r.coins * goldMult(d);
   d.currencies.coins += coins;
   d.lifetime.kills += 1;
   ev.push({ type: 'kill', enemyUid: e.uid, enemyId: e.enemyId, coins, xp: r.xp, kind: e.kind });
-  if (e.kind === 'regular') recordRewards(d, now, { bags: 0, coins: r.coins * mult, xp: r.xp });
-  else addLuckBoost(d, now, BAL.luck.potion.seconds, ev);
+  if (e.kind === 'regular') recordRewards(d, now, { bags: 0, coins, xp: r.xp });
+  else if (c.rng.chance(BAL.worlds.boss.potionChance)) addLuckBoost(d, now, BAL.luck.potion.seconds, ev);
   addXp(d, r.xp, ev);
 }
 
@@ -115,7 +108,7 @@ function playerAttack(c: Ctx, echo: boolean) {
   const b = c.d.battle;
   const target = b.enemies[0];
   if (!target) return;
-  const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng);
+  const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, defConstant(b.stage));
   const hpBefore = target.hp;
   const uid = target.uid;
   const killed = damageEnemy(c, 0, roll.amount);
@@ -153,7 +146,7 @@ function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean) {
     ev.push({ type: 'playerDodge', enemyUid: e.uid });
     return;
   }
-  const amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng));
+  const amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng), defConstant(d.battle.stage));
   d.battle.playerHp -= amount;
   ev.push({ type: 'enemyHit', enemyUid: e.uid, amount, heavy });
   if (c.fx.thorns > 0) {
@@ -185,11 +178,10 @@ function tickBurns(c: Ctx, dt: number) {
 function onWaveCleared(c: Ctx) {
   const { d, rng, now, ev, stats } = c;
   const b = d.battle;
-  const info = stageInfo(b.stage);
-  const lastWave = b.wave >= BAL.stages.wavesPerStage - 1;
+  const bossWave = isBossWave(b.wave);
   let bags: number;
-  if (lastWave && info.kind !== 'regular') {
-    bags = info.kind === 'boss' ? BAL.stages.boss.bags : BAL.stages.miniBoss.bags;
+  if (bossWave) {
+    bags = BAL.worlds.boss.bags;
   } else {
     bags = BAL.drops.bagsPerWave + rollExtraBags(stats.BAG_FIND, rng);
     recordRewards(d, now, { bags, coins: 0, xp: 0 });
@@ -199,53 +191,74 @@ function onWaveCleared(c: Ctx) {
   d.lifetime.wavesCleared += 1;
   ev.push({ type: 'bagDrop', count: bags });
   ev.push({ type: 'waveClear', stage: b.stage, wave: b.wave });
-  if (!lastWave) {
+  if (!bossWave) {
     b.wave += 1;
     b.phase = 'walking';
     b.phaseTime = BAL.combat.walkSeconds;
     b.playerHp = Math.min(stats.HP, b.playerHp + (stats.HP * BAL.combat.waveHealPct) / 100);
     return;
   }
-  onStageCleared(d, ev);
+  onWorldCleared(c);
 }
 
-function onStageCleared(d: GameState, ev: CoreEvent[]) {
+/**
+ * The world's boss is down. The first clear pays Gems and a Luck Potion. Pushing raccoons move on to
+ * the next world; farming raccoons loop this world, and retry the frontier once they are stronger
+ * than when they last died there.
+ */
+function onWorldCleared(c: Ctx) {
+  const { d, ev, now } = c;
   const s = d.stage;
-  const cleared = d.battle.stage;
-  const firstTime = cleared > s.highestCleared;
-  if (firstTime) s.highestCleared = cleared;
-  ev.push({ type: 'stageClear', stage: cleared, firstTime });
-  const info = stageInfo(cleared);
-  if (info.kind !== 'regular') {
-    d.lifetime.bossesBeaten += 1;
-    ev.push({ type: 'bossWin', stage: cleared });
-    if (info.kind === 'boss' && !d.neighborhoodsCleared.includes(info.neighborhood.id)) {
-      d.neighborhoodsCleared.push(info.neighborhood.id);
-      ev.push({ type: 'neighborhoodCleared', neighborhoodId: info.neighborhood.id });
-    }
+  const world = d.battle.stage;
+  const firstTime = world > s.highestCleared;
+  if (firstTime) {
+    s.highestCleared = world;
+    const gems = BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world;
+    d.currencies.gems += gems;
+    ev.push({ type: 'worldFirstClear', world, gems });
+    addLuckBoost(d, now, BAL.luck.potion.seconds, ev);
   }
-  const next = s.highestCleared + 1;
-  const farm = farmStageFor(s.highestCleared);
-  if (next > maxStage() || stageInfo(next).kind !== 'regular') {
-    startStage(d, farm, ev, false);
+  d.lifetime.bossesBeaten += 1;
+  ev.push({ type: 'stageClear', stage: world, firstTime });
+  ev.push({ type: 'bossWin', stage: world });
+  const next = world + 1;
+  if (s.mode === 'push' && next <= worldCount()) {
+    s.returnTo = world;
+    startStage(d, next, ev, true);
     return;
   }
-  if (s.mode === 'farm' && s.powerAtDeath !== null && playerPower(d) <= s.powerAtDeath) {
-    startStage(d, farm, ev, false);
+  const frontier = s.highestCleared + 1;
+  const stronger = s.powerAtDeath !== null && playerPower(d) > s.powerAtDeath;
+  if (s.mode === 'farm' && stronger && world === s.highestCleared && frontier <= worldCount()) {
+    s.mode = 'push';
+    s.returnTo = world;
+    s.powerAtDeath = null;
+    s.showToughHint = false;
+    startStage(d, frontier, ev, true);
     return;
   }
-  s.mode = 'push';
-  s.powerAtDeath = null;
-  s.showToughHint = false;
-  startStage(d, next, ev, true);
+  startStage(d, world, ev, false);
 }
 
+/**
+ * After a death: a failed push falls back to the world it started from; a death in a world already
+ * beaten steps down one world. Each further death steps down again, so the raccoon always ends up
+ * somewhere it can win.
+ */
 function onDeathResolved(d: GameState, ev: CoreEvent[]) {
   const s = d.stage;
+  const world = d.battle.stage;
   s.mode = 'farm';
-  s.powerAtDeath = playerPower(d);
   s.showToughHint = true;
-  startStage(d, farmStageFor(Math.max(1, s.highestCleared)), ev, false);
+  let back: number;
+  if (world > s.highestCleared) {
+    s.powerAtDeath = playerPower(d);
+    back = Math.max(1, Math.min(s.returnTo, world - 1));
+  } else {
+    back = Math.max(1, world - 1);
+  }
+  s.returnTo = Math.max(1, back - 1);
+  startStage(d, back, ev, false);
 }
 
 /** Advance the Alley battle by one fixed tick of `dt` seconds. */
@@ -271,6 +284,7 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
       b.phase = 'fighting';
       b.phaseTime = 0;
       ev.push({ type: 'waveStart', stage: b.stage, wave: b.wave });
+      if (isBossWave(b.wave)) ev.push({ type: 'bossAttempt', stage: b.stage });
     }
     return;
   }

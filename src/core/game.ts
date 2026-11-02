@@ -10,13 +10,14 @@ import { BAL } from '../data';
 import type { Rng } from './rng';
 import type { GameState } from './state';
 import type { CoreEvent, GameAction, StepResult } from './types';
-import { bossStageAvailable, canPushStage, combatTick, startStage } from './systems/combat';
+import { combatTick, startStage } from './systems/combat';
 import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './systems/dumpster';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { addXp } from './systems/progression';
 import { doRebirth } from './systems/rebirth';
 import { addLuckBoost, equipFromBag, rollTick, scrapFromBag, toggleLock } from './systems/roller';
-import { maxStage } from './systems/stages';
+import { worldCount } from './systems/stages';
+import { travelTo } from './systems/worlds';
 import { buyUpgrade } from './systems/upgrades';
 import { clamp } from './util';
 
@@ -67,22 +68,9 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'rebirth':
         doRebirth(d, ev);
         break;
-      case 'fightBoss': {
-        const stage = bossStageAvailable(d);
-        if (stage === null) break;
-        d.stage.mode = 'push';
-        startStage(d, stage, ev, true);
-        ev.push({ type: 'bossAttempt', stage });
+      case 'travel':
+        travelTo(d, action.world, ev);
         break;
-      }
-      case 'pushStage': {
-        if (!canPushStage(d)) break;
-        d.stage.mode = 'push';
-        d.stage.powerAtDeath = null;
-        d.stage.showToughHint = false;
-        startStage(d, d.stage.highestCleared + 1, ev, true);
-        break;
-      }
       case 'startDumpsterUpgrade':
         startUpgrade(d, now, ev);
         break;
@@ -132,7 +120,7 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       addXp(d, cheat.amount, ev);
       break;
     case 'setStage': {
-      const stage = clamp(Math.round(cheat.stage), 1, maxStage());
+      const stage = clamp(Math.round(cheat.stage), 1, worldCount());
       d.stage.highestCleared = Math.max(0, stage - 1);
       d.stage.mode = 'push';
       d.stage.powerAtDeath = null;

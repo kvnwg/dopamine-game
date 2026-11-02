@@ -36,7 +36,7 @@ export function computeItemPower(item: Omit<Item, 'power'>): number {
 }
 
 export function createItem(
-  base: BaseItem, rarity: Rarity, level: number, themeId: string, rng: Rng, uid: number, enchants: ItemEnchant[] = [],
+  base: BaseItem, rarity: Rarity, level: number, themeId: string, rng: Rng, uid: number, enchants: ItemEnchant[] = [], tier = 1,
 ): Item {
   const main: Mod[] = BAL.items.slots[base.slot].main.map((m) => ({
     stat: m.stat,
@@ -45,7 +45,7 @@ export function createItem(
   }));
   const subs = rollSubstats(BAL.rarities[rarity].substats, level, themeId, rng);
   const mintPerkId = rarity === 'mint' ? rng.pick(DATA.mintPerks).id : null;
-  const partial = { uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false };
+  const partial = { uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false, tier };
   return { ...partial, power: computeItemPower(partial) };
 }
 
@@ -60,11 +60,12 @@ export function pickBaseItem(slot: Slot, themeId: string, rarity: Rarity, rng: R
   return rng.pick(regular.length > 0 ? regular : inTheme);
 }
 
-/** Recycle rewards x (1 + 0.05 x itemLevel). */
-export function recycleRewards(item: Pick<Item, 'rarity' | 'level'>): { xp: number; coins: number } {
+/** Recycle rewards x (1 + 0.05 x itemLevel); the coins also scale with the item's world, like kill gold. */
+export function recycleRewards(item: Pick<Item, 'rarity' | 'level'> & Partial<Pick<Item, 'tier'>>): { xp: number; coins: number } {
   const r = BAL.rarities[item.rarity];
   const mult = 1 + BAL.recycle.perItemLevel * item.level;
-  return { xp: Math.round(r.recycleXp * mult), coins: Math.round(r.recycleCoins * mult) };
+  const t = Math.max(0, (item.tier ?? 1) - 1);
+  return { xp: Math.round(r.recycleXp * mult), coins: Math.round(r.recycleCoins * mult * Math.pow(BAL.worlds.goldGrowth, t)) };
 }
 
 export function itemName(item: Pick<Item, 'baseId' | 'rarity'>): string {

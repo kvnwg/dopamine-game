@@ -45,6 +45,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
           <span className={s.meta}>
             {t('item.meta', { slot: t(`slot.${item.slot}`), level: item.level })} · {t('roll.oneIn', { odds: fmtOdds(RARITY_ODDS[item.rarity]) })}
           </span>
+          <span className={s.meta}>{t('item.worldTier', { n: item.tier })}</span>
           <div className={s.powerBig}>
             <PowerIcon size={54} />
             {formatNumber(item.power)}

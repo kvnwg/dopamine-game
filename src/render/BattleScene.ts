@@ -103,11 +103,11 @@ function drainTrail(t: Trail, hp: number, max: number, dt: number): void {
 }
 
 /**
- * How many of a bar's `inner` columns are full and how far the trail reaches. Any damage takes a
- * column and the last sliver stays until 0, so a bar only reads full or empty when it is.
+ * How many of a bar's `inner` columns are full and how far the trail reaches: the nearest column, but
+ * the last sliver stays until 0, so a bar never reads empty while its fighter stands.
  */
 function barCells(inner: number, pct: number, ghost: number): { fill: number; trail: number } {
-  const cells = (k: number) => (k >= 1 ? inner : k > 0 ? Phaser.Math.Clamp(Math.floor(k * inner), 1, inner - 1) : 0);
+  const cells = (k: number) => (k >= 1 ? inner : k > 0 ? Phaser.Math.Clamp(Math.round(k * inner), 1, inner) : 0);
   const fill = cells(pct);
   return { fill, trail: Math.max(fill, cells(ghost)) };
 }
@@ -1307,26 +1307,28 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * The boss bar near the top. It follows the boss on screen rather than core, so the killing blow
-   * still empties it before it fades; between waves and while the player picks the next world
-   * (phase 'choice') there is no boss and it stays hidden.
+   * empties it, then it fades out. Between waves and while the player picks the next world (phase
+   * 'choice') there is no boss and it stays hidden.
    */
   private updateBossBar(g: GameState, dt: number) {
     const b = g.battle;
     let f: Foe | undefined;
-    for (const x of this.foes.values()) if (x.kind !== 'regular' && !x.dying) f = x;
-    const show = !!f && (b.phase !== 'choice' || f.pending > 0);
+    for (const x of this.foes.values()) if (x.kind !== 'regular' && (!f || f.dying)) f = x;
+    const show = !!f && !f.dying && (b.phase !== 'choice' || f.pending > 0);
     const ui = this.bossUi;
     ui.setAlpha(show ? Math.min(1, ui.alpha + dt * 8) : Math.max(0, ui.alpha - dt * 4)).setVisible(ui.alpha > 0);
-    // (Fading out, it keeps showing its last state: an empty bar.)
-    if (!f || !show) return;
+    if (!f || !ui.visible) return;
+    // A boss that's down shows an empty bar while it fades (its trail drains here: syncFoes skips the dying).
+    const hp = f.dying ? 0 : f.shownHp;
+    if (f.dying) drainTrail(f.trail, 0, f.maxHp, dt);
     const name = enemyName(b.stage, f.id, f.kind);
     if (name !== this.bossName.text) {
       this.bossName.setText(name);
       this.fitBossName();
     }
-    this.bossHp.setText(formatNumber(Math.max(0, Math.ceil(f.shownHp))));
+    this.bossHp.setText(formatNumber(Math.max(0, Math.ceil(hp))));
     const tones = f.kind === 'boss' ? BAR_BOSS : BAR_FOE;
-    this.bossSig = this.pixelBar(this.bossBar, this.bossSig, BOSS_BAR.w, BOSS_BAR.h, f.shownHp / f.maxHp, f.trail.hp / f.maxHp, tones);
+    this.bossSig = this.pixelBar(this.bossBar, this.bossSig, BOSS_BAR.w, BOSS_BAR.h, hp / f.maxHp, f.trail.hp / f.maxHp, tones);
   }
 }
 

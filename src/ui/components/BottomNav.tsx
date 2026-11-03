@@ -15,6 +15,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: 'alley', icon: (n) => <ReelIcon size={n} /> },
+  { id: 'watch', icon: (n) => <ReelIcon gold size={n} /> },
   { id: 'bag', icon: (n) => <BagIcon size={n} /> },
   { id: 'upgrades', icon: (n) => <ArrowUpIcon size={n} /> },
   { id: 'rebirth', icon: (n) => <RebirthIcon size={n} /> },

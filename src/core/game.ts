@@ -134,6 +134,9 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       startStage(d, stage, ev, true);
       break;
     }
+    case 'forceTokens':
+      d.dumpster.forcedTokens = cheat.mults;
+      break;
     case 'forceRarity':
       d.dumpster.forcedRarity = cheat.rarity;
       break;

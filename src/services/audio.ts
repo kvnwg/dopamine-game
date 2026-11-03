@@ -363,6 +363,31 @@ class AudioEngine {
     this.bell(midi(n) * 2, at + 0.04, 0.3, 0.03);
   }
 
+  /**
+   * A reel lands on a luck token: a leafy shimmer and a chime that climbs with each token in the
+   * chain (`step` from 0), brighter for bigger multipliers (`x` = 2, 3, 5, 10).
+   */
+  token(step: number, x: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    const lift = Math.min(4, step) * 2 + (x >= 10 ? 5 : x >= 5 ? 3 : x >= 3 ? 1 : 0);
+    const base = [72, 76, 79, 84].map((n) => n + lift);
+    base.forEach((n, k) => this.bell(midi(n), at + k * 0.045, 0.45, 0.06 + step * 0.01));
+    this.tone(midi(base[0] - 12), at, 0.35, { type: 'triangle', gain: 0.05 });
+    this.noise(at, 0.35, { type: 'highpass', freq: 6000, gain: 0.04, attack: 0.01 });
+    if (x >= 5) this.bell(midi(base[3] + 12), at + 0.2, 0.6, 0.045);
+  }
+
+  /** The reel spins up again after a token: a quick upward whoosh. */
+  respin(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('respin', 120)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.22, { type: 'bandpass', freq: 900, q: 0.8, gain: 0.09, attack: 0.03 });
+    this.tone(260, at, 0.2, { type: 'triangle', gain: 0.04, freqEnd: 720 });
+  }
+
   /** The counter lands: a slam, a crash and a chord stab. `level` 0, 1, 2 = big, huge, insane. */
   slam(level: number): void {
     const ctx = this.live;

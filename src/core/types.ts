@@ -118,6 +118,7 @@ export type Cheat =
   /** Jump to a world as if every world before it was beaten. */
   | { kind: 'setStage'; stage: number }
   | { kind: 'forceRarity'; rarity: Rarity | null }
+  | { kind: 'forceTokens'; mults: number[] | null }
   | { kind: 'luckBoost'; seconds: number }
   | { kind: 'setDumpsterLevel'; level: number }
   | { kind: 'skipToLastWave' };

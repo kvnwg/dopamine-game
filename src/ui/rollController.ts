@@ -3,7 +3,8 @@
  * that is rare for the raccoon's current luck (see luckOddsOneIn and feel.bigRoll) gets a build-up
  * while the reels roll (glow, rattle, riser, silence drop) and the full-screen reveal when it lands
  * (black screen, the item shining, its "1 in X" counting up). With several reels, sounds play once
- * per spin for the best result. Also toasts for level-ups, luck boosts, upgrades and rebirths.
+ * per spin for the best result. Also toasts for level-ups, luck boosts, upgrades and rebirths (with
+ * the items each rebirth unlocks).
  */
 import { BAL, DATA } from '../data';
 import { currentLuck, formatNumber, haulMinutes, haulSize, itemName, luckOddsOneIn, rarityIndex, rollDrama, type CoreEvent, type Item } from '../core';
@@ -13,6 +14,7 @@ import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
 import { t } from './i18n';
 import { revealTotalMs } from './revealTiming';
+import { itemStopMs, multOf } from './reelTiming';
 import { useUi, type RollView } from './uiStore';
 
 let rollId = 1;
@@ -35,11 +37,13 @@ function rareness(item: Item): Pick<RollView, 'luckOdds' | 'drama'> {
   return { luckOdds, drama: rollDrama(luckOdds) };
 }
 
-/** While the reels roll toward a big roll: rising rattle, a riser, then a silence drop. */
-function buildUp(view: RollView, spinSeconds: number) {
+/**
+ * While the reels roll toward a big roll: rising rattle, a riser, then a silence drop just before its
+ * reel stops on it (`ms` after the spin starts, after any luck tokens on that reel).
+ */
+function buildUp(view: RollView, ms: number) {
   const tier = rarityIndex(view.item.rarity);
   useUi.setState({ charging: view });
-  const ms = spinSeconds * 1000;
   const beats = BAL.feel.rattleBeatsByRarity[view.item.rarity];
   for (let b = 0; b < beats; b++) {
     setTimeout(() => {
@@ -113,9 +117,9 @@ export function installRollController(): () => void {
           if (rare.drama) {
             const view: RollView = {
               id: -best.item.uid, item: best.item, odds: best.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false,
-              at: performance.now(), ...rare,
+              at: performance.now(), mult: multOf(best.mults), ...rare,
             };
-            buildUp(view, e.spinSeconds);
+            buildUp(view, itemStopMs(e, e.reels.indexOf(best)));
           }
           if (e.golden) audio.jingle(5);
           spinBest = null;
@@ -124,7 +128,7 @@ export function installRollController(): () => void {
         case 'roll': {
           const view: RollView = {
             id: rollId++, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: e.placed, newRecord: e.newRecord,
-            at: performance.now(), ...rareness(e.item),
+            at: performance.now(), mult: e.mult, ...rareness(e.item),
           };
           // The big "last roll" card shows the best result of the spin; every result goes in Recent.
           if (e.reel === 0 || !spinBest || e.odds > spinBest.odds) spinBest = view;
@@ -168,7 +172,8 @@ export function installRollController(): () => void {
           haptics.impact('light');
           break;
         case 'rebirth':
-          useUi.setState({ rebirthFx: e.count, tab: 'alley' });
+          useUi.setState({ rebirthFx: e.count, tab: 'alley', unlocked: e.unlocked.length ? { count: e.count, ids: e.unlocked } : null });
+          if (e.unlocked.length) setTimeout(() => ui.toast(t('toast.unlocked', { n: e.unlocked.length }), 'good'), 3300);
           setTimeout(() => {
             if (useUi.getState().rebirthFx === e.count) useUi.setState({ rebirthFx: null });
           }, 3200);

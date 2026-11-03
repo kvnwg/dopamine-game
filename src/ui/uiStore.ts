@@ -4,7 +4,7 @@ import type { HaulSize, Item, RollDrama, RollPlacement } from '../core';
 import type { AdPlacement } from '../services';
 
 export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world';
-export type Tab = 'alley' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
+export type Tab = 'alley' | 'watch' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
 export interface RollView {
   id: number;
@@ -19,6 +19,8 @@ export interface RollView {
   luckOdds: number;
   /** How big a deal it is for that luck: null for an everyday roll. */
   drama: RollDrama | null;
+  /** Luck tokens its reel landed on first, multiplied (1 without any). */
+  mult: number;
 }
 
 /** An item being dragged toward the raccoon (stage coordinates). */
@@ -67,6 +69,10 @@ interface UiState {
   goldPulse: number;
   /** The last boss win, for the "again or next?" card (first clears list their rewards). */
   afterBoss: { world: number; firstTime: boolean; gems: number } | null;
+  /** Items the last rebirth unlocked (shown after the rebirth burst). */
+  unlocked: { count: number; ids: string[] } | null;
+  /** The Watch tab hides everything but the battle and the rolls. */
+  watchHideUi: boolean;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -93,6 +99,8 @@ export const useUi = create<UiState>((set) => ({
   haul: null,
   goldPulse: 0,
   afterBoss: null,
+  unlocked: null,
+  watchHideUi: false,
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),

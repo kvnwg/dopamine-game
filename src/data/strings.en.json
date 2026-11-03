@@ -384,5 +384,20 @@
   "haul.mega": "MEGA HAUL!",
   "haul.minutes": "That's {n} minutes of fighting!",
   "haul.hours": "That's {n} hours of fighting!",
-  "haul.items": "{n} items scrapped"
+  "haul.items": "{n} items scrapped",
+  "tab.watch": "Watch",
+  "toast.unlocked": "{n} new items can turn up in the dumpster!",
+  "reel.token": "×{x} LUCK",
+  "watch.luck": "×{luck} luck",
+  "watch.chain": "×{x} luck",
+  "watch.rolledAt": "Rolled at ×{x} luck",
+  "watch.hide": "Hide buttons",
+  "watch.show": "Tap to show buttons",
+  "watch.rolling": "Rolling…",
+  "watch.best": "Best this visit: {name} (1 in {odds})",
+  "rebirth.unlocksNext": "UNLOCKS {n} NEW ITEMS",
+  "rebirth.allUnlocked": "Every item is unlocked",
+  "rebirth.unlockedTitle": "NEW IN THE DUMPSTER",
+  "codex.locked": "Rebirth {n}",
+  "codex.lockedHint": "Unlocks at Rebirth {n}"
 }

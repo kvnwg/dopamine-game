@@ -142,6 +142,8 @@ export const GameStateSchema = z.object({
     totalDives: z.number().int().nonnegative(),
     firstDiveDone: z.boolean(),
     forcedRarity: RaritySchema.nullable(),
+    /** Dev: the luck tokens the next reel lands on before its item. */
+    forcedTokens: z.array(z.number()).nullable().default(null),
     adSpeedupDay: z.string(),
     adSpeedupsUsed: z.number().int().nonnegative(),
   }),
@@ -222,6 +224,7 @@ export function createInitialState(now: number, seed: number): GameState {
       totalDives: 0,
       firstDiveDone: false,
       forcedRarity: null,
+      forcedTokens: null,
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },

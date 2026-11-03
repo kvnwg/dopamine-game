@@ -227,8 +227,12 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const reels: { item: Item; odds: number; mults: number[]; landAt: number; landed: boolean }[] = [];
   let dry = d.dumpster.dryStreak;
   for (let i = 0, n = reelCount(d); i < n; i++) {
-    // No tokens on the tutorial spin or a forced (debug) roll.
-    const mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng) : [];
+    // No tokens on the tutorial spin or a forced (debug) roll; dev cheats can force a chain.
+    let mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng) : [];
+    if (d.dumpster.forcedTokens) {
+      mults = d.dumpster.forcedTokens;
+      d.dumpster.forcedTokens = null;
+    }
     const item = rollReelItem(d, rng, luck * tokenMult(mults), dry);
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     reels.push({ item, odds: itemOddsOneIn(item), mults, landAt: baseSpinSeconds + mults.length * stepSeconds, landed: false });

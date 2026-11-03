@@ -6,6 +6,7 @@ import { InventoryPanel } from './components/InventoryPanel';
 import { UpgradeMap } from './components/UpgradeMap';
 import { RebirthPanel } from './components/RebirthPanel';
 import { WorldsPanel } from './components/WorldsPanel';
+import { WatchPanel } from './components/WatchPanel';
 import { BottomNav } from './components/BottomNav';
 import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
@@ -28,6 +29,8 @@ export function App() {
   // The upgrade map covers the whole screen; underneath, keep showing the tab it was opened from.
   const prevTab = useUi((u) => u.prevTab);
   const lowerTab = tab === 'upgrades' ? prevTab : tab;
+  // The Watch tab can hide the buttons for a clean view of the battle and the rolls.
+  const bare = useUi((u) => u.watchHideUi) && tab === 'watch';
 
   useLayoutEffect(() => {
     const el = frameRef.current;
@@ -45,15 +48,16 @@ export function App() {
   return (
     <div className={styles.viewport}>
       <div className={styles.frame} ref={frameRef}>
-        <div className={styles.stage} data-stage style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
+        <div className={styles.stage} data-stage data-bare={bare || undefined} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
           <div className={styles.battle}><BattlePanel /></div>
           <div className={styles.lower}>
             {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
+            {lowerTab === 'watch' && <WatchPanel />}
             {lowerTab === 'bag' && <InventoryPanel />}
             {lowerTab === 'rebirth' && <RebirthPanel />}
             {lowerTab === 'worlds' && <WorldsPanel />}
           </div>
-          <div className={styles.nav}><BottomNav /></div>
+          {!bare && <div className={styles.nav}><BottomNav /></div>}
           {tab === 'upgrades' && <UpgradeMap />}
           <DragLayer />
           <RevealLayer />

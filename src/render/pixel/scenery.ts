@@ -69,7 +69,8 @@ function plant(layer: PixelBuf, s: PixelBuf, x: number, base = GROUND, flip = fa
 
 const ink = (b: PixelBuf): PixelBuf => outline(b, PAL.k);
 
-function rgbAt(b: PixelBuf, x: number, y: number): number {
+function rgbAt(b: PixelBuf, x: number, y: number, wrapX = false): number {
+  if (wrapX) x = ((x % b.w) + b.w) % b.w;
   if (x < 0 || y < 0 || x >= b.w || y >= b.h) return -1;
   const i = (y * b.w + x) * 4;
   return b.px[i + 3] ? (b.px[i] << 16) | (b.px[i + 1] << 8) | b.px[i + 2] : -1;
@@ -96,14 +97,17 @@ function mostCommon(list: number[]): number {
   return best;
 }
 
-/** Recolors pixels that match none of their 4 neighbours (stray pixels) to their most common neighbour. */
-function despeckle(b: PixelBuf): void {
+/**
+ * Recolors pixels that match none of their 4 neighbours (stray pixels) to their most common
+ * neighbour. `wrapX` treats the buffer as a horizontal tile.
+ */
+function despeckle(b: PixelBuf, wrapX = false): void {
   const src = clone(b);
   for (let y = 0; y < b.h; y++) {
     for (let x = 0; x < b.w; x++) {
       const me = rgbAt(src, x, y);
       if (me < 0) continue;
-      const ns = [rgbAt(src, x - 1, y), rgbAt(src, x + 1, y), rgbAt(src, x, y - 1), rgbAt(src, x, y + 1)].filter((n) => n >= 0);
+      const ns = [rgbAt(src, x - 1, y, wrapX), rgbAt(src, x + 1, y, wrapX), rgbAt(src, x, y - 1), rgbAt(src, x, y + 1)].filter((n) => n >= 0);
       if (ns.length >= 2 && !ns.includes(me)) setRgb(b, x, y, mostCommon(ns));
     }
   }
@@ -178,9 +182,9 @@ const FAR_HOUSE_GABLE: Rows = [
 
 const FAR_HOUSE_HIP: Rows = [
   '...ccUUUUUu...',
-  '..ccUUUUUUUu..',
-  '.ccUUUUUUUUUu.',
-  'cUUUUUUUUUUUUu',
+  '..ccUUUUUUuu..',
+  '.ccUUUUUUUUuu.',
+  'ccUUUUUUUUUUuu',
   '.WWWWWWWWWWW5.',
   '.WxxWWWWWxxW5.',
   '.WWWWWWWWWWW5.',
@@ -225,13 +229,8 @@ export function farLayer(): PixelBuf {
     for (let y = t; y < H; y++) setPx(b, x, y, F.back);
     setPx(b, x, t, F.backRim);
   }
-  // a water tower and a few tiny groves on the back hills
+  // a water tower on the back hills
   stamp(b, WATER_TOWER, 236, back(240) - 9, { wrapX: true, recolor: hazeMap('w543', 0.5) });
-  const groves: Clump[] = [];
-  for (const [gx, n] of [[58, 2], [148, 3], [318, 2]] as const) {
-    for (let k = 0; k < n; k++) groves.push([gx + k * 4, back(gx + k * 4) + 3, 2.6]);
-  }
-  foliage((px, py, c) => dot(b, px, py, c), groves, [hz('g', 0.62), hz('G', 0.56), hz('l', 0.54), null]);
 
   // nearer hills
   for (let x = 0; x < TILE_W; x++) {
@@ -255,7 +254,12 @@ export function farLayer(): PixelBuf {
     crowns.push([x + r, field + 2 - r - lift, r]);
     x += Math.round(r * 1.35) + (hash01(i * 7 + 14) < 0.14 ? 9 : 0);
   }
-  foliage((px, py, c) => dot(b, px, py, c), crowns, trees);
+  // drawn on their own tile first so overlap slivers can be cleaned (wrapping at the seam)
+  const line = blank(TILE_W, H);
+  fill(line, 0, field - 1, TILE_W, 2, trees[0]);
+  foliage((px, py, c) => dot(line, px, py, c), crowns, trees);
+  despeckle(line, true);
+  blit(b, line, 0, 0);
 
   // a few far houses tucked into the tree line
   const fh: Array<[Rows, number, string]> = [
@@ -376,7 +380,7 @@ function gableHouse(): PixelBuf {
       if (xr >= R) setPx(b, xr, y, i === 0 ? 'R' : 'r');
     }
   }
-  stamp(b, ROUND_WINDOW, L - 2, 9);
+  stamp(b, ROUND_WINDOW, L - 2, 10);
   // wall details
   const wy = roofRows;
   stamp(b, WINDOW, wallX0 + 3, wy + 3);
@@ -511,12 +515,16 @@ function tree(s: TreeSpec): PixelBuf {
     setPx(b, x, y, c);
     leaf.add(y * s.w + x);
   }, s.clumps, ['g', 'G', 'l', 'L']);
-  // the canopy's shadow on the trunk just below it
+  // the canopy's shadow on the trunk: dark from the leaves down to one flat line
+  let low = s.trunkTop;
   for (let x = s.trunkX; x < s.trunkX + s.trunkW; x++) {
     let y = s.trunkTop;
     while (leaf.has(y * s.w + x)) y++;
-    setPx(b, x, y, 'b');
-    setPx(b, x, y + 1, 'n');
+    low = Math.max(low, y);
+  }
+  for (let x = s.trunkX; x < s.trunkX + s.trunkW; x++) {
+    for (let y = s.trunkTop; y <= low; y++) if (!leaf.has(y * s.w + x)) setPx(b, x, y, 'b');
+    setPx(b, x, low + 1, 'n');
   }
   tidy(b);
   despeckle(b);
@@ -565,6 +573,9 @@ function picketFence(n: number): PixelBuf {
       setPx(b, x + 2, y, '5');
     }
   }
+  // a shadow line along the base closes the gaps, so the ink underneath stays unbroken
+  fill(b, 0, h - 1, w, 1, '4');
+  for (let i = 0; i < n; i++) fill(b, i * 4, h - 1, 2, 1, '5');
   return ink(b);
 }
 
@@ -575,6 +586,7 @@ function plankFence(n: number): PixelBuf {
   const w = n * (pw + 1) - 1;
   const b = blank(w, h);
   for (const ry of [4, 13]) fill(b, 0, ry, w, 2, 'n');
+  fill(b, 0, h - 1, w, 1, 'n');
   for (let i = 0; i < n; i++) {
     const x = i * (pw + 1);
     const top = hash01(i + 40) < 0.3 ? 1 : 0;
@@ -618,10 +630,10 @@ const HYDRANT: Rows = [
 ];
 
 const CAN: Rows = [
-  '...434...',
+  '...444...',
   '.5wwww44.',
-  '55wwww443',
-  '.3333332.',
+  '55wwww433',
+  '.3333322.',
   '.5w55443.',
   '.5w55443.',
   '.4444433.',
@@ -629,7 +641,8 @@ const CAN: Rows = [
   '.5w55443.',
   '.4444433.',
   '.5w55443.',
-  '.4444332.',
+  '.5w55443.',
+  '.4444333.',
 ];
 
 const PAW: Rows = [
@@ -663,7 +676,7 @@ function dumpster(): PixelBuf {
       else if (x >= x1 - 1) c = 'g';
       if (y === 4) c = x >= x1 - 1 ? 'G' : 'l';
       if (y === 5) c = 'g';
-      if (y === 16) c = x === x0 ? 'G' : 'g';
+      if (y === 16) c = 'g';
       setPx(b, x, y, c);
     }
   }
@@ -678,7 +691,8 @@ function dumpster(): PixelBuf {
   setPx(b, 3, 6, 'L');
   setPx(b, 3, 7, 'L');
   stamp(b, PAW, 12, 8);
-  // casters
+  // deep shadow under the body, then the casters
+  fill(b, 5, 17, 20, 2, 'x');
   for (const cx of [4, 22]) {
     fill(b, cx, 17, 4, 1, '1');
     fill(b, cx + 1, 18, 2, 1, '3');
@@ -749,8 +763,8 @@ const CRACKS: readonly Rows[] = [
 ];
 
 const PEBBLES: readonly Rows[] = [
-  ['.w4.', 'w443', '.33.'],
-  ['w4.', '433'],
+  ['.44', '433'],
+  ['44.', '433'],
 ];
 
 export function groundLayer(): PixelBuf {

@@ -7,7 +7,7 @@ import Phaser from 'phaser';
 import { DATA, type Slot } from '../data';
 import { blank, bounds, fromRows, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
-import { HERO_BODY, HERO_POINTS, HERO_SIZE, HERO_TAIL, gearBuf, pawBuf, weaponBuf, type GearSlot } from './pixel/hero';
+import { HERO_H, HERO_POINTS, HERO_W, bodyBuf, gearBuf, pawBuf, tailBuf, weaponBuf, type GearSlot } from './pixel/hero';
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
 import { CLOUDS } from './pixel/scenery';
 import { FX } from './pixel/ui';
@@ -15,8 +15,8 @@ import { baseLayers, gradeBuf, skyBuf } from './worldLook';
 
 /** The hero frame in battle pixels: feet (ground contact), the paw's grip, the top of the head. */
 export const HERO = {
-  w: HERO_SIZE * P,
-  h: HERO_SIZE * P,
+  w: HERO_W * P,
+  h: HERO_H * P,
   feet: { x: HERO_POINTS.feet.x * P + P / 2, y: (HERO_POINTS.feet.y + 1) * P },
   hand: { x: HERO_POINTS.hand.x * P + P / 2, y: HERO_POINTS.hand.y * P + P / 2 },
   head: { x: HERO_POINTS.head.x * P + P / 2, y: HERO_POINTS.head.y * P },
@@ -60,11 +60,11 @@ function lazy(scene: Phaser.Scene, key: string, make: () => { canvas: HTMLCanvas
 }
 
 export function heroTail(scene: Phaser.Scene): SpriteInfo {
-  return lazy(scene, 'hero_tail', () => ({ canvas: toCanvas(fromRows(HERO_TAIL)), origin: HERO.feet }));
+  return lazy(scene, 'hero_tail', () => ({ canvas: toCanvas(tailBuf()), origin: HERO.feet }));
 }
 
 export function heroBody(scene: Phaser.Scene): SpriteInfo {
-  return lazy(scene, 'hero_body', () => ({ canvas: toCanvas(fromRows(HERO_BODY)), origin: HERO.feet }));
+  return lazy(scene, 'hero_body', () => ({ canvas: toCanvas(bodyBuf()), origin: HERO.feet }));
 }
 
 /** The front paw (in glove colors when gloves are worn), centered on the grip. */

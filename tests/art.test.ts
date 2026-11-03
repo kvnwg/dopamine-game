@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DATA } from '../src/data';
 import { alphaAt, bounds, checkRows } from '../src/render/pixel/buf';
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
-import { HERO_BODY, HERO_POINTS, HERO_SIZE, HERO_TAIL, WORN, gearBuf, weaponBuf } from '../src/render/pixel/hero';
+import { HEADROOM, HERO_BODY, HERO_POINTS, HERO_SIZE, HERO_TAIL, WORN, gearBuf, weaponBuf } from '../src/render/pixel/hero';
 import { ITEM_SPRITES, WEAPON_GRIP } from '../src/render/pixel/items';
 import { CLOUDS, LAYERS, TILE_W, farLayer, fgLayer, groundLayer, midLayer } from '../src/render/pixel/scenery';
 import { FX, UI_SPRITES } from '../src/render/pixel/ui';
@@ -34,14 +34,14 @@ describe('pixel art', () => {
     for (const [id, w] of Object.entries(WORN)) checkRows(id, w.rows);
   });
 
-  it('the hero is a 60x60 frame with its feet, paw and head on the art', () => {
+  it('the hero is drawn in a 40x40 grid with its feet and head on the art', () => {
     checkRows('hero body', HERO_BODY);
     checkRows('hero tail', HERO_TAIL);
     expect(HERO_BODY).toHaveLength(HERO_SIZE);
     expect(HERO_BODY[0]).toHaveLength(HERO_SIZE);
     const { feet, head } = HERO_POINTS;
-    expect(HERO_BODY[feet.y - 1][feet.x - 4]).not.toBe('.');
-    expect(HERO_BODY[head.y + 2][head.x]).not.toBe('.');
+    expect(HERO_BODY[feet.y - HEADROOM - 1][feet.x - 4]).not.toBe('.');
+    expect(HERO_BODY[head.y - HEADROOM + 2][head.x]).not.toBe('.');
   });
 
   it('every enemy shape the data uses has art, recolorable per world', () => {
@@ -50,7 +50,9 @@ describe('pixel art', () => {
       const art = ENEMY_ART[shape];
       expect(art, shape).toBeDefined();
       checkRows(shape, art.rows);
-      expect(art.rows[art.feet.y]?.[art.feet.x], `${shape} feet on the art`).not.toBe('.');
+      // The ground point may sit between two feet: there must be art on that row close to it.
+      const row = art.rows[art.feet.y] ?? '';
+      expect(/[^.]/.test(row.slice(Math.max(0, art.feet.x - 4), art.feet.x + 5)), `${shape} feet on the art`).toBe(true);
       const a = recolorEnemy(shape, '#ff0000', '#00ff00');
       const b = recolorEnemy(shape, '#0000ff', '#ffff00');
       expect(a.w).toBe(b.w);

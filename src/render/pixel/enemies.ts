@@ -1,14 +1,35 @@
 /**
- * Enemies and bosses in pixel art (see docs/PIXEL_ART.md). Every sprite faces LEFT, toward the hero.
- * Each world recolors an enemy: the three `body` keys take rampOf(world color) and the three `accent`
- * keys take rampOf(world accent). Those keys are used for nothing else in that sprite, so eyes, teeth,
- * metal, skin and outlines never change. Raw (un-recolored) rows only approximate the look; always draw
- * through recolorEnemy().
+ * Enemies and bosses in pixel art (see docs/PIXEL_ART.md). Every sprite faces LEFT, toward the hero,
+ * and stands with its feet on its bottom row (`feet`, the ground point between the feet).
+ *
+ * The cast is drawn like Kevin's raccoon hero, the farm animals and the user's otter reference: chunky,
+ * rounded critters with tiny dot eyes and a little blush, a light belly or face patch, 3 or 4 flat tones
+ * per material and one small prop that says who each one is. The outside edge is a 1 px outline in key
+ * `x`, always drawn in the raccoon's brown (CHARACTER_OUTLINE); lines inside a shape use a darker tone of
+ * the local color instead.
+ *
+ * Colors: each world recolors an enemy. The three `body` keys take rampOf(world color) and the three
+ * `accent` keys take rampOf(world accent); those keys are used for nothing else in that sprite. Every
+ * other key is drawn in CAST_COLORS, a muted, earthy take on the palette (cream, moss, warm browns, soft
+ * gold), so eyes, teeth, skin, wood and metal look the same in every world. Raw rows only approximate the
+ * look; always draw through recolorEnemy().
  */
 import { checkRows, fromRows, rampOf, type PixelBuf, type Rows, type SheetEntry } from './buf';
+import { CHARACTER_OUTLINE } from './palette';
 import worlds from '../../data/worlds.json';
 
-export type EnemyShape = 'rat' | 'pigeon' | 'raccoon' | 'ratKing' | 'raccoonBoss' | 'officer';
+export type EnemyShape =
+  | 'rat'
+  | 'pigeon'
+  | 'raccoon'
+  | 'ratKing'
+  | 'raccoonBoss'
+  | 'officer'
+  | 'soldier'
+  | 'orc'
+  | 'pumpkin'
+  | 'doc'
+  | 'bigDemon';
 
 export interface EnemyArt {
   rows: Rows;
@@ -18,7 +39,56 @@ export interface EnemyArt {
   body: [string, string, string];
   /** Dark, mid, light palette keys replaced by rampOf(world accent). */
   accent: [string, string, string];
+  /** The key drawn in CHARACTER_OUTLINE (default `x`). */
+  outline?: string;
 }
+
+/**
+ * How the cast draws every key that is not a body, accent or outline key: muted, natural colors in the
+ * style of the otter reference, so fixed parts (eyes, cream bellies, skin, wood, metal, gold) sit with
+ * the hero and the farm animals instead of the brighter UI palette.
+ */
+export const CAST_COLORS: Readonly<Record<string, string>> = {
+  k: '#1e1619', // eyes, nostrils: darker than the outline
+  x: CHARACTER_OUTLINE,
+  w: '#fbf6e6', // soft white: glints, teeth
+  W: '#efe4c9', // cream: bellies, muzzles
+  T: '#d9c29a', // cream shadow, light tan
+  t: '#b48f63', // tan
+  N: '#8a6646', // brown, wood
+  n: '#62483a', // dark brown
+  b: '#46352d', // darkest brown
+  s: '#efc4a2', // skin
+  S: '#cf9878', // skin shadow
+  P: '#e6a096', // blush, pink
+  q: '#c27779', // rose
+  e: '#d08566', // terracotta
+  R: '#a8503f', // dusty red
+  r: '#6e3530', // dark red
+  o: '#966037', // amber brown
+  O: '#c78f4f', // amber
+  y: '#e3c06e', // soft gold
+  Y: '#f5e3a6', // pale gold, lantern glow
+  g: '#424b26', // dark olive
+  G: '#687a3e', // moss
+  l: '#9caf70', // sage
+  L: '#cbd5a2', // pale sage
+  u: '#323b4e', // dusty navy
+  U: '#516683', // dusty blue
+  c: '#8099ab', // gray blue
+  C: '#bccdd3', // pale blue
+  a: '#53867b', // dusty teal
+  A: '#a8cbbc', // pale teal
+  v: '#40334a', // plum
+  V: '#6d5c82', // dusty purple
+  m: '#9d8db0', // lilac
+  M: '#d6cbdd', // pale lilac
+  '1': '#4d4649', // warm grays, dark to light: iron, stone
+  '2': '#6e6767',
+  '3': '#918a85',
+  '4': '#b6afa5',
+  '5': '#dbd4c7',
+};
 
 /** Alley Rat: big pink ear, angry squint, buck tooth, hunched back, tail curling up behind. 14x9. */
 const ROWS_RAT: Rows = [
@@ -195,21 +265,37 @@ const ROWS_OFFICER: Rows = [
 export const ENEMY_ART: Record<EnemyShape, EnemyArt> = {
   rat: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
   pigeon: { rows: ROWS_PIGEON, feet: { x: 5, y: 10 }, body: ['2', '3', '4'], accent: ['g', 'a', 'A'] },
-  raccoon: { rows: ROWS_RACCOON, feet: { x: 11, y: 31 }, body: ['2', '3', '4'], accent: ['r', 'R', 'e'] },
+  raccoon: { rows: ROWS_RACCOON, feet: { x: 11, y: 31 }, body: ['2', '3', '4'], accent: ['r', 'R', 'e'], outline: 'k' },
   ratKing: { rows: ROWS_RAT_KING, feet: { x: 8, y: 18 }, body: ['2', '3', '4'], accent: ['v', 'V', 'm'] },
   raccoonBoss: { rows: ROWS_RACCOON_BOSS, feet: { x: 9, y: 20 }, body: ['v', 'V', 'm'], accent: ['r', 'R', 'e'] },
   officer: { rows: ROWS_OFFICER, feet: { x: 23, y: 55 }, body: ['u', 'U', 'c'], accent: ['O', 'y', 'Y'] },
+  soldier: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
+  orc: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
+  pumpkin: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
+  doc: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
+  bigDemon: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
 };
 
 /** Builds an enemy sprite with the world's body color and accent swapped in. */
 export function recolorEnemy(shape: EnemyShape, color: string, accent: string): PixelBuf {
   const art = ENEMY_ART[shape];
-  const map: Record<string, string> = {};
+  const map: Record<string, string> = { ...CAST_COLORS };
+  map[art.outline ?? 'x'] = CHARACTER_OUTLINE;
   const b = rampOf(color);
   const a = rampOf(accent);
   art.body.forEach((k, i) => (map[k] = b[i]));
   art.accent.forEach((k, i) => (map[k] = a[i]));
   return fromRows(art.rows, map);
+}
+
+/** Throws if an enemy's rows are invalid or its recolor keys overlap each other or the outline. */
+export function checkArt(shape: EnemyShape): void {
+  const art = ENEMY_ART[shape];
+  checkRows(shape, art.rows);
+  const keys = [...art.body, ...art.accent, art.outline ?? 'x'];
+  if (new Set(keys).size !== keys.length) throw new Error(`${shape}: body, accent and outline keys must all differ`);
+  const bottom = art.rows[art.feet.y] ?? '';
+  if (art.feet.y !== art.rows.length - 1 || bottom[art.feet.x] === undefined) throw new Error(`${shape}: feet must be on the bottom row`);
 }
 
 const SHAPE_OF: Record<string, EnemyShape> = {
@@ -219,6 +305,11 @@ const SHAPE_OF: Record<string, EnemyShape> = {
   big_earl: 'ratKing',
   vinnie_two_lids: 'raccoonBoss',
   officer_dale: 'officer',
+  tin_soldier: 'soldier',
+  orc_brute: 'orc',
+  pumpkin_dude: 'pumpkin',
+  plague_doc: 'doc',
+  demon_king: 'bigDemon',
 };
 
 interface WorldFoe {
@@ -229,7 +320,8 @@ interface WorldFoe {
 
 /**
  * Preview sheet: each enemy in the first world it appears in (World 1 for the regulars and Officer Dale,
- * World 2 for Big Earl, World 3 for Vinnie) plus two later worlds, named like "rat_w1".
+ * World 2 for Big Earl, World 3 for Vinnie, World 8 for the dungeon cast) plus up to two later worlds,
+ * named like "rat_w1".
  */
 export function sheet(): SheetEntry[] {
   const list = worlds as unknown as { enemies: WorldFoe[]; boss: WorldFoe }[];
@@ -245,7 +337,7 @@ export function sheet(): SheetEntry[] {
   });
   const out: SheetEntry[] = [];
   for (const shape of Object.keys(ENEMY_ART) as EnemyShape[]) {
-    checkRows(shape, ENEMY_ART[shape].rows);
+    checkArt(shape);
     const hits = seen.get(shape) ?? [];
     const picks = [hits[0], hits[Math.min(2, hits.length - 1)], hits[Math.min(4, hits.length - 1)]].filter(
       (h, i, all) => h && all.indexOf(h) === i,

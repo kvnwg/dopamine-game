@@ -2,7 +2,18 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Power is rarity, a smaller battle grid, x100 upgrades (Nov 3, newest)
+## A slower climb, rare-roll moments and big scrap hauls (Nov 3, newest)
+
+Kevin's notes, in order: "the too tough sign wont move", "i want all the characters to be simple and cute, but with those details that they need", "get rid of the recent tab... NO I HATE IT", "outline of every single pixel character must be the same shade of brown that our main character raccoon is", "u gotta slow the game down more, u progress way too fast. i can instantly get such a good set of stuff and instantly move to world 7". These rows replace the rows they mention.
+
+| # | Decision | Why |
+|---|---|---|
+| S1 | The climb is about 2 to 3 times slower. Gear grows 1.8x per world (was 1.9x) and 5% per raccoon level (was 6%), and a world's gear bonus only arrives once that world is beaten (it used to count the world being fought). A spin takes 2.6 seconds plus 0.9 of rest (was 2.0 plus 0.6), so a fresh raccoon rolls about 17 items a minute. Amends Q2 and the roll timing. | "I can instantly get such a good set of stuff and instantly move to world 7." World 7 used to fall in about 30 minutes; now it takes about 100 (see Balance). |
+| S2 | "Too tough" is a toast that shows once when the raccoon first gets stuck, not a sign that stays on the battle view. | "The too tough sign won't move." |
+| S3 | The Recent row is gone from the Roll tab; the last roll card and the bag already show what came out. | Kevin asked twice, firmly. |
+| S4 | Every character is outlined in the raccoon's brown (`CHARACTER_OUTLINE`, #32282B): hand-drawn enemies use it, and pack sprites' outlines (their most common dark edge color) are recolored to it when the sheet is built. Backdrops keep their own ink. | "The outline of every single pixel character must be the same shade of brown." |
+
+## Power is rarity, a smaller battle grid, x100 upgrades (Nov 3, late evening)
 
 Kevin's playtest notes, in order: "health bars are too cramped... everything's too close together for the setting... push the houses and stuff a bit further", "can u just shrink the characters a bit more", "make the upgrades x100 each time it goes up", "something cannot be more rare than something but have less power score", "if it has an enchantment, that makes it more rare. reflect that", "instead of power and rarity, they're just one filter of power. also have a insta equip biggest upgrade button", "instead of doing a decimal increase. put it as a percentage increase instead", "as long as the player drags the item up towards the top of the screen, it should land directly into the slot", "pixelated 5 and 2 look weird, fix". These rows replace the rows they mention.
 

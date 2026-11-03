@@ -61,4 +61,9 @@ export interface ScenerySet {
   fg(): PixelBuf;
   /** Light spots per layer (in that layer's pixels). */
   lights(): Readonly<Partial<Record<LayerName, readonly LightSpot[]>>>;
+  /**
+   * Where a world's themed props stand in the mid layer, best spot first: the row their feet stand on
+   * and each prop's left edge, all in mid-layer pixels. Without it, props look for plain grass.
+   */
+  propSpots?: { readonly row: number; readonly x: readonly number[] };
 }

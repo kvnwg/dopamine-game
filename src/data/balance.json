@@ -66,7 +66,7 @@
       "def": 2.6
     },
     "defConstantGrowth": 2.6,
-    "itemGrowth": 1.9,
+    "itemGrowth": 1.8,
     "goldGrowth": 3.0,
     "xpGrowth": 1.35,
     "boss": {
@@ -141,7 +141,7 @@
     "perItemLevel": 0.05
   },
   "items": {
-    "levelScalePerLevel": 0.06,
+    "levelScalePerLevel": 0.05,
     "power": { "base": 30, "oddsExponent": 0.2 },
     "levelOffset": {
       "min": -2,
@@ -429,8 +429,8 @@
     "watchSeconds": 1.5
   },
   "roll": {
-    "spinSeconds": 2.0,
-    "restSeconds": 0.6,
+    "spinSeconds": 2.6,
+    "restSeconds": 0.9,
     "minCycleSeconds": 0.7,
     "speedPerLevel": 0.06,
     "turboSpeedMult": 2,

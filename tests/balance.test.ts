@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { simulate } from '../tools/simCore';
 
 /**
- * Balance target: the first worlds fall in minutes, then each world takes longer. Rebirth wipes
- * the raccoon (items, level, gold, upgrades) but its multipliers make every climb go further, so
- * an active player rebirths every 20 minutes or so and reaches a new best world each cycle.
+ * Balance target (slowed down at Kevin's request): World 2 falls in minutes, then each world takes
+ * clearly longer, so a first climb reaches about World 5 in the first hour and World 7 takes well
+ * over an hour. Rebirth wipes the raccoon (items, level, gold, upgrades) but its multipliers make
+ * every climb go further.
  * One seeded run keeps this from regressing; run `npm run sim -- --minutes 120 --seeds 4` for the
  * full picture.
  */
@@ -13,15 +14,16 @@ describe('balance (headless bot)', () => {
     const r = simulate({ minutes: 60, seed: 2 });
     const w3 = r.clearedAt[3];
     expect(w3).toBeDefined();
-    expect(w3).toBeGreaterThan(2);
-    expect(w3).toBeLessThan(12);
+    expect(w3).toBeGreaterThan(4);
+    expect(w3).toBeLessThan(25);
     // Later worlds take longer than early ones.
     expect(r.clearedAt[5] - r.clearedAt[4]).toBeGreaterThan(r.clearedAt[3] - r.clearedAt[2]);
     expect(r.rebirthAt.length).toBeGreaterThanOrEqual(1);
-    expect(r.rebirthAt[0]).toBeGreaterThan(10);
+    expect(r.rebirthAt[0]).toBeGreaterThan(30);
     const best = Math.max(...Object.keys(r.clearedAt).map(Number));
-    expect(best).toBeGreaterThanOrEqual(6);
-    expect(best).toBeLessThanOrEqual(12);
+    // No racing ahead: about World 5 in the first hour, World 7 not yet.
+    expect(best).toBeGreaterThanOrEqual(4);
+    expect(best).toBeLessThanOrEqual(6);
     expect(r.deaths).toBeGreaterThan(3);
     // Within the first climb (before any rebirth wipes it), gear power only goes up.
     const firstCycle = r.samples.filter((s) => s.rebirths === 0 && s.minute % 5 === 0).map((s) => s.gearPower);

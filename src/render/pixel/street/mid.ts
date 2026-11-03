@@ -606,7 +606,7 @@ const ROSE_BUSH = shrub(9, 5, [[3, 3, 2.8], [6, 3, 2.8], [4.5, 2.2, 2.6]], 24, L
 
 // ------------------------------------------------------------------ props
 
-/** A mailbox on a post, its flag up. */
+/** A mailbox on a post (t lit, N shade, n deep), its flag up. */
 const MAILBOX: Rows = [
   '.....RR',
   '.5555Re',
@@ -859,6 +859,15 @@ export function midLights(): LightSpot[] {
     return [...windows, ...lamps];
   });
 }
+
+/**
+ * Where a world's themed props (16 px sprites, see placeProps in worldLook.ts) can stand without
+ * covering a door, a tree or a window (lit glass is painted over whatever covers it at night): the
+ * left edge of each prop's frame, in mid-layer pixels, and the row their feet stand on (view row 55).
+ * In order of preference: the side yard left of the cherry, the garage driveway, and the side yard
+ * right of the maple (behind the hero in the opening shot).
+ */
+export const MID_PROP_SPOTS = { row: BASE + 3, x: [124, 186, 68] } as const;
 
 /** The alley's dumpster (left edge before inking). */
 const DUMPSTER_X = 211;

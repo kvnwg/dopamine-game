@@ -118,11 +118,27 @@ const GLOWING: Partial<Record<PropId, string>> = {
 };
 
 /**
- * Sets a world's themed props into a mid layer (already graded, so they keep their own colors):
- * in the front yards, standing a few rows in front of the house line (the first fully opaque row),
- * on stretches of plain grass, spread out across the tile. Returns light spots for the ones that glow.
+ * Sets a world's themed props into a mid layer (already graded, so they keep their own colors) and
+ * returns light spots for the ones that glow. With `spots` (the scenery's propSpots) each prop stands
+ * at the next spot, best first, its lowest pixel on the spot's row. Otherwise they stand a few rows in
+ * front of the house line (the first fully opaque row) on stretches of plain grass, spread out.
  */
-export function placeProps(mid: PixelBuf, ids: readonly string[], seed: number): LightSpot[] {
+export function placeProps(mid: PixelBuf, ids: readonly string[], seed: number, spots?: ScenerySet['propSpots']): LightSpot[] {
+  const props = ids.filter((id): id is PropId => id in PROPS).map((id) => ({ id, buf: frameBuf(PROPS[id], 0) }));
+  if (props.length === 0) return [];
+  const lights: LightSpot[] = [];
+  const stand = (p: (typeof props)[number], x: number, feet: number) => {
+    let low = p.buf.h - 1;
+    while (low > 0 && !rowHasInk(p.buf, low)) low--;
+    const top = feet - low;
+    blit(mid, p.buf, x, top, { wrapX: true });
+    const color = GLOWING[p.id];
+    if (color) lights.push({ x: x + Math.floor(p.buf.w / 2) - 1, y: top + Math.floor(low / 2) - 1, w: 3, h: 2, kind: 'fire', color, radius: 7, power: 0.9 });
+  };
+  if (spots) {
+    props.slice(0, spots.x.length).forEach((p, i) => stand(p, spots.x[i], spots.row));
+    return lights;
+  }
   const W = mid.w;
   const at = (x: number, y: number) => {
     const i = (y * W + (((x % W) + W) % W)) * 4;
@@ -134,8 +150,7 @@ export function placeProps(mid: PixelBuf, ids: readonly string[], seed: number):
     for (let x = 0; x < W && full; x++) full = at(x, y) >= 0;
     if (full) lawn = y;
   }
-  const props = ids.filter((id): id is PropId => id in PROPS).map((id) => ({ id, buf: frameBuf(PROPS[id], 0) }));
-  if (lawn < 0 || props.length === 0) return [];
+  if (lawn < 0) return [];
   const base = Math.min(lawn + 3, mid.h - 2);
   // Grass colors: the common ones on the yard rows.
   const counts = new Map<number, number>();
@@ -146,7 +161,6 @@ export function placeProps(mid: PixelBuf, ids: readonly string[], seed: number):
     for (let y = lawn; y <= base + 1; y++) if (!grass.has(at(x, y))) return false;
     return true;
   });
-  const spots: LightSpot[] = [];
   const gap = Math.floor(W / (props.length + 1));
   let start = Math.floor(((seed % 97) / 97) * gap);
   for (const p of props) {
@@ -155,15 +169,18 @@ export function placeProps(mid: PixelBuf, ids: readonly string[], seed: number):
       let ok = true;
       for (let i = -1; i <= p.buf.w && ok; i++) ok = free[(x + i + W) % W];
       if (!ok) continue;
-      blit(mid, p.buf, x, base - p.buf.h + 1, { wrapX: true });
+      stand(p, x, base);
       for (let i = -2; i <= p.buf.w + 1; i++) free[(x + i + W) % W] = false;
-      const color = GLOWING[p.id];
-      if (color) spots.push({ x: x + Math.floor(p.buf.w / 2) - 1, y: base - Math.ceil(p.buf.h / 2) - 1, w: 3, h: 2, kind: 'fire', color, radius: 7, power: 0.9 });
       start = x + p.buf.w + gap;
       break;
     }
   }
-  return spots;
+  return lights;
+}
+
+function rowHasInk(b: PixelBuf, y: number): boolean {
+  for (let x = 0; x < b.w; x++) if (b.px[(y * b.w + x) * 4 + 3]) return true;
+  return false;
 }
 
 /** Seed for a world's sky and lights, so each world's stars, clouds and lit windows stay put. */
@@ -203,7 +220,7 @@ export function worldArt(world: number): WorldArt {
   for (const name of LAYER_NAMES) {
     const graded = set.graded ? gradeBuf(bufs[name], def.look) : clone(bufs[name]);
     // A world's themed props stand in the mid layer's yards (in their own colors).
-    const extra = name === 'mid' && def.look.props ? placeProps(graded, def.look.props, seed) : [];
+    const extra = name === 'mid' && def.look.props ? placeProps(graded, def.look.props, seed, set.propSpots) : [];
     layers[name] = lightLayer(graded, { atmo, layer: name, lights: [...(spots[name] ?? []), ...extra], seed, top: set.layers[name].y });
   }
   const flicker = LAYER_NAMES.flatMap((layer) =>

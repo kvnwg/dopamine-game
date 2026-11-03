@@ -81,7 +81,8 @@ describe('item rolls', () => {
     const later = gearScale({ player: { level: 11 } as never, stage: { highestCleared: 3 } as never });
     expect(fresh).toEqual({ level: 1, tier: 1 });
     expect(later.level).toBeCloseTo(1 + BAL.items.levelScalePerLevel * 10);
-    expect(later.tier).toBeCloseTo(BAL.worlds.itemGrowth ** 3);
+    // Three worlds beaten: the tier of world 3, the best one cleared.
+    expect(later.tier).toBeCloseTo(BAL.worlds.itemGrowth ** 2);
     expect(sum(itemMods(it, later), 'ATK')).toBeCloseTo(sum(itemMods(it), 'ATK') * later.level * later.tier);
     expect(sum(itemMods(it, later), 'CRIT')).toBeCloseTo(sum(itemMods(it), 'CRIT') * later.level);
     // Scrap gold still grows with the world the item came from.

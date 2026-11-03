@@ -21,7 +21,7 @@ export function tierMult(tier: number): number {
 /**
  * How much stronger worn gear is for this raccoon. An item's own stats only depend on how rare it is
  * (so a rarer item always has more power); the raccoon's level grows every worn item's own stats,
- * and the world past the best one beaten grows their flat HP, ATK, DEF and regen.
+ * and the best world beaten grows their flat HP, ATK, DEF and regen.
  */
 export interface GearScale {
   level: number;
@@ -30,7 +30,8 @@ export interface GearScale {
 
 export function gearScale(state: Partial<Pick<GameState, 'player' | 'stage'>>): GearScale {
   const level = state.player?.level ?? 1;
-  const world = Math.max(1, Math.min(DATA.worlds.length, (state.stage?.highestCleared ?? 0) + 1));
+  // Only worlds actually beaten count (the bonus for a world arrives once it is cleared).
+  const world = Math.max(1, Math.min(DATA.worlds.length, state.stage?.highestCleared ?? 0));
   return { level: 1 + BAL.items.levelScalePerLevel * (level - 1), tier: tierMult(world) };
 }
 

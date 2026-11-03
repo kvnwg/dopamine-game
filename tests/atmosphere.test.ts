@@ -149,7 +149,7 @@ describe('atmosphere', () => {
     const def = DATA.worlds[haunted - 1];
     const mid = clone(sceneryFor(def).bufs.mid);
     const before = mid.px.slice();
-    const spots = placeProps(mid, def.look.props!, worldSeed(haunted));
+    const spots = placeProps(mid, def.look.props!, worldSeed(haunted), sceneryFor(def).set.propSpots);
     let changed = 0;
     for (let i = 0; i < before.length; i += 4) if (before[i] !== mid.px[i] || before[i + 1] !== mid.px[i + 1]) changed++;
     expect(changed, 'props were drawn').toBeGreaterThan(40);

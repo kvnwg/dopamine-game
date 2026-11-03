@@ -791,7 +791,14 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx || !this.gate('hit', 45)) return;
     const at = ctx.currentTime;
-    const up = Math.pow(2, Math.min(12, Math.max(0, combo)) / 12);
+    const c = Math.min(12, Math.max(0, combo));
+    const up = Math.pow(2, c / 12);
+    // A recording climbs half as far (6 semitones at most), so a solid whack stays solid, with a hair of
+    // random pitch; a crit is the same whack, harder, with the ring on top.
+    if (this.rec('hit', at, { semis: c / 2 + (this.rnd() * 2 - 1) * 0.3, gain: crit ? 1.4 : 1 })) {
+      if (crit) this.bell(this.vary(1900, 0.04) * up, at + 0.01, 0.25, 0.05);
+      return;
+    }
     this.noise(at, 0.05, { freq: this.vary(1500, 0.15) * up, q: 1.2, gain: crit ? 0.16 : 0.1 });
     this.tone(this.vary(150) * up, at, 0.09, { gain: crit ? 0.24 : 0.16, freqEnd: 70 * up });
     if (crit) this.bell(this.vary(1900, 0.04) * up, at + 0.01, 0.25, 0.05);

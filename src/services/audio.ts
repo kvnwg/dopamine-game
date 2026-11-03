@@ -662,6 +662,8 @@ class AudioEngine {
     if (!ctx) return;
     const at = ctx.currentTime;
     this.duckMusic(0.4, 1 + level * 0.6);
+    // (A recording: the same haul, 1.5 dB louder for each size up.)
+    if (this.rec('haul', at, { gain: [1, 1.19, 1.41][Math.max(0, Math.min(2, level))] })) return;
     this.noise(at, 0.06, { type: 'highpass', freq: 3000, gain: 0.12 });
     this.bell(midi(88), at + 0.05, 0.6, 0.08);
     this.bell(midi(93), at + 0.12, 0.8, 0.07);

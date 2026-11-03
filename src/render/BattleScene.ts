@@ -15,15 +15,16 @@
  */
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity } from '../data';
-import { computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState } from '../core';
+import { computeStats, enemyName, formatNumber, rarityAtLeast, rarityIndex, worldDef, type CoreEvent, type GameState, type Item } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
 import { rarityColor, rarityColorNum } from './art';
 import {
-  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, releaseWorlds,
+  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, itemTex, releaseWorlds,
   shadowTex, texOrigin, texSize, weaponTex, worldTextures, type FoeTex, type WorldKeys,
 } from './textures';
+import { SLAM, SLAM_FROM, SLAM_HEIGHT } from './equipSlam';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
 import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type FaceName, type TextStyle } from './pixel/font';
@@ -368,6 +369,8 @@ export class BattleScene extends Phaser.Scene {
   /** Seconds left in a short hero pose (hurt, cheer). */
   private poseT = 0;
   private gearSig = '';
+  /** Scene time until which the worn gear keeps its old look (an equipped item is still falling). */
+  private gearHold = 0;
   private hpCache: { key: unknown; hp: number } = { key: null, hp: 1 };
   private healAcc = 0;
   private healTimer = 0;
@@ -1203,6 +1206,151 @@ export class BattleScene extends Phaser.Scene {
     this.time.delayedCall(ms, () => imgs.forEach((i) => i.active && i.clearTint()));
   }
 
+  // ------------------------------------------------------------------ equip slam (equipSlam.ts)
+
+  /** Equipped gear drops out of the sky and slams onto him; the rarer, the bigger (see SLAM_FROM). */
+  private slamGear(item: Item, index: number) {
+    const tier = rarityIndex(item.rarity);
+    const delay = index * SLAM.stagger;
+    const drop = this.reduceMotion ? 0 : SLAM.drop;
+    this.gearHold = Math.max(this.gearHold, this.time.now + delay + drop);
+    this.time.delayedCall(delay, () => this.dropItem(item, tier, drop));
+  }
+
+  private dropItem(item: Item, tier: number, drop: number) {
+    if (!this.sys.isActive()) return;
+    const color = rarityColor(item.rarity);
+    const c = rarityColorNum(item.rarity);
+    const x = this.hero.x + HERO.midX;
+    const y = FEET_Y - (SLAM_HEIGHT[item.slot] ?? 8) * P;
+    const tex = itemTex(this, item.baseId);
+    const impact = () => this.slamImpact(item, tier, x, y, color, c);
+    if (!tex || drop <= 0) {
+      impact();
+      return;
+    }
+    const fall = 30 + tier * 2;
+    const spr = this.add.image(snap(x), snap(y - fall * P), tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(36);
+    // Rare gear rides down a pillar of light.
+    if (tier >= SLAM_FROM.pillar) this.pillar(x, y, c, drop, tier);
+    // Afterimages trail it as it falls.
+    const trail: Phaser.GameObjects.Image[] = [];
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: drop,
+      ease: 'Quad.easeIn',
+      onUpdate: (tw) => {
+        if (!spr.active) return;
+        const k = tw.getValue() ?? 0;
+        spr.y = snap(y - fall * P * (1 - k));
+        if (k > 0.25 && trail.length < 3 && k * 4 > trail.length + 1) {
+          const ghost = this.add.image(spr.x, spr.y, tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(35).setAlpha(0.45).setTintFill(c);
+          trail.push(ghost);
+          this.tweens.add({ targets: ghost, alpha: 0, duration: 180, ease: 'Stepped', easeParams: [3], onComplete: () => ghost.destroy() });
+        }
+      },
+      onComplete: () => {
+        spr.destroy();
+        impact();
+      },
+    });
+  }
+
+  /** The hit: he takes the blow (a white flash and a one-pixel squash), then sparks, rings, light. */
+  private slamImpact(item: Item, tier: number, x: number, y: number, color: string, c: number) {
+    if (!this.sys.isActive()) return;
+    // The new look shows now.
+    this.gearHold = 0;
+    this.flash(this.heroSpr, 0xffffff, 70 + tier * 6);
+    if (!this.reduceMotion) {
+      this.rig.y = P;
+      this.time.delayedCall(90, () => this.rig.active && (this.rig.y = 0));
+    }
+    this.dust.burst(4 + Math.min(6, tier), this.hero.x, FEET_Y - P, DUST);
+    // Sparks: more, faster and longer-lived the rarer it is.
+    const sparks: BitStyle = {
+      speed: [30 + tier * 4, 70 + tier * 10], life: [260 + tier * 30, 480 + tier * 40], drag: 2.2,
+      colors: [0xffffff, c, c], fade: [c], sizes: tier >= 4 ? [2, 2, 1] : [2, 1],
+    };
+    this.bits.burst(8 + tier * 5, x, y, sparks);
+    if (tier >= SLAM_FROM.ring) this.ring(x, y, c, 10 + tier * 3, 260 + tier * 20);
+    if (tier >= SLAM_FROM.confetti) this.time.delayedCall(90, () => this.ring(x, y, 0xffffff, 16 + tier * 4, 420));
+    if (tier >= SLAM_FROM.sparkle) {
+      this.fx('sparkle', x, y, { depth: 37, tint: c });
+      this.cheer(0.6 + tier * 0.08);
+    }
+    if (tier >= SLAM_FROM.pillar) {
+      this.hitStop(50 + (tier - SLAM_FROM.pillar) * 18);
+      this.stamp(this.hero.x, FEET_Y - 30 * P, `${t(`rarity.${item.rarity}`).toUpperCase()}!`, color);
+      this.glints.burst(6 + tier, x, y - 4 * P, { ...BIG_SPARK, colors: [0xffffff, c], fade: [c] });
+    }
+    if (tier >= SLAM_FROM.confetti) this.confetti.burst(20 + tier * 6, x, y - 10 * P, CONFETTI);
+    if (tier >= SLAM_FROM.flash && !this.reduceFlashing) this.whiteout(0.16 + (tier - SLAM_FROM.flash) * 0.025);
+    this.shake(90 + tier * 30, 0.0015 + tier * 0.0011);
+  }
+
+  /** A white flash over the whole view that steps out (the rarest slams). */
+  private whiteout(alpha: number) {
+    const m = VIEW_MARGIN * P;
+    const r = this.add.rectangle(-m, -m, BATTLE_W + 2 * m, BATTLE_H + 2 * m, 0xffffff).setOrigin(0, 0).setDepth(47).setAlpha(alpha);
+    r.setBlendMode(Phaser.BlendModes.ADD);
+    // Fades on the wall clock, not the scene's, so a hit-stop doesn't hold the whole view white.
+    const steps = [0.66, 0.33, 0];
+    steps.forEach((k, i) => setTimeout(() => (k ? r.active && r.setAlpha(alpha * k) : r.destroy()), 70 * (i + 1)));
+  }
+
+  /** A one-pixel ring growing out from (x, y), flattened to the ground's perspective, stepping out. */
+  private ring(x: number, y: number, c: number, radius: number, ms: number) {
+    const g = this.add.graphics().setDepth(35);
+    this.tweens.addCounter({
+      from: 2,
+      to: radius,
+      duration: ms,
+      ease: 'Quad.easeOut',
+      onUpdate: (tw) => {
+        const r = Math.round(tw.getValue() ?? 0);
+        const k = tw.progress;
+        g.clear();
+        g.lineStyle(P, c, k < 0.6 ? 1 : 0.5);
+        g.strokeEllipse(snap(x), snap(y), r * 2 * P, Math.max(2, Math.round(r * 1.3)) * P);
+      },
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  /** A pillar of light from the top of the view down onto him, with a white core, fading in steps. */
+  private pillar(x: number, y: number, c: number, drop: number, tier: number) {
+    const g = this.add.graphics().setDepth(19);
+    const front = this.add.graphics().setDepth(34);
+    const w = 8 + Math.min(8, tier - SLAM_FROM.pillar) * 2;
+    const left = snap(x) - Math.floor(w / 2) * P;
+    const bottom = snap(y) + 6 * P;
+    const draw = (k: number, a: number) => {
+      const h = Math.round((bottom / P) * k) * P;
+      g.clear();
+      front.clear();
+      g.fillStyle(c, 0.28 * a).fillRect(left - 2 * P, bottom - h, (w + 4) * P, h);
+      g.fillStyle(c, 0.5 * a).fillRect(left, bottom - h, w * P, h);
+      front.fillStyle(0xffffff, 0.75 * a).fillRect(snap(x) - P, bottom - h, 2 * P, h);
+    };
+    // It reaches down as the item falls, holds a moment, then fades in steps.
+    this.tweens.addCounter({ from: 0, to: 1, duration: drop, onUpdate: (tw) => draw(tw.getValue() ?? 0, 1) });
+    this.tweens.addCounter({
+      from: 1,
+      to: 0,
+      delay: drop + 160,
+      duration: 380 + tier * 40,
+      ease: 'Stepped',
+      easeParams: [5],
+      onUpdate: (tw) => draw(1, tw.getValue() ?? 0),
+      onComplete: () => {
+        g.destroy();
+        front.destroy();
+      },
+    });
+  }
+
   private cheer(seconds: number) {
     if (this.dead || this.mode === 'swing') return;
     this.mode = 'cheer';
@@ -1214,6 +1362,7 @@ export class BattleScene extends Phaser.Scene {
     // Kills arrive with the blow that caused them; remember them so the death plays when the blow lands.
     for (const e of events) if (e.type === 'kill') this.kills.set(e.enemyUid, { kind: e.kind, coins: e.coins });
     let lastSwing: Swing | null = null;
+    let slamIndex = 0;
     for (const e of events) {
       switch (e.type) {
         case 'playerHit': {
@@ -1342,16 +1491,10 @@ export class BattleScene extends Phaser.Scene {
           this.cheer(1);
           break;
         }
-        case 'equip': {
-          const c = rarityColorNum(e.item.rarity);
-          const epic = rarityAtLeast(e.item.rarity, 'epic');
-          this.bits.burst(epic ? 14 : 6, this.hero.x, FEET_Y - 16 * P, { ...SPARK, colors: [0xffffff, c], fade: [c] });
-          if (epic) {
-            this.fx('sparkle', this.hero.x, FEET_Y - 9 * P, { depth: 34 });
-            this.cheer(0.8);
-          }
+        case 'equip':
+          // Several at once (Equip best) slam one after another.
+          this.slamGear(e.item, slamIndex++);
           break;
-        }
         case 'luckBoost':
           this.bits.burst(20, this.hero.x, FEET_Y - 12 * P, { ...FLAME, colors: [0xd8ffd0, 0x8dff8a], fade: [0x46d36b, 0x2fb150] });
           this.fx('sparkle', this.hero.x, FEET_Y - 9 * P, { depth: 34, tint: 0x8dff8a });
@@ -1577,7 +1720,8 @@ export class BattleScene extends Phaser.Scene {
     });
 
     const sig = SLOTS.map((s) => `${g.equipped[s]?.uid ?? 0}`).join(',');
-    if (sig !== this.gearSig) {
+    // New gear shows the moment its item slams onto him (slamGear), not while it's still falling.
+    if (sig !== this.gearSig && this.time.now >= this.gearHold) {
       this.gearSig = sig;
       this.drawGear(g);
     }

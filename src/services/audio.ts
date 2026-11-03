@@ -654,6 +654,36 @@ class AudioEngine {
     this.bell(midi(88), at + 0.08, 0.8, 0.06);
   }
 
+  /** Gear starts dropping onto the raccoon: a falling whoosh, longer and brighter for rarer gear. */
+  equipDrop(tier: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.24, { type: 'bandpass', freq: 700 + tier * 120, freqEnd: 2400 + tier * 300, q: 0.9, gain: 0.06 + tier * 0.006, attack: 0.05 });
+    if (tier >= 4) this.tone(midi(84 + Math.min(12, tier)), at, 0.25, { type: 'triangle', gain: 0.03, freqEnd: midi(72) });
+  }
+
+  /**
+   * Gear slams onto the raccoon: a thump and a clank, then a chime that climbs with rarity (`tier` is
+   * the rarity index, 0 Junk to 12 Holy Grail). Legendary and up add a chord and a shimmer.
+   */
+  equipImpact(tier: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.tone(110, at, 0.22, { gain: 0.32 + Math.min(0.2, tier * 0.02), freqEnd: 42 });
+    this.noise(at, 0.07, { type: 'highpass', freq: 2200, gain: 0.12 + tier * 0.006 });
+    this.noise(at, 0.12, { freq: 900, q: 1.4, gain: 0.08 });
+    const notes = Math.min(6, 1 + Math.floor(tier / 2));
+    for (let k = 0; k < notes; k++) this.bell(midi(LADDER[Math.min(LADDER.length - 1, 2 + tier + k)]), at + 0.04 + k * 0.06, 0.45, 0.05 + tier * 0.004);
+    if (tier >= 4) {
+      this.duckMusic(0.5, 0.6);
+      for (const n of [60, 64, 67, 72]) this.tone(midi(n + Math.min(7, tier - 4)), at + 0.05, 0.7, { type: 'sawtooth', gain: 0.022, filter: 2600, attack: 0.01 });
+      this.noise(at + 0.08, 0.9, { type: 'highpass', freq: 6000, gain: 0.035, attack: 0.05 });
+    }
+    if (tier >= 7) this.slam(Math.min(2, tier - 7));
+  }
+
   equip(): void {
     const ctx = this.live;
     if (!ctx) return;

@@ -3,7 +3,8 @@
  * every button, maps core events to sounds, follows the Sound/Music settings, and goes quiet
  * while the app is in the background.
  */
-import { isBossWave, type CoreEvent } from '../core';
+import { isBossWave, rarityIndex, type CoreEvent } from '../core';
+import { SLAM } from '../render/equipSlam';
 import { bus } from '../app/eventBus';
 import { gameStore, getGame } from '../app/store';
 import { audio } from '../services/audio';
@@ -33,6 +34,7 @@ export function installSound(): () => void {
   document.addEventListener('visibilitychange', onVis);
 
   const unsubBus = bus.on((events: CoreEvent[]) => {
+    let slamIndex = 0;
     for (const e of events) {
       switch (e.type) {
         case 'playerHit':
@@ -75,9 +77,14 @@ export function installSound(): () => void {
         case 'codexBonus':
           audio.jingle(3);
           break;
-        case 'equip':
-          if (!e.auto) audio.equip();
+        case 'equip': {
+          // On the slam's schedule (BattleScene draws it): a whoosh as it drops, a hit as it lands.
+          const tier = rarityIndex(e.item.rarity);
+          const at = slamIndex++ * SLAM.stagger;
+          setTimeout(() => audio.equipDrop(tier), at);
+          setTimeout(() => audio.equipImpact(tier), at + SLAM.drop);
           break;
+        }
         case 'scrap':
           audio.recycle(e.auto);
           break;

@@ -17,6 +17,7 @@ import { FOE_SHEETS, sheetFrames } from './pixel/foes';
 import { FX_SHEETS, type FxName } from './pixel/packs/fx';
 import { CHARACTER_OUTLINE } from './pixel/palette';
 import { FX } from './pixel/ui';
+import { ITEM_SPRITES } from './pixel/items';
 import { VIEW_MARGIN } from './pixel/sceneryTypes';
 import { worldArt, type SceneryKeys } from './worldLook';
 
@@ -513,6 +514,13 @@ function coinFrames(): PixelBuf[] {
     }
     return out;
   });
+}
+
+/** A base item's icon (16 x 16 art px, centered origin) for the equip slam; draw with setScale(P). */
+export function itemTex(scene: Phaser.Scene, baseId: string): SpriteInfo | null {
+  const rows = ITEM_SPRITES[baseId];
+  if (!rows) return null;
+  return lazy(scene, `item_${baseId}`, () => ({ canvas: toCanvas(fromRows(rows), 1) }));
 }
 
 /** The spinning coin (`fx_coin`, animation `fx_coin:spin`; 1x, draw with setScale(P)) and its center pixel. */

@@ -105,15 +105,15 @@ const BACKPACK_TOASTER: Rows = [
   '.k4444444443k...',
   '.k3333333332k...',
   '..k22222222k....',
-  '..k1k....k1k....',
+  '..k1kkkkkk1k....',
   '...k......k.....',
   '................',
 ];
 
 /** Silver boombox: two speakers, a tape window, a handle and its antenna up. */
 const BACKPACK_BOOMBOX: Rows = [
+  '................',
   '.............k..',
-  '............k4k.',
   '...kkkkkkkk.k4k.',
   '..k34444443kk4k.',
   '..k3kkkkkk3kk4k.',
@@ -145,7 +145,7 @@ const BACKPACK_PIGGY_BANK: Rows = [
   '.kkPPPPPPPPqqqk.',
   '..kqPPPPPPqqqk..',
   '...kqqqqqqqqk...',
-  '...kqqk..kqqk...',
+  '...kqqkkkkqqk...',
   '....kk....kk....',
   '................',
 ];
@@ -234,7 +234,7 @@ const BLING_NAME_TAG: Rows = [
 
 /** Coach's silver whistle on a red cord. */
 const BLING_WHISTLE: Rows = [
-  '.kRk............',
+  '.kkk............',
   '..kRk...........',
   '...kRk.......k..',
   '....kRk.....kRk.',
@@ -281,13 +281,13 @@ const BLING_HEADPHONES: Rows = [
   '.k2kk......kk2k.',
   '.k2k........k2k.',
   '.k2k........k2k.',
-  'kkkkk......kkkkk',
-  'keRR1k....k1rRrk',
-  'kRRR1k....k1RRrk',
-  'kRRR1k....k1RRrk',
-  'kRRr1k....k1Rrrk',
-  'krrr1k....k1rrrk',
   '.kkkk......kkkk.',
+  '.keR1k....k1Rrk.',
+  '.kRR1k....k1RRk.',
+  '.kRR1k....k1Rrk.',
+  '.kRr1k....k1rrk.',
+  '.krr1k....k1rrk.',
+  '..kkk......kkk..',
   '................',
   '................',
 ];
@@ -298,15 +298,15 @@ const BLING_LEI: Rows = [
   '....kk....kk....',
   '...kPqk..kYyk...',
   '..kPyPqkkYOYyk..',
-  '..kqPqkGkkYyk...',
+  '..kqPqkkkkYyk...',
   '..kkGkk..kkGkk..',
   '.kmMmk....kPqk..',
   '.kMyMVk..kPyPqk.',
   '.kmMVk....kPqk..',
   '..kGkk....kkGk..',
   '..kYyk....kmMk..',
-  '.kYOYyk..kMyMVk.',
-  '..kYykPqkkmVk...',
+  '.kYOYykk.kMyMVk.',
+  '..kYykPqkkmVkk..',
   '...kkPyPqkkk....',
   '.....kPqk.......',
   '......kk........',
@@ -416,6 +416,7 @@ const RING_SCRUNCHIE: Rows = [
 
 /** Pink plastic bubble wand, its loop still filmed with soap, two bubbles floating off. */
 const RING_BUBBLE_WAND: Rows = [
+  '................',
   '.........kk.....',
   '..kkk..kkPPkk...',
   '.kCwCkkPPPPPPk..',
@@ -430,7 +431,6 @@ const RING_BUBBLE_WAND: Rows = [
   '..kPqk..........',
   '.kPqk...........',
   '..kk............',
-  '................',
   '................',
 ];
 
@@ -448,10 +448,10 @@ const RING_RUBBER_DUCK: Rows = [
   '...kkcCCCCUkk...',
   '..kcCkkkkkkcUk..',
   '.kcCk......kUUk.',
-  '.kcUk......kUuk.',
   '..kUUkkkkkkUuk..',
   '...kkUUUUuukk...',
   '.....kkkkkk.....',
+  '................',
 ];
 
 /** Rubber tire off a toy truck, its tread showing, a yellow hub. */
@@ -476,6 +476,7 @@ const RING_TOY_TIRE: Rows = [
 
 /** Mini pretzel, twisted and salted. */
 const RING_PRETZEL: Rows = [
+  '................',
   '...kkkk..kkkk...',
   '..ktttnkktttnk..',
   '.ktNwnNttNnwNnk.',
@@ -489,8 +490,7 @@ const RING_PRETZEL: Rows = [
   '..ktnkk..kktnk..',
   '..knNtnkkttNnk..',
   '...knnnttnnnk...',
-  '....kkknnkkk....',
-  '.......kk.......',
+  '....kkkkkkkk....',
   '................',
 ];
 
@@ -518,11 +518,11 @@ const RING_SEA_GLASS: Rows = [
 const RING_TOY_SPIDER: Rows = [
   '................',
   '.kk...kkkk...kk.',
-  'kVVk.kVmMVk.kVVk',
+  '.kVk.kVmMVk.kVk.',
   '.kVVkVmMmVvkVvk.',
   '..kkVVmmVVvvkk..',
   '.kkVkVVVVVvkVkk.',
-  'kVVkkkVvVkkkkVvk',
+  '.kVkkkVvVkkkkVk.',
   '.kk.kVkRkRk..kk.',
   '....kVvkvVk.....',
   '...kkoOOOOokk...',
@@ -556,41 +556,41 @@ const RING_LUCKY_DIE: Rows = [
 
 /** Fidget spinner in purple anodized metal with silver bearings. */
 const RING_FIDGET_SPINNER: Rows = [
-  '................',
-  '......kkkk......',
-  '.....kmMMVk.....',
-  '....kmk55kVk....',
-  '....kMk43kVk....',
-  '.....kmkkVk.....',
-  '.....kmVVVk.....',
-  '..kkkmVkkVVkkk..',
-  '.kmMmVk54kVVVvk.',
-  'km55kVk32kVk55vk',
-  'kM43kVVkkVVk43vk',
-  '.kmkkVVVVVVVkkvk',
-  '..kvvvvkkvvvvvk.',
-  '...kkkk..kkkkk..',
+  '.......kk.......',
+  '......kmvk......',
+  '.....kMVVvk.....',
+  '....kmV54Vvk....',
+  '....kvV43Vvk....',
+  '.....kmVVvk.....',
+  '.....MmVVvk.....',
+  '..kkkmV54Vvkkk..',
+  '.kmmmVV43VVmmvk.',
+  'kmM54VV43VV54Vvk',
+  'kmV54VVvvVV54Vvk',
+  'kvV43VvkkvV43Vvk',
+  '.kvvvvk..kvvvvk.',
+  '..kkkk....kkkk..',
   '................',
   '................',
 ];
 
 /** Mirror disco ball on a gold band, sparkling. */
 const RING_DISCO_BALL: Rows = [
-  '.......kk.......',
-  '.k...kk44kk.....',
-  'kwk.k444433k....',
-  '.k.k4ww4m433k...',
+  '......kkkk......',
+  '..k..k5444k.....',
+  '.kwkk444433k....',
+  '..kk4ww5m533k...',
   '..k4455544332k..',
-  '..k54ww554C43k..',
-  '..k4444443322k..',
-  '..k4455444333k..',
-  '..k3333333222kk.',
-  '...k3M4333Y3kkwk',
-  '...k22222222k.k.',
-  '....kk3233kk....',
-  '..kyYkkkkkkOOk..',
-  '...kyOkkkkOok...',
-  '....kkOOOOkk....',
+  '..k54ww555C43k..',
+  '..k3444443322k..',
+  '..k4355444333k..',
+  '...k3M3333Y2k...',
+  '...k24433323k...',
+  '...kY222222Ok...',
+  '..kYYkkkkkkOOk..',
+  '..kYYkkkkkkOOk..',
+  '...kyyyyOOOok...',
+  '....kkkkkkkk....',
   '................',
 ];
 
@@ -608,12 +608,12 @@ const BACKPACK_UNIQUE_SODA_JETPACK: Rows = [
   '....keRRrkeRRrk.',
   '....keRwrkeRwrk.',
   '....kLlGgkLlGgk.',
-  '.....kGgk..kGgk.',
-  '.....kRrk..kRrk.',
-  '....kYwYk.kYwYk.',
-  '....kyYOk.kyYOk.',
-  '.....kOk...kOk..',
-  '......k.....k...',
+  '.....kGgk.kGgk..',
+  '.....kRrk.kRrk..',
+  '....kYwYkkYwYk..',
+  '.....kyOk.kyOk..',
+  '......kk...kk...',
+  '................',
 ];
 
 /** Every carry icon by item id, in itemsCarry.json order. */

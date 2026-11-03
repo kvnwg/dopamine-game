@@ -127,23 +127,23 @@ const JACKET_TUXEDO_TEE: Rows = [
   '................',
 ];
 
-/** Inflatable donut pool float: pink frosting, sprinkles, a shiny highlight. */
+/** Rubber duck swim ring: a yellow tube with a white shine, the duck's head and beak up front, its tail behind. */
 const JACKET_POOL_FLOAT: Rows = [
   '................',
-  '.....kkkkkk.....',
-  '...kkwPPPPPkk...',
-  '..kwPPyPPcPPqk..',
-  '.kPwPPPPPPPlqqk.',
-  '.kPcPPPkkPPPPqk.',
-  '.kPPPPk..kPyPqk.',
-  '.kqPlPk..kPPqqk.',
-  '.kTqPPk..kqPqtk.',
-  '.kTTqqPkkqqqttk.',
-  '.kTTTtqqqqtttNk.',
-  '..kTttttttttNk..',
-  '...kkttttNNkk...',
-  '.....kkkkkk.....',
-  '................',
+  '....kkk.........',
+  '...kYYyk........',
+  '..kYYxyyk.......',
+  '.kOOkYyyk.......',
+  '.kooOYyyk..kk...',
+  '..kkYYyyk.kyk...',
+  '..kkYyyykkyyykk.',
+  '.kYwYyyyYYYyyyk.',
+  '.kYYwkkkkkkyyyk.',
+  '.kYYk......kyOk.',
+  '.kYyykkkkkkyyOk.',
+  '.kyYwwwwyyyyOOk.',
+  '..kkOOOOOOOOkk..',
+  '....kkkkkkkk....',
   '................',
 ];
 

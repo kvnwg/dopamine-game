@@ -256,20 +256,23 @@ export const JACKETS: Readonly<Record<string, JacketArt>> = {
       return shade(['x', 'a', 'b'], g);
     },
   },
-  // Donut pool float round his belly: pink frosting with sprinkles over golden dough; it sticks out past his paws.
+  // Rubber duck swim ring round his belly: a yellow tube with a white shine; the duck's head (black eye, orange
+  // beak) pokes up at the front, facing the way he does; the ring sticks out past his paws.
   jacket_pool_float: {
-    pal: { P: 'P', q: 'q', w: 'w', t: 't', N: 'N', T: 'T', y: 'y', c: 'c', l: 'l' },
+    pal: { O: 'O', y: 'y', Y: 'Y', w: 'w', x: 'x' },
     cut: 'jacket',
     paint: (g) => {
       if (g.part !== 'b') return '';
-      if (g.v === 3) return g.u === -2 ? 'y' : g.u === 1 ? 'c' : g.u === 3 ? 'l' : g.tone === 2 ? 'w' : g.tone === 0 ? 'q' : 'P';
-      if (g.v === 4) return g.tone === 0 ? 'N' : 't';
+      if (g.v === 1 && g.u >= -1 && g.u <= 1) return g.u === -1 ? 'x' : g.u === 0 ? 'Y' : 'y';
+      if (g.v === 2 && g.u >= -2 && g.u <= 1) return g.u === -2 ? 'O' : g.u === -1 ? 'Y' : 'y';
+      if (g.v === 3) return g.u === -3 || g.u === -2 ? 'w' : g.tone === 0 ? 'y' : 'Y';
+      if (g.v === 4) return g.tone === 0 ? 'O' : 'y';
       return '';
     },
     back: piece([8, -2], [
       '.################.',
-      '#wPPPPPPPPPPPPPPq#',
-      '#tttttttttttttttN#',
+      '#wwYYYYYYYYYYYYYy#',
+      '#yyyyyyyyyyyyyyyO#',
       '.################.',
     ]),
   },

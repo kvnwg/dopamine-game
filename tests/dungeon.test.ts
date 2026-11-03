@@ -4,7 +4,8 @@ import { fromIndexed, KEYS } from '../src/render/pixel/indexed';
 import { DUNGEON, TORCH, TORCHES, sheet } from '../src/render/pixel/packs/dungeon';
 import { DUNGEON_PAL, DUNGEON_TILES } from '../src/render/pixel/packs/dungeonTiles';
 import { fromRows } from '../src/render/pixel/buf';
-import { SCENE_FEET_ROW, SCENE_H, SCENE_Y, VIEW, type LayerName } from '../src/render/pixel/sceneryTypes';
+import { FEET_ROW, SCENE_FRAME, VIEW, frameTop, sceneFrame, type LayerName } from '../src/render/pixel/sceneryTypes';
+import { layerRow } from '../src/render/worldLook';
 
 const NAMES: readonly LayerName[] = ['far', 'mid', 'ground', 'fg'];
 
@@ -64,20 +65,27 @@ describe('dungeon backdrop (0x72 DungeonTileset II)', () => {
     expect(DUNGEON.graded).toBe(false);
   });
 
-  it('the far wall fills the background from the top of the view to the floor, and the floor runs to the bottom of the scene', () => {
+  it('fills the 180 x 160 view: the far wall from the top of the view to the floor, the floor to the bottom edge', () => {
     const { far, mid, ground, fg } = DUNGEON.layers;
-    // No sky: the far layer reaches up out of the 82-row scene frame to the top of the battle view.
-    expect(SCENE_Y + far.y, 'far starts at view row 0').toBe(0);
+    // Drawn in the 123-row frame, whose last row is the view's last.
+    expect(sceneFrame(DUNGEON)).toEqual(SCENE_FRAME);
+    const frame = sceneFrame(DUNGEON);
+    const top = frameTop(DUNGEON);
+    // No sky: the far layer reaches up out of the frame to the top of the battle view.
+    expect(top + far.y, 'far starts at view row 0').toBe(0);
+    expect(layerRow(DUNGEON, 'far')).toBe(0);
     expect(opaqueRows(DUNGEON.far(), 0, far.h), 'far is fully opaque').toBe(true);
     expect(ground.y, 'no gap between the wall and the floor').toBeLessThanOrEqual(far.y + far.h);
-    expect(ground.y + ground.h).toBe(SCENE_H);
+    expect(ground.y + ground.h).toBe(frame.h);
+    expect(top + ground.y + ground.h, 'the floor reaches the bottom of the view').toBe(VIEW.h);
+    expect(ground.h, 'nearly two rows of slabs').toBeGreaterThanOrEqual(28);
     expect(opaqueRows(DUNGEON.ground(), 0, ground.h), 'the floor is fully opaque').toBe(true);
     expect(mid.y + mid.h, 'mid props stand on the floor line').toBe(ground.y);
-    expect(fg.y + fg.h, 'fg sits on the bottom edge').toBe(SCENE_H);
+    expect(fg.y + fg.h, 'fg sits on the bottom edge').toBe(frame.h);
     for (const name of NAMES) {
       const { y, h } = DUNGEON.layers[name];
-      expect(SCENE_Y + y >= 0 && SCENE_Y + y + h <= VIEW.h, `${name} is inside the view`).toBe(true);
-      if (name !== 'far') expect(y >= 0 && y + h <= SCENE_H, `${name} is inside the scene frame`).toBe(true);
+      expect(top + y >= 0 && top + y + h <= VIEW.h, `${name} is inside the view`).toBe(true);
+      if (name !== 'far') expect(y >= 0 && y + h <= frame.h, `${name} is inside the scene frame`).toBe(true);
     }
   });
 
@@ -96,9 +104,11 @@ describe('dungeon backdrop (0x72 DungeonTileset II)', () => {
     });
   });
 
-  it('fighters stand on the floor: SCENE_FEET_ROW is inside the opaque floor, a few rows below its top, clear of fg', () => {
+  it('fighters stand on the floor: the feet row is inside the opaque floor, a few rows below its top, clear of fg', () => {
     const { ground, fg } = DUNGEON.layers;
-    const row = SCENE_FEET_ROW - ground.y;
+    const feet = sceneFrame(DUNGEON).feetRow;
+    expect(frameTop(DUNGEON) + feet).toBe(FEET_ROW);
+    const row = feet - ground.y;
     expect(row, 'a few rows below the floor top').toBeGreaterThanOrEqual(3);
     expect(row, 'a few rows below the floor top').toBeLessThanOrEqual(8);
     expect(row + 1, 'the ground line is inside the floor').toBeLessThan(ground.h);
@@ -106,7 +116,7 @@ describe('dungeon backdrop (0x72 DungeonTileset II)', () => {
     for (const y of [row, row + 1]) {
       for (let x = 0; x < g.w; x++) expect(alphaAt(g, x, y), `floor at x ${x}, view row ${ground.y + y}`).toBe(255);
     }
-    expect(fg.y, 'the fg strip stays below the feet').toBeGreaterThan(SCENE_FEET_ROW);
+    expect(fg.y, 'the fg strip stays below the feet').toBeGreaterThan(feet + 1);
   });
 
   it('mid props touch the floor line and leave most of the wall clear', () => {

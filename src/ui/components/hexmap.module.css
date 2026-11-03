@@ -1,6 +1,6 @@
 /*
  * The full-screen upgrade map: a pannable, zoomable honeycomb of tier hexes. The hexes (vector) scale
- * with the zoom; their pixel icons sit in .icons, which only moves, so they stay 9 px per art pixel.
+ * with the zoom; their pixel icons sit in .icons, which only moves, so they stay 6 px per art pixel.
  */
 .overlay {
   --hexclip: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
@@ -336,8 +336,8 @@
 }
 .centerBtn {
   pointer-events: auto;
-  width: calc(11 * var(--px));
-  height: calc(11 * var(--px));
+  width: calc(16 * var(--px));
+  height: calc(16 * var(--px));
   padding: 0;
   display: grid;
   place-items: center;
@@ -362,14 +362,14 @@
 .card {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
-  padding: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
+  padding: calc(3 * var(--px));
 }
-/* The selected upgrade's icon, 16 x 16 at 9 px per pixel, on a tile colored like its hex. */
+/* The selected upgrade's icon, 16 x 16 at 6 px per pixel, on a tile colored like its hex. */
 .cardTile {
   flex: none;
-  width: calc(18 * var(--px));
-  height: calc(18 * var(--px));
+  width: calc(20 * var(--px));
+  height: calc(20 * var(--px));
   display: grid;
   place-items: center;
   border: var(--px) solid var(--ink);

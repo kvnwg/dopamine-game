@@ -1,14 +1,14 @@
 /**
  * Full-screen moments: the big reveal for a roll that is rare at the raccoon's luck (black screen,
- * the item rising and shining, its "1 in X" counting up to the real odds; see RareReveal), and the
- * rebirth celebration.
+ * the item rising and shining in Scale3x, its "1 in X" counting up to the real odds; see RareReveal),
+ * the Scrap All haul and the rebirth celebration. Pixel art moves by whole 6 px art pixels.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { DATA, RARITIES, type Rarity } from '../../data';
 import { currentLuck, formatNumber, itemName, RARITY_ODDS, rarityAtLeast, rarityIndex, rebirthGoldMult, rebirthLuckMult } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
-import { sparkleArt } from '../../render/icons';
+import { sparkleArt, UI_PX } from '../../render/icons';
 import { audio } from '../../services/audio';
 import { revealLanded, skipReveal } from '../rollController';
 import { DRAMA_LEVEL, revealPhases } from '../revealTiming';
@@ -49,7 +49,7 @@ function Confetti({ n }: { n: number }) {
           key={i}
           data-tall={b.tall || undefined}
           style={{
-            left: `${Math.round((b.left / 100) * 120) * 9}px`,
+            left: `${Math.round((b.left / 100) * (1080 / UI_PX)) * UI_PX}px`,
             background: b.color,
             animationDelay: `${b.delay}ms, ${b.delay}ms`,
             animationDuration: `${b.dur}ms, ${b.flip}ms`,
@@ -81,7 +81,7 @@ function Motes({ n, ms }: { n: number; ms: number }) {
       Array.from({ length: n }, (_, i) => {
         const a = i * 2.39996;
         const r = 380 + ((i * 97) % 260);
-        return { x: Math.round((Math.cos(a) * r) / 9) * 9, y: Math.round((Math.sin(a) * r) / 9) * 9, d: ms * (0.55 + ((i * 37) % 40) / 100), delay: (i * 61) % Math.max(1, ms * 0.4) };
+        return { x: Math.round((Math.cos(a) * r) / UI_PX) * UI_PX, y: Math.round((Math.sin(a) * r) / UI_PX) * UI_PX, d: ms * (0.55 + ((i * 37) % 40) / 100), delay: (i * 61) % Math.max(1, ms * 0.4) };
       }),
     [n, ms],
   );
@@ -106,9 +106,9 @@ function Sparkles({ n }: { n: number }) {
       {Array.from({ length: n }, (_, i) => {
         const a = (i / n) * Math.PI * 2 + 0.4;
         const r = 190 + ((i * 53) % 70);
-        // Whole art pixels from the item's center (the sprite is 63 px: its center is 31 px in, near enough).
-        const x = Math.round((Math.cos(a) * r) / 9) * 9 - 27;
-        const y = Math.round((Math.sin(a) * r) / 9) * 9 - 27;
+        // Whole art pixels from the item's center (the sprite is 7 x 7, 42 px: its middle pixel starts 18 px in).
+        const x = Math.round((Math.cos(a) * r) / UI_PX) * UI_PX - 3 * UI_PX;
+        const y = Math.round((Math.sin(a) * r) / UI_PX) * UI_PX - 3 * UI_PX;
         return (
           <PixelArt
             key={i}
@@ -240,7 +240,7 @@ function RareReveal({ view }: { view: RollView }) {
         </div>
         {risen && (
           <div className={`${s.rareItem} ${lit ? s.rareLit : ''}`}>
-            <ItemIcon item={it} hd size={306} showOdds={false} />
+            <ItemIcon item={it} scale={3} showOdds={false} />
             {lit && <span className={s.glint} />}
             {lit && !calm && <Sparkles n={[6, 9, 12][lvl]} />}
           </div>
@@ -351,7 +351,7 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
           <Chunky text={t(`haul.${haul.size}`)} size={[100, 112, 128][lvl]} grad="gold" />
         </div>
         <span className={s.haulAmount}>
-          <CoinIcon size="nav" />+{formatNumber(Math.round(shown))}
+          <CoinIcon size="lg" />+{formatNumber(Math.round(shown))}
         </span>
         <span className={s.haulSub}>{worth}</span>
         <span className={s.haulCount}>{t('haul.items', { n: haul.count })}</span>

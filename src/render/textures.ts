@@ -8,7 +8,7 @@
  */
 import Phaser from 'phaser';
 import { DATA } from '../data';
-import { blank, bounds, downsample2, fromRows, padEdges, rgb, setPx, type PixelBuf } from './pixel/buf';
+import { blank, bounds, fromRows, padEdges, rgb, setPx, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
 import { frameBuf, type AnimSheet } from './pixel/indexed';
 import { HERO_POINTS, HERO_SHEET, clothesOf, frameOffsets, gearSprite, handOffsets, heroFrame, weaponBuf, type BodyGear, type SpriteSlot } from './pixel/hero';
@@ -462,27 +462,31 @@ export function fxTex(scene: Phaser.Scene, name: FxName): (AnimInfo & { anim: st
 // ------------------------------------------------------------------ small effects
 
 /**
- * HP bar badges, outlined in the characters' brown ('o'): a heart at the end of the hero's bar and a
- * skull at the end of the boss bar. Drawn at P like everything else (`bar_heart`, `bar_skull`).
+ * HP bar badges, outlined in the characters' brown ('o'): a heart at the end of the hero's bar (7 x 7,
+ * a pixel over and under the 5-row bar) and a skull at the end of the boss bar (11 x 11, two over and
+ * under the 7-row bar). Drawn at P like everything else (`bar_heart`, `bar_skull`).
  */
 const BAR_HEART = [
   '.oo.oo.',
   'oweoeRo',
   'oeRRRro',
+  'oRRRRro',
   '.oRRro.',
   '..oro..',
   '...o...',
 ];
 const BAR_SKULL = [
-  '..ooooo..',
-  '.owWWWWo.',
-  'owWWWWW5o',
-  'oWooWoo5o',
-  'oWooWoo5o',
-  'oWWWoW55o',
-  '.oo5W5oo.',
-  '..oWoWo..',
-  '...ooo...',
+  '...ooooo...',
+  '..owwWWWo..',
+  '.owwWWWWW5o',
+  'owWWWWWWW5o',
+  'owWWWWWWW5o',
+  'oWoooWooo5o',
+  'oWoooWooo5o',
+  'oWWWWoWW55o',
+  '.oo5WWW5oo.',
+  '..oWoWoWo..',
+  '...ooooo...',
 ];
 
 /**
@@ -496,7 +500,7 @@ function centered(b: PixelBuf): { canvas: HTMLCanvasElement; origin: { x: number
 
 /** A coin turning: full face, narrower, edge on, narrower (its columns sampled nearest-neighbor). */
 function coinFrames(): PixelBuf[] {
-  const coin = downsample2(fromRows(FX.coin));
+  const coin = fromRows(FX.coin);
   return [coin.w, Math.max(1, coin.w - 2), 1, Math.max(1, coin.w - 2)].map((w) => {
     const out = blank(coin.w, coin.h);
     const x0 = Math.floor((coin.w - w) / 2);
@@ -574,9 +578,10 @@ export function auraTex(scene: Phaser.Scene, color: string, frame: 0 | 1): { key
 export function generateTextures(scene: Phaser.Scene): void {
   heroTex(scene);
   coinTex(scene);
-  // Still effects drawn for the old, finer grid: used at half resolution.
+  // Still effects (drawn for a grid finer than the 9 px one, and shown at half resolution there): at
+  // 6 px, whole. The coin (coinTex) too.
   for (const [key, rows] of [['fx_impact', FX.impact], ['fx_puff', FX.puff], ['fx_bag', FX.bag]] as const) {
-    const c = centered(downsample2(fromRows(rows)));
+    const c = centered(fromRows(rows));
     put(scene, key, c.canvas, c.origin);
   }
   const top = { x: 0, y: 0 };

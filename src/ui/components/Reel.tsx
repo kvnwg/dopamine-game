@@ -8,8 +8,8 @@
  * a near miss next to most results (BAL.feel.reels). Only the landed results come from the real
  * odds, which the Luck popup lists. Every spin is free; a paid spin must never get this tease.
  *
- * Pixel sizes: every cell shows its art at 16 x 16 x 9 px (144) under a one-line "1 in X" label; the
- * strip only ever moves by whole stage px, and the reels' widths keep the art on whole pixels.
+ * Pixel sizes: every cell shows its art at 16 x 16 x 6 px (96) under a one-line "1 in X" label; the
+ * strip only ever moves by whole stage px, and the reels' widths keep the art on the 6 px grid.
  *
  * Structure: .bank > .reels > .reel (one per reel) > .strip (moves) > .cell (one per item rolling past:
  * .odds label + art), plus .curve (the drum's frame and shading) over each strip; .payline marks the
@@ -22,8 +22,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { formatNumber, reelCount, type GameState } from '../../core';
 import { gameStore, useGame } from '../../app/store';
-import { itemArt, luckTokenArt, uiBitArt, uiIcon, type Art } from '../../render/icons';
-import { LUCK_TOKENS } from '../../render/pixel/ui';
+import { itemArt, luckTokenArt, uiBitArt, type Art } from '../../render/icons';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { t } from '../i18n';
@@ -31,26 +30,27 @@ import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reel
 import { useUi } from '../uiStore';
 import { PixelArt } from './PixelArt';
 import s from './reel.module.css';
+import { tokenHoldMs } from '../reelTiming';
 
-/** Cell height in stage px (20 art px): a 27 px "1 in X" line over the 144 px art. */
-export const CELL = 180;
+/** Cell height in stage px (22 art px): a pixel of groove, a 30 px "1 in X" line, the 96 px art. */
+export const CELL = 132;
 
 /**
- * Width of each reel (stage px) by reel count: wider while there are few, and always the art (144)
- * plus whole art pixels on each side. Three reels share the card with the info column, so they are
- * the narrowest: one pixel of drum each side.
+ * Width of each reel (stage px) by reel count: the art (96) plus whole art pixels of drum on each
+ * side, wider while there are few. Up to three reels share the card with the info column; four and
+ * five take the card's full width.
  */
 export function reelWidth(n: number): number {
-  return [216, 198, 162, 180, 180][Math.min(5, Math.max(1, n)) - 1];
+  return [168, 156, 144, 180, 180][Math.min(5, Math.max(1, n)) - 1];
 }
 
 /** Space between reels. */
 export function reelGap(n: number): number {
-  return n >= 4 ? 9 : 18;
+  return n >= 4 ? 12 : 18;
 }
 
 /** The bank's frame around the reels (each side). */
-export const BANK_PAD = 18;
+export const BANK_PAD = 12;
 
 /** The whole bank's width for `n` reels. */
 export function bankWidth(n: number): number {
@@ -59,8 +59,7 @@ export function bankWidth(n: number): number {
 
 /** A cell's picture: its item, or a luck token's clover (the plain clover for a value without its own art). */
 function cellArt(c: StripCell): Art {
-  if (c.token === null) return itemArt(c.baseId);
-  return c.token in LUCK_TOKENS ? luckTokenArt(c.token as keyof typeof LUCK_TOKENS) : uiIcon('clover', 'lg');
+  return c.token === null ? itemArt(c.baseId) : luckTokenArt(c.token);
 }
 
 interface Run {
@@ -165,7 +164,7 @@ export function ReelBank({ win, wide }: { win: number; wide?: boolean }) {
           if (stop.token !== null) {
             // A luck token: chime, burst, and the reel spins on with its luck multiplied.
             audio.token(k, stop.token);
-            setTimeout(() => audio.respin(), 260);
+            setTimeout(() => audio.respin(), tokenHoldMs());
             haptics.impact('medium');
             const x = chainOf(st, r.reached[i]);
             setChain((c) => c.map((v, j) => (j === i ? x : v)));

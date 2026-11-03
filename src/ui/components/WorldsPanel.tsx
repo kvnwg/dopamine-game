@@ -21,13 +21,13 @@ export const THREAT_COLOR: Record<ThreatLevel, string> = {
 export function ThreatChip({ level, big }: { level: ThreatLevel; big?: boolean }) {
   return (
     <span className={`${s.threat} ${big ? s.threatBig : ''} ${level === 'oneShot' ? s.threatOneShot : ''}`} style={{ background: THREAT_COLOR[level] }}>
-      {level === 'oneShot' && <SkullIcon />}
+      {level === 'oneShot' && <SkullIcon size={big ? 'sm' : 'xs'} />}
       {t(`worlds.threat.${level}`)}
     </span>
   );
 }
 
-/** A world's preview picture (9 px per art pixel, like the battle), faded in when it's ready. */
+/** A world's preview picture (6 px per art pixel, like the battle), faded in when it's ready. */
 function Thumb({ world }: { world: number }) {
   const art = useWorldThumb(world, 'card');
   return art ? <PixelArt art={art} className={s.thumbImg} /> : <span className={s.thumbWait} />;

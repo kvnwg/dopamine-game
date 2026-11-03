@@ -26,7 +26,7 @@ import {
 } from './textures';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
-import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type TextStyle } from './pixel/font';
+import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type FaceName, type TextStyle } from './pixel/font';
 import { SPRITE_SLOTS } from './pixel/hero';
 import { CHARACTER_OUTLINE, PAL } from './pixel/palette';
 import { FEET_ROW, VIEW, VIEW_MARGIN, frameTop, type LayerName } from './pixel/sceneryTypes';
@@ -37,20 +37,24 @@ import { PixelBits, type BitStyle } from './pixelBits';
 import { PixelTexts, type PixelText } from './pixelText';
 import { snapCameraToGrid } from './gridSnap';
 
-/** The battle view: 120 x 107 art pixels, 1080 x 963 screen pixels. */
+/** The battle view: 180 x 160 art pixels, 1080 x 960 screen pixels. */
 export const BATTLE_W = VIEW.w * P;
 export const BATTLE_H = VIEW.h * P;
-/** The ground line: the bottom edge of the view row fighters stand on. */
+/** The ground line: the bottom edge of the view row fighters stand on (y 828). */
 const FEET_Y = (FEET_ROW + 1) * P;
 /** How far (screen px) the full-view pictures reach past each edge, for the screen shake. */
 const MARGIN = VIEW_MARGIN * P;
-const HERO_WALK_X = 33 * P;
-const HERO_FIGHT_X = 37 * P;
-/** Where the front enemy's leading edge stands while fighting. */
-const ENGAGE_EDGE = 51 * P;
+/** The raccoon's feet column while walking and fighting: about a third of the way across. */
+const HERO_WALK_X = 52 * P;
+const HERO_FIGHT_X = 56 * P;
+/** Where the front enemy's leading edge stands while fighting (14 art pixels in front of the raccoon). */
+const ENGAGE_EDGE = 70 * P;
+/** How fast the ground goes by while he walks (screen px per second): his hops' stride. */
+const WALK_SPEED = 37 * P;
+/** Where coins fly when the HUD's gold counter ([data-gold-target]) can't be found. */
 const COIN_TARGET = { x: 694, y: 58 };
 /** Top of the boss HP bar: under the HUD row, with the boss's name (one or two lines) over it. */
-const BOSS_BAR_Y = 27 * P;
+const BOSS_BAR_Y = 41 * P;
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
 const INK_N = 0x1a1326;
 /** Weapon angles in degrees (0 = pointing up, clockwise positive). */
@@ -77,13 +81,16 @@ const BAR_GHOST: BarTones = [hexNum(PAL.w), hexNum(PAL.W)];
 /** The empty part reads as a groove (shadowed top row), light enough to show on night skies. */
 const BAR_EMPTY: BarTones = [hexNum(PAL['1']), hexNum(PAL['2'])];
 /** Bar sizes in art pixels, outline included. Fighters' bars are as wide as their art allows. */
-const BAR_TALL = 4;
+const BAR_TALL = 5;
 const FOE_BAR_W = { min: 10, max: 16 };
 const HERO_BAR_W = 14;
-const BOSS_BAR = { w: 52, h: 5 };
-/** The heart (7 x 6) shares its right column with the hero bar's left edge; the skull (9 x 9) sits left of the boss bar. */
+const BOSS_BAR = { w: 78, h: 7 };
+/**
+ * The heart (7 x 7, a pixel over and under the bar) shares its right column with the hero bar's left
+ * edge; the skull (11 x 11, two over and under) sits left of the boss bar.
+ */
 const HEART_W = 7;
-const SKULL_W = 9;
+const SKULL_W = 11;
 /** Art pixels between a bar and the top of the head under it. */
 const BAR_GAP = 2;
 /** Seconds the light part of a fresh hit holds before it drains. */
@@ -93,28 +100,37 @@ const GHOST_HOLD = 0.3;
 
 /** A fill with a lighter top row over `color`. */
 const litTop = (color: string): readonly string[] => [mix(color, '#ffffff', 0.55), color];
-/** A big-face fill in three flat bands from `top` to `bottom`. */
-const bands = (grad: readonly [string, string]): readonly string[] => gradientRows(grad[0], grad[1], FACES.big.h);
+/** A fill for `face` in three flat bands from `top` to `bottom`. */
+const bands = (grad: readonly [string, string], face: FaceName = 'huge'): readonly string[] => gradientRows(grad[0], grad[1], FACES[face].h);
 /** Widest a line of battle text may be (art px), leaving room for the outline and a margin. */
 const TEXT_MAX_W = VIEW.w - 8;
-const BOSS_NAME: TextStyle = { face: 'small', fill: '#ffffff', maxW: TEXT_MAX_W };
-const BOSS_HP: TextStyle = { face: 'small', fill: '#ffffff' };
-const WORLD_CARD: TextStyle = { face: 'small', fill: '#ffffff', shadow: true, maxW: TEXT_MAX_W };
+/**
+ * Faces: pop-up numbers and small notes in the 5 x 7 face, big moments (crits, level ups, banners,
+ * stamps, the world's name) in the 7 x 9 bold one. (On the 6 px grid the 3 x 5 face is too small to
+ * read at a glance.)
+ */
+const NUMBER: FaceName = 'big';
+const BIG_NUMBER: FaceName = 'huge';
+const BOSS_NAME: TextStyle = { face: 'big', fill: '#ffffff', maxW: TEXT_MAX_W };
+const BOSS_HP: TextStyle = { face: 'big', fill: '#ffffff' };
+/** The world's title card: "WORLD 1" over its name (font.ts TextStyle.lead). */
+const WORLD_CARD: TextStyle = { face: 'huge', lead: 'big', fill: litTop('#ffffff'), shadow: true, maxW: TEXT_MAX_W };
 const GOLD: readonly [string, string] = ['#fff6a8', '#ffa21a'];
 
 /** The "too tough" notice: a cream plate like the toasts', ink text, its first sentence big and red. */
 const NOTICE = { bg: ['#fff0e0', '#ffe0c8', '#ffd0b0'], head: '#c8323a', ms: 2400 } as const;
 
-// ------------------------------------------------------------------ particle styles (pixelBits.ts)
+// ------------------------------------------------------------------ particle styles (pixelBits.ts, art px)
 
-const SPARK: BitStyle = { speed: [240, 520], life: [200, 360], drag: 2, colors: [0xffffff], fade: [0xfff28c], sizes: [2, 1] };
+const SPARK: BitStyle = { speed: [27, 58], life: [200, 360], drag: 2, colors: [0xffffff], fade: [0xfff28c], sizes: [2, 1] };
 const BIG_SPARK: BitStyle = {
-  speed: [360, 860], life: [380, 680], drag: 2.5, colors: [0xffe14a, 0xffffff, 0xffb300], fade: [0xffb300], sizes: [2, 2, 1],
+  speed: [40, 96], life: [380, 680], drag: 2.5, colors: [0xffe14a, 0xffffff, 0xffb300], fade: [0xffb300], sizes: [2, 2, 1],
 };
-const DUST: BitStyle = { speed: [40, 150], angle: [180, 360], life: [360, 560], colors: [0xe8e0d0], sizes: [2, 1], alpha: [0.85, 0.55, 0.3] };
-const FLAME: BitStyle = { speedX: [-40, 40], speedY: [-220, -120], life: [300, 520], colors: [0xffe14a, 0xffb300], fade: [0xff7043, 0xc8323a], sizes: [2, 1] };
+const DUST: BitStyle = { speed: [4.5, 17], angle: [180, 360], life: [360, 560], colors: [0xe8e0d0], sizes: [2, 1], alpha: [0.85, 0.55, 0.3] };
+const FLAME: BitStyle = { speedX: [-4.5, 4.5], speedY: [-24, -13], life: [300, 520], colors: [0xffe14a, 0xffb300], fade: [0xff7043, 0xc8323a], sizes: [2, 1] };
 const CONFETTI_COLORS = [0xff5a7a, 0xffd54f, 0x5bd23a, 0x4fc3f7] as const;
-const CONFETTI: BitStyle = { speed: [320, 760], angle: [200, 340], gravity: 900, drag: 1.2, life: [900, 1500], colors: CONFETTI_COLORS, tumble: 90 };
+/** Confetti fills the view (its spread follows the view, not the fighters). */
+const CONFETTI: BitStyle = { speed: [53, 127], angle: [200, 340], gravity: 150, drag: 1.2, life: [900, 1500], colors: CONFETTI_COLORS, tumble: 90 };
 
 /** The damage trail behind an HP bar. */
 interface Trail {
@@ -214,8 +230,14 @@ const stepsDown = (k: number, n = 3) => 1 - Math.min(n, Math.floor(k * (n + 1)))
 /** Splits "Too tough! Keep rolling..." into its first sentence and the rest (or no head). */
 function headline(text: string): { head: string | null; rest: string } {
   const m = /^(.{2,24}?[!?.])\s+(.+)$/.exec(text);
-  if (m && lineWidth(m[1], FACES.big) <= TEXT_MAX_W) return { head: m[1], rest: m[2] };
+  if (m && lineWidth(m[1], FACES.huge) <= TEXT_MAX_W) return { head: m[1], rest: m[2] };
   return { head: null, rest: text };
+}
+
+/** "World 1 · Sunny Suburbs" as a kicker over the name ("World 1\nSunny Suburbs"), or as it is. */
+function titleLines(label: string): string {
+  const m = /^(.+?)\s+·\s+(.+)$/.exec(label);
+  return m ? `${m[1]}\n${m[2]}` : label;
 }
 
 /**
@@ -505,9 +527,9 @@ export class BattleScene extends Phaser.Scene {
   private showWorldCard(world: number) {
     this.worldCard?.destroy();
     const name = DATA.worlds[world - 1]?.name ?? '';
-    const card = this.texts.add(t('battle.worldLabel', { n: world, name }), WORLD_CARD).setDepth(48);
+    const card = this.texts.add(titleLines(t('battle.worldLabel', { n: world, name })), WORLD_CARD).setDepth(48);
     this.worldCard = card;
-    const y = 14 * P;
+    const y = 21 * P;
     const still = this.reduceMotion;
     card.place(BATTLE_W / 2, y, 0.5, 0).setAlpha(0);
     this.tweens.addCounter({
@@ -548,8 +570,8 @@ export class BattleScene extends Phaser.Scene {
     this.notice?.destroy();
     const { head, rest } = headline(t('battle.toughHint'));
     const parts = [
-      ...(head ? [renderText(head, { face: 'big', fill: NOTICE.head, ink: null })] : []),
-      renderText(rest, { face: 'small', fill: TEXT_INK, ink: null, maxW: TEXT_MAX_W - 8 }),
+      ...(head ? [renderText(head, { face: 'huge', fill: NOTICE.head, ink: null })] : []),
+      renderText(rest, { face: 'big', fill: TEXT_INK, ink: null, maxW: TEXT_MAX_W - 12 }),
     ];
     const plate = renderPlate(parts, NOTICE.bg);
     const key = `notice_${this.noticeN++}`;
@@ -558,7 +580,8 @@ export class BattleScene extends Phaser.Scene {
     img.once(Phaser.GameObjects.Events.DESTROY, () => this.time.delayedCall(0, () => this.textures.exists(key) && this.textures.remove(key)));
     this.notice = img;
     const x = snap(BATTLE_W / 2 - (plate.w * P) / 2);
-    const y = 23 * P;
+    // Under the world's title card (rows 21 to 40; it shows too: the raccoon was just sent back a world).
+    const y = 43 * P;
     const drop = this.reduceMotion ? [0] : [-3, -2, -1, 0];
     drop.forEach((dy, i) => this.time.delayedCall(i * 40, () => img.active && img.setPosition(x, y + dy * P)));
     img.setPosition(x, y + drop[0] * P);
@@ -647,7 +670,7 @@ export class BattleScene extends Phaser.Scene {
     const c = hexNum(this.auraColor);
     const x = this.hero.x + P / 2 + Phaser.Math.Between(-AURA.rx + 2, AURA.rx - 2) * P;
     const y = FEET_Y - Phaser.Math.Between(2, AURA.up + AURA.ry - 2) * P;
-    this.glints.burst(1, x, y, { speedX: [-12, 12], speedY: [-70, -35], life: [500, 900], colors: [0xffffff], fade: [c, c], alpha: [1, 1, 0.6] });
+    this.glints.burst(1, x, y, { speedX: [-1.3, 1.3], speedY: [-7.8, -3.9], life: [500, 900], colors: [0xffffff], fade: [c, c], alpha: [1, 1, 0.6] });
   }
 
   /** Points the weapon `angle` degrees from straight up (the art itself is drawn tilted). */
@@ -784,12 +807,16 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * Pop-up number: flashes white for its first frames, floats up by whole art pixels (fast, then
-   * slowing) and steps out.
+   * slowing) and steps out. It starts centered on (x, y), but its bottom edge no lower than a pixel
+   * over `floor` (the top of the HP bar under it, so the bar stays readable).
    */
-  private number(x: number, y: number, text: string, opts: { big?: boolean; fill?: string | readonly string[]; life?: number } = {}) {
+  private number(
+    x: number, y0: number, text: string, opts: { big?: boolean; fill?: string | readonly string[]; life?: number; floor?: number } = {},
+  ) {
     const life = opts.life ?? 800;
-    const tx = this.texts.add(text, { face: opts.big ? 'big' : 'small', fill: opts.fill ?? '#ffffff' }).setDepth(45);
+    const tx = this.texts.add(text, { face: opts.big ? BIG_NUMBER : NUMBER, fill: opts.fill ?? '#ffffff' }).setDepth(45);
     const cx = this.clampX(x + Phaser.Math.Between(-2, 2) * P, tx.artW * P);
+    const y = opts.floor === undefined ? y0 : Math.min(y0, opts.floor - P - (tx.artH * P) / 2);
     tx.place(cx, y);
     if (!this.reduceFlashing) {
       tx.setFlash(true);
@@ -802,7 +829,7 @@ export class BattleScene extends Phaser.Scene {
       onUpdate: (tw) => {
         if (!tx.active) return;
         const k = tw.getValue() ?? 0;
-        tx.place(cx, y - Math.round(easeOutCubic(k) * 12) * P);
+        tx.place(cx, y - Math.round(easeOutCubic(k) * 14) * P);
         tx.setAlpha(k < 0.55 ? 1 : stepsDown((k - 0.55) / 0.45));
       },
       onComplete: () => tx.destroy(),
@@ -814,7 +841,7 @@ export class BattleScene extends Phaser.Scene {
    * pixel, holds, then rises and steps out.
    */
   private stamp(x: number, y0: number, text: string, color: string) {
-    const tx = this.texts.add(text, { face: 'big', fill: litTop(color), shadow: true, maxW: TEXT_MAX_W }).setDepth(46);
+    const tx = this.texts.add(text, { face: 'huge', fill: litTop(color), shadow: true, maxW: TEXT_MAX_W }).setDepth(46);
     const w = tx.artW * P;
     const h = tx.artH * P;
     const cx = this.clampX(x, w);
@@ -851,13 +878,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Big title that sweeps in with a smear and sweeps out ("FIGHT!", "BOSS!", "VICTORY!"), in whole art pixels. */
-  private banner(text: string, grad: readonly [string, string], y = FEET_Y - 30 * P) {
-    const style: TextStyle = { face: 'big', fill: bands(grad), shadow: true, maxW: TEXT_MAX_W };
+  private banner(text: string, grad: readonly [string, string], y = FEET_Y - 44 * P) {
+    const style: TextStyle = { face: 'huge', fill: bands(grad), shadow: true, maxW: TEXT_MAX_W };
     const main = this.texts.add(text, style).setDepth(50);
     const w = main.artW * P;
     const mid = BATTLE_W / 2;
     const start = -w;
-    const smears = this.reduceMotion ? [] : [0.25, 0.45].map((a) => this.texts.add(text, style).setDepth(49.5).setAlpha(a));
+    // (Placed at once: a text is drawn at the view's top-left corner until it is placed.)
+    const smears = this.reduceMotion ? [] : [0.25, 0.45].map((a) => this.texts.add(text, style).setDepth(49.5).setAlpha(a).place(start, y));
     smears.forEach((s, i) => {
       const to = mid - 8 * P + i * 3 * P;
       this.tweens.addCounter({
@@ -932,14 +960,14 @@ export class BattleScene extends Phaser.Scene {
     return { x: f.c.x - f.front * 0.45, y: FEET_Y - f.height * 0.5 };
   }
 
-  /** Where a pop-up number over foe `f` starts: no lower than just over its HP bar, so the bar stays readable. */
-  private overFoe(f: Foe, y: number): number {
-    return f.kind === 'regular' ? Math.min(y, FEET_Y + f.barY - 5 * P) : y;
+  /** The top of foe `f`'s HP bar (screen px): pop-up numbers over it start above it. Bosses have theirs under the HUD. */
+  private barTop(f: Foe): number | undefined {
+    return f.kind === 'regular' ? FEET_Y + f.barY : undefined;
   }
 
-  /** The same over the hero's bar (its heart stands a pixel taller than the bar). */
-  private overHero(y: number): number {
-    return Math.min(y, FEET_Y - snap(this.heroTop) - (BAR_GAP + BAR_TALL + 1 + 5) * P);
+  /** The top of the hero's bar (its heart stands a pixel taller than the bar). */
+  private heroBarTop(): number {
+    return FEET_Y - snap(this.heroTop) - (BAR_GAP + BAR_TALL + 1) * P;
   }
 
   /** The blow lands: pack hit effect, sparks, number, knockback, maybe a kill. */
@@ -957,18 +985,18 @@ export class BattleScene extends Phaser.Scene {
     }
     if (s.crit) this.fx('slash', p.x + 2 * P, p.y, { depth: 35 });
     this.flash(f.spr, 0xffffff, 60);
-    f.knockV += s.crit ? 900 : 560;
+    f.knockV += (s.crit ? 100 : 62) * P;
     this.foeAct(f, 'hurt');
     f.shownHp = Math.max(0, f.shownHp - s.amount);
     if (s.crit) {
       this.bits.burst(12, p.x, p.y, BIG_SPARK);
-      this.number(p.x, this.overFoe(f, p.y - 7 * P), formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950 });
-      this.stamp(p.x + P, p.y - 16 * P, t('battle.crit'), '#FFD54F');
+      this.number(p.x, p.y - 8 * P, formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950, floor: this.barTop(f) });
+      this.stamp(p.x + P, p.y - 18 * P, t('battle.crit'), '#FFD54F');
       this.shake(110, 0.006);
       this.hitStop(70);
     } else {
       this.bits.burst(6, p.x, p.y, SPARK);
-      this.number(p.x, this.overFoe(f, p.y - 6 * P), formatNumber(s.amount), { fill: s.echo ? '#e2ccff' : '#ffffff' });
+      this.number(p.x, p.y - 7 * P, formatNumber(s.amount), { fill: s.echo ? '#e2ccff' : '#ffffff', floor: this.barTop(f) });
     }
     for (const r of s.riders) r();
     if (s.killed || this.kills.has(f.uid)) this.die(f);
@@ -1021,20 +1049,21 @@ export class BattleScene extends Phaser.Scene {
   /** Coins pop out, bounce once, then fly up to the gold counter, turning (frame by frame) all the way. */
   private coinBurst(x: number, y: number, n: number) {
     const coin = coinTex(this);
+    const target = this.coinTarget();
     for (let i = 0; i < n && this.coinsFlying < 50; i++) {
       this.coinsFlying++;
       const c = this.gridLock(
         this.add.sprite(x, y, coin.key, String(i % 4)).setOrigin(coin.cx / (coin.w / P), coin.cy / (coin.h / P)).setScale(P).setDepth(36),
       );
       c.play({ key: `${coin.key}:spin`, startFrame: i % 4 });
-      const vx = Phaser.Math.Between(-260, 260);
+      const vx = Phaser.Math.Between(-29, 29) * P;
       const landX = x + vx * 0.45;
-      const peak = y - Phaser.Math.Between(9, 19) * P;
+      const peak = y - Phaser.Math.Between(12, 26) * P;
       this.tweens.chain({
         targets: c,
         tweens: [
           { x: landX, duration: 420, ease: 'Linear' },
-          { x: COIN_TARGET.x, y: COIN_TARGET.y, duration: 420 + i * 35, ease: 'Cubic.easeIn' },
+          { x: target.x, y: target.y, duration: 420 + i * 35, ease: 'Cubic.easeIn' },
         ],
         onComplete: () => {
           c.destroy();
@@ -1046,12 +1075,27 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The HUD's gold counter in canvas pixels (the canvas fills the top of the stage, so stage px), from
+   * the page: the coins land on its coin. COIN_TARGET when it isn't there.
+   */
+  private coinTarget(): { x: number; y: number } {
+    const el = typeof document !== 'undefined' ? document.querySelector('[data-gold-target]') : null;
+    const canvas = this.sys.game.canvas;
+    if (!el || !canvas) return COIN_TARGET;
+    const r = el.getBoundingClientRect();
+    const c = canvas.getBoundingClientRect();
+    if (!c.width || !r.width) return COIN_TARGET;
+    const k = BATTLE_W / c.width;
+    return { x: (r.left + r.width * 0.2 - c.left) * k, y: (r.top + r.height / 2 - c.top) * k };
+  }
+
   private bagBurst(count: number) {
-    const from = { x: ENGAGE_EDGE + 9 * P, y: FEET_Y - 13 * P };
+    const from = { x: ENGAGE_EDGE + 12 * P, y: FEET_Y - 13 * P };
     for (let i = 0; i < Math.min(count, 6); i++) {
       const o = texOrigin('fx_bag');
-      const bag = this.gridLock(this.add.image(from.x + i * 3 * P, from.y, 'fx_bag').setOrigin(o.x, o.y).setDepth(36));
-      this.tweens.add({ targets: bag, y: from.y - 13 * P, duration: 260, ease: 'Back.easeOut', delay: i * 70 });
+      const bag = this.gridLock(this.add.image(from.x + i * 6 * P, from.y, 'fx_bag').setOrigin(o.x, o.y).setDepth(36));
+      this.tweens.add({ targets: bag, y: from.y - 18 * P, duration: 260, ease: 'Back.easeOut', delay: i * 70 });
       this.tweens.add({
         targets: bag, x: BAG_TARGET.x, y: BAG_TARGET.y, duration: 520, ease: 'Cubic.easeIn',
         delay: 380 + i * 70, onComplete: () => bag.destroy(),
@@ -1093,7 +1137,7 @@ export class BattleScene extends Phaser.Scene {
     }
     if (amount >= this.maxHp(gameStore.getState().game)) {
       // Way out of its league: make it obvious.
-      this.stamp(this.hero.x + 3 * P, FEET_Y - 30 * P, t('battle.oneShot'), '#FF5A5A');
+      this.stamp(this.hero.x + 3 * P, FEET_Y - 32 * P, t('battle.oneShot'), '#FF5A5A');
       this.shake(320, 0.02);
       this.fx('hit', this.hero.x + 2 * P, FEET_Y - 8 * P, { depth: 34, flipX: true });
     }
@@ -1103,7 +1147,7 @@ export class BattleScene extends Phaser.Scene {
       this.fx('hit', p.x + 3 * P, p.y, { depth: 34, flipX: true });
       this.shake(220, 0.012);
     }
-    this.number(p.x - 3 * P, this.overHero(p.y - 6 * P), `-${formatNumber(amount)}`, { big: heavy, fill: '#ff8a80' });
+    this.number(p.x - 3 * P, p.y - 7 * P, `-${formatNumber(amount)}`, { big: heavy, fill: '#ff8a80', floor: this.heroBarTop() });
   }
 
   /** Plays a foe's one-shot animation (attack / hurt) if it has one, then its base loop again. */
@@ -1127,7 +1171,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.chain({
       targets: f,
       tweens: [
-        { lunge: 14, duration: 90, ease: 'Quad.easeOut' },
+        { lunge: 2 * P, duration: 90, ease: 'Quad.easeOut' },
         { lunge: -dist, duration: 80, ease: 'Quad.easeIn', onComplete: contact },
         { lunge: 0, duration: 200, ease: 'Back.easeOut' },
       ],
@@ -1187,8 +1231,8 @@ export class BattleScene extends Phaser.Scene {
             this.lightning(pa, pb);
             this.flash(b.spr, 0xfff3a0, 70);
             b.shownHp = Math.max(0, b.shownHp - e.amount);
-            b.knockV += 300;
-            this.number(pb.x, this.overFoe(b, pb.y - 5 * P), formatNumber(e.amount), { fill: '#ffe14a' });
+            b.knockV += 33 * P;
+            this.number(pb.x, pb.y - 6 * P, formatNumber(e.amount), { fill: '#ffe14a', floor: this.barTop(b) });
             if (this.kills.has(b.uid)) this.die(b);
           };
           this.attachRider(lastSwing, e.toUid, run);
@@ -1203,8 +1247,8 @@ export class BattleScene extends Phaser.Scene {
             if (b) {
               const pb = this.foeHitPoint(b);
               b.shownHp = Math.max(0, b.shownHp - e.amount);
-              b.knockV += 500;
-              this.number(pb.x, this.overFoe(b, pb.y - 5 * P), formatNumber(e.amount), { fill: '#ffab70' });
+              b.knockV += 55 * P;
+              this.number(pb.x, pb.y - 6 * P, formatNumber(e.amount), { fill: '#ffab70', floor: this.barTop(b) });
               if (this.kills.has(b.uid)) this.die(b);
             }
           };
@@ -1218,7 +1262,7 @@ export class BattleScene extends Phaser.Scene {
           // (The pack's fire is taller than most enemies at this pixel size, so burns stay pixel flames.)
           this.bits.burst(6, p.x, p.y + 2 * P, FLAME);
           f.shownHp = Math.max(0, f.shownHp - e.amount);
-          this.number(p.x + 3 * P, this.overFoe(f, p.y - 3 * P), formatNumber(e.amount), { fill: '#ff9e5e', life: 600 });
+          this.number(p.x + 3 * P, p.y - 4 * P, formatNumber(e.amount), { fill: '#ff9e5e', life: 600, floor: this.barTop(f) });
           if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           break;
         }
@@ -1235,7 +1279,7 @@ export class BattleScene extends Phaser.Scene {
             const p = this.foeHitPoint(f);
             this.bits.burst(5, p.x, p.y, SPARK);
             f.shownHp = Math.max(0, f.shownHp - e.amount);
-            this.number(p.x, this.overFoe(f, p.y - 4 * P), formatNumber(e.amount), { fill: '#9cff8a' });
+            this.number(p.x, p.y - 5 * P, formatNumber(e.amount), { fill: '#9cff8a', floor: this.barTop(f) });
             if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           });
           break;
@@ -1244,7 +1288,7 @@ export class BattleScene extends Phaser.Scene {
           const f = this.foes.get(e.enemyUid);
           const dodge = () => {
             this.heroKnock = this.reduceMotion ? 0 : -5 * P;
-            this.number(this.hero.x, this.overHero(FEET_Y - 26 * P), t('battle.dodge'), { fill: '#7fe9ff' });
+            this.number(this.hero.x, FEET_Y - 26 * P, t('battle.dodge'), { fill: '#7fe9ff', floor: this.heroBarTop() });
           };
           if (f) this.lungeAt(f, dodge, false);
           else dodge();
@@ -1253,13 +1297,13 @@ export class BattleScene extends Phaser.Scene {
         case 'heal':
           if (e.source === 'lifesteal') this.healAcc += e.amount;
           else {
-            this.number(this.hero.x - 4 * P, this.overHero(FEET_Y - 25 * P), `+${formatNumber(e.amount)}`, { fill: '#7ef08f' });
+            this.number(this.hero.x - 4 * P, FEET_Y - 25 * P, `+${formatNumber(e.amount)}`, { fill: '#7ef08f', floor: this.heroBarTop() });
             this.fx('sparkle', this.hero.x, FEET_Y - 8 * P, { depth: 34, tint: 0x9dff9a });
           }
           break;
         case 'bossSpecial': {
           const f = this.foes.get(e.enemyUid);
-          if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 4 * P, `${e.name}!`, '#FF9800');
+          if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 6 * P, `${e.name}!`, '#FF9800');
           break;
         }
         case 'kill': {
@@ -1279,12 +1323,12 @@ export class BattleScene extends Phaser.Scene {
           break;
         }
         case 'worldFirstClear':
-          this.banner(t('battle.worldCleared'), GOLD, FEET_Y - 34 * P);
-          this.confetti.burst(72, BATTLE_W / 2, FEET_Y - 34 * P, CONFETTI);
+          this.banner(t('battle.worldCleared'), GOLD, FEET_Y - 50 * P);
+          this.confetti.burst(72, BATTLE_W / 2, FEET_Y - 50 * P, CONFETTI);
           this.cheer(1.6);
           break;
         case 'bossWin':
-          if (!events.some((x) => x.type === 'worldFirstClear')) this.confetti.burst(20, BATTLE_W / 2 + 13 * P, FEET_Y - 29 * P, CONFETTI);
+          if (!events.some((x) => x.type === 'worldFirstClear')) this.confetti.burst(20, BATTLE_W / 2 + 20 * P, FEET_Y - 42 * P, CONFETTI);
           this.cheer(1.2);
           break;
         case 'levelUp': {
@@ -1292,7 +1336,7 @@ export class BattleScene extends Phaser.Scene {
             this.still('fx_puff', this.hero.x, FEET_Y - 14 * P, { depth: 33, tint: 0xffe14a, ms: 700 });
           }
           this.bits.burst(14, this.hero.x, FEET_Y - 16 * P, BIG_SPARK);
-          this.number(this.hero.x, this.overHero(FEET_Y - 32 * P), t('battle.levelUp'), { big: true, fill: bands(GOLD), life: 1100 });
+          this.number(this.hero.x, FEET_Y - 32 * P, t('battle.levelUp'), { big: true, fill: bands(GOLD), life: 1100, floor: this.heroBarTop() });
           this.cheer(1);
           break;
         }
@@ -1309,8 +1353,8 @@ export class BattleScene extends Phaser.Scene {
         case 'luckBoost':
           this.bits.burst(20, this.hero.x, FEET_Y - 12 * P, { ...FLAME, colors: [0xd8ffd0, 0x8dff8a], fade: [0x46d36b, 0x2fb150] });
           this.fx('sparkle', this.hero.x, FEET_Y - 9 * P, { depth: 34, tint: 0x8dff8a });
-          this.number(this.hero.x, this.overHero(FEET_Y - 33 * P), t('battle.luckUp', { mult: BAL.luck.potion.mult }), {
-            big: true, fill: bands(['#d8ffd0', '#2fb150']), life: 1200,
+          this.number(this.hero.x, FEET_Y - 33 * P, t('battle.luckUp', { mult: BAL.luck.potion.mult }), {
+            big: true, fill: bands(['#d8ffd0', '#2fb150']), life: 1200, floor: this.heroBarTop(),
           });
           break;
         case 'playerDeath':
@@ -1515,7 +1559,7 @@ export class BattleScene extends Phaser.Scene {
     const walking = b.phase === 'walking' && !this.dead;
 
     // Parallax while walking (each layer drawn at whole art pixels); clouds always drift.
-    const speed = walking ? 330 : 0;
+    const speed = walking ? WALK_SPEED : 0;
     this.scrollLayer('far', this.scroll.far + speed * 0.18 * dt);
     this.scrollLayer('mid', this.scroll.mid + speed * 0.5 * dt);
     this.scrollLayer('ground', this.scroll.ground + speed * dt);
@@ -1552,7 +1596,7 @@ export class BattleScene extends Phaser.Scene {
     // Lifesteal heals are batched into one number.
     this.healTimer -= dt;
     if (this.healAcc >= 1 && this.healTimer <= 0) {
-      this.number(this.hero.x - 5 * P, this.overHero(FEET_Y - 25 * P), `+${formatNumber(this.healAcc)}`, { fill: '#7ef08f', life: 600 });
+      this.number(this.hero.x - 5 * P, FEET_Y - 25 * P, `+${formatNumber(this.healAcc)}`, { fill: '#7ef08f', life: 600, floor: this.heroBarTop() });
       this.healAcc = 0;
       this.healTimer = 0.5;
     }

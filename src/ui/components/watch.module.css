@@ -1,10 +1,10 @@
 /*
- * The Watch tab's roll stage. One pixel size like the rest of the game: --u is one art pixel (9 stage
+ * The Watch tab's roll stage. One pixel size like the rest of the game: --u is one art pixel (6 stage
  * px); art is drawn at exactly that size, borders and steps are whole units, nothing is rotated or
  * scaled (pops move in whole units instead).
  */
 .stage {
-  --u: 9px;
+  --u: 6px;
   --ink: #1a1326;
   position: relative;
   height: 100%;
@@ -60,12 +60,14 @@
 }
 
 /* ---------------------------------------------------------------- the reels */
+/* Room above the windows for each reel's stacked-up multiplier. */
 .theater {
   position: relative;
   display: flex;
   justify-content: center;
   gap: calc(3 * var(--u));
   align-self: stretch;
+  margin-top: calc(5 * var(--u));
 }
 .stage[data-n='2'] .theater {
   gap: calc(4 * var(--u));
@@ -88,8 +90,8 @@
   z-index: 3;
   left: 0;
   right: 0;
-  top: calc(-4 * var(--u));
-  height: calc(7 * var(--u));
+  top: calc(-6 * var(--u));
+  height: calc(10 * var(--u));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -180,8 +182,9 @@
   margin-right: 8px;
   color: #ffffff;
 }
-.stage[data-n='3'] .odds,
-.stage[data-n='4'] .odds,
+.stage[data-n='4'] .odds {
+  font-size: 30px;
+}
 .stage[data-n='5'] .odds {
   font-size: 26px;
 }

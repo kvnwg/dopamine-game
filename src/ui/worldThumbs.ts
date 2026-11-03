@@ -1,23 +1,29 @@
 /**
  * World previews for the Worlds tab and the world popup, at the UI's one pixel size: a band of the
- * world's backdrop as the battle draws it (composeWorld, one image pixel per art pixel), shown at 9
+ * world's backdrop as the battle draws it (composeWorld, one image pixel per art pixel), shown at 6
  * stage px per art pixel like everything else. Each preview frames the busiest stretch of its band
  * (the house, the barn, the trees). They are made in the background, one world per task, since
  * composing a backdrop takes a few tens of milliseconds.
+ *
+ * The band is centered on the same row of every set's scene: legacy-frame row 39 (roofs down to the
+ * yards), placed for the set's own frame with legacyRow (sceneryTypes.ts, worldLook.ts). A set drawn
+ * for the 6 px frame fills the band with exactly the rows the 9 px previews showed, 1.5 times finer.
  */
 import { useEffect, useState } from 'react';
 import { crop, type PixelBuf } from '../render/pixel/buf';
 import { pixelUrl } from '../render/pixel';
-import { SCENE_Y } from '../render/pixel/sceneryTypes';
-import { composeWorld } from '../render/worldLook';
+import { composeWorld, legacyRow, worldArt } from '../render/worldLook';
 import type { Art } from '../render/icons';
 
 export type ThumbKind = 'card' | 'popup';
 
-/** Preview size in art pixels, and the band's top in scene rows (roofs down to the yards). */
-const SIZE: Record<ThumbKind, { w: number; h: number; y: number }> = {
-  card: { w: 54, h: 26, y: 26 },
-  popup: { w: 90, h: 30, y: 24 },
+/**
+ * Preview size in art pixels (card 486 x 234 stage px, popup 810 x 270), and the legacy-frame row the
+ * band is centered on.
+ */
+const SIZE: Record<ThumbKind, { w: number; h: number; mid: number }> = {
+  card: { w: 81, h: 39, mid: 39 },
+  popup: { w: 135, h: 45, mid: 39 },
 };
 
 const composed = new Map<number, PixelBuf>();
@@ -58,8 +64,8 @@ export function worldThumb(world: number, kind: ThumbKind): Art {
     full = composeWorld(world, { vignette: false, fg: false });
     composed.set(world, full);
   }
-  const { w, h, y } = SIZE[kind];
-  const top = Math.max(0, Math.min(full.h - h, SCENE_Y + y));
+  const { w, h, mid } = SIZE[kind];
+  const top = Math.max(0, Math.min(full.h - h, Math.round(legacyRow(worldArt(world).set, mid) - h / 2)));
   const x = busiestX(full, top, w, h);
   const src = full;
   a = { url: pixelUrl(`worldThumb:${key}`, () => crop(src, x, top, w, h), 1), w, h };

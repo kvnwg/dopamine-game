@@ -52,6 +52,16 @@ const SPRITES: Record<string, readonly string[]> = {
   amb_bird0: ['w...w', '.w.w.', '..w..'],
   amb_bird1: ['.....', 'ww.ww', '..w..'],
   amb_flake: ['w'],
+  // The drifting kinds again, for a set drawn 1.5 times finer (frameScale): drawn bigger in art
+  // pixels, so they keep their size on screen (FINE).
+  amb_glow_f: ['.44.', '4ww4', '4ww4', '.44.'],
+  amb_drop_f: ['4', 'w', 'w'],
+  amb_drop3_f: ['4', '4', 'w', 'w', 'w'],
+  amb_flake_f: ['4w', 'w4'],
+  amb_leaf0_f: ['ww.', '.ww'],
+  amb_leaf1_f: ['www', '.w.'],
+  amb_leaf2_f: ['.ww', 'ww.'],
+  amb_petal_f: ['.w', 'ww'],
   // Torch flames (5 x 5, over the 5 x 4 flame painted on the wall; each frame covers it).
   amb_flame0: ['.....', '..Y..', '.yYy.', '.OYO.', '.oOo.'],
   amb_flame1: ['..y..', '.yYy.', '.yYY.', '.OYO.', '.oOo.'],
@@ -166,11 +176,15 @@ interface Kind extends Omit<KindDef, 'rows'> {
   rows: readonly [number, number];
 }
 
+/** Sprites with a bigger version for sets drawn 1.5 times finer (the `_f` sprites). */
+const FINE = new Set(['amb_glow', 'amb_drop', 'amb_drop3', 'amb_flake', 'amb_leaf0', 'amb_leaf1', 'amb_leaf2', 'amb_petal']);
+
 function inFrame(def: KindDef, top: number, k: number): Kind {
   const row = (r: number | 'top') => (r === 'top' ? 0 : Math.round(top + r * k));
   const times = (a: readonly [number, number] | undefined) => a && ([a[0] * k, a[1] * k] as const);
   return {
     ...def,
+    tex: k >= 1.5 ? def.tex.map((t) => (FINE.has(t) ? `${t}_f` : t)) : def.tex,
     rows: [row(def.rows[0]), row(def.rows[1])],
     vx: times(def.vx)!,
     vy: times(def.vy)!,

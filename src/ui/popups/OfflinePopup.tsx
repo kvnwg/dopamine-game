@@ -18,9 +18,9 @@ export function OfflinePopup({ pending }: { pending: PendingOffline }) {
   return (
     <Modal title={t('offline.title')} subtitle={t('offline.away', { time: formatDuration(pending.awayMs / 1000) })}>
       <div className={s.pile}>
-        <TrashIcon size="lg" />
-        <TrashIcon size="lg" />
-        <TrashIcon size="lg" />
+        <TrashIcon size="nav" />
+        <TrashIcon size="nav" />
+        <TrashIcon size="nav" />
       </div>
       <div className={s.rewardList}>
         <div className={s.rewardRow}>

@@ -1,6 +1,6 @@
 /**
  * The Watch tab: nothing but the rolls. Under the battle, every spin plays big on a stage: the reels
- * roll (one or two reels get double-resolution art), a reel that lands on a luck token bursts into
+ * roll (up to four reels show their art in Scale2x, 192 px), a reel that lands on a luck token bursts into
  * clovers and spins again with its luck multiplied, and each result lands with white swooshes, its
  * rarity's glow, its name and its "1 in X". A button hides the rest of the UI for a clean view.
  *
@@ -15,9 +15,8 @@ import { audio } from '../../services/audio';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
-import { multOf } from '../reelTiming';
-import { itemArt, itemArtHd, luckTokenArt, luckTokenArtHd, uiIcon, UI_PX, type Art } from '../../render/icons';
-import { LUCK_TOKENS } from '../../render/pixel/ui';
+import { multOf, tokenHoldMs } from '../reelTiming';
+import { itemArt, luckTokenArt, uiIcon, UI_PX, type Art, type ArtScale } from '../../render/icons';
 import { PixelArt } from './PixelArt';
 import { useUi } from '../uiStore';
 import { fmtLuck, fmtOdds } from './AlleyPanel';
@@ -46,24 +45,24 @@ interface Shown {
 
 const UNIT = UI_PX;
 
-/** Sizes by reel count: art scale (1 or Scale2x), cell height, window size (stage px, whole units). */
+/**
+ * Sizes by reel count: the art's scale (Scale2x, 192 px, while the reels fit across: up to four; as
+ * drawn, 96 px, for five), cell height and window size (stage px). The art and the window's middle sit
+ * on the 6 px grid.
+ */
 function layout(n: number) {
-  const hd = n <= 2;
-  const art = (hd ? 32 : 16) * UNIT;
+  const scale: ArtScale = n <= 4 ? 2 : 1;
+  const art = 16 * scale * UNIT;
   const cell = art + 4 * UNIT;
-  const winW = n === 1 ? art + 8 * UNIT : n === 2 ? art + 6 * UNIT : n === 3 ? art + 7 * UNIT : art + 4 * UNIT;
-  // A sliver of the cells above and below shows motion; more for the small cells of 3+ reels.
-  const winH = Math.round((cell * (hd ? 1.25 : 1.75)) / UNIT) * UNIT;
-  return { hd, art, cell, winW, winH };
+  const winW = art + (n === 1 ? 8 : n <= 3 ? 6 : 4) * UNIT;
+  // Part of the cells above and below shows motion; more for the small cells of five reels.
+  const winH = Math.round((cell * (scale === 2 ? 1.75 : 3.5)) / (2 * UNIT)) * 2 * UNIT;
+  return { scale, art, cell, winW, winH };
 }
 
-/** A cell's art: its item (Scale2x when big) or its luck token. */
-function cellArt(c: StripCell, hd: boolean): Art {
-  if (c.token !== null) {
-    if (c.token in LUCK_TOKENS) return hd ? luckTokenArtHd(c.token) : luckTokenArt(c.token as keyof typeof LUCK_TOKENS);
-    return uiIcon('clover', 'lg');
-  }
-  return hd ? itemArtHd(c.baseId) : itemArt(c.baseId);
+/** A cell's art: its item or its luck token, at the layout's scale. */
+function cellArt(c: StripCell, scale: ArtScale): Art {
+  return c.token !== null ? luckTokenArt(c.token, scale) : itemArt(c.baseId, scale);
 }
 
 let swooshId = 1;
@@ -131,7 +130,7 @@ export function WatchPanel() {
     const onStop = (r: Run, i: number, token: number | null, step: number) => {
       if (token !== null) {
         audio.token(step, token);
-        setTimeout(() => audio.respin(), 260);
+        setTimeout(() => audio.respin(), tokenHoldMs());
         haptics.impact('medium');
         setChain((c) => c.map((x, k) => (k === i ? chainSoFar(r.strips[i], r.reached[i]) : x)));
         setBursts((b) => [...b.slice(-6), { id: swooshId++, reel: i }]);
@@ -241,7 +240,7 @@ export function WatchPanel() {
                             {formatNumber(c.odds)}
                           </span>
                         )}
-                        <PixelArt art={cellArt(c, L.hd)} className={s.art} />
+                        <PixelArt art={cellArt(c, L.scale)} className={s.art} />
                       </div>
                     );
                   })}

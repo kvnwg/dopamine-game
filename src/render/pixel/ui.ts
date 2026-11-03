@@ -1,9 +1,10 @@
 /**
  * Pixel UI icons and battle effects. See docs/PIXEL_ART.md for the style rules.
  *
- * The UI shows every icon at 9 stage px per art pixel, so each size is drawn on its own: UI_SPRITES
- * (16 x 16, big spots), UI_NAV (10 x 10, the nav bar), UI_MD (about 7 x 7, HUD and map hexes) and
- * UI_SM (about 5 x 5, next to text). LUCK_TOKENS are the reels' luck multipliers (16 x 16).
+ * The UI shows every icon at 6 stage px per art pixel, so each size is drawn on its own: UI_SPRITES
+ * (16 x 16: the nav bar and big spots, and their Scale2x versions for the biggest), UI_MD (about
+ * 10 x 10: HUD, headers and map hexes), UI_SM (about 7 x 7, next to text) and UI_XS (about 5 x 5, tiny
+ * badges). LUCK_TOKENS are the reels' luck multipliers (16 x 16).
  */
 import { checkRows, fromRows, type Rows, type SheetEntry } from './buf';
 import { REF_COIN } from './reference';
@@ -628,14 +629,15 @@ export const UI_SPRITES: Record<UiIcon, Rows> = {
 };
 
 /*
- * The UI draws every icon at 9 stage px per art pixel (the battle's pixel size), so each size an icon
- * shows at is its own drawing: 5 x 5 next to text, 7 x 7 in the HUD and on map hexes, 10 x 10 in the
- * nav bar, and the 16 x 16 originals above for big spots. An icon missing from a set falls back to the
- * nearest size that has it (src/render/icons.ts).
+ * The UI draws every icon at 6 stage px per art pixel (the battle's pixel size), so each size an icon
+ * shows at is its own drawing: about 5 x 5 for tiny badges, 7 x 7 next to text, 10 x 10 in the HUD,
+ * headers and on map hexes, and the 16 x 16 originals above in the nav bar and big spots (their Scale2x
+ * versions for the biggest). An icon missing from a set falls back to the nearest size that has it
+ * (src/render/icons.ts).
  */
 
-/** Inline icons, about 5 x 5 (45 stage px): next to text on buttons, chips and prices. */
-export const UI_SM: Partial<Record<UiIcon, Rows>> = {
+/** Tiny badges, about 5 x 5 (30 stage px): the lock and the check on item tiles. */
+export const UI_XS: Partial<Record<UiIcon, Rows>> = {
   coin: [
     '.kkk.',
     'kYYyk',
@@ -787,7 +789,7 @@ export const UI_SM: Partial<Record<UiIcon, Rows>> = {
   ],
 };
 
-const MD_ARROW_UP: Rows = [
+const SM_ARROW_UP: Rows = [
   '...k...',
   '..kLk..',
   '.kLlGk.',
@@ -798,8 +800,8 @@ const MD_ARROW_UP: Rows = [
   '.kkkkk.',
 ];
 
-/** HUD and map icons, about 7 x 7 (63 stage px). */
-export const UI_MD: Partial<Record<UiIcon, Rows>> = {
+/** Inline icons, about 7 x 7 (42 stage px): next to text on buttons, chips and prices. */
+export const UI_SM: Partial<Record<UiIcon, Rows>> = {
   coin: [
     '..kkk..',
     '.kYYyk.',
@@ -910,8 +912,8 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     'k4k3k2k',
     '.kkkkk.',
   ],
-  arrowUp: MD_ARROW_UP,
-  arrowRight: turnRows(MD_ARROW_UP),
+  arrowUp: SM_ARROW_UP,
+  arrowRight: turnRows(SM_ARROW_UP),
   rebirth: [
     '...k...',
     '..kMk..',
@@ -1029,10 +1031,32 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     'kRwwwrk',
     '.kkkkk.',
   ],
+  tv: [
+    '.k...k.',
+    '..k.k..',
+    'kkkkkkk',
+    'kCcckTk',
+    'kcwUkyk',
+    'kcUukNk',
+    'kkkkkkk',
+  ],
 };
 
-/** Nav bar icons, 10 x 10 (90 stage px), and a few big spots that use the same size. */
-export const UI_NAV: Partial<Record<UiIcon, Rows>> = {
+const MD_ARROW_UP: Rows = [
+  '....kk....',
+  '...kLLk...',
+  '..kLLllk..',
+  '.kLLlllGk.',
+  'kLLllllGGk',
+  'kkkLllGkkk',
+  '..kLllGk..',
+  '..kLllGk..',
+  '..kGGGGk..',
+  '..kkkkkk..',
+];
+
+/** HUD, header and map icons, about 10 x 10 (60 stage px). */
+export const UI_MD: Partial<Record<UiIcon, Rows>> = {
   reel: [
     '.kkkkkkkk.',
     'keeeeeeeRk',
@@ -1057,18 +1081,8 @@ export const UI_NAV: Partial<Record<UiIcon, Rows>> = {
     'k221111xxk',
     '.kkkkkkkk.',
   ],
-  arrowUp: [
-    '....kk....',
-    '...kLLk...',
-    '..kLLllk..',
-    '.kLLlllGk.',
-    'kLLllllGGk',
-    'kkkLllGkkk',
-    '..kLllGk..',
-    '..kLllGk..',
-    '..kGGGGk..',
-    '..kkkkkk..',
-  ],
+  arrowUp: MD_ARROW_UP,
+  arrowRight: turnRows(MD_ARROW_UP),
   rebirth: [
     '..kkkkk...',
     '.kMMmmmk..',
@@ -1129,6 +1143,240 @@ export const UI_NAV: Partial<Record<UiIcon, Rows>> = {
     '.kkooookk.',
     '...kkkk...',
   ],
+  gem: [
+    '..kkkkkk..',
+    '.kAwAAaak.',
+    'kAwAAAaagk',
+    'kaaaaaaggk',
+    '.kaAAaagk.',
+    '..kaAagk..',
+    '...kagk...',
+    '....kk....',
+  ],
+  gear: [
+    '....kk....',
+    '..kk54kk..',
+    '.k5k54k4k.',
+    '.k554443k.',
+    'k544kk333k',
+    'k444kk332k',
+    '.k443332k.',
+    '.k3k32k2k.',
+    '..kk32kk..',
+    '....kk....',
+  ],
+  heart: [
+    '.kkk..kkk.',
+    'keeRkkeRRk',
+    'kewRRRRRrk',
+    'keRRRRRRrk',
+    'kRRRRRRrrk',
+    '.kRRRRRrk.',
+    '..kRRRrk..',
+    '...kRrk...',
+    '....kk....',
+  ],
+  sword: [
+    '........kk',
+    '.......kwk',
+    '......k54k',
+    '.....k54k.',
+    '..k.k54k..',
+    '.kYk54k...',
+    '..kyyk....',
+    '.kNkyOk...',
+    'kYk..kk...',
+    'kk........',
+  ],
+  shield: [
+    'kkkkkkkkkk',
+    'k55555554k',
+    'k5CccUUU3k',
+    'k5cccUUU3k',
+    'k5cccUUu3k',
+    'k4cccUuu3k',
+    '.k4ccUu3k.',
+    '..k4cu3k..',
+    '...k43k...',
+    '....kk....',
+  ],
+  bolt: [
+    '....kkkkk.',
+    '...kYyyOk.',
+    '..kYyyOk..',
+    '.kYyyykkk.',
+    'kYyyyyyOk.',
+    'kkkkyyyOk.',
+    '...kyyOk..',
+    '..kyOkk...',
+    '.kykk.....',
+    '.kk.......',
+  ],
+  power: [
+    '....kk....',
+    '...kYOk...',
+    '.kkkYOkkk.',
+    'kYOYYyyOOk',
+    '.kOYwYyOk.',
+    '.kOyYyyOk.',
+    'kOOOyyOOok',
+    '.kkkOokkk.',
+    '...kOok...',
+    '....kk....',
+  ],
+  lock: [
+    '...kkkk...',
+    '..k5443k..',
+    '..k5kk3k..',
+    '..k4kk3k..',
+    'kkkkkkkkkk',
+    'kYYYYYYyOk',
+    'kYyykkyyOk',
+    'kyyykkyyOk',
+    'kyOOOOOOok',
+    'kkkkkkkkkk',
+  ],
+  trash: [
+    '...kkkk...',
+    '.kkk54kkk.',
+    'k55555443k',
+    'k44444332k',
+    'kkkkkkkkkk',
+    '.k5k44k3k.',
+    '.k5k44k3k.',
+    '.k5k43k3k.',
+    '.k4k33k2k.',
+    '..kkkkkk..',
+  ],
+  potion: [
+    '...kkkk...',
+    '...kNnk...',
+    '...kCwk...',
+    '..kCwCCk..',
+    '.kLLLLLLk.',
+    'kwLlllllGk',
+    'kLlllllGGk',
+    'kllllllGGk',
+    '.kGGGGGGk.',
+    '..kkkkkk..',
+  ],
+  dice: [
+    '.kkkkkkk.',
+    'kwwwwwwWk',
+    'kwxwwwxWk',
+    'kwwwwwwWk',
+    'kwwwxwwWk',
+    'kwwwwwwWk',
+    'kwxwwwxWk',
+    'kWWWWWW5k',
+    '.kkkkkkk.',
+  ],
+  book: [
+    'kkkkkkkkk',
+    'kVvmMmmVk',
+    'kVvmmYmVk',
+    'kVvmYyOVk',
+    'kVvmmOmVk',
+    'kVvmmmmVk',
+    'kVvVVVVVk',
+    'kvkWWWWTk',
+    'kvvvvvvvk',
+    '.kkkkkkk.',
+  ],
+  star: [
+    '....kk....',
+    '...kYyk...',
+    'kkkYYyykkk',
+    'kYYyyyyyOk',
+    '.kyyyyyyk.',
+    '..kyyyyk..',
+    '..kyyyyk..',
+    '.kyyOOyyk.',
+    '.kyOkkyOk.',
+    '.kkk..kkk.',
+  ],
+  check: [
+    '.......kk.',
+    '......kLlk',
+    '.....kLlGk',
+    'kk..kLlGk.',
+    'kLkkLlGk..',
+    'kLlLlGk...',
+    '.kGllGk...',
+    '..kGGk....',
+    '...kk.....',
+  ],
+  clock: [
+    '..kkkkkk..',
+    '.kccccUUk.',
+    'kcwwwwwwUk',
+    'kcwwwxwwUk',
+    'kcwwwxwwuk',
+    'kcwwwxxwuk',
+    'kcwwwwwwuk',
+    'kUwwwww5uk',
+    '.kUUuuuuk.',
+    '..kkkkkk..',
+  ],
+  skull: [
+    '..kkkkkk..',
+    '.kwWWWWTk.',
+    'kwWWWWWWTk',
+    'kWkkWWkkTk',
+    'kWkkWWkkTk',
+    'kTWWkkWWTk',
+    '.kTWWWWTk.',
+    '.kWkWkWTk.',
+    '..kkkkkk..',
+  ],
+  reelGold: [
+    '.kkkkkkkk.',
+    'kYYYYYYYyk',
+    'kYkkkkkkOk',
+    'kYkRRRrkOk',
+    'kYkWWWRkOk',
+    'kYkWWRWkOk',
+    'kYkWRWWkOk',
+    'kYkkkkkkOk',
+    'kyOOOOOOOk',
+    '.kkkkkkkk.',
+  ],
+  backpack: [
+    '...kkkk...',
+    '..kNkkNk..',
+    '.kTTTTtNk.',
+    'ktttttttNk',
+    'knnnnnnnnk',
+    'ktNTyyTNnk',
+    'ktNTttTNnk',
+    'ktNnnnnNnk',
+    'knnnnnnnnk',
+    '.kkkkkkkk.',
+  ],
+  drop: [
+    '...kk...',
+    '..keRk..',
+    '..keRk..',
+    '.keRRrk.',
+    'keRRRRrk',
+    'kewRRRrk',
+    'kewRRRrk',
+    'keRRRrrk',
+    '.krrrrk.',
+    '..kkkk..',
+  ],
+  target: [
+    '...kkkk...',
+    '.kkeeRRkk.',
+    '.kewwwwRk.',
+    'kewRRRRwRk',
+    'kewRwwRwrk',
+    'kRwRwwrwrk',
+    'kRwRrrr5rk',
+    '.kRw555rk.',
+    '.kkrrrrkk.',
+    '...kkkk...',
+  ],
 };
 
 /** 3 x 5 numerals for the luck tokens ('#' takes the token's digit color). */
@@ -1184,16 +1432,19 @@ export const LUCK_TOKENS: Record<2 | 3 | 5 | 10, Rows> = {
   10: luckToken(10, 'y', 'O', 'w'),
 };
 
-/** Small UI pieces: the payline arrows on the reels, the close cross, a sparkle for inline text. */
+/** Small UI pieces: the payline arrows on the reels, the close cross (10 x 10), a sparkle for inline text. */
 export const UI_BITS: Record<string, Rows> = {
   closeX: [
-    'kk...kk',
-    'kwk.kwk',
-    '.kwkwk.',
-    '..kwk..',
-    '.kwkwk.',
-    'kwk.kwk',
-    'kk...kk',
+    '.kk....kk.',
+    'kwwk..kwwk',
+    'kwwwkkwwwk',
+    '.kwwwwwwk.',
+    '..kwwwwk..',
+    '..kwwwwk..',
+    '.kwwwwwwk.',
+    'kwwwkkwwwk',
+    'kwwk..kwwk',
+    '.kk....kk.',
   ],
   sparkle: [
     '..k..',
@@ -1214,8 +1465,9 @@ export const UI_BITS: Record<string, Rows> = {
 };
 
 /**
- * Battle effects. The slash opens to the left (a swing from the hero on the left, hitting right);
- * draw dumpsterLid at (bodyX - 1, bodyY - 5) so its bottom outline sits on the body's top outline.
+ * Battle effects, and the Dumpster Level popup's dumpster. The slash opens to the left (a swing from the
+ * hero on the left, hitting right). The dumpster (60 x 32, lid 62 x 9) is drawn for the UI's 6 px grid:
+ * draw dumpsterLid at (bodyX - 1, bodyY - 8) so its bottom outline sits on the body's top outline.
  */
 export const FX = {
   slash: [
@@ -1310,44 +1562,55 @@ export const FX = {
   ] as Rows,
   confetti: [['eR', 'RR', 'Rr'], ['Yyy', 'yyO'], ['cUU', 'UUu', 'Uuu'], ['lG', 'GG', 'Gg']] as Rows[],
   dumpsterBody: [
-    '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-    'kLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLk',
-    'kllllllllllllllllllllllllllllllllllllllk',
-    'kllllllllllllllllllllllllllllllllllllllk',
-    'kggggggggggggggggggggggggggggggggggggggk',
-    'klGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgk',
-    'klxxxxGGlGgGGGGGGGlGgGGGGGGGlGgGGGxxxxgk',
-    'klxxxxGGlGgGGGGGGGlGgGGGGWGGlGgGGGxxxxgk',
-    'klGGGGGGlGgGGGGGGGlGgGGWGGGWlGgGGGGGGGgk',
-    '.klGGGGGlGgGGGGGGGlGgGGGGGGGlGgGGGGGGgk.',
-    '.klGGGGGlGgGGGGGGGlGgGGGWWWGlGgGGGGGGgk.',
-    '.klGGGGGlGgGGGGGGGlGgGGGWWWGlGgGGGGGGgk.',
-    '.klGGGGGlGgGGGGGGGlGgGGGGGGGlGgGGGGGGgk.',
-    '.klGGGGGlGgGGGGGGGlGgGGGGGGGlGgGGGGGGgk.',
-    '.klGGGGGlGgGGGGGGGlGgGGGGGGGlGgGGGGGGgk.',
-    '.klGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgk.',
-    '.kggggggggggggggggggggggggggggggggggggk.',
-    '.kggggggggggggggggggggggggggggggggggggk.',
-    '..kggggggggggggggggggggggggggggggggggk..',
-    '...kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk...',
-    '....k131k......................k131k....',
-    '....k211k......................k211k....',
-    '.....kkk........................kkk.....',
-    '........................................',
+    '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+    'kLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLk',
+    'kllllllllllllllllllllllllllllllllllllllllllllllllllllllllllk',
+    'kllllllllllllllllllllllllllllllllllllllllllllllllllllllllllk',
+    'kllllllllllllllllllllllllllllllllllllllllllllllllllllllllllk',
+    'kggggggggggggggggggggggggggggggggggggggggggggggggggggggggggk',
+    'klGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgk',
+    'klGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgk',
+    'klGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGGgk',
+    'klGxxxxxxGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGxxxxxxGgk',
+    'klGxxxxxxGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGxxxxxxGgk',
+    'klGxxxxxxGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGxxxxxxGgk',
+    'klGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGWWGGGGGlGGgGGGGGGGGGGGGgk',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGWGGWGGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGWGGGGWGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGWGGGGGGWGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgWWWWGGWWWWGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGlGGgGGGGGGGGGGGgk.',
+    '.klGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgk.',
+    '.kggggggggggggggggggggggggggggggggggggggggggggggggggggggggk.',
+    '.kggggggggggggggggggggggggggggggggggggggggggggggggggggggggk.',
+    '.kggggggggggggggggggggggggggggggggggggggggggggggggggggggggk.',
+    '..kggggggggggggggggggggggggggggggggggggggggggggggggggggggk..',
+    '...kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk...',
+    '......k13331k..................................k13331k......',
+    '......k13311k..................................k13311k......',
+    '......k21111k..................................k21111k......',
+    '.......kkkkk....................................kkkkk.......',
   ] as Rows,
   dumpsterLid: [
-    '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-    'kLLLLLLLLLLLLLLLLLLLLLLLLLLLLLlllllllllllk',
-    'kllllllllllllllllllllllllllllllllllllllllk',
-    'kGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGk',
-    'kggggggggggggggggggggggggggggggggggggggggk',
-    '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+    '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+    'kLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLlllllllllllllllllk',
+    'kllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllk',
+    'kllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllk',
+    'kGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGk',
+    'kGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGk',
+    'kggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggk',
+    'kggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggk',
+    '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
   ] as Rows,
 };
 
 export function sheet(): SheetEntry[] {
   const all: [string, Rows][] = Object.entries(UI_SPRITES).map(([name, rows]) => [`ui_${name}`, rows]);
-  for (const [set, icons] of [['nav', UI_NAV], ['md', UI_MD], ['sm', UI_SM]] as const) {
+  for (const [set, icons] of [['md', UI_MD], ['sm', UI_SM], ['xs', UI_XS]] as const) {
     for (const [name, rows] of Object.entries(icons)) all.push([`${set}_${name}`, rows as Rows]);
   }
   for (const [x, rows] of Object.entries(LUCK_TOKENS)) all.push([`token_x${x}`, rows]);

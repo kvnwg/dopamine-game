@@ -3,7 +3,7 @@ import { DATA } from '../src/data';
 import { formatNumber, formatPct } from '../src/core';
 import { rgb } from '../src/render/pixel/buf';
 import {
-  CHARSET, FACES, TEXT_INK, fontChars, glyph, gradientRows, lineWidth, linePitch, renderPlate, renderText, wrapBalanced, wrapText,
+  CHARSET, FACES, TEXT_INK, fontChars, glyph, gradientRows, lineWidth, linePitch, renderPlate, renderText, stackText, wrapBalanced, wrapText,
   type Face,
 } from '../src/render/pixel/font';
 
@@ -34,17 +34,30 @@ describe('battle bitmap font', () => {
     }
     expect(FACES.small.h).toBe(5);
     expect(FACES.big.h).toBe(7);
+    expect(FACES.huge.h).toBe(9);
   });
 
-  it('both faces draw the same characters: capitals, digits and the battle punctuation', () => {
+  it('every face draws the same characters: capitals, digits and the battle punctuation', () => {
     const need = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?:'-+×/%·";
     for (const [name, face] of faces) {
       for (const ch of need) expect(face.glyphs[ch], `${name} draws ${ch}`).toBeDefined();
       expect(Object.keys(face.glyphs).sort(), name).toEqual([...CHARSET].sort());
     }
-    // Most letters are 3 wide in the small face and 5 in the big one (a few are narrower or wider).
+    // Most letters are 3 wide in the small face, 5 in the big one and 7 in the huge one (a few are narrower or wider).
     expect(FACES.small.glyphs.A[0]).toHaveLength(3);
     expect(FACES.big.glyphs.A[0]).toHaveLength(5);
+    expect(FACES.huge.glyphs.A[0]).toHaveLength(7);
+  });
+
+  it('the huge face is bold: its letters and digits stand on stems two pixels wide', () => {
+    for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') {
+      const rows = FACES.huge.glyphs[ch];
+      // Every run of ink in the glyph's middle row is at least two pixels wide, except a diagonal's.
+      const runs = rows.slice(1, -1).flatMap((r) => r.split('.').filter((x) => x.length > 0).map((x) => x.length));
+      const wide = runs.filter((n) => n >= 2).length;
+      expect(wide / runs.length, `${ch} is mostly two-pixel strokes`).toBeGreaterThanOrEqual(0.6);
+    }
+    expect(FACES.huge.glyphs.H).toEqual(['##...##', '##...##', '##...##', '##...##', '#######', '##...##', '##...##', '##...##', '##...##']);
   });
 
   it('shows lowercase as capitals, folds typographic quotes and dashes, and draws ? for anything else', () => {
@@ -112,6 +125,26 @@ describe('battle bitmap font', () => {
     expect(colorAt(shadow, 1, shadow.h - 1)).toEqual(ink);
     const bare = renderText('HI', { face: 'small', fill: '#ffffff', ink: null });
     expect([bare.w, bare.h]).toEqual([lineWidth('HI', FACES.small), 5]);
+  });
+
+  it('sets a kicker in a smaller face over a title, their outlines sharing a row', () => {
+    const style = { face: 'huge', lead: 'big', fill: '#ffffff', shadow: true } as const;
+    const card = renderText('World 1\nSunny Suburbs', style);
+    const kicker = renderText('World 1', { face: 'big', fill: '#ffffff' });
+    const title = renderText('Sunny Suburbs', { face: 'huge', fill: '#ffffff', shadow: true });
+    expect(card.w).toBe(Math.max(kicker.w, title.w));
+    expect(card.h).toBe(kicker.h + title.h - 1);
+    expect(kicker.h).toBe(7 + 2);
+    expect(title.h).toBe(9 + 2 + 1);
+    // Without a line break, or without a kicker face, it is plain text.
+    expect(renderText('Sunny Suburbs', style).px).toEqual(title.px);
+    // stackText centers, and opaque pixels win where the parts overlap.
+    const a = renderText('A', { face: 'big', fill: '#ff0000' });
+    const b = renderText('WIDE', { face: 'big', fill: '#00ff00' });
+    const s = stackText([a, b]);
+    expect([s.w, s.h]).toEqual([b.w, a.h + b.h - 1]);
+    expect(colorAt(s, Math.floor((b.w - a.w) / 2) + 1, 1), "A's top-left stroke, centered").toEqual(colorAt(a, 1, 1));
+    expect(colorAt(s, 1, a.h), "the second part's first glyph row").toEqual([0, 255, 0]);
   });
 
   it('stacks wrapped lines one pitch apart, centered by default', () => {

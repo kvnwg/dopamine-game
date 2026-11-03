@@ -1,17 +1,19 @@
 /**
  * The dungeon world's battle backdrop, composed from 0x72's DungeonTileset II (dungeonTiles.ts, made
  * by tools/packs/dungeon.py). Tiles are drawn 1:1 (never scaled; only cropped and stacked) in the
- * pack's own colors, so the set is not graded.
+ * pack's own colors, so the set is not graded. On the 6 px grid a 16 px tile is 96 screen px.
  *
- * The pack is drawn for a top-down 3/4 view; here it becomes a hall seen from the side. Rows are
- * scene rows (sceneryTypes.ts: the 82-row scene frame, shown SCENE_Y rows down the battle view):
- *  - far: the hall's upper dark (it reaches SCENE_Y rows above the scene, up to the top of the view):
- *    a stone beam resting on the column capitals and chains hanging out of the dark above it; then
- *    darkness above the back wall, the wall's stone lip with gargoyle heads and column capitals
- *    rising out of it, and the brick face down to the floor line: banners, holes, an arched door,
- *    two gargoyle fountains (water and lava) pouring into basins on the floor, engaged columns.
- *  - mid: a few props standing against the wall on the floor line (crates, a chest, a skull).
- *  - ground: one row of floor slabs; fighters stand 6 rows into it.
+ * The pack is drawn for a top-down 3/4 view; here it becomes a hall seen from the side, filling the
+ * 180 x 160 view. Rows are rows of the 123-row scene frame (sceneryTypes.ts: SCENE_FRAME, the fighters'
+ * feet on row 100; the battle shows row 0 at view row 37):
+ *  - far: the hall's vault (it reaches UP rows above the frame, up to the top of the view): stone ribs
+ *    arching from capital to capital, a fainter row of ribs further back between them and chains
+ *    hanging out of the dark; then the back wall's stone lip with gargoyle heads and column capitals
+ *    rising out of it, and the brick face, nearly five tiles high, down to the floor line: banners,
+ *    holes, an arched door, torches, two gargoyle fountains (water and lava) pouring down the wall into
+ *    basins on the floor, and engaged columns.
+ *  - mid: a few props standing against the wall on the floor line (crates, a chest, skulls).
+ *  - ground: two rows of floor slabs; fighters stand 7 rows into the first.
  *  - fg: the near wall's lip along the bottom edge of the view.
  * Every layer is TILE_W wide and wraps: things are placed with wrapX. The opening shot (scroll0)
  * puts a column behind the hero, plain wall where the blows land and the banners and water fountain
@@ -20,26 +22,32 @@
 import { blank, blit, crop, downsample2, fromRows, type PixelBuf, type Rows, type SheetEntry } from '../buf';
 import { frameBuf, fromIndexed, KEYS } from '../indexed';
 import { PROPS } from './props';
-import { SCENE_H, SCENE_Y, type LightSpot, type ScenerySet } from '../sceneryTypes';
+import { SCENE_FRAME, frameTop, type LightSpot, type ScenerySet } from '../sceneryTypes';
 import { DUNGEON_PAL, DUNGEON_TILES } from './dungeonTiles';
 
 /** The pack's grid. */
 const T = 16;
 /** Width of every layer: 16 pack tiles. */
 const TILE_W = 16 * T;
-/** Scene row where the floor starts (the far layer ends here), 7 rows above SCENE_FEET_ROW (67). */
-const FLOOR_Y = 60;
-/** The ground layer: floor slabs down to the bottom of the scene (a second row peeks in at the bottom). */
-const GROUND_H = SCENE_H - FLOOR_Y;
-/** Rows the far layer reaches above the scene frame (the top of the battle view). */
-const UP = SCENE_Y;
-/** Scene row where the back wall's stone lip starts (it is 4 rows tall); bricks start below it. */
-const LIP_Y = 8;
-/** First brick row under the lip. Bricks come in 4-row courses lined up with it. */
+/** The set's frame: SCENE_FRAME, its last row the view's last. */
+const FRAME = SCENE_FRAME;
+/** Frame row where the floor starts (the far layer ends here), 7 rows above the feet (row 100). */
+const FLOOR_Y = 93;
+/** The ground layer: floor slabs down to the bottom of the frame (a second row, cut off by the view's edge). */
+const GROUND_H = FRAME.h - FLOOR_Y;
+/** Rows the far layer reaches above the frame (up to the top of the battle view). */
+const UP = frameTop({ frame: FRAME });
+/** Frame row where the back wall's stone lip starts (it is 4 rows tall); bricks start below it. */
+const LIP_Y = 13;
+/** First brick row under the lip. */
 const WALL_Y = LIP_Y + 4;
-/** The mid layer's top row in the scene (room for two stacked crates); its bottom row sits on the floor line. */
-const MID_Y = 12;
-/** The near wall's lip (4 rows) along the bottom of the scene. */
+/** The engaged columns: capital, 9 ringed segments, foot (88 rows), standing on the floor line. */
+const COLUMN = { segments: 9, plain: 4 } as const;
+const COLUMN_TOP = FLOOR_Y - (25 + COLUMN.segments * (3 + COLUMN.plain));
+/** The mid layer: room for two stacked crates; its bottom row sits on the floor line. */
+const MID_H = 48;
+const MID_Y = FLOOR_Y - MID_H;
+/** The near wall's lip (4 rows) along the bottom of the frame. */
 const FG_H = 4;
 
 const VOID = '#222222';
@@ -157,10 +165,12 @@ const INSETS: readonly (readonly [string, number, number, boolean?])[] = [
   ['wall_banner_red', 4, WALL_Y, true],
   ['wall_hole_2', 5, WALL_Y + 4, true],
   ['wall_hole_1', 6, FLOOR_Y - T],
+  ['wall_hole_2', 6, WALL_Y + 36],
   ['wall_banner_blue', 7, WALL_Y],
   ['wall_banner_green', 9, WALL_Y],
   ['wall_hole_1', 12, WALL_Y + 8, true],
   ['wall_banner_yellow', 13, WALL_Y],
+  ['wall_hole_1', 15, WALL_Y + 40, true],
   ['wall_banner_yellow', 15, WALL_Y, true],
 ];
 
@@ -179,12 +189,12 @@ export const TORCH: Rows = [
   '..1..',
 ];
 
-/** Torch positions on the back wall (top-left of TORCH, far-layer pixels): clear of banners, holes and the door. */
+/** Torch positions on the back wall (top-left of TORCH: x in far-layer pixels, frame rows): clear of banners, holes and the door. */
 export const TORCHES: ReadonlyArray<readonly [number, number]> = [
-  [20, 28],
-  [98, 28],
-  [147, 34],
-  [200, 44],
+  [20, 44],
+  [98, 44],
+  [147, 52],
+  [200, 62],
 ];
 
 /** Fountain columns (far-layer x of each gargoyle's 16 px bay). */
@@ -203,12 +213,12 @@ function farLights(): LightSpot[] {
 }
 
 /**
- * The far layer: the hall's upper dark (UP rows, above the scene frame) over the back wall (scene rows
- * 0 to FLOOR_Y - 1, unchanged).
+ * The far layer: the vault (the UP rows above the frame and the frame's rows over the lip) and the back
+ * wall (frame rows 0 to FLOOR_Y - 1), its columns standing in front of the ribs' feet.
  */
 function farLayer(): PixelBuf {
   const b = blank(TILE_W, UP + FLOOR_Y);
-  blit(b, upperDark(), 0, 0);
+  blit(b, vault(), 0, 0);
   blit(b, backWall(), 0, UP);
   return b;
 }
@@ -235,71 +245,92 @@ const ARCHES: ReadonlyArray<readonly [number, number]> = [
   [8, 8 * T + 8],
   [8 * T + 8, TILE_W + 8],
 ];
-/** Chains hanging from the ribs: far-layer x and how many link pairs. */
-const CHAINS: ReadonlyArray<readonly [number, number]> = [
-  [43, 1],
-  [71, 2],
-  [99, 1],
-  [171, 1],
-  [199, 2],
-  [227, 1],
+/** Fainter ribs further back, between the near ones (their feet hidden behind the wall's lip). */
+const BACK_ARCHES: ReadonlyArray<readonly [number, number]> = [
+  [4 * T + 8, 12 * T + 8],
+  [12 * T + 8, TILE_W + 4 * T + 8],
 ];
-/** Rib stone, top to bottom: lit edge, face, underside. */
+/** Chains hanging from the near ribs: far-layer x and how many link pairs. */
+const CHAINS: ReadonlyArray<readonly [number, number]> = [
+  [37, 2],
+  [57, 4],
+  [79, 3],
+  [101, 2],
+  [165, 2],
+  [185, 3],
+  [207, 4],
+  [229, 2],
+];
+/** Rib stone, top to bottom: lit edge, face, underside; the back ribs in the wall's dark tones. */
 const RIB = ['#775c55', '#775c55', '#483b3a'] as const;
+const BACK_RIB = ['#483b3a', '#38262d', '#38262d'] as const;
+/** The layer row the near ribs spring from: the capitals' top. Their crowns are VAULT_RISE rows higher. */
+const RIB_FOOT = UP + COLUMN_TOP - 1;
+const VAULT_RISE = RIB_FOOT - 4;
 
 /**
- * The UP rows above the scene: the hall rises into darkness under a vault. Its ribs arch from capital
- * to capital over the back wall, and chains hang from them into the dark.
+ * Draws arches of rib stone (each [left foot, right foot], `rise` rows from foot to crown) into `b`,
+ * three rows thick: `tones` top to bottom. Returns each column's row just under the rib (wrapped x).
  */
-function upperDark(): PixelBuf {
-  const b = blank(TILE_W, UP);
-  put(b, solid(TILE_W, UP, VOID), 0, 0);
-  const dot = RIB.map((c) => solid(1, 1, c));
-  /** The rib's top row at column x (wrapped into the tile). */
-  const ribTop = new Map<number, number>();
-  for (const [x0, x1] of ARCHES) {
+function ribs(b: PixelBuf, arches: ReadonlyArray<readonly [number, number]>, foot: number, rise: number, tones: readonly string[]): Map<number, number> {
+  const dot = tones.map((c) => solid(1, 1, c));
+  const under = new Map<number, number>();
+  for (const [x0, x1] of arches) {
     const cx = (x0 + x1) / 2;
     const rx = (x1 - x0) / 2;
-    const ry = UP - 5;
-    const top = (x: number) => Math.round(UP - 1 - ry * Math.sqrt(Math.max(0, 1 - ((x + 0.5 - cx) / rx) ** 2)));
+    const top = (x: number) => Math.round(foot - rise * Math.sqrt(Math.max(0, 1 - ((x + 0.5 - cx) / rx) ** 2)));
     for (let x = x0; x < x1; x++) {
       const y = top(x);
       // Down to the lower neighbor's edge, so the steep feet stay one connected band.
       const low = Math.max(y, Math.min(top(x - 1), top(x + 1)));
       for (let yy = y; yy <= low + 2; yy++) put(b, dot[Math.min(2, Math.max(0, yy - low))], x, yy);
-      ribTop.set(((x % TILE_W) + TILE_W) % TILE_W, low + 3);
+      under.set(((x % TILE_W) + TILE_W) % TILE_W, low + 3);
     }
   }
+  return under;
+}
+
+/**
+ * The hall rises into darkness under a vault, from the top of the view down to the wall's lip: the
+ * near ribs arch from capital to capital, fainter ones further back between them, and chains hang
+ * from the near ribs into the dark.
+ */
+function vault(): PixelBuf {
+  const h = UP + LIP_Y;
+  const b = blank(TILE_W, h);
+  put(b, solid(TILE_W, h, VOID), 0, 0);
+  ribs(b, BACK_ARCHES, h + 2, VAULT_RISE - 8, BACK_RIB);
+  const under = ribs(b, ARCHES, RIB_FOOT, VAULT_RISE, RIB);
   const link = fromIndexed(CHAIN, DUNGEON_PAL);
   const hook = fromIndexed(HOOK, DUNGEON_PAL);
   for (const [x, pairs] of CHAINS) {
-    let y = ribTop.get(x + 1) ?? 0;
+    let y = under.get(x + 1) ?? 0;
     for (let k = 0; k < pairs; k++, y += link.h) put(b, link, x, y);
     put(b, hook, x, y);
   }
   return b;
 }
 
-/** The back wall in scene rows 0 to FLOOR_Y - 1 (the original far layer). */
+/** The back wall in frame rows 0 to FLOOR_Y - 1. */
 function backWall(): PixelBuf {
   const b = blank(TILE_W, FLOOR_Y);
   BRICKS.forEach(([shift, flip], i) => {
     for (let y = FLOOR_Y - T + shift; y > -T; y -= T) put(b, tile('wall_mid'), i * T, y, flip);
   });
-  // Darkness above the wall, then the lip along its top.
-  put(b, solid(TILE_W, LIP_Y, VOID), 0, 0);
+  // Nothing above the wall (the vault shows there), then the lip along its top.
+  b.px.fill(0, 0, LIP_Y * TILE_W * 4);
   for (let x = 0; x < TILE_W; x += T) put(b, tile('wall_top_mid'), x, LIP_Y - 12);
   for (const [name, bay, y, flip] of INSETS) put(b, tile(name), bay * T, y, flip);
   // Fountains: the top tile's lip lines up with the wall's, the basin sits on the floor line
-  // (the face and basin take 16 of the rows under the lip; the stream falls the other 24).
+  // (the face and basin take 16 of the rows under the lip; the stream falls the other 60).
   const courses = (FLOOR_Y - WALL_Y - 16) / 4;
   put(b, fountain('blue', 2, courses), WATER_X, LIP_Y - 12);
   put(b, fountain('red', 3, courses), LAVA_X, LIP_Y - 12);
   const torch = fromRows(TORCH);
   for (const [x, y] of TORCHES) put(b, torch, x, y);
   stand(b, door(), 10 * T - 4, FLOOR_Y - 1);
-  // Engaged columns, 60 rows tall: capital above the lip from row 0, foot on the floor line.
-  const col = column(5, 4);
+  // Engaged columns, 88 rows tall: the capital over the lip (from row COLUMN_TOP), the foot on the floor line.
+  const col = column(COLUMN.segments, COLUMN.plain);
   stand(b, col, 0, FLOOR_Y - 1);
   stand(b, col, 8 * T, FLOOR_Y - 1);
   // Cobwebs (from the icon pack) strung in two corners where a column meets the wall's lip.
@@ -312,7 +343,7 @@ function backWall(): PixelBuf {
 // ------------------------------------------------------------------ mid: props against the wall
 
 function midLayer(): PixelBuf {
-  const h = FLOOR_Y - MID_Y;
+  const h = MID_H;
   const b = blank(TILE_W, h);
   const base = h - 1;
   const crate = rowsOf('crate', 3, 23);
@@ -361,14 +392,15 @@ function fgLayer(): PixelBuf {
 // ------------------------------------------------------------------ the set
 
 export const DUNGEON: ScenerySet = {
+  frame: FRAME,
   tileW: TILE_W,
   layers: {
     far: { y: -UP, h: UP + FLOOR_Y },
-    mid: { y: MID_Y, h: FLOOR_Y - MID_Y },
+    mid: { y: MID_Y, h: MID_H },
     ground: { y: FLOOR_Y, h: GROUND_H },
-    fg: { y: SCENE_H - FG_H, h: FG_H },
+    fg: { y: FRAME.h - FG_H, h: FG_H },
   },
-  scroll0: { far: 240, mid: 254, ground: 0, fg: 0 },
+  scroll0: { far: 212, mid: 254, ground: 0, fg: 0 },
   sky: false,
   graded: false,
   far: farLayer,

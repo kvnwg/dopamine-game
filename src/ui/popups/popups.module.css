@@ -1,4 +1,4 @@
-/* Popups. Pixel-ish sizes are art pixels (var(--px) = 9 stage px). */
+/* Popups. Pixel-ish sizes are art pixels (var(--px) = 6 stage px). */
 .overlay {
   position: absolute;
   inset: 0;
@@ -37,7 +37,7 @@
   --rbl: #8fd0ff;
   flex: none;
   margin: calc(-1 * var(--px)) calc(-1 * var(--px)) 0;
-  padding: calc(2 * var(--px)) 108px;
+  padding: calc(3 * var(--px)) 108px;
   border: var(--px) solid var(--ink);
   background: linear-gradient(180deg, var(--rbl) 0 var(--px), var(--rb) var(--px) calc(100% - 2 * var(--px)), var(--rbd) calc(100% - 2 * var(--px)) 100%);
   text-align: center;
@@ -57,11 +57,11 @@
 }
 .close {
   position: absolute;
-  right: calc(-3 * var(--px));
-  top: calc(-3 * var(--px));
+  right: calc(-4 * var(--px));
+  top: calc(-4 * var(--px));
   z-index: 2;
-  width: calc(11 * var(--px));
-  height: calc(11 * var(--px));
+  width: calc(16 * var(--px));
+  height: calc(16 * var(--px));
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #ff8a80 0 var(--px), #ef5350 var(--px) calc(100% - 2 * var(--px)), #b52f35 calc(100% - 2 * var(--px)) 100%);
@@ -72,7 +72,7 @@
   box-shadow: var(--pixel-edge);
 }
 .body {
-  padding: calc(3 * var(--px)) calc(4 * var(--px)) calc(4 * var(--px));
+  padding: calc(5 * var(--px)) calc(6 * var(--px)) calc(6 * var(--px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -95,7 +95,7 @@
   color: var(--ink);
 }
 .inset {
-  padding: var(--px) calc(2 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px));
   border: var(--px) solid #d9c7a2;
   background: #f6ead1;
 }
@@ -103,22 +103,22 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: calc(3 * var(--px));
-  margin-top: calc(4 * var(--px));
+  gap: calc(4 * var(--px));
+  margin-top: calc(6 * var(--px));
 }
 
 /* ------------------------------------------------------------ item detail */
 .itemHead {
   display: flex;
   align-items: center;
-  gap: calc(3 * var(--px));
+  gap: calc(5 * var(--px));
 }
 .itemHeadText {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
 }
 .itemName {
   font-family: var(--font-display);
@@ -143,10 +143,10 @@
 .up,
 .down,
 .same {
-  height: calc(5 * var(--px));
-  padding: 0 var(--px);
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px));
   font-size: 26px;
-  line-height: calc(5 * var(--px));
+  line-height: calc(7 * var(--px));
   box-shadow: var(--pixel-edge);
   color: #fff;
   -webkit-text-stroke: 4px var(--ink);
@@ -156,7 +156,7 @@
 .down { background: #ef5350; }
 .same { background: #9a9aa6; }
 .stats {
-  margin-top: calc(3 * var(--px));
+  margin-top: calc(5 * var(--px));
   padding: var(--px) 0;
   border: var(--px) solid #d9c7a2;
   background: #f6ead1;
@@ -165,7 +165,7 @@
 .statRow {
   display: flex;
   justify-content: space-between;
-  padding: 6px calc(2 * var(--px));
+  padding: 6px calc(3 * var(--px));
   font-size: 28px;
   font-weight: 900;
 }
@@ -181,17 +181,17 @@
 .mintPerk {
   display: flex;
   align-items: center;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
   margin-top: var(--px);
-  padding: 0 calc(2 * var(--px));
+  padding: 0 calc(3 * var(--px));
   font-size: 26px;
   color: #b8860b;
 }
 .enchantList {
-  margin-top: calc(2 * var(--px));
+  margin-top: calc(3 * var(--px));
   display: flex;
   flex-direction: column;
-  gap: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
   padding-left: var(--px);
 }
 .enchantRow {
@@ -203,12 +203,12 @@
 }
 .enchantChip {
   flex: none;
-  height: calc(4 * var(--px));
-  padding: 0 var(--px);
+  height: calc(6 * var(--px));
+  padding: 0 calc(2 * var(--px));
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
   font-size: 26px;
-  line-height: calc(4 * var(--px));
+  line-height: calc(6 * var(--px));
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -234,8 +234,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: calc(2 * var(--px));
-  margin-bottom: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
+  margin-bottom: calc(3 * var(--px));
 }
 .luckTotal {
   font-family: var(--font-display);
@@ -274,17 +274,17 @@
   paint-order: stroke fill;
 }
 
-/* ------------------------------------------------------------ dumpster upgrade: the dumpster at 9 px per pixel, lid on top */
+/* ------------------------------------------------------------ dumpster upgrade: the dumpster at 6 px per pixel, lid on top */
 .binHero {
   position: relative;
-  width: calc(42 * var(--px));
-  height: calc(29 * var(--px));
+  width: calc(62 * var(--px));
+  height: calc(40 * var(--px));
   margin: 0 auto;
 }
 .binHeroBody {
   position: absolute;
   left: var(--px);
-  top: calc(5 * var(--px));
+  top: calc(8 * var(--px));
 }
 .binHeroLid {
   position: absolute;
@@ -295,8 +295,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: calc(2 * var(--px));
-  margin-top: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
+  margin-top: calc(3 * var(--px));
   font-family: var(--font-display);
   font-size: 36px;
   color: #2f8a1c;
@@ -305,8 +305,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: calc(2 * var(--px));
-  margin-top: calc(3 * var(--px));
+  gap: calc(3 * var(--px));
+  margin-top: calc(4 * var(--px));
   font-family: var(--font-display);
   font-size: 64px;
 }
@@ -315,45 +315,48 @@
 .pile {
   display: flex;
   justify-content: center;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
 }
 .rewardList {
   display: flex;
   flex-direction: column;
-  gap: calc(2 * var(--px));
-  margin: calc(2 * var(--px)) auto 0;
+  gap: calc(3 * var(--px));
+  margin: calc(3 * var(--px)) auto 0;
   width: fit-content;
 }
 .rewardRow {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
   font-family: var(--font-display);
   font-size: 44px;
 }
 
 /* ------------------------------------------------------------ codex */
 .codexSlot {
-  margin-top: calc(2 * var(--px));
+  margin-top: calc(3 * var(--px));
 }
 .codexRow {
   display: flex;
   align-items: center;
   gap: var(--px);
-  padding: 6px var(--px);
+  padding: 6px calc(2 * var(--px));
 }
 .codexRow:nth-child(odd) {
   background: rgba(122, 106, 96, 0.08);
 }
 .codexName {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
   font-size: 26px;
 }
 /* One rarity: not found yet, a faint square; found, its color in an ink frame. */
 .pip {
   flex: none;
-  width: calc(3 * var(--px));
-  height: calc(3 * var(--px));
+  width: calc(4 * var(--px));
+  height: calc(4 * var(--px));
   border: var(--px) solid #d9c7a2;
   background: #efe3c8;
 }
@@ -366,7 +369,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(2 * var(--px)) var(--px);
+  padding: calc(3 * var(--px)) calc(2 * var(--px));
   font-family: var(--font-display);
   font-size: 38px;
 }
@@ -376,8 +379,8 @@
 .switch {
   position: relative;
   flex: none;
-  width: calc(16 * var(--px));
-  height: calc(8 * var(--px));
+  width: calc(24 * var(--px));
+  height: calc(12 * var(--px));
   border: var(--px) solid var(--ink);
   background: #b9b1a6;
 }
@@ -386,8 +389,8 @@
   position: absolute;
   left: var(--px);
   top: var(--px);
-  width: calc(4 * var(--px));
-  height: calc(4 * var(--px));
+  width: calc(8 * var(--px));
+  height: calc(7 * var(--px));
   background: #fff;
   box-shadow: 0 var(--px) 0 0 #8b8378;
   transition: transform 120ms steps(2);
@@ -396,15 +399,15 @@
   background: #5bc236;
 }
 .switchOn::after {
-  transform: translateX(calc(8 * var(--px)));
+  transform: translateX(calc(12 * var(--px)));
   box-shadow: 0 var(--px) 0 0 #3a8f25;
 }
 
-/* ------------------------------------------------------------ world */
+/* ------------------------------------------------------------ world: the preview is 135 x 45 art pixels (810 x 270) */
 .worldThumb {
   width: fit-content;
-  min-width: calc(92 * var(--px));
-  min-height: calc(32 * var(--px));
+  min-width: calc(137 * var(--px));
+  min-height: calc(47 * var(--px));
   margin: 0 auto;
   border: var(--px) solid var(--ink);
   background: #2a2d48;
@@ -412,8 +415,8 @@
 .threatRow {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
-  margin: calc(2 * var(--px)) 0 calc(2 * var(--px));
+  gap: calc(3 * var(--px));
+  margin: calc(3 * var(--px)) 0;
 }
 .threatText {
   font-family: var(--font-display);
@@ -436,8 +439,8 @@
   justify-content: center;
   gap: 14px;
   width: fit-content;
-  margin: 0 auto calc(3 * var(--px));
-  padding: 0 calc(4 * var(--px)) var(--px);
+  margin: 0 auto calc(5 * var(--px));
+  padding: 0 calc(6 * var(--px)) var(--px);
   background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff) 0 50%, var(--c) 50% 100%);
   box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 var(--ink), 0 0 calc(4 * var(--px)) var(--c);
   font-family: var(--font-display);

@@ -3,6 +3,7 @@
  * bit is a square of whole art pixels (1 x 1 or 2 x 2; confetti 2 x 1 and 1 x 2, turning between the
  * two to tumble) drawn at whole art pixels. Over its life it steps through sizes, colors and
  * opacities: no smooth scaling, no rotation, so every bit stays on the battle's pixel grid.
+ * Speeds are in art pixels, so a burst keeps its size next to the characters whatever P is.
  */
 import Phaser from 'phaser';
 import { P, toCanvas } from './pixel';
@@ -11,15 +12,15 @@ import { blank, setPx } from './pixel/buf';
 export type Range = readonly [number, number];
 
 export interface BitStyle {
-  /** Launch speed (screen px per second) and direction in degrees (0 = right, 90 = down). */
+  /** Launch speed (art px per second) and direction in degrees (0 = right, 90 = down). */
   speed?: Range;
   angle?: Range;
-  /** Or launch velocity per axis (screen px per second). */
+  /** Or launch velocity per axis (art px per second). */
   speedX?: Range;
   speedY?: Range;
   /** Life in milliseconds. */
   life: Range;
-  /** Downward pull (screen px per second squared) and air drag (share of speed lost per second). */
+  /** Downward pull (art px per second squared) and air drag (share of speed lost per second). */
   gravity?: number;
   drag?: number;
   /** One color is picked per bit from `colors`; `fade` colors, if given, take over in steps as it ages. */
@@ -79,10 +80,10 @@ export class PixelBits {
       let vx: number;
       let vy: number;
       if (style.speedX || style.speedY) {
-        vx = style.speedX ? between(style.speedX) : 0;
-        vy = style.speedY ? between(style.speedY) : 0;
+        vx = (style.speedX ? between(style.speedX) : 0) * P;
+        vy = (style.speedY ? between(style.speedY) : 0) * P;
       } else {
-        const sp = between(style.speed ?? [100, 200]);
+        const sp = between(style.speed ?? [11, 22]) * P;
         const a = Phaser.Math.DegToRad(between(style.angle ?? [0, 360]));
         vx = Math.cos(a) * sp;
         vy = Math.sin(a) * sp;
@@ -111,7 +112,7 @@ export class PixelBits {
         b.vx *= k;
         b.vy *= k;
       }
-      b.vy += (s.gravity ?? 0) * dt;
+      b.vy += (s.gravity ?? 0) * P * dt;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       this.draw(b);

@@ -1,10 +1,12 @@
 /**
  * The battle's bitmap font, drawn on the art grid (one font pixel is one art pixel, P screen pixels),
- * so text sits on the same pixel grid as everything else in battle. Two faces:
- *  - small, 3 x 5 (M, N, W and a few symbols wider): damage and coin numbers, the boss's name and HP,
- *    the world's title, notices;
- *  - big, 5 x 7 (I, 1 and punctuation narrower): banners (FIGHT!, BOSS!, VICTORY!), stamps (CRIT!,
- *    K.O.) and big numbers.
+ * so text sits on the same pixel grid as everything else in battle. Three faces (sizes on the 6 px grid):
+ *  - small, 3 x 5 (M, N, W and a few symbols wider), 18 x 30 screen px: fine print;
+ *  - big, 5 x 7 (I, 1 and punctuation narrower), 30 x 42: damage and heal numbers, the boss's name and
+ *    HP, notices, the world title's kicker ("WORLD 1");
+ *  - huge, 7 x 9 bold (2-pixel stems, 1-pixel bars; I, T, Y, 1 six wide, punctuation narrower),
+ *    42 x 54: banners (FIGHT!, BOSS!, VICTORY!), stamps (CRIT!, K.O.), crit and level-up numbers and
+ *    the world's name on its title card.
  * Uppercase only (lowercase is shown in capitals), digits and . , ! ? : ' " - + × / % · ( ) ∞.
  * Anything else shows as '?'. Text gets a 1 art pixel outline in the scene's ink (it joins across the
  * one-pixel gaps between letters, so a word reads as one shape), optionally a drop shadow (one more
@@ -24,7 +26,7 @@ export interface Face {
   glyphs: Readonly<Record<string, readonly string[]>>;
 }
 
-export type FaceName = 'small' | 'big';
+export type FaceName = 'small' | 'big' | 'huge';
 
 const SMALL_GLYPHS: Record<string, readonly string[]> = {
   A: ['.#.', '#.#', '###', '#.#', '#.#'],
@@ -136,12 +138,69 @@ const BIG_GLYPHS: Record<string, readonly string[]> = {
   '∞': ['.......', '.......', '.##.##.', '#..#..#', '.##.##.', '.......', '.......'],
 };
 
+/** 7 x 9 bold: two-pixel stems and one-pixel bars, for titles that have to read at a glance. */
+const HUGE_GLYPHS: Record<string, readonly string[]> = {
+  A: ['.#####.', '##...##', '##...##', '##...##', '#######', '##...##', '##...##', '##...##', '##...##'],
+  B: ['######.', '##...##', '##...##', '##...##', '######.', '##...##', '##...##', '##...##', '######.'],
+  C: ['.#####.', '##...##', '##.....', '##.....', '##.....', '##.....', '##.....', '##...##', '.#####.'],
+  D: ['#####..', '##..##.', '##...##', '##...##', '##...##', '##...##', '##...##', '##..##.', '#####..'],
+  E: ['#######', '##.....', '##.....', '##.....', '######.', '##.....', '##.....', '##.....', '#######'],
+  F: ['#######', '##.....', '##.....', '##.....', '######.', '##.....', '##.....', '##.....', '##.....'],
+  G: ['.#####.', '##...##', '##.....', '##.....', '##..###', '##...##', '##...##', '##...##', '.######'],
+  H: ['##...##', '##...##', '##...##', '##...##', '#######', '##...##', '##...##', '##...##', '##...##'],
+  I: ['######', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '######'],
+  J: ['.....##', '.....##', '.....##', '.....##', '.....##', '.....##', '##...##', '##...##', '.#####.'],
+  K: ['##...##', '##..##.', '##.##..', '####...', '###....', '####...', '##.##..', '##..##.', '##...##'],
+  L: ['##.....', '##.....', '##.....', '##.....', '##.....', '##.....', '##.....', '##.....', '#######'],
+  M: ['##...##', '###.###', '#######', '##.#.##', '##.#.##', '##...##', '##...##', '##...##', '##...##'],
+  N: ['##...##', '###..##', '###..##', '##.#.##', '##.#.##', '##..###', '##..###', '##...##', '##...##'],
+  O: ['.#####.', '##...##', '##...##', '##...##', '##...##', '##...##', '##...##', '##...##', '.#####.'],
+  P: ['######.', '##...##', '##...##', '##...##', '######.', '##.....', '##.....', '##.....', '##.....'],
+  Q: ['.#####.', '##...##', '##...##', '##...##', '##...##', '##...##', '##.#.##', '##..##.', '.###.##'],
+  R: ['######.', '##...##', '##...##', '##...##', '######.', '##.##..', '##..##.', '##...##', '##...##'],
+  S: ['.######', '##.....', '##.....', '##.....', '.#####.', '.....##', '.....##', '.....##', '######.'],
+  T: ['######', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..'],
+  U: ['##...##', '##...##', '##...##', '##...##', '##...##', '##...##', '##...##', '##...##', '.#####.'],
+  V: ['##...##', '##...##', '##...##', '##...##', '##...##', '##...##', '.##.##.', '..###..', '...#...'],
+  W: ['##...##', '##...##', '##...##', '##...##', '##.#.##', '##.#.##', '#######', '###.###', '##...##'],
+  X: ['##...##', '##...##', '.##.##.', '..###..', '...#...', '..###..', '.##.##.', '##...##', '##...##'],
+  Y: ['##..##', '##..##', '##..##', '.####.', '..##..', '..##..', '..##..', '..##..', '..##..'],
+  Z: ['#######', '.....##', '.....##', '....##.', '...##..', '..##...', '.##....', '##.....', '#######'],
+  '0': ['.#####.', '##...##', '##...##', '##..###', '##.#.##', '###..##', '##...##', '##...##', '.#####.'],
+  '1': ['..##..', '.###..', '####..', '..##..', '..##..', '..##..', '..##..', '..##..', '######'],
+  '2': ['.#####.', '##...##', '.....##', '.....##', '...###.', '.###...', '##.....', '##.....', '#######'],
+  '3': ['.#####.', '##...##', '.....##', '.....##', '..####.', '.....##', '.....##', '##...##', '.#####.'],
+  '4': ['....###', '...####', '..##.##', '.##..##', '##...##', '#######', '.....##', '.....##', '.....##'],
+  '5': ['#######', '##.....', '##.....', '######.', '.....##', '.....##', '.....##', '##...##', '.#####.'],
+  '6': ['..####.', '.##....', '##.....', '##.....', '######.', '##...##', '##...##', '##...##', '.#####.'],
+  '7': ['#######', '.....##', '.....##', '....##.', '...##..', '..##...', '..##...', '..##...', '..##...'],
+  '8': ['.#####.', '##...##', '##...##', '##...##', '.#####.', '##...##', '##...##', '##...##', '.#####.'],
+  '9': ['.#####.', '##...##', '##...##', '##...##', '.######', '.....##', '.....##', '....##.', '.####..'],
+  '.': ['..', '..', '..', '..', '..', '..', '..', '##', '##'],
+  ',': ['..', '..', '..', '..', '..', '..', '##', '.#', '#.'],
+  '!': ['##', '##', '##', '##', '##', '##', '..', '##', '##'],
+  '?': ['.#####.', '##...##', '.....##', '....##.', '...##..', '...##..', '.......', '...##..', '...##..'],
+  ':': ['..', '..', '##', '##', '..', '..', '##', '##', '..'],
+  "'": ['##', '##', '#.', '..', '..', '..', '..', '..', '..'],
+  '"': ['##.##', '##.##', '#..#.', '.....', '.....', '.....', '.....', '.....', '.....'],
+  '-': ['.....', '.....', '.....', '.....', '#####', '.....', '.....', '.....', '.....'],
+  '+': ['......', '......', '..##..', '..##..', '######', '..##..', '..##..', '......', '......'],
+  '×': ['.......', '.......', '##...##', '.##.##.', '..###..', '.##.##.', '##...##', '.......', '.......'],
+  '/': ['.....##', '.....##', '....##.', '...##..', '...##..', '..##...', '.##....', '##.....', '##.....'],
+  '%': ['##....#', '##...##', '....##.', '...##..', '...##..', '..##...', '.##....', '##...##', '#....##'],
+  '·': ['..', '..', '..', '##', '##', '..', '..', '..', '..'],
+  '(': ['..##', '.##.', '##..', '##..', '##..', '##..', '##..', '.##.', '..##'],
+  ')': ['##..', '.##.', '..##', '..##', '..##', '..##', '..##', '.##.', '##..'],
+  '∞': ['.........', '.........', '.##...##.', '#..#.#..#', '#...#...#', '#..#.#..#', '.##...##.', '.........', '.........'],
+};
+
 export const FACES: Readonly<Record<FaceName, Face>> = {
   small: { h: 5, space: 2, glyphs: SMALL_GLYPHS },
   big: { h: 7, space: 3, glyphs: BIG_GLYPHS },
+  huge: { h: 9, space: 4, glyphs: HUGE_GLYPHS },
 };
 
-/** The characters both faces draw (besides the space). */
+/** The characters every face draws (besides the space). */
 export const CHARSET = Object.keys(SMALL_GLYPHS).join('');
 
 /** A character as the font shows it: capitals, typographic quotes and dashes folded to plain ones. */
@@ -237,6 +296,11 @@ export interface TextStyle {
   maxW?: number;
   /** How lines line up with each other (default: centered). */
   align?: 'left' | 'center' | 'right';
+  /**
+   * A kicker: the text's first line (up to its first '\n') is set in this face over the rest, its
+   * outline merged with the title's ("WORLD 1" over "SUNNY SUBURBS"). Not wrapped, no shadow.
+   */
+  lead?: FaceName;
 }
 
 /** The battle's ink: text outlines (the scene's line color). */
@@ -250,8 +314,15 @@ export function linePitch(face: Face): number {
 /**
  * Renders text into a buffer: glyphs filled, outlined, with a 1 pixel border all round for the
  * outline (and one more row at the bottom for the shadow). Fully opaque or fully clear pixels only.
+ * With `lead`, the first line is a kicker in that face over the rest (stackText).
  */
 export function renderText(text: string, style: TextStyle): PixelBuf {
+  const cut = style.lead ? text.indexOf('\n') : -1;
+  if (style.lead && cut >= 0) {
+    const kicker = renderText(text.slice(0, cut), { ...style, face: style.lead, lead: undefined, shadow: false, maxW: undefined });
+    const title = renderText(text.slice(cut + 1), { ...style, lead: undefined });
+    return stackText([kicker, title], style.ink === null ? 1 : -1, style.align);
+  }
   const face = FACES[style.face];
   const lines = wrapBalanced(text, face, style.maxW);
   const widths = lines.map((l) => lineWidth(l, face));
@@ -303,6 +374,29 @@ export function renderText(text: string, style: TextStyle): PixelBuf {
         b.px[i + 3] = 255;
       }
     }
+  }
+  return b;
+}
+
+/**
+ * Text buffers one under another, `gap` rows apart (-1: the outlines of the two share a row), lined
+ * up like the lines of one text (centered by default). Opaque pixels win where they overlap.
+ */
+export function stackText(parts: readonly PixelBuf[], gap = -1, align: TextStyle['align'] = 'center'): PixelBuf {
+  const w = Math.max(1, ...parts.map((p) => p.w));
+  const h = parts.reduce((sum, p) => sum + p.h, 0) + gap * Math.max(0, parts.length - 1);
+  const b = blank(w, Math.max(1, h));
+  let y = 0;
+  for (const p of parts) {
+    const x0 = align === 'left' ? 0 : align === 'right' ? w - p.w : Math.floor((w - p.w) / 2);
+    for (let py = 0; py < p.h; py++) {
+      for (let px = 0; px < p.w; px++) {
+        const si = (py * p.w + px) * 4;
+        if (!p.px[si + 3]) continue;
+        b.px.set(p.px.subarray(si, si + 4), ((y + py) * w + x0 + px) * 4);
+      }
+    }
+    y += p.h + gap;
   }
   return b;
 }

@@ -6,7 +6,7 @@
  * details, and hold Buy to keep buying up a line.
  *
  * Zooming scales the map (hex shapes, lines and words) but never the pixel art: the hexes' icons live
- * in their own layer on top that only moves, by whole stage px, so they stay 9 px per art pixel at
+ * in their own layer on top that only moves, by whole stage px, so they stay 6 px per art pixel at
  * every zoom (and hide when the map is zoomed far out).
  */
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react';
@@ -227,7 +227,7 @@ const Hex = memo(function Hex({ node, view, afford, selected, price, fresh, calm
   );
 });
 
-/** A hex's icon in the icon layer: 7 x 7 art pixels at 9 px each, placed (and re-placed on zoom) by the map. */
+/** A hex's icon in the icon layer: about 10 x 10 art pixels at 6 px each, placed (and re-placed on zoom) by the map. */
 const HexIcon = memo(function HexIcon({ node, view, k, fresh, calm }: { node: HexNode; view: HexView; k: number; fresh: boolean; calm: boolean }) {
   // Decided once, when it mounts (like its hex): the opening fade, or the buy/reveal flash.
   const mode = useRef(calm ? 'calm' : fresh ? 'fresh' : 'intro').current;
@@ -311,7 +311,7 @@ function BuyCard({ node }: { node: HexNode }) {
   return (
     <div className={`${s.card} card`} data-view={view}>
       <span className={s.cardTile} data-view={view} data-special={node.special || undefined}>
-        <PixelArt art={uiIcon(iconOf(node.id), 'lg')} />
+        <PixelArt art={uiIcon(iconOf(node.id), 'nav')} />
       </span>
       <div className={s.cardBody}>
         <span className={s.cardName}>

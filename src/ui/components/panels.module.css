@@ -1,4 +1,4 @@
-/* Shared layout for the Bag and Rebirth tabs. Pixel-ish sizes are art pixels (var(--px) = 9 stage px). */
+/* Shared layout for the Bag and Rebirth tabs. Pixel-ish sizes are art pixels (var(--px) = 6 stage px). */
 .panel {
   position: absolute;
   inset: 0;
@@ -25,8 +25,8 @@
 .headRow {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
-  min-height: calc(8 * var(--px));
+  gap: calc(3 * var(--px));
+  min-height: calc(10 * var(--px));
 }
 .headTitle {
   font-family: var(--font-display);
@@ -39,9 +39,9 @@
 .powerTag {
   display: flex;
   align-items: center;
-  gap: var(--px);
-  height: calc(7 * var(--px));
-  padding: 0 calc(2 * var(--px)) 0 var(--px);
+  gap: calc(2 * var(--px));
+  height: calc(9 * var(--px));
+  padding: 0 calc(3 * var(--px)) 0 calc(2 * var(--px));
   background: rgba(0, 0, 0, 0.35);
   font-family: var(--font-display);
   font-size: 32px;
@@ -70,15 +70,15 @@
 
 /* ------------------------------------------------------------ bag */
 .gearCard {
-  padding: var(--px) calc(2 * var(--px)) calc(2 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px)) calc(3 * var(--px));
   background: rgba(0, 0, 0, 0.22);
   border: var(--px) solid rgba(0, 0, 0, 0.35);
 }
 .capTrack {
   position: relative;
   flex: 1;
-  min-width: calc(18 * var(--px));
-  height: calc(7 * var(--px));
+  min-width: calc(27 * var(--px));
+  height: calc(11 * var(--px));
   border: var(--px) solid var(--ink);
   background: #15172a;
   overflow: hidden;
@@ -98,7 +98,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: calc(5 * var(--px));
+  width: calc(8 * var(--px));
   display: grid;
   place-items: center;
   border-left: var(--px) solid var(--ink);
@@ -114,7 +114,7 @@
 }
 .capText {
   position: absolute;
-  inset: 0 calc(5 * var(--px)) 0 0;
+  inset: 0 calc(8 * var(--px)) 0 0;
   display: grid;
   place-items: center;
   font-family: var(--font-display);
@@ -155,18 +155,18 @@
   display: flex;
   align-items: center;
   gap: var(--px);
-  height: calc(6 * var(--px));
+  height: calc(8 * var(--px));
   margin-left: var(--px);
   padding: 0 var(--px);
   background: rgba(0, 0, 0, 0.25);
   font-size: 26px;
 }
-/* Bag tiles: six across, room above each for its "1 in X" banner. */
+/* Bag tiles (16 x 16 art, 108 px tiles): eight across, room above each for its "1 in X" banner. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, calc(18 * var(--px)));
+  grid-template-columns: repeat(8, calc(18 * var(--px)));
   justify-content: space-between;
-  row-gap: calc(4 * var(--px));
+  row-gap: calc(6 * var(--px));
   padding-top: calc(3 * var(--px));
 }
 .slotEmpty {
@@ -197,11 +197,11 @@
 }
 .rbHero {
   position: relative;
-  min-height: calc(16 * var(--px));
+  min-height: calc(24 * var(--px));
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
-  padding: 0 calc(3 * var(--px));
+  gap: calc(4 * var(--px));
+  padding: 0 calc(4 * var(--px));
   background: linear-gradient(180deg, #f6ecff 0 50%, #e2c9ff 50% 100%);
 }
 .rbIcon {
@@ -225,19 +225,19 @@
   color: #6d5f78;
 }
 .rbCard {
-  padding: var(--px) calc(3 * var(--px)) calc(2 * var(--px));
+  padding: calc(2 * var(--px)) calc(4 * var(--px)) calc(3 * var(--px));
   display: flex;
   flex-direction: column;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
 }
 .req {
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
 }
 .reqDot {
-  width: calc(7 * var(--px));
-  height: calc(7 * var(--px));
+  width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
   flex: none;
   border: var(--px) solid var(--ink);
   background: #d8cbb0;
@@ -254,7 +254,7 @@
   color: var(--ink);
 }
 .reqTrack {
-  height: calc(3 * var(--px));
+  height: calc(4 * var(--px));
   border: var(--px) solid var(--ink);
   background: #d8cbb0;
   overflow: hidden;
@@ -270,14 +270,14 @@
 .rbRewards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
 }
 .rbReward {
   --rc: #fff;
-  padding: var(--px);
+  padding: calc(2 * var(--px));
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
   border: var(--px) solid var(--ink);
   background: color-mix(in srgb, var(--rc) 22%, #fff);
 }
@@ -311,9 +311,9 @@
   text-align: center;
 }
 .rbGo {
-  min-height: calc(11 * var(--px));
+  min-height: calc(16 * var(--px));
   font-size: 52px;
-  margin: 0 calc(6 * var(--px)) var(--px);
+  margin: 0 calc(9 * var(--px)) var(--px);
 }
 @media (prefers-reduced-motion: reduce) {
   .rbIcon {

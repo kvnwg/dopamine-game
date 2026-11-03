@@ -1,4 +1,4 @@
-/* The Worlds tab. Pixel-ish sizes are art pixels (var(--px) = 9 stage px). */
+/* The Worlds tab. Pixel-ish sizes are art pixels (var(--px) = 6 stage px). */
 .panel {
   position: absolute;
   inset: 0;
@@ -42,12 +42,12 @@
 .scroll::-webkit-scrollbar {
   display: none;
 }
-/* Two cards across; each preview is 54 art pixels (486 px) wide inside its one-pixel border. */
+/* Two cards across; each preview is 81 art pixels (486 px) wide inside its one-pixel border. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, calc(56 * var(--px)));
+  grid-template-columns: repeat(2, calc(83 * var(--px)));
   justify-content: space-between;
-  row-gap: calc(4 * var(--px));
+  row-gap: calc(6 * var(--px));
 }
 .card {
   --tc: #5bc236;
@@ -69,18 +69,18 @@
 }
 .thumb {
   position: relative;
-  height: calc(26 * var(--px));
+  height: calc(39 * var(--px));
   border-bottom: var(--px) solid var(--ink);
   overflow: hidden;
   background: #2a2d48;
 }
 .num {
   position: absolute;
-  left: var(--px);
-  top: var(--px);
-  min-width: calc(7 * var(--px));
-  height: calc(7 * var(--px));
-  padding: 0 var(--px);
+  left: calc(2 * var(--px));
+  top: calc(2 * var(--px));
+  min-width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
+  padding: 0 calc(2 * var(--px));
   display: grid;
   place-items: center;
   border: var(--px) solid var(--ink);
@@ -91,15 +91,15 @@
 }
 .here {
   position: absolute;
-  right: var(--px);
-  top: var(--px);
-  height: calc(6 * var(--px));
-  padding: 0 var(--px);
+  right: calc(2 * var(--px));
+  top: calc(2 * var(--px));
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px));
   border: var(--px) solid var(--ink);
   background: #5bc236;
   font-family: var(--font-display);
   font-size: 28px;
-  line-height: calc(4 * var(--px));
+  line-height: calc(6 * var(--px));
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -110,14 +110,14 @@
 }
 .done {
   position: absolute;
-  right: var(--px);
-  top: var(--px);
+  right: calc(2 * var(--px));
+  top: calc(2 * var(--px));
 }
 .info {
-  padding: var(--px) calc(2 * var(--px)) calc(2 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px)) calc(3 * var(--px));
   display: flex;
   flex-direction: column;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
 }
 .name {
   font-family: var(--font-display);
@@ -145,8 +145,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--px);
-  height: calc(6 * var(--px));
-  padding: 0 var(--px);
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px));
   border: var(--px) solid var(--ink);
   font-family: var(--font-display);
   font-size: 24px;
@@ -156,8 +156,8 @@
   white-space: nowrap;
 }
 .threatBig {
-  height: calc(8 * var(--px));
-  padding: 0 calc(2 * var(--px));
+  height: calc(12 * var(--px));
+  padding: 0 calc(3 * var(--px));
   font-size: 40px;
   -webkit-text-stroke-width: 6px;
 }

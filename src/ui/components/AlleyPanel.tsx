@@ -4,9 +4,10 @@
  * its "1 in X", and the best roll ever. Equipped gear lives in the Bag tab; items are equipped by
  * dragging them up onto the raccoon.
  *
- * Layout (797 stage px below the battle): the machine card (reels and their info), the last roll
- * and the rarest-roll line, no scrolling. Up to 3 reels the info sits beside the reels; with 4 or 5
- * the reels take the full width and the info moves to a row above and a row below them.
+ * Layout (800 stage px below the battle): the machine card (reels and their info), the last roll
+ * (its art in Scale2x) and the rarest-roll line, no scrolling. Up to 3 reels the info sits beside the
+ * reels, which show three whole rows; with 4 or 5 the reels take the full width (two rows) and the
+ * info moves to a row above and a row below them.
  */
 import type { CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
@@ -21,12 +22,12 @@ import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
 import { enchantColor, ItemIcon } from './ItemIcon';
-import { ReelBank } from './Reel';
+import { CELL, ReelBank } from './Reel';
 import s from './alley.module.css';
 
-/** Reel window heights (stage px): beside the info (up to 3 reels), and full width (4 or 5). */
-const WIN_SIDE = 396;
-const WIN_WIDE = 252;
+/** Reel window heights (stage px): beside the info (up to 3 reels, three rows), and full width (4 or 5, two rows). */
+const WIN_SIDE = 3 * CELL;
+const WIN_WIDE = 2 * CELL;
 
 export function fmtLuck(v: number): string {
   return v >= 100 ? formatNumber(v) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
@@ -78,7 +79,7 @@ function LastRoll() {
   const open = () => useUi.getState().openPopup('itemDetail', it.uid);
   return (
     <div key={last.id} className={`${s.last} card ${s.lastIn} ${rare ? s.lastRare : ''}`} style={{ ['--c' as string]: color } as CSSProperties}>
-      <ItemIcon item={it} showOdds={false} draggable={!!inBag} upgrade={upgrade} onTap={open} />
+      <ItemIcon item={it} scale={2} showOdds={false} draggable={!!inBag} upgrade={upgrade} onTap={open} />
       <div className={s.lastBody} onClick={open}>
         <span className={s.lastName} style={{ color }}>
           {itemName(it)}

@@ -1,6 +1,6 @@
 /*
  * The reel bank: pixel-art slot reels rolling downward behind a payline. Pixel-ish sizes are art
- * pixels (var(--px) = 9 stage px); --cell is a cell's height (Reel.tsx CELL).
+ * pixels (var(--px) = 6 stage px); --cell is a cell's height (Reel.tsx CELL).
  */
 .bank {
   position: relative;
@@ -58,7 +58,7 @@
   height: 0;
   will-change: transform;
 }
-/* One item rolling past: its "1 in X" line on top, then the art (144 px). */
+/* One item rolling past: its "1 in X" line on top, then the art (96 px). */
 .cell {
   position: absolute;
   left: var(--px);
@@ -101,10 +101,10 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
-  height: calc(3 * var(--px));
+  height: calc(5 * var(--px));
   font-family: var(--font-display);
   font-size: var(--label);
-  line-height: calc(3 * var(--px));
+  line-height: calc(5 * var(--px));
   color: var(--rc, #9e9e9e);
   white-space: nowrap;
   text-shadow:
@@ -221,11 +221,11 @@
   bottom: calc(-3 * var(--px));
 }
 .badge {
-  height: calc(4 * var(--px));
+  height: calc(5 * var(--px));
   padding: 0 var(--px);
   font-family: var(--font-display);
-  font-size: 24px;
-  line-height: calc(4 * var(--px));
+  font-size: 23px;
+  line-height: calc(5 * var(--px));
   color: #ffffff;
   background: #5a5668;
   box-shadow: var(--pixel-edge);

@@ -71,30 +71,51 @@ clean outline, three-tone shading, one highlight, no stray pixels.
 
 ## One pixel size in battle
 
-Every pixel in the battle is the same size: `P = 9` screen pixels per art pixel
-(`src/render/pixel/index.ts`), so the 1080 x 963 view is 120 x 107 art pixels
+Every pixel in the battle is the same size: `P = 6` screen pixels per art pixel
+(`src/render/pixel/index.ts`), so the 1080 x 960 view is 180 x 160 art pixels
 (`src/render/pixel/sceneryTypes.ts`: `VIEW`). Nothing in battle is scaled or squashed: sprites move
-and change frames, and only the weapon's swing rotates freely. Art drawn for a finer grid is either
-redrawn (the street, rats, pigeons, raccoon bosses) or shown at half resolution with `downsample2`
-(the older still effects, the icon-pack props).
+and change frames, and only the weapon's swing rotates freely. Characters (the raccoon, enemies, worn
+gear, the effects packs) keep the art they had at 9 px, so they show at two thirds of their old size;
+the scenery is drawn at 1.5 times the old resolution, so the world keeps its size on screen with
+more detail. The older still effects (coin, bag, impact, puff) are shown whole (at 9 px they were
+halved with `downsample2`); the icon-pack props still are.
 
-**The scene frame.** Every scenery set is drawn for an 82-row scene (`SCENE_H`) with the fighters'
-feet on row 67 (`SCENE_FEET_ROW`). The battle shows that frame `SCENE_Y` = 25 rows down the view, so
-the fighters stand on view row 92 (`FEET_ROW`, the ground line at y 837). Layer spots
-(`ScenerySet.layers`), light spots and the rows in each scenery module are scene rows; add `SCENE_Y`
-for view rows (`layerRow` in `src/render/worldLook.ts`). The 25 rows above the scene are more sky
-for sets with a sky; the dungeon draws its far layer up into them (a vault and hanging chains).
-A world's `look.atmo` (horizon, sun or moon, clouds) is also given in scene rows; `viewAtmo` shifts
-it when the world is composed. Particle bands in `src/render/ambience.ts` are view rows.
+**Scene frames.** Each scenery set is drawn for its own scene frame, `ScenerySet.frame`: `h` rows
+with the fighters' feet on row `feetRow`. The battle puts every set's feet row on one view row,
+`FEET_ROW` = 137 (the ground line at y 828), so a set's frame top is at view row
+`frameTop(set)` = 137 - `feetRow`.
+
+- `SCENE_FRAME` (`{ h: 123, feetRow: 100 }`) is the frame for sets drawn for the 6 px grid (the
+  street, the farm, the dungeon). Its top is view row 37 and its last row is the view's last; a set
+  without a sky draws its far layer up above it (`LayerSpot.y` may be negative), as the dungeon does
+  with its vault.
+- `LEGACY_FRAME` (`{ h: 82, feetRow: 67 }`) is the frame the first sets were drawn for at 9 px, and
+  the default for a set that declares none. Its top is view row 70: the view shows more sky over it,
+  and `src/render/worldLook.ts` fills the 8 rows under it (a ground layer that reaches the frame's
+  bottom repeats its bottom rows down to the view's edge; such a foreground moves down to the edge).
+
+Layer spots (`ScenerySet.layers`), light spots, prop spots and the rows in each scenery module are
+rows of the set's own frame; `layerRow(set, layer)` in `src/render/worldLook.ts` gives view rows. The
+old names `SCENE_H`, `SCENE_FEET_ROW` and `SCENE_Y` (70) describe the legacy frame.
+
+A world's `look.atmo` (horizon, sun or moon, clouds) in `src/data/worlds.json` is written in legacy
+frame rows (and the sun's x in columns of the old 120-wide view). `viewAtmo(atmo, set)` maps it into the
+set's frame: a row `r` becomes view row `frameTop(set) + r * frameScale(set)`, where `frameScale` is
+`h / 82` (1.5 for `SCENE_FRAME`); the sun's or moon's x and size scale by the same factor. The sky's
+details follow `frameScale` too (`src/render/pixel/atmosphere.ts`): clouds are built 1.5 times
+bigger in 270-pixel strips, stars keep their density on screen, glows spread as far. Particle bands
+in `src/render/ambience.ts` are legacy frame rows mapped the same way, their speeds scaled, and on a
+finer set rain, snow, leaves, petals and glows use bigger sprites.
 
 Size guide at this scale: the raccoon hero is about 15 x 17, rats, pigeons, hens, ducks and rabbits
-10 to 15, pack knights, orcs, pigs and rams 16 to 30, humans about 30, bosses 20 to 34.
+10 to 15, pack knights, orcs, pigs and rams 16 to 30, humans about 30, bosses 20 to 34. Dungeon tiles
+are 16 x 16 (96 screen px).
 
 ## One grid
 
-Every pixel in the battle canvas sits on one 9 x 9 screen-pixel grid that starts at the canvas's
-top-left corner: each 9 x 9 block is one flat color. That is guaranteed by how the battle is built,
-in two layers:
+Every pixel in the battle canvas sits on one 6 x 6 screen-pixel grid that starts at the canvas's
+top-left corner: each 6 x 6 block is one flat color (1080 x 960 is 180 x 160 of them). That is
+guaranteed by how the battle is built, in two layers:
 
 1. **A camera post-pass** (`src/render/gridSnap.ts`, WebGL). It samples only the center texel of
    each block, so anything that reaches the frame off the grid (the swinging weapon, a sub-pixel
@@ -102,14 +123,20 @@ in two layers:
    even though the WebGL framebuffer's origin is its bottom-left corner. (Phaser's Pixelate FX blends
    neighboring blocks' corners, so it can't do this.) The canvas renderer runs without it.
 2. **Everything is drawn on the grid in the first place**, so the snap never has to mangle anything:
-   - **Text** is the bitmap font in `src/render/pixel/font.ts`: a 3 x 5 face (numbers, the boss's
-     name and HP, the world's title, notices) and a 5 x 7 face (banners, stamps, big numbers), with a
-     1 art pixel outline in the ink and fill colors per row (a lighter top row, stepped gradients).
-     Long lines wrap, evenly. No vector fonts and no `this.add.text` in the battle.
+   - **Text** is the bitmap font in `src/render/pixel/font.ts`: a 5 x 7 face (damage and heal
+     numbers, the boss's name and HP, notices, the world title's kicker), a bold 7 x 9 face with
+     two-pixel stems (banners, stamps, crit and level-up numbers, the world's name) and a 3 x 5 face
+     for fine print (too small to read at a glance at 6 px). Text has a 1 art pixel outline in the ink
+     and fill colors per row (a lighter top row, stepped gradients). Long lines wrap, evenly; a
+     kicker line can be set in a smaller face over the rest (`TextStyle.lead`: "WORLD 1" over
+     "SUNNY SUBURBS"). No vector fonts and no `this.add.text` in the battle.
    - **Pops** move and flash in whole art pixels: numbers flash white and float up a pixel at a
      time, stamps slam down and shake a pixel, banners slide in snapped positions. Fades step.
    - **Particles** (`src/render/pixelBits.ts`) are 1 x 1 and 2 x 2 art-pixel bits that step through
-     sizes, colors and opacities; confetti tumbles by turning between 2 x 1 and 1 x 2.
+     sizes, colors and opacities; confetti tumbles by turning between 2 x 1 and 1 x 2. Their speeds
+     are in art pixels, so bursts keep their size next to the fighters.
+   - **HP bars** are 5 rows tall (the boss's 7), with a 7 x 7 heart at the hero's and an 11 x 11
+     skull at the boss's.
    - **Shadows** are flat pixel ellipses two rows tall; the Legendary **aura** is three flat rings of
      the rarity's color that breathe a pixel at a time, with glints rising from it.
    - **Lines** (chain lightning) are 1-pixel lines on the grid (`linePixels` in `buf.ts`) with an
@@ -124,25 +151,40 @@ in two layers:
      everything half a pixel off.
    - Even a quarter-turn tumble is exact; only free rotation (the weapon) relies on the post-pass.
 
-Check it: load the dev build with `?nosnap` to turn the post-pass off and count the 9 x 9 blocks of a
+Check it: load the dev build with `?nosnap` to turn the post-pass off and count the 6 x 6 blocks of a
 battle screenshot that are not one flat color. With the pass, the count is 0; without it, only the
 swinging weapon's blocks show up.
 
 ## One pixel size in the UI
 
-The UI uses the battle's pixel size too: every picture is drawn at exactly `UI_PX` = 9 stage px per
-art pixel (`src/render/icons.ts`), never resized by layout, rotated or scaled by a fraction.
+The UI uses the battle's pixel size too: every picture is drawn at exactly `UI_PX` = 6 stage px per
+image pixel (`src/render/icons.ts`), never resized by layout, rotated or scaled by a fraction.
 
 - Draw pictures with `<PixelArt art={...} />` (`src/ui/components/PixelArt.tsx`); `icons.ts` makes the
-  art (one image pixel per art pixel) and knows its size. Item icons are 16 x 16 (144 px on screen);
-  big moments (the rare-roll reveal, the Watch tab) show `itemArtHd`, a Scale2x version (32 x 32 at
-  the same 9 px), never a 2x blow-up.
-- UI icons come in drawn sizes, not scaled ones: `sm` about 5 x 5 (next to text), `md` about 7 x 7
-  (HUD, map hexes), `nav` 10 x 10 (nav bar, headers) and `lg` 16 x 16 (`src/render/pixel/ui.ts`).
-  `LUCK_TOKENS` are the reels' clover tokens (16 x 16, x2 to x10).
-- CSS borders, notched corners and drop shadows are whole multiples of `--px` (9px). Pops on pictures
-  are flashes or whole-pixel moves; only text may scale.
+  art (one image pixel per art pixel) and knows its size. Finer pixels make pictures better, not
+  smaller: big spots show more art pixels, never a blow-up.
+- Item icons and luck tokens are 16 x 16. `itemArt(id, scale)` gives them at three resolutions, all
+  at 6 px per image pixel:
+  - 1, as drawn (96 px): grids and strips (bag, equipped gear, the Roll tab's reels, Codex, unlock
+    strips, the drag ghost; `ItemIcon` tiles are 108 px, the bag is eight across);
+  - 2, Scale2x (32 x 32, 192 px, `itemArtHd`): showcase spots (the last roll, the item popup, the
+    Watch tab's reels while up to four fit across);
+  - 3, Scale3x (48 x 48, 288 px, `itemArtX3`, `scale3x` in `buf.ts`): the full-screen rare-roll
+    reveal.
+  `PixelArt` marks a Scale2x or Scale3x picture `data-px="2"` or `"3"`.
+- UI icons come in drawn sizes, not scaled ones (`src/render/pixel/ui.ts`): `xs` about 5 x 5 (tiny
+  badges on item tiles), `sm` about 7 x 7 (next to text, the default), `md` about 10 x 10 (HUD,
+  headers, map hexes), `nav` the 16 x 16 originals (nav bar, big spots) and `lg` their Scale2x
+  versions (32 x 32, the haul's coin). An icon missing at a size falls back to the nearest drawn one.
+  Scale2x suits round art (coins, gems, clovers); on straight edges it is just a 2x blow-up, so
+  square icons go no bigger than `nav`.
+- CSS borders, notched corners, drop shadows and button bands are whole multiples of `--px` (6px).
+  Layout sizes around text (plates, chips, buttons) keep their stage size in more art pixels. Pops on
+  pictures are flashes or whole-pixel moves; only text may scale.
 - Text stays Pixelify Sans at readable sizes (a font at the art's pixel size would be enormous).
+- Check it: every visible `<img>` shows each image pixel as 6 x 6 screen px at DPR 1 (12 or 18 per
+  block only where a Scale2x or Scale3x picture came out as plain blocks), and nothing above it
+  rotates, skews or scales except the stage's own fit.
 
 ## Atmosphere and light
 
@@ -168,6 +210,71 @@ Moving parts (stars, particles, weather, torch flicker) are sprites snapped to w
 ```bash
 npx tsx tools/worldPreview.ts /path/to/worlds.png --scale 4
 npx tsx tools/worldPreview.ts /path/to/two.png --worlds 2,6 --scale 8 --walk 40
+```
+
+## The street
+
+The street (`src/render/pixel/scenery.ts`, its layers in `src/render/pixel/street/`) is the backdrop
+of every world but the dungeon and the farm; each world grades it with its own hue and light, so its
+colors stay natural and its windows and lamps are light spots. It is drawn for the 6 px grid in
+`SCENE_FRAME` (123 rows, the fighters' feet on row 100): 1.5 times the resolution of the first street,
+in the same composition, so the houses are as big on screen with finer detail. Every layer is
+`TILE_W` = 342 wide and wraps: sprites go down with `wrapX`, and noise cells and texture runs repeat
+with the tile. Rows below are frame rows.
+
+- **far** (39 to 88, `street/far.ts`): a far range, a misty ridge, back hills of fields and hedgerows
+  with the town (gabled roofs, a church spire, a water tower on its legs), near hills with plowed rows,
+  wheat, an orchard and a farm, then the tree line on the meadow (row 72). Nothing is inked; each depth
+  band is hazed toward the horizon sky.
+- **mid** (30 to 89, `street/mid.ts`): the houses stand on the house line (row 78), their front yards
+  run to row 85. Houses are sketched on a grid of palette keys: shingles in two-row courses with
+  staggered keyways, clapboard in three-row boards with staggered butt joints, board and batten, brick
+  in three-row courses; windows (heads, sills, shutters, curtains, shades), doors, transoms, gutters
+  and downspouts are stamped or drawn in. Crowns are round clumps shaded in leaf clusters (five tones).
+  Nothing in a yard may cover window glass: lit glass glows over whatever covers it.
+- **ground** (57 to 122, `street/ground.ts`): two lamps on the lawn edge (86 and 87), the curb (88 to
+  92) with a drain and a painted stretch, the sidewalk (93 to 107, joints slanting a pixel every five
+  rows), its lit front edge and face (108, 109), then the verge (110 to 122). Rows 97 to 104 around the
+  feet stay plain slab and joints, so fighters and their shadows read.
+- **fg** (109 to 122): tufts, flowers and pebbles, outlined in a near-black green.
+
+World props stand at `MID_PROP_SPOTS` (feet on row 83, four spots in the side yards and on the
+driveway, a prop apart). `tests/street.test.ts` checks the frame, the seams, the plain rows around the
+feet, uncovered window glass and the prop spots. Preview the layers and the composite:
+
+```bash
+npx tsx tools/pixelSheet.ts scenery /path/to/street.png --scale 4
+```
+
+## The farm
+
+The farm (`src/render/pixel/farm.ts`, `FARM`) is World 5's backdrop, "Funky Farmland", a harvest farm
+in golden late-afternoon light. It keeps its own colors (not graded) and inks in a warm dark brown
+(`#2c1b1e`, like the animals). Like the street it is drawn for `SCENE_FRAME`, at 1.5 times the first
+farm's resolution in the same composition; every layer is `TILE_W` = 390 wide and wraps. Rows below
+are frame rows.
+
+- **far** (32 to 80): a range, a misty ridge, then hills of patchwork fields between hedgerows
+  (furrows and sown rows in three tones, mown stripes, round bales, stooks, an orchard), a tower
+  windmill, the far farmstead (its windows light up), a pond and autumn trees. Nothing is inked. The
+  windmill's sails are red-brown sailcloth: pale sails vanish into the golden sky.
+- **mid** (2 to 89): the yard's far edge is row 75, where World 5's horizon (legacy row 50) lands;
+  buildings stand on row 81. The barn is sketched on a grid of keys: board and batten (lit battens,
+  weathered boards, grain), the gambrel's slate edge over white trim, a louvered cupola and a rooster
+  vane, the open loft with its hay and doors swung back, X-braced doors, the lamp, fieldstones. Then the
+  banded, domed silo, the pumpkin patch (ribs follow each pumpkin's curve into the stem), the scarecrow
+  and his crow, a wheelbarrow of pumpkins, the coop with a hen at its door, the maple and round bales
+  by the fence, the windpump and its trough.
+- **ground** (78 to 122): the far verge with wildflowers, the dirt road (93 to 108), the near verge
+  and the wheat field's edge. Rows 100 to 105 under the feet are plain dirt in two tones.
+- **fg** (109 to 122): tufts, flowers and wheat stalks.
+
+`tests/farm.test.ts` checks the frame, the solid rows from the road down, the calm rows, the yard on
+the horizon and the light spots. Preview the layers, then World 5 lit:
+
+```bash
+npx tsx tools/pixelSheet.ts farm /path/to/farm.png --scale 4
+npx tsx tools/worldPreview.ts /path/to/w5.png --worlds 5 --scale 6
 ```
 
 ## Pack art (sheets with their own palette)

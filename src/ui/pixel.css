@@ -12,7 +12,7 @@ img {
   image-rendering: pixelated;
 }
 /*
- * Pixel art (PixelArt.tsx): sized by its art at 9 stage px per art pixel, never by layout. It does
+ * Pixel art (PixelArt.tsx): sized by its art at 6 stage px per art pixel, never by layout. It does
  * not shrink in flex rows, ignores max sizes, and lets taps through to whatever it sits on.
  */
 img[data-px] {

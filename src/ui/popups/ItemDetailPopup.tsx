@@ -52,7 +52,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
         <b>{fmtOdds(itemOddsOneIn(item))}</b>
       </div>
       <div className={s.itemHead}>
-        <ItemIcon item={item} size={180} equipped={equipped} showPower={false} showOdds={false} />
+        <ItemIcon item={item} scale={2} equipped={equipped} showPower={false} showOdds={false} />
         <div className={s.itemHeadText}>
           <span className={s.itemName} style={{ color }}>
             {itemName(item)}

@@ -20,11 +20,11 @@
   left: 0;
   right: 0;
   top: 0;
-  /* Everything on the HUD sits on the battle's 9 px grid, so its pixel art lines up with the battle's. */
-  padding: calc(2 * var(--px)) calc(2 * var(--px)) 0;
+  /* Everything on the HUD sits on the battle's 6 px grid, so its pixel art lines up with the battle's. */
+  padding: calc(3 * var(--px)) calc(3 * var(--px)) 0;
   display: flex;
   align-items: flex-start;
-  gap: calc(3 * var(--px));
+  gap: calc(4 * var(--px));
   z-index: 5;
   pointer-events: none;
 }
@@ -36,8 +36,8 @@
   pointer-events: none !important;
 }
 .gearBtn {
-  width: calc(9 * var(--px));
-  height: calc(9 * var(--px));
+  width: calc(14 * var(--px));
+  height: calc(14 * var(--px));
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #5a6299 0 var(--px), #3d4470 var(--px) calc(100% - var(--px)), #2a2f52 calc(100% - var(--px)) 100%);
@@ -50,19 +50,19 @@
 /* Level and XP: a green level box and the XP bar in one dark plate. */
 .levelPill {
   position: relative;
-  margin-top: var(--px);
-  height: calc(7 * var(--px));
-  padding-right: calc(2 * var(--px));
+  margin-top: calc(2 * var(--px));
+  height: calc(10 * var(--px));
+  padding-right: calc(3 * var(--px));
   display: flex;
   align-items: center;
-  gap: calc(2 * var(--px));
+  gap: calc(3 * var(--px));
   background: rgba(32, 34, 52, 0.82);
   box-shadow: var(--pixel-edge);
 }
 .lvBadge {
-  min-width: calc(7 * var(--px));
-  height: calc(7 * var(--px));
-  padding: 0 var(--px);
+  min-width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
+  padding: 0 calc(2 * var(--px));
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #b0ec6c 0 var(--px), #5bc236 var(--px) calc(100% - var(--px)), #3a8f25 calc(100% - var(--px)) 100%);
@@ -74,8 +74,8 @@
 }
 .xpTrack {
   position: relative;
-  width: calc(24 * var(--px));
-  height: calc(4 * var(--px));
+  width: calc(36 * var(--px));
+  height: calc(6 * var(--px));
   border: var(--px) solid var(--ink);
   background: #15172a;
   overflow: hidden;
@@ -102,22 +102,22 @@
   flex-direction: column;
   align-items: flex-end;
   gap: calc(2 * var(--px));
-  margin-top: var(--px);
+  margin-top: calc(2 * var(--px));
 }
 .row {
   display: flex;
-  gap: calc(3 * var(--px));
+  gap: calc(4 * var(--px));
 }
 /* Gold and gems: the icon at the plate's left edge, the amount after it. */
 .money {
   position: relative;
-  height: calc(7 * var(--px));
-  min-width: calc(20 * var(--px));
-  padding-right: calc(2 * var(--px));
+  height: calc(10 * var(--px));
+  min-width: calc(30 * var(--px));
+  padding-right: calc(3 * var(--px));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
   background: rgba(32, 34, 52, 0.82);
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
@@ -133,7 +133,7 @@
 .waveBox {
   display: flex;
   align-items: center;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
 }
 .waveBox:active {
   transform: translateY(var(--px));
@@ -141,8 +141,8 @@
 .waveTrack {
   display: flex;
   align-items: center;
-  height: calc(5 * var(--px));
-  padding: 0 calc(2 * var(--px));
+  height: calc(9 * var(--px));
+  padding: 0 calc(3 * var(--px));
   background: rgba(32, 34, 52, 0.78);
   box-shadow: var(--pixel-edge);
 }
@@ -151,7 +151,7 @@
   align-items: center;
 }
 .waveLine {
-  width: calc(2 * var(--px));
+  width: calc(3 * var(--px));
   height: var(--px);
   margin: 0 var(--px);
   background: #15172a;
@@ -160,8 +160,8 @@
   background: #ffc233;
 }
 .waveDot {
-  width: calc(3 * var(--px));
-  height: calc(3 * var(--px));
+  width: calc(4 * var(--px));
+  height: calc(4 * var(--px));
   border: var(--px) solid var(--ink);
   background: #6b7096;
 }
@@ -181,9 +181,9 @@
 }
 .battleActions {
   position: absolute;
-  left: calc(2 * var(--px));
-  right: calc(2 * var(--px));
-  bottom: calc(2 * var(--px));
+  left: calc(3 * var(--px));
+  right: calc(3 * var(--px));
+  bottom: calc(3 * var(--px));
   display: flex;
   align-items: flex-end;
   gap: calc(2 * var(--px));
@@ -191,17 +191,18 @@
 }
 /*
  * Drop target around the raccoon while an item is being dragged: a frame of one-pixel dashes that
- * march round a pixel at a time (no rotation: everything stays on the 9 px grid), solid green over
- * the target. Centered on his body (feet on the ground line at y 837, body about 15 x 15 art px).
+ * march round a pixel at a time (no rotation: everything stays on the 6 px grid), solid green over
+ * the target. 36 art px square, centered on his body where he fights (feet on the ground line at
+ * y 828; his body about 15 x 15 art px, x 294 to 384 and y 738 to 828), his HP bar inside it.
  */
 .dropRing {
   --dash: repeating-linear-gradient(90deg, #fff 0 calc(2 * var(--px)), transparent 0 calc(4 * var(--px)));
   --dashV: repeating-linear-gradient(180deg, #fff 0 calc(2 * var(--px)), transparent 0 calc(4 * var(--px)));
   position: absolute;
-  left: 162px;
-  top: 612px;
-  width: 324px;
-  height: 324px;
+  left: 228px;
+  top: 672px;
+  width: 216px;
+  height: 216px;
   z-index: 6;
   background: rgba(126, 240, 143, 0.16);
   pointer-events: none;
@@ -242,15 +243,15 @@
 .dropLabel {
   position: absolute;
   left: 50%;
-  top: calc(-7 * var(--px));
-  height: calc(5 * var(--px));
-  padding: 0 calc(2 * var(--px));
+  top: calc(-10 * var(--px));
+  height: calc(7 * var(--px));
+  padding: 0 calc(3 * var(--px));
   transform: translateX(-50%);
   background: #5bc236;
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
   font-size: 30px;
-  line-height: calc(5 * var(--px));
+  line-height: calc(7 * var(--px));
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -258,44 +259,48 @@
 }
 
 /*
- * First-time nudge over the raccoon until something is worn: over his HP bar (its top at about y
- * 648), with a stepped pixel arrow pointing down at him. It bobs a pixel at a time.
+ * First-time nudge over the raccoon until something is worn: over his HP bar (the heart's top at
+ * y 690, the bar centered between x 318 walking and 342 fighting), with a stepped pixel arrow pointing
+ * down at it. It bobs a pixel at a time.
  */
 .dragTip {
   position: absolute;
-  left: 324px;
-  top: 576px;
+  left: 330px;
+  top: 624px;
   z-index: 6;
   transform: translateX(-50%);
-  height: calc(5 * var(--px));
-  padding: 0 calc(2 * var(--px));
+  height: calc(7 * var(--px));
+  padding: 0 calc(3 * var(--px));
   background: #fff;
-  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  box-shadow: var(--pixel-edge), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
   font-family: var(--font-display);
   font-size: 28px;
-  line-height: calc(5 * var(--px));
+  line-height: calc(7 * var(--px));
   color: var(--ink);
   white-space: nowrap;
   pointer-events: none;
   animation: tipBob 1.1s steps(2, jump-none) infinite;
 }
-/* The arrow: three rows of white narrowing to a point, outlined in ink (all whole art pixels). */
+/* The arrow: four rows of white narrowing to a point (7 x 4 art px), outlined in ink (all whole art pixels). */
 .dragTipArrow {
   position: absolute;
   left: 50%;
   /* Its top row sits on the box's ink edge, opening the box into the arrow. */
   top: 100%;
-  width: calc(5 * var(--px));
-  height: calc(3 * var(--px));
+  width: calc(7 * var(--px));
+  height: calc(4 * var(--px));
   transform: translateX(-50%);
   background:
-    linear-gradient(#fff, #fff) calc(1 * var(--px)) 0 / calc(3 * var(--px)) var(--px) no-repeat,
-    linear-gradient(#fff, #fff) calc(2 * var(--px)) var(--px) / var(--px) var(--px) no-repeat,
+    linear-gradient(#fff, #fff) calc(1 * var(--px)) 0 / calc(5 * var(--px)) var(--px) no-repeat,
+    linear-gradient(#fff, #fff) calc(2 * var(--px)) var(--px) / calc(3 * var(--px)) var(--px) no-repeat,
+    linear-gradient(#fff, #fff) calc(3 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat,
     linear-gradient(var(--ink), var(--ink)) 0 0 / var(--px) var(--px) no-repeat,
-    linear-gradient(var(--ink), var(--ink)) calc(4 * var(--px)) 0 / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(6 * var(--px)) 0 / var(--px) var(--px) no-repeat,
     linear-gradient(var(--ink), var(--ink)) var(--px) var(--px) / var(--px) var(--px) no-repeat,
-    linear-gradient(var(--ink), var(--ink)) calc(3 * var(--px)) var(--px) / var(--px) var(--px) no-repeat,
-    linear-gradient(var(--ink), var(--ink)) calc(2 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat;
+    linear-gradient(var(--ink), var(--ink)) calc(5 * var(--px)) var(--px) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(2 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(4 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(3 * var(--px)) calc(3 * var(--px)) / var(--px) var(--px) no-repeat;
 }
 @keyframes tipBob {
   50% { transform: translateX(-50%) translateY(calc(-1 * var(--px))); }
@@ -320,19 +325,19 @@
 @keyframes choiceIn {
   from { opacity: 0; }
 }
-/* A cream card framed in ink, dropping in from four pixels up (no scaling: its pixels stay 9 px). */
+/* A cream card framed in ink, dropping in from six pixels up (no scaling: its pixels stay 6 px). */
 .choiceCard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(2 * var(--px));
-  padding: calc(3 * var(--px)) calc(5 * var(--px)) calc(4 * var(--px));
+  gap: calc(3 * var(--px));
+  padding: calc(5 * var(--px)) calc(8 * var(--px)) calc(6 * var(--px));
   background: linear-gradient(180deg, #fffaf0 0 var(--px), #fff8e6 var(--px) calc(100% - 2 * var(--px)), #f3e3bf calc(100% - 2 * var(--px)) 100%);
-  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  box-shadow: var(--pixel-edge), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
   animation: choicePop 270ms steps(3);
 }
 @keyframes choicePop {
-  from { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
+  from { transform: translateY(calc(-6 * var(--px))); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .choice,
@@ -347,14 +352,14 @@
 }
 .choiceBtns {
   display: flex;
-  gap: calc(3 * var(--px));
-  margin-top: var(--px);
+  gap: calc(5 * var(--px));
+  margin-top: calc(2 * var(--px));
 }
 .choiceBtn {
   position: relative;
-  min-width: calc(33 * var(--px));
-  min-height: calc(15 * var(--px));
-  padding: var(--px) calc(3 * var(--px));
+  min-width: calc(50 * var(--px));
+  min-height: calc(22 * var(--px));
+  padding: calc(2 * var(--px)) calc(5 * var(--px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -364,7 +369,7 @@
   overflow: hidden;
 }
 .choiceNext {
-  min-width: calc(42 * var(--px));
+  min-width: calc(63 * var(--px));
 }
 /*
  * The countdown fills the Next button from the left (whole art pixels at a time, --fill is a share of
@@ -384,7 +389,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--px);
+  gap: calc(2 * var(--px));
 }
 .choiceAuto {
   position: relative;

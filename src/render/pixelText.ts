@@ -35,7 +35,10 @@ export class PixelTexts {
 
   /** A texture for `text` in `style`, counted as used until `release`. */
   acquire(text: string, style: TextStyle): Entry {
-    const id = [style.face, typeof style.fill === 'string' ? style.fill : style.fill.join(','), style.ink ?? '', style.shadow ? 1 : 0, style.maxW ?? '', style.align ?? '', text].join('|');
+    const id = [
+      style.face, style.lead ?? '', typeof style.fill === 'string' ? style.fill : style.fill.join(','), style.ink ?? '', style.shadow ? 1 : 0,
+      style.maxW ?? '', style.align ?? '', text,
+    ].join('|');
     let e = this.entries.get(id);
     if (e && !this.scene.textures.exists(e.key)) {
       this.entries.delete(id);

@@ -12,7 +12,7 @@ interface TabDef {
   icon: typeof ReelIcon;
 }
 
-/** Nav icons are all 10 x 10 art pixels (90 px); the open tab rises instead of growing. */
+/** Nav icons are the 16 x 16 originals (96 px); the open tab rises instead of growing. */
 const TABS: TabDef[] = [
   { id: 'alley', icon: ReelIcon },
   { id: 'watch', icon: TvIcon },

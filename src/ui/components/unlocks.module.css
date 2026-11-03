@@ -1,13 +1,13 @@
-/* Item unlocks: one pixel size like everything else (--u = one art pixel = 9 stage px). */
+/* Item unlocks: one pixel size like everything else (--u = one art pixel = 6 stage px). Tiles hold the 16 x 16 art (96 px). */
 .preview,
 .card {
-  --u: 9px;
+  --u: 6px;
   --ink: #1a1326;
 }
 .preview {
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: calc(2 * var(--u));
 }
 .title {
   font-size: 32px;
@@ -18,7 +18,7 @@
 }
 .strip {
   display: flex;
-  gap: var(--u);
+  gap: calc(3 * var(--u));
   overflow-x: auto;
   padding: var(--u) var(--u) calc(2 * var(--u));
   scrollbar-width: none;
@@ -52,8 +52,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(2 * var(--u));
-  padding: calc(4 * var(--u)) calc(3 * var(--u));
+  gap: calc(3 * var(--u));
+  padding: calc(6 * var(--u)) calc(4 * var(--u));
   background: #23213f;
   box-shadow:
     0 calc(-1 * var(--u)) 0 0 var(--ink), 0 var(--u) 0 0 var(--ink), calc(-1 * var(--u)) 0 0 0 var(--ink), var(--u) 0 0 0 var(--ink),

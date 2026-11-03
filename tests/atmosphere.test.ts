@@ -33,8 +33,8 @@ describe('atmosphere', () => {
 
   it('paints skies deterministically, fully opaque, in a handful of bands', () => {
     const a = atmoOf('pinecone_park');
-    const one = paintSky(a, VIEW.w, VIEW.h + 1, 7);
-    const two = paintSky(a, VIEW.w, VIEW.h + 1, 7);
+    const one = paintSky(a, VIEW.w, VIEW.h, 7);
+    const two = paintSky(a, VIEW.w, VIEW.h, 7);
     expect(one.px).toEqual(two.px);
     expect([...alphas(one.px)]).toEqual([255]);
     // A column well away from stars: few distinct colors (the bands), not a smooth ramp.
@@ -118,7 +118,7 @@ describe('atmosphere', () => {
     const at = (x: number, y: number) => v.px[(y * v.w + x) * 4 + 3];
     expect(at(Math.floor(VIEW.w / 2), Math.floor(VIEW.h / 2))).toBe(0);
     expect(at(0, 0)).toBeGreaterThan(0);
-    expect(at(0, 0)).toBeGreaterThan(at(8, 6));
+    expect(at(0, 0)).toBeGreaterThan(at(Math.round(VIEW.w * 0.1), Math.round(VIEW.h * 0.08)));
     expect([...alphas(paintVignette(VIEW.w, VIEW.h, 0).px)]).toEqual([0]);
   });
 
@@ -136,7 +136,7 @@ describe('atmosphere', () => {
     for (let w = 1; w <= DATA.worlds.length; w++) {
       const v = composeWorld(w);
       expect(v.w).toBe(VIEW.w);
-      expect(v.h).toBe(VIEW.h + 1);
+      expect(v.h).toBe(VIEW.h);
       expect([...alphas(v.px)], `world ${w}`).toEqual([255]);
     }
   });

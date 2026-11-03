@@ -59,7 +59,7 @@ function toBottom(set: ScenerySet, name: LayerName): boolean {
  * above it: the ground repeats its bottom rows (more verge, more floor); other layers stay as drawn
  * (the foreground moves down instead, layerRow).
  */
-function fitToView(set: ScenerySet, name: LayerName, b: PixelBuf): PixelBuf {
+export function fitToView(set: ScenerySet, name: LayerName, b: PixelBuf): PixelBuf {
   const below = rowsBelow(set);
   if (name !== 'ground' || below === 0 || !toBottom(set, name)) return b;
   const out = blank(b.w, b.h + below);

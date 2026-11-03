@@ -71,7 +71,7 @@
    * One art pixel in stage px: the battle's pixel size, and every sprite, border, notch and drop
    * shadow in the UI. Keep pixel-ish sizes in CSS to multiples of it.
    */
-  --px: 9px;
+  --px: 6px;
   --pixel-edge: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink);
   --pixel-text: 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 4px 4px 0 var(--ink), -4px 4px 0 var(--ink),
     4px -4px 0 var(--ink), -4px -4px 0 var(--ink), 0 8px 0 var(--ink);
@@ -191,10 +191,10 @@ button {
   --bl: #a7a5b8;
 }
 .btn.small {
-  gap: 9px;
+  gap: 12px;
   min-height: 72px;
   font-size: 32px;
-  padding: 0 27px;
+  padding: 0 24px;
 }
 
 @keyframes breathe {

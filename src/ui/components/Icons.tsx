@@ -1,8 +1,9 @@
 /**
- * UI icons: pixel art (src/render/pixel/ui.ts) at 9 stage px per art pixel. `size` picks one of the
- * sizes each icon is drawn at: 'sm' (about 5 x 5, next to text), 'md' (about 7 x 7, HUD and map),
- * 'nav' (10 x 10) or 'lg' (16 x 16). A number (the old stage px sizes) picks the nearest of those.
- * An icon is never stretched to a size: it shows at its own size, 9 px per pixel.
+ * UI icons: pixel art (src/render/pixel/ui.ts) at 6 stage px per art pixel. `size` picks one of the
+ * sizes each icon is drawn at: 'xs' (about 5 x 5, tiny badges), 'sm' (about 7 x 7, next to text, the
+ * default), 'md' (about 10 x 10: HUD, headers, map), 'nav' (16 x 16) or 'lg' (the 16 x 16 in Scale2x,
+ * 32 x 32). A number (a size in stage px) picks the nearest of those. An icon is never stretched to a
+ * size: it shows at its own size, 6 px per pixel.
  */
 import type { CSSProperties } from 'react';
 import { uiIcon, type IconTier } from '../../render/icons';
@@ -17,8 +18,8 @@ interface P {
 
 function tierOf(size: IconTier | number | undefined): IconTier {
   if (typeof size === 'string') return size;
-  if (size === undefined || size <= 50) return 'sm';
-  return size <= 75 ? 'md' : size <= 120 ? 'nav' : 'lg';
+  if (size === undefined) return 'sm';
+  return size <= 36 ? 'xs' : size <= 50 ? 'sm' : size <= 75 ? 'md' : size <= 140 ? 'nav' : 'lg';
 }
 
 function Pix({ name, size, style, className }: P & { name: UiIcon }) {

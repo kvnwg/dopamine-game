@@ -48,7 +48,7 @@ export function CodexPopup({ onClose }: { onClose: () => void }) {
                 <span className={s.codexName} style={{ color: any ? 'var(--ink)' : '#b5a68d' }}>
                   {locked ? (
                     <>
-                      <LockIcon size="sm" /> {t('codex.locked', { n: i.unlock })}
+                      <LockIcon size="xs" /> {t('codex.locked', { n: i.unlock })}
                     </>
                   ) : any ? (
                     i.unique ? `★ ${i.name}` : i.name

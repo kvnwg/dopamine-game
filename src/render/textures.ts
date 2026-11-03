@@ -15,17 +15,34 @@ import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
 import { FOE_SHEETS, sheetFrames } from './pixel/foes';
 import { FX_SHEETS, type FxName } from './pixel/packs/fx';
+import { CHARACTER_OUTLINE } from './pixel/palette';
 import { FX } from './pixel/ui';
 import { worldArt, type SceneryKeys } from './worldLook';
 
 const S = HERO_SHEET;
+/**
+ * The raccoon is drawn facing left, but the enemies come from the right, so the battle shows him
+ * mirrored: every body frame (clothes included) and every worn hat, mask, shield and backpack flips
+ * about the frame's center line. His head and feet are symmetric about it, so they keep their
+ * columns (the feet origin doesn't move) while his face, paws and tail swap sides. The weapon is the
+ * exception: its art and swing already point right, so it is never mirrored; it sits in his front paw
+ * (HERO_POINTS.hand, mirrored).
+ */
+const flipCol = (x: number) => S.w - 1 - x;
+const IDLE = S.anims.idle?.frames ?? [0];
+/** How far his head rises above the reference pose during the idle loop (art px). */
+const idleLift = () => Math.max(0, ...IDLE.map((f) => -(frameOffsets()[f]?.dy ?? 0)));
 /** The hero frame in battle pixels: feet (ground contact), the weapon paw, the top of the head. */
 export const HERO = {
   w: S.w * P,
   h: S.h * P,
   feet: { x: (S.anchor.x + 0.5) * P, y: (S.anchor.y + 1) * P },
-  hand: { x: (HERO_POINTS.hand.x + 0.5) * P, y: (HERO_POINTS.hand.y + 0.5) * P },
-  head: { x: (HERO_POINTS.head.x + 0.5) * P, y: HERO_POINTS.head.y * P },
+  hand: { x: (flipCol(HERO_POINTS.hand.x) + 0.5) * P, y: (HERO_POINTS.hand.y + 0.5) * P },
+  head: { x: (flipCol(HERO_POINTS.head.x) + 0.5) * P, y: HERO_POINTS.head.y * P },
+  /** How high the bare raccoon reaches above the ground in his idle loop (screen px). */
+  top: (S.anchor.y + 1 - Math.min(...IDLE.map((f) => bounds(frameBuf(S, f)).y))) * P,
+  /** His body's center line relative to the feet origin (screen px): the frame's middle. */
+  midX: (S.w / 2 - S.anchor.x - 0.5) * P,
 };
 /** Most weapon art points up and to the right; the scene turns it this much to point straight up. */
 export const WEAPON_TILT = 45;
@@ -143,13 +160,17 @@ function mirror(b: PixelBuf): PixelBuf {
 
 let heroGearSig = '';
 
-/** The hero's body texture ('hero', with animations 'hero:idle' etc.), repainted when clothes change. */
+/**
+ * The hero's body texture ('hero', with animations 'hero:idle' etc.), mirrored to face the enemies and
+ * repainted when clothes change.
+ */
 export function heroTex(scene: Phaser.Scene, gear: BodyGear = {}): AnimInfo {
   const sig = `${gear.jacket ?? ''}|${gear.gloves ?? ''}|${gear.sneakers ?? ''}|${gear.bling ?? ''}`;
-  const bufs = () => S.frames.map((_, f) => heroFrame(f, gear));
+  const bufs = () => S.frames.map((_, f) => mirror(heroFrame(f, gear)));
   const existing = info.get('hero') as AnimInfo | undefined;
   if (!existing || !scene.textures.exists('hero')) {
     heroGearSig = sig;
+    // Not `flip`: the origin keeps its place, so the frames turn about their center line (see HERO).
     return registerSheet(scene, 'hero', S, bufs(), false);
   }
   if (sig !== heroGearSig) {
@@ -161,21 +182,27 @@ export function heroTex(scene: Phaser.Scene, gear: BodyGear = {}): AnimInfo {
   return existing;
 }
 
-/** Each hero frame's gear offset in screen pixels (and whether gear shows on it). */
+/** Each (mirrored) hero frame's gear offset in screen pixels, and whether gear shows on it. */
 export function heroFrameOffset(frame: number): { x: number; y: number; head: boolean } {
   const o = frameOffsets()[frame] ?? { dx: 0, dy: 0, head: true };
-  return { x: o.dx * P, y: o.dy * P, head: o.head };
+  // The offsets are measured on the art as drawn; mirrored, a shift to the left is a shift to the right.
+  return { x: -o.dx * P, y: o.dy * P, head: o.head };
 }
 
-/** A worn hat / mask / shield / backpack, positioned relative to the hero's feet, or null. */
-export function gearTex(scene: Phaser.Scene, slot: SpriteSlot, baseId: string): (SpriteInfo & { behind: boolean }) | null {
+/**
+ * A worn hat / mask / shield / backpack, mirrored with the body and positioned relative to the hero's
+ * feet, or null. `top` is how high its art reaches above the ground during his idle loop (screen px).
+ */
+export function gearTex(scene: Phaser.Scene, slot: SpriteSlot, baseId: string): (SpriteInfo & { behind: boolean; top: number }) | null {
   const g = gearSprite(slot, baseId);
   if (!g) return null;
+  // Mirrored about the frame's center line like the body: the icon flips and its left edge moves.
+  const x = S.w - g.x - g.buf.w;
   // Origin at the hero's feet point so the image can sit at (0, 0) of the hero rig.
-  const origin = { x: (S.anchor.x + 0.5 - g.x) * P, y: (S.anchor.y + 1 - g.y) * P };
+  const origin = { x: (S.anchor.x + 0.5 - x) * P, y: (S.anchor.y + 1 - g.y) * P };
   const key = `gear_${slot}_${baseId}`;
-  const i = lazy(scene, key, () => ({ canvas: toCanvas(g.buf), origin }));
-  return { ...i, behind: g.behind };
+  const i = lazy(scene, key, () => ({ canvas: toCanvas(mirror(g.buf)), origin }));
+  return { ...i, behind: g.behind, top: (S.anchor.y + 1 - g.y - bounds(g.buf).y + idleLift()) * P };
 }
 
 /** A weapon with its grip as origin (empty paw: an invisible 1px texture) and how far its art leans. */
@@ -190,7 +217,19 @@ export function weaponTex(scene: Phaser.Scene, baseId: string | null): SpriteInf
 
 // ------------------------------------------------------------------ enemies
 
-export type FoeTex = AnimInfo & { front: number; back: number; height: number; animated: boolean };
+export type FoeTex = AnimInfo & {
+  front: number;
+  back: number;
+  height: number;
+  animated: boolean;
+  /** Where its standing art starts and ends, relative to its feet (screen px, `artL` negative). */
+  artL: number;
+  artR: number;
+  /** How high it reaches above the ground while it stands or walks (screen px): HP bars go over this. */
+  reach: number;
+};
+
+const foeExtents = new Map<string, { artL: number; artR: number; reach: number }>();
 
 /**
  * An enemy in a world's colors, facing left toward the hero, with its feet as origin. `front` is
@@ -206,22 +245,46 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
   const look = FOE_SHEETS[ph.shape];
   let i: AnimInfo;
   let artTop: number;
+  /** The frames it stands and walks in (for its extents). */
+  let poses: PixelBuf[];
   if (look) {
     const s = look.sheet;
     const flip = s.faces === 'right';
     const frames = sheetFrames(look, color, accent).map((b) => (flip ? mirror(b) : b));
     i = registerSheet(scene, key, s, frames, flip);
     artTop = bounds(frames[s.anims.idle?.frames[0] ?? 0]).y;
+    const standing = [...(s.anims.idle?.frames ?? [0]), ...(s.anims.walk?.frames ?? [])];
+    poses = standing.map((f) => frames[f]).filter((b) => !!b);
   } else {
     const shape = ph.shape as EnemyShape;
     const art = ENEMY_ART[shape] ?? ENEMY_ART.rat;
     const b = recolorEnemy(shape in ENEMY_ART ? shape : 'rat', color, accent);
     i = registerSheet(scene, key, { w: b.w, h: b.h, anchor: art.feet, anims: { idle: { fps: 1, loop: true, frames: [0] } } }, [b], false);
     artTop = bounds(b).y;
+    poses = [b];
   }
   const front = i.ox * i.w;
   const height = i.oy * i.h - artTop * P;
-  return { ...i, front, back: (1 - i.ox) * i.w, height, animated: !!look && !look.still };
+  let ext = foeExtents.get(key);
+  if (!ext) {
+    // Sheet columns relative to the feet origin (the middle of the anchor column), in art pixels.
+    const ox = (i.ox * i.w) / P;
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let top = Infinity;
+    for (const b of poses) {
+      const bb = bounds(b);
+      if (!bb.w) continue;
+      x0 = Math.min(x0, bb.x);
+      x1 = Math.max(x1, bb.x + bb.w);
+      top = Math.min(top, bb.y);
+    }
+    ext = Number.isFinite(top)
+      ? { artL: (x0 - ox) * P, artR: (x1 - ox) * P, reach: i.oy * i.h - top * P }
+      : { artL: -front, artR: (1 - i.ox) * i.w, reach: height };
+    foeExtents.set(key, ext);
+  }
+  return { ...i, front, back: (1 - i.ox) * i.w, height, animated: !!look && !look.still, ...ext };
 }
 
 // ------------------------------------------------------------------ worlds
@@ -280,6 +343,7 @@ export function releaseWorlds(scene: Phaser.Scene, keep: number, inUse: Readonly
     if (i?.anims) for (const a of i.anims) scene.anims.remove(`${key}:${a}`);
     scene.textures.remove(key);
     info.delete(key);
+    foeExtents.delete(key);
   }
   return held;
 }
@@ -301,6 +365,30 @@ export function fxTex(scene: Phaser.Scene, name: FxName): (AnimInfo & { anim: st
 /** Tiny pixel particles: a plus-shaped spark, a dust square and confetti bits, in white (tinted at runtime). */
 const SPARK = ['.W.', 'WWW', '.W.'];
 const DUST = ['WW', 'WW'];
+
+/**
+ * HP bar badges, outlined in the characters' brown ('o'): a heart at the end of the hero's bar and a
+ * skull at the end of the boss bar. Drawn at P like everything else (`bar_heart`, `bar_skull`).
+ */
+const BAR_HEART = [
+  '.oo.oo.',
+  'oweoeRo',
+  'oeRRRro',
+  '.oRRro.',
+  '..oro..',
+  '...o...',
+];
+const BAR_SKULL = [
+  '..ooooo..',
+  '.owWWWWo.',
+  'owWWWWW5o',
+  'oWooWoo5o',
+  'oWooWoo5o',
+  'oWWWoW55o',
+  '.oo5W5oo.',
+  '..oWoWo..',
+  '...ooo...',
+];
 
 /** A sprite's buffer with its origin at its tight bounds' center (FX art can be any size). */
 function centered(b: PixelBuf): { canvas: HTMLCanvasElement; origin: { x: number; y: number } } {
@@ -324,6 +412,9 @@ export function generateTextures(scene: Phaser.Scene, w: number, h: number): voi
     const c = centered(downsample2(fromRows(rows)));
     put(scene, key, c.canvas, c.origin);
   }
+  const top = { x: 0, y: 0 };
+  put(scene, 'bar_heart', toCanvas(fromRows(BAR_HEART, { o: CHARACTER_OUTLINE })), top);
+  put(scene, 'bar_skull', toCanvas(fromRows(BAR_SKULL, { o: CHARACTER_OUTLINE })), top);
   void w;
   void h;
 }

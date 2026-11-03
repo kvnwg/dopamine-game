@@ -314,6 +314,83 @@ class AudioEngine {
     this.master.gain.setTargetAtTime(0.9, now + seconds, 0.01);
   }
 
+  // ------------------------------------------------------------------ the big rare-roll reveal
+  /** The screen goes black for a big roll: the music drops out under a deep boom. */
+  blackout(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.duckMusic(0.04, 3);
+    this.tone(48, at, 1.4, { gain: 0.5, freqEnd: 28 });
+    this.noise(at, 0.9, { type: 'lowpass', freq: 500, freqEnd: 120, gain: 0.16, attack: 0.01 });
+  }
+
+  /** A heartbeat in the dark (lub-dub), a little higher and louder each beat. */
+  heartbeat(beat: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    const up = 1 + beat * 0.06;
+    this.tone(62 * up, at, 0.14, { gain: Math.min(0.62, 0.42 + beat * 0.04), freqEnd: 40 });
+    this.tone(56 * up, at + 0.17, 0.12, { gain: 0.3, freqEnd: 38 });
+  }
+
+  /** The item rising out of the dark: a shimmering swell. */
+  emerge(seconds: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    for (const [n, det] of [[72, -6], [76, 6], [79, 0], [84, 4]] as const) {
+      this.tone(midi(n), at, seconds, { type: 'triangle', gain: 0.035, attack: seconds * 0.8, detune: det, vibrato: 4 });
+    }
+    this.noise(at, seconds, { type: 'highpass', freq: 5000, gain: 0.05, attack: seconds * 0.9 });
+  }
+
+  /** One tick of the "1 in X" counter; `progress` (0 to 1) raises the pitch. */
+  countTick(progress: number): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('count', 40)) return;
+    this.tone(midi(64 + Math.round(progress * 30)), ctx.currentTime, 0.05, { type: 'square', gain: 0.025, filter: 3200 });
+  }
+
+  /** The counter climbs past a rarity tier's odds: a bright chime, higher for rarer tiers. */
+  tierPass(tierIndex: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    const n = LADDER[Math.min(LADDER.length - 1, 3 + tierIndex)];
+    this.bell(midi(n), at, 0.5, 0.065);
+    this.bell(midi(n) * 2, at + 0.04, 0.3, 0.03);
+  }
+
+  /** The counter lands: a slam, a crash and a chord stab. `level` 0, 1, 2 = big, huge, insane. */
+  slam(level: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.tone(52, at, 0.9, { gain: 0.55, freqEnd: 32 });
+    this.noise(at, 0.12, { type: 'lowpass', freq: 2400, gain: 0.3 });
+    this.noise(at + 0.01, 1.4 + level * 0.5, { type: 'highpass', freq: 4500, gain: 0.07 + level * 0.02, attack: 0.005 });
+    for (const n of [60, 67, 72, 76, 79]) this.tone(midi(n), at, 0.6, { type: 'sawtooth', gain: 0.03, filter: 2800, attack: 0.005 });
+  }
+
+  /** A big Scrap All haul: a cash-register ka-ching, then coins pouring in (longer for bigger hauls). */
+  haul(level: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.duckMusic(0.4, 1 + level * 0.6);
+    this.noise(at, 0.06, { type: 'highpass', freq: 3000, gain: 0.12 });
+    this.bell(midi(88), at + 0.05, 0.6, 0.08);
+    this.bell(midi(93), at + 0.12, 0.8, 0.07);
+    this.coinCascade(at + 0.35, 10 + level * 4);
+    if (level >= 1) [72, 76, 79, 84].forEach((n, k) => this.bell(midi(n), at + 0.95 + k * 0.08, 0.5, 0.06));
+    if (level >= 2) {
+      this.noise(at + 0.3, 1.8, { freq: 1100, q: 0.6, gain: 0.07, attack: 0.4 });
+      this.coinCascade(at + 1.4, 12);
+    }
+  }
+
   /** Material texture when an item comes out of the bin (variants so repeats differ). */
   material(m: Material, quiet = false): void {
     const ctx = this.live;

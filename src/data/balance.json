@@ -377,8 +377,7 @@
       "level": 1
     },
     "defaultTheme": "curbside",
-    "luckPerLevel": 0.05,
-    "bigRevealMinRarity": "legendary"
+    "luckPerLevel": 0.05
   },
   "codex": {
     "entriesPerBonus": 10,
@@ -428,6 +427,16 @@
     "autoFlipSeconds": 0.25,
     "legendarySlowMoSeconds": 0.3,
     "rattleBeatSeconds": 0.15,
+    "bigRoll": {
+      "big": 250,
+      "huge": 2500,
+      "insane": 25000
+    },
+    "haul": {
+      "big": 10,
+      "huge": 40,
+      "mega": 120
+    },
     "rattleBeatsByRarity": {
       "junk": 3,
       "decent": 3,

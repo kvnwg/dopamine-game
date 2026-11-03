@@ -398,3 +398,11 @@
   font-size: 24px;
   opacity: 0.9;
 }
+
+/* Coins from a big haul land on the gold counter. */
+.moneyPulse {
+  animation: moneyPulse 320ms ease-out;
+}
+@keyframes moneyPulse {
+  40% { transform: scale(1.22); filter: brightness(1.45); }
+}

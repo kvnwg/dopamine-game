@@ -2,7 +2,7 @@
  * Renders every animation of every AnimSheet a module exports, one row per animation, so pack
  * sprites can be checked in Node (no browser needed).
  *
- *   npx tsx tools/animSheet.ts packs/fantasy /tmp/fantasy.png --scale 6
+ *   npx tsx tools/animSheet.ts packs/farm /tmp/farm.png --scale 6
  *
  * The module path is relative to src/render/pixel. A dot marks each sheet's anchor.
  */

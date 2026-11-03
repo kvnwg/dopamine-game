@@ -9,22 +9,25 @@
  *    the body takes the item's colors, so they follow every pose exactly.
  * Each frame's offset from the reference pose is found by matching the head's silhouette; frames
  * where the head is hidden (curled up asleep) carry no gear.
+ *
+ * The sheet faces left (tail on the right). The battle mirrors the body and the worn gear so he faces
+ * the enemies on the right (textures.ts); everything here is in the sheet's own, unmirrored pixels.
  */
-import { alphaAt, blank, color, downsample2, fromRows, rampOf, rgb, type PixelBuf, type SheetEntry } from './buf';
+import { alphaAt, blank, color, downsample2, flipX, fromRows, rampOf, rgb, type PixelBuf, type SheetEntry } from './buf';
 import { frameBuf } from './indexed';
 import { DEFAULT_WEAPON_TILT, ITEM_SPRITES, WEAPON_ART_TILT, WEAPON_GRIP } from './items';
 import { RACCOON, RACCOON_FUR } from './packs/raccoon';
 
 export const HERO_SHEET = RACCOON;
 
-/** Landmarks of the reference pose (frame 0), in frame pixels. */
+/** Landmarks of the reference pose (frame 0), in frame pixels as drawn (facing left). */
 export const HERO_POINTS = {
   /** Ground contact (the bottom edge of this row). */
   feet: RACCOON.anchor,
-  /** The paw that holds the weapon (screen right, toward the enemies). */
-  hand: { x: 15, y: 15 },
-  /** The other paw: shields. */
-  offHand: { x: 6, y: 15 },
+  /** The front paw (left as drawn, toward the enemies once mirrored): it holds the weapon. */
+  hand: { x: 6, y: 15 },
+  /** The back paw, by the tail: shields. */
+  offHand: { x: 15, y: 15 },
   /** Top of the head between the ears: hats sit here. */
   head: { x: 11, y: 6 },
   /** Between the eyes: masks center here. */
@@ -216,8 +219,8 @@ export function gearSprite(slot: GearSlot, baseId: string): GearSprite | null {
     case 'shield':
       return { buf, x: P.offHand.x - Math.round(bb.x + bb.w / 2), y: P.offHand.y - Math.round(bb.y + bb.h / 2), behind: false };
     case 'backpack':
-      // Peeks out behind the left shoulder.
-      return { buf, x: 3 - bb.x, y: 9 - bb.y, behind: true };
+      // Peeks out behind his back: over the tail's shoulder (the right one as drawn).
+      return { buf, x: 21 - bb.x - bb.w, y: 9 - bb.y, behind: true };
     default:
       return null;
   }
@@ -255,12 +258,13 @@ export function weaponBuf(baseId: string): WeaponSprite | null {
 export type Outfit = Partial<Record<GearSlot | 'weapon', string>>;
 
 /**
- * The hero in one frame with a whole outfit, as one buffer (for previews; the battle draws the
- * parts as separate sprites so the weapon can swing). PAD pixels of room on every side.
+ * The hero in one frame with a whole outfit, as one buffer, the way the battle shows him: body and
+ * worn gear mirrored to face right, the weapon (never mirrored) in his front paw. For previews; the
+ * battle draws the parts as separate sprites so the weapon can swing. PAD pixels of room on every side.
  */
 export function composeHero(f: number, outfit: Outfit, pad = 10): PixelBuf {
   const o = frameOffsets()[f];
-  const out = blank(RACCOON.w + pad * 2, RACCOON.h + pad * 2);
+  let out = blank(RACCOON.w + pad * 2, RACCOON.h + pad * 2);
   const put = (b: PixelBuf, x: number, y: number) => {
     for (let yy = 0; yy < b.h; yy++) {
       for (let xx = 0; xx < b.w; xx++) {
@@ -277,8 +281,10 @@ export function composeHero(f: number, outfit: Outfit, pad = 10): PixelBuf {
   for (const g of sprites) if (g.behind) put(g.buf, g.x + o.dx, g.y + o.dy);
   put(heroFrame(f, outfit), 0, 0);
   for (const g of sprites) if (!g.behind) put(g.buf, g.x + o.dx, g.y + o.dy);
+  // (The pad is the same on both sides, so this mirrors about the frame's center line.)
+  out = flipX(out);
   const w = outfit.weapon && o.head ? weaponBuf(outfit.weapon) : null;
-  if (w) put(w.buf, HERO_POINTS.hand.x + o.dx - w.grip.x, HERO_POINTS.hand.y + o.dy - w.grip.y);
+  if (w) put(w.buf, RACCOON.w - 1 - (HERO_POINTS.hand.x + o.dx) - w.grip.x, HERO_POINTS.hand.y + o.dy - w.grip.y);
   return out;
 }
 

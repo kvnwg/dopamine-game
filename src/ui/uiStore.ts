@@ -1,6 +1,6 @@
 /** UI-only state (tabs, animations, popups, toasts). Never saved; GameState stays the single source of truth. */
 import { create } from 'zustand';
-import type { Item, RollPlacement } from '../core';
+import type { HaulSize, Item, RollDrama, RollPlacement } from '../core';
 import type { AdPlacement } from '../services';
 
 export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world';
@@ -15,6 +15,10 @@ export interface RollView {
   placed: RollPlacement;
   newRecord: boolean;
   at: number;
+  /** "1 in X" for this tier or better at the raccoon's luck when it was rolled (luckOddsOneIn). */
+  luckOdds: number;
+  /** How big a deal it is for that luck: null for an everyday roll. */
+  drama: RollDrama | null;
 }
 
 /** An item being dragged toward the raccoon (stage coordinates). */
@@ -57,6 +61,10 @@ interface UiState {
   mapView: { x: number; y: number; k: number } | null;
   /** The dev cheat panel is open (playtest builds; opened from Settings). */
   devOpen: boolean;
+  /** A big Scrap All haul being celebrated. */
+  haul: { id: number; coins: number; minutes: number; count: number; size: HaulSize } | null;
+  /** Bumped when coins land on the gold counter (it pulses). */
+  goldPulse: number;
   /** The last boss win, for the "again or next?" card (first clears list their rewards). */
   afterBoss: { world: number; firstTime: boolean; gems: number } | null;
   setTab: (t: Tab) => void;
@@ -82,6 +90,8 @@ export const useUi = create<UiState>((set) => ({
   upgradeSel: 'luck:1',
   prevTab: 'alley',
   mapView: null,
+  haul: null,
+  goldPulse: 0,
   afterBoss: null,
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),

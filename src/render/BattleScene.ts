@@ -1,17 +1,17 @@
 /**
  * The battle view (Phaser). Reads GameState every frame and choreographs core events:
  * the raccoon hops along, closes in, winds up and dashes into a swing (pack hit effects, hit-stop
- * on crits, knockback), enemies walk in, attack, flinch and fall with their own animations, HP
- * bars sit under every fighter, and coins arc up to the gold counter. Combat results always come
- * from core; this file only animates them.
+ * on crits, knockback), enemies walk in, attack, flinch and fall with their own animations, pixel
+ * HP bars float over the fighters' heads (the boss's sits under the HUD), and coins arc up to the
+ * gold counter. Combat results always come from core; this file only animates them.
  *
  * Everything is drawn on one pixel grid (P screen pixels per art pixel): Kevin's raccoon, the pack
- * characters, the backdrops and the effects. Nothing is scaled or squashed; motion is position,
- * frames and (for weapon swings and knock-outs) rotation.
+ * characters, the backdrops, the effects and the HP bars. Nothing is scaled or squashed; motion is
+ * position, frames and (for weapon swings and knock-outs) rotation.
  */
 import Phaser from 'phaser';
 import { BAL, SLOTS, type Rarity } from '../data';
-import { computeStats, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState } from '../core';
+import { computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
@@ -22,6 +22,7 @@ import {
 } from './textures';
 import { P } from './pixel';
 import { SPRITE_SLOTS } from './pixel/hero';
+import { CHARACTER_OUTLINE, PAL } from './pixel/palette';
 import { FEET_ROW } from './pixel/sceneryTypes';
 import type { FxName } from './pixel/packs/fx';
 import { layerY, scenerySet, scroll0, worldArt, worldSeed } from './worldLook';
@@ -37,11 +38,8 @@ const HERO_FIGHT_X = 336;
 /** Where the front enemy's leading edge stands while fighting. */
 const ENGAGE_EDGE = 456;
 const COIN_TARGET = { x: 694, y: 58 };
-/** Top of the boss HP bar: just under the HUD row. */
-const BOSS_BAR_Y = 176;
-/** Fighters' HP bars: how far under the feet, and how tall (slim, so a row of foes reads cleanly). */
-const BAR_DY = 16;
-const BAR_H = 12;
+/** Top of the boss HP bar: just under the HUD row, with the boss's name over it. */
+const BOSS_BAR_Y = 180;
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
 const FONT = '"Dumpster Digits", "Pixelify Sans", "Courier New", monospace';
 const INK = '#1A1326';
@@ -55,6 +53,64 @@ const HAND = { x: HERO.hand.x - HERO.feet.x, y: HERO.hand.y - HERO.feet.y };
 /** Hero sheet frames used directly (see tools/packs/chars.py): standing, crouched, stretched up, arms out, blushing, dash. */
 const FRAME = { stand: 0, up: 2, squash: 4, armsOut: 13, blush: 14, dash: 15 } as const;
 
+/**
+ * HP bars are pixel art on the battle grid (every edge on a multiple of P): a frame in the characters'
+ * outline brown with its corners cut, a lit top row over the main color, the part just lost showing
+ * light (the ghost) until it drains, and a dark empty part. Tones are [top row, rows below].
+ */
+type BarTones = readonly [top: number, main: number];
+const hexNum = (hex: string) => parseInt(hex.slice(1), 16);
+const BAR_LINE = hexNum(CHARACTER_OUTLINE);
+const BAR_HERO: BarTones = [hexNum(PAL.L), hexNum(PAL.l)];
+const BAR_FOE: BarTones = [hexNum(PAL.e), hexNum(PAL.R)];
+const BAR_BOSS: BarTones = [hexNum(PAL.y), hexNum(PAL.O)];
+const BAR_GHOST: BarTones = [hexNum(PAL.w), hexNum(PAL.W)];
+const BAR_EMPTY: BarTones = [hexNum(PAL.x), hexNum(PAL['1'])];
+/** Bar sizes in art pixels, outline included. Fighters' bars are as wide as their art allows. */
+const BAR_TALL = 4;
+const FOE_BAR_W = { min: 10, max: 16 };
+const HERO_BAR_W = 14;
+const BOSS_BAR = { w: 52, h: 5 };
+/** The heart (7 x 6) shares its right column with the hero bar's left edge; the skull (9 x 9) sits left of the boss bar. */
+const HEART_W = 7;
+const SKULL_W = 9;
+/** Art pixels between a bar and the top of the head under it. */
+const BAR_GAP = 2;
+/** Seconds the light part of a fresh hit holds before it drains. */
+const GHOST_HOLD = 0.3;
+
+/** The damage trail behind an HP bar. */
+interface Trail {
+  /** The HP the light part still reaches. */
+  hp: number;
+  /** Seconds before it starts to drain. */
+  hold: number;
+}
+
+/** Moves a trail toward `hp`: a hit holds a moment, then drains (faster for a bigger gap); heals show at once. */
+function drainTrail(t: Trail, hp: number, max: number, dt: number): void {
+  if (hp >= t.hp) {
+    t.hp = hp;
+    t.hold = GHOST_HOLD;
+    return;
+  }
+  if (t.hold > 0) {
+    t.hold -= dt;
+    return;
+  }
+  t.hp = Math.max(hp, t.hp - (max * 0.3 + (t.hp - hp) * 3) * dt);
+}
+
+/**
+ * How many of a bar's `inner` columns are full and how far the trail reaches. Any damage takes a
+ * column and the last sliver stays until 0, so a bar only reads full or empty when it is.
+ */
+function barCells(inner: number, pct: number, ghost: number): { fill: number; trail: number } {
+  const cells = (k: number) => (k >= 1 ? inner : k > 0 ? Phaser.Math.Clamp(Math.floor(k * inner), 1, inner - 1) : 0);
+  const fill = cells(pct);
+  return { fill, trail: Math.max(fill, cells(ghost)) };
+}
+
 type Kind = 'regular' | 'miniboss' | 'boss';
 type HeroMode = 'idle' | 'walk' | 'swing' | 'hurt' | 'cheer' | 'ko' | 'wake';
 
@@ -66,8 +122,14 @@ interface Foe {
   rig: Phaser.GameObjects.Container;
   spr: Phaser.GameObjects.Sprite;
   tex: FoeTex;
+  /** Its HP bar over its head (regular foes; the boss has the big one under the HUD). */
   bar: Phaser.GameObjects.Graphics;
-  num: Phaser.GameObjects.Text;
+  /** The bar's top-left corner relative to the feet (screen px, multiples of P) and its width (art px). */
+  barX: number;
+  barY: number;
+  barW: number;
+  /** What the bar shows (it's redrawn only when this changes). */
+  barSig: string;
   front: number;
   back: number;
   height: number;
@@ -76,7 +138,7 @@ interface Foe {
   knock: number;
   knockV: number;
   shownHp: number;
-  ghostHp: number;
+  trail: Trail;
   maxHp: number;
   /** Visual hits still on their way (so the sprite outlives its core death until the blow lands). */
   pending: number;
@@ -134,9 +196,17 @@ export class BattleScene extends Phaser.Scene {
   private weaponTilt = WEAPON_TILT;
   private aura!: Phaser.GameObjects.Graphics;
   private heroBar!: Phaser.GameObjects.Graphics;
-  private heroNum!: Phaser.GameObjects.Text;
+  private heart!: Phaser.GameObjects.Image;
+  private heroBarSig = '';
+  private heroTrail: Trail = { hp: 0, hold: 0 };
+  /** How high the raccoon reaches above the ground, hat included (screen px). */
+  private heroTop = HERO.top;
+  /** The boss's bar, skull, name and HP, faded as one. */
+  private bossUi!: Phaser.GameObjects.Container;
   private bossBar!: Phaser.GameObjects.Graphics;
   private bossName!: Phaser.GameObjects.Text;
+  private bossHp!: Phaser.GameObjects.Text;
+  private bossSig = '';
   private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
   private bigSparks!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dust!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -156,7 +226,6 @@ export class BattleScene extends Phaser.Scene {
   private poseT = 0;
   private gearSig = '';
   private hpCache: { key: unknown; hp: number } = { key: null, hp: 1 };
-  private shownHeroHp = 0;
   private healAcc = 0;
   private healTimer = 0;
   private coinsFlying = 0;
@@ -179,12 +248,10 @@ export class BattleScene extends Phaser.Scene {
     this.buildHero();
     this.buildEffects();
     this.heroBar = this.add.graphics().setDepth(40);
-    this.heroNum = this.label(0, 0, 20).setDepth(41);
-    this.bossBar = this.add.graphics().setDepth(40);
-    // Boss name and HP bar sit right under the HUD (the sky below the HUD is otherwise clear).
-    this.bossName = this.label(BATTLE_W / 2, BOSS_BAR_Y - 6, 32).setOrigin(0.5, 1).setDepth(41);
+    this.heart = this.add.image(0, 0, 'bar_heart').setOrigin(0, 0).setDepth(40.5);
+    this.buildBossBar();
     this.cover = this.add.rectangle(0, 0, BATTLE_W, BATTLE_H, 0xffffff, 1).setOrigin(0, 0).setDepth(60).setAlpha(0);
-    this.shownHeroHp = gameStore.getState().game.battle.playerHp;
+    this.heroTrail.hp = gameStore.getState().game.battle.playerHp;
     this.unsub = bus.on((events) => this.onEvents(events));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsub?.());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.unsub?.());
@@ -197,8 +264,30 @@ export class BattleScene extends Phaser.Scene {
       .then(() => fonts?.ready)
       .then(() => {
         if (!this.sys.isActive()) return;
-        for (const tx of [this.heroNum, this.bossName]) tx.setFontFamily(FONT);
+        for (const tx of [this.bossName, this.bossHp]) tx.setFontFamily(FONT);
+        this.fitBossName();
       });
+  }
+
+  /**
+   * The boss bar sits right under the HUD (the sky there is otherwise clear): a wide pixel bar with a
+   * skull at its left end, the boss's name centered over it and its HP to the right, outside the bar.
+   */
+  private buildBossBar() {
+    const x = BATTLE_W / 2 - (BOSS_BAR.w * P) / 2;
+    this.bossBar = this.add.graphics().setPosition(x, BOSS_BAR_Y);
+    // The skull's right column is the bar's left edge; it stands 2 art px over and under the bar.
+    const skull = this.add.image(x - (SKULL_W - 1) * P, BOSS_BAR_Y - 2 * P, 'bar_skull').setOrigin(0, 0);
+    this.bossName = this.label(BATTLE_W / 2, BOSS_BAR_Y - 2 * P, 32).setOrigin(0.5, 1);
+    this.bossHp = this.label(x + (BOSS_BAR.w + 2) * P, BOSS_BAR_Y + (BOSS_BAR.h * P) / 2, 28).setOrigin(0, 0.5);
+    this.bossUi = this.add.container(0, 0, [this.bossBar, skull, this.bossName, this.bossHp]).setDepth(40).setAlpha(0).setVisible(false);
+  }
+
+  /** Long boss names shrink to fit the view. */
+  private fitBossName() {
+    const room = BATTLE_W - 6 * P;
+    this.bossName.setFontSize(32);
+    if (this.bossName.width > room) this.bossName.setFontSize(Math.floor((32 * room) / this.bossName.width));
   }
 
   private label(x: number, y: number, size: number): Phaser.GameObjects.Text {
@@ -319,6 +408,7 @@ export class BattleScene extends Phaser.Scene {
     heroTex(this, { jacket: id('jacket'), gloves: id('gloves'), sneakers: id('sneakers'), bling: id('bling') });
     this.gearBack.removeAll(true);
     this.gearFront.removeAll(true);
+    this.heroTop = HERO.top;
     // Front order, back to front: shield, mask, hat.
     for (const slot of ['backpack', 'shield', 'mask', 'hat'] as const) {
       const base = id(slot);
@@ -326,6 +416,8 @@ export class BattleScene extends Phaser.Scene {
       const i = gearTex(this, slot, base);
       if (!i) continue;
       (i.behind ? this.gearBack : this.gearFront).add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
+      // A tall hat lifts his HP bar.
+      this.heroTop = Math.max(this.heroTop, i.top);
     }
     const w = weaponTex(this, id('weapon'));
     this.weapon.setTexture(w.key).setOrigin(w.ox, w.oy);
@@ -619,8 +711,7 @@ export class BattleScene extends Phaser.Scene {
   private die(f: Foe) {
     if (f.dying) return;
     f.dying = true;
-    f.bar.clear();
-    f.num.setVisible(false);
+    f.bar.setVisible(false);
     const info = this.kills.get(f.uid);
     this.kills.delete(f.uid);
     const p = this.foeHitPoint(f);
@@ -635,7 +726,7 @@ export class BattleScene extends Phaser.Scene {
     this.flash(f.spr, 0xffffff, 90);
     const remove = () => {
       f.c.destroy();
-      f.num.destroy();
+      f.bar.destroy();
       this.foes.delete(f.uid);
     };
     this.tweens.killTweensOf(f.spr);
@@ -953,6 +1044,7 @@ export class BattleScene extends Phaser.Scene {
           break;
         case 'stageStart':
           this.clearFoes();
+          this.bossUi.setAlpha(0).setVisible(false);
           if (this.dead) {
             this.dead = false;
             this.mode = 'idle';
@@ -975,17 +1067,21 @@ export class BattleScene extends Phaser.Scene {
     const rig = this.add.container(0, 0);
     const spr = this.add.sprite(0, 0, tex.key, '0').setOrigin(tex.ox, tex.oy).setScale(P);
     rig.add(spr);
-    const bar = this.add.graphics();
-    c.add([shadow, rig, bar]);
-    const num = this.label(0, 0, 20).setDepth(41);
+    c.add([shadow, rig]);
+    // Its HP bar: about as wide as its art, centered over it, BAR_GAP over the highest point of its
+    // standing and walking frames. (Over the vignette and the weather, like the hero's.)
+    const bar = this.add.graphics().setDepth(39).setVisible(false);
+    const barW = Phaser.Math.Clamp(Math.round((tex.artR - tex.artL) / P) - 2, FOE_BAR_W.min, FOE_BAR_W.max);
+    const barX = snap((tex.artL + tex.artR) / 2 - (barW * P) / 2);
+    const barY = -snap(tex.reach) - (BAR_GAP + BAR_TALL) * P;
     spr.play(`${tex.key}:${tex.anims.has('walk') ? 'walk' : 'idle'}`);
     if (!tex.animated) {
       // Stills breathe: one pixel up and down so nothing sits perfectly still.
       this.tweens.add({ targets: spr, y: -P, duration: 420 + (uid % 5) * 60, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [1] });
     }
     return {
-      uid, id: enemyId, kind, c, rig, spr, tex, bar, num, front: tex.front, back: tex.back, height: tex.height,
-      x: startX, lunge: 0, knock: 0, knockV: 0, shownHp: hp, ghostHp: hp, maxHp, pending: 0, dead: false, dying: false, acting: false,
+      uid, id: enemyId, kind, c, rig, spr, tex, bar, barX, barY, barW, barSig: '', front: tex.front, back: tex.back, height: tex.height,
+      x: startX, lunge: 0, knock: 0, knockV: 0, shownHp: hp, trail: { hp, hold: GHOST_HOLD }, maxHp, pending: 0, dead: false, dying: false, acting: false,
     };
   }
 
@@ -1024,54 +1120,58 @@ export class BattleScene extends Phaser.Scene {
         if (this.kills.has(uid)) this.die(f);
         else {
           f.c.destroy();
-          f.num.destroy();
+          f.bar.destroy();
           this.foes.delete(uid);
         }
       }
     }
     for (const f of this.foes.values()) {
-      if (f.dying) {
-        f.num.setVisible(false);
-        continue;
-      }
+      if (f.dying) continue;
       // Knockback spring.
       f.knockV += -f.knock * 260 * dt - f.knockV * 16 * dt;
       f.knock += f.knockV * dt;
       f.c.x = snap(f.x + f.lunge + (this.reduceMotion ? 0 : f.knock));
-      f.ghostHp = f.ghostHp > f.shownHp ? Math.max(f.shownHp, f.ghostHp - f.maxHp * 0.9 * dt) : f.shownHp;
-      const regular = f.kind === 'regular';
-      const w = regular ? Phaser.Math.Clamp((f.front + f.back) * 0.42, 60, 120) : 0;
-      f.bar.clear();
-      if (regular) {
-        this.drawBar(f.bar, 0, BAR_DY, w, BAR_H, f.shownHp / f.maxHp, f.ghostHp / f.maxHp, 0xff4d5e);
-        // Only the foe being fought shows its number; the rest just show their bars.
-        const fighting = f.uid === frontUid;
-        f.num.setVisible(fighting);
-        if (fighting) f.num.setText(formatNumber(Math.ceil(Math.max(0, f.shownHp)))).setPosition(f.c.x, FEET_Y + BAR_DY + BAR_H / 2);
-      } else {
-        f.num.setVisible(false);
-      }
+      drainTrail(f.trail, f.shownHp, f.maxHp, dt);
+      // A foe's bar stays hidden (a calmer field) until it fronts the line or has been hit.
+      const show = f.kind === 'regular' && (f.uid === frontUid || f.shownHp < f.maxHp);
+      f.bar.setVisible(show);
+      if (!show) continue;
+      f.bar.setPosition(f.c.x + f.barX, FEET_Y + f.barY);
+      f.barSig = this.pixelBar(f.bar, f.barSig, f.barW, BAR_TALL, f.shownHp / f.maxHp, f.trail.hp / f.maxHp, BAR_FOE);
     }
   }
 
-  private drawBar(g: Phaser.GameObjects.Graphics, cx: number, y: number, w: number, h: number, pct: number, ghost: number, color: number) {
-    const x = cx - w / 2;
-    const border = h >= 20 ? 6 : 4;
-    g.fillStyle(INK_N, 1).fillRect(x - border, y - border, w + border * 2, h + border * 2);
-    g.fillStyle(0x4a3b38, 1).fillRect(x, y, w, h);
-    const gw = w * Phaser.Math.Clamp(ghost, 0, 1);
-    if (gw > 2) g.fillStyle(0xffffff, 0.95).fillRect(x, y, gw, h);
-    const fw = w * Phaser.Math.Clamp(pct, 0, 1);
-    if (fw > 2) {
-      g.fillStyle(color, 1).fillRect(x, y, fw, h);
-      g.fillStyle(0xffffff, 0.35).fillRect(x, y, fw, Math.max(4, Math.round(h * 0.3)));
-    }
+  /**
+   * Draws a pixel HP bar `w` x `h` art pixels into `g` (its top-left corner at g's position): a
+   * CHARACTER_OUTLINE frame with cut corners around a lit top row over the main rows; the part lost
+   * since `ghost` light, the rest dark. Redraws only if the cells differ from `sig`; returns the new sig.
+   */
+  private pixelBar(g: Phaser.GameObjects.Graphics, sig: string, w: number, h: number, pct: number, ghost: number, tones: BarTones): string {
+    const inner = w - 2;
+    const { fill, trail } = barCells(inner, pct, ghost);
+    const next = `${w}x${h}:${fill},${trail},${tones[1]}`;
+    if (next === sig) return sig;
+    g.clear();
+    g.fillStyle(BAR_LINE, 1);
+    g.fillRect(P, 0, inner * P, P);
+    g.fillRect(P, (h - 1) * P, inner * P, P);
+    g.fillRect(0, P, P, (h - 2) * P);
+    g.fillRect((w - 1) * P, P, P, (h - 2) * P);
+    const span = (from: number, to: number, c: BarTones) => {
+      if (to <= from) return;
+      g.fillStyle(c[0], 1).fillRect((1 + from) * P, P, (to - from) * P, P);
+      if (h > 3) g.fillStyle(c[1], 1).fillRect((1 + from) * P, 2 * P, (to - from) * P, (h - 3) * P);
+    };
+    span(0, fill, tones);
+    span(fill, trail, BAR_GHOST);
+    span(trail, inner, BAR_EMPTY);
+    return next;
   }
 
   private clearFoes() {
     for (const f of this.foes.values()) {
       f.c.destroy();
-      f.num.destroy();
+      f.bar.destroy();
     }
     this.foes.clear();
     this.kills.clear();
@@ -1150,8 +1250,8 @@ export class BattleScene extends Phaser.Scene {
       this.drawGear(g);
     }
 
-    // Hero: hops along, closes in to fight.
-    const targetX = b.phase === 'fighting' ? HERO_FIGHT_X : HERO_WALK_X;
+    // Hero: hops along, closes in to fight, and stays put (idling) while the player picks a world after a boss.
+    const targetX = b.phase === 'fighting' || b.phase === 'choice' ? HERO_FIGHT_X : HERO_WALK_X;
     this.heroX += (targetX - this.heroX) * (1 - Math.pow(0.001, dt));
     this.heroKnock += (0 - this.heroKnock) * (1 - Math.pow(0.0005, dt));
     this.hero.x = snap(this.heroX + this.heroDx + this.heroKnock);
@@ -1170,29 +1270,52 @@ export class BattleScene extends Phaser.Scene {
       this.healTimer = 0.5;
     }
 
-    // Hero HP bar.
-    const maxHp = Math.max(1, b.playerHp, this.maxHp(g));
-    this.shownHeroHp += (b.playerHp - this.shownHeroHp) * (1 - Math.pow(0.0001, dt));
-    this.heroBar.clear();
-    if (!this.dead) {
-      this.drawBar(this.heroBar, this.hero.x - 4, FEET_Y + BAR_DY, 132, BAR_H, b.playerHp / maxHp, this.shownHeroHp / maxHp, 0x5bd23a);
-      this.heroNum.setText(formatNumber(Math.max(0, Math.ceil(b.playerHp)))).setPosition(this.hero.x - 4, FEET_Y + BAR_DY + BAR_H / 2).setVisible(true);
-    } else {
-      this.heroNum.setVisible(false);
-    }
+    this.updateHeroBar(g, dt);
+    this.updateBossBar(g, dt);
+  }
 
-    // Boss bar under the stage name.
-    const boss = b.enemies.find((e) => e.kind !== 'regular');
-    this.bossBar.clear();
-    if (boss) {
-      const f = this.foes.get(boss.uid);
-      const shown = f ? f.shownHp : boss.hp;
-      const ghost = f ? f.ghostHp : boss.hp;
-      this.drawBar(this.bossBar, BATTLE_W / 2, BOSS_BAR_Y, 600, 28, shown / boss.maxHp, ghost / boss.maxHp, boss.kind === 'boss' ? 0xffb300 : 0xff4d5e);
-      this.bossName.setText(`${worldDef(b.stage).boss.name}  ${formatNumber(Math.max(0, Math.ceil(shown)))}`);
-    } else {
-      this.bossName.setText('');
+  /**
+   * The hero's bar, with a heart at its left end, over his head (or hat). It follows his spot and his
+   * hops but not his dashes and knockbacks, so it stays calm while he fights. Hidden while he's out cold.
+   */
+  private updateHeroBar(g: GameState, dt: number) {
+    const b = g.battle;
+    const max = Math.max(1, b.playerHp, this.maxHp(g));
+    drainTrail(this.heroTrail, b.playerHp, max, dt);
+    const show = !this.dead;
+    this.heroBar.setVisible(show);
+    this.heart.setVisible(show);
+    if (!show) return;
+    const span = HEART_W - 1 + HERO_BAR_W;
+    const x = snap(this.heroX + HERO.midX - (span * P) / 2);
+    const y = FEET_Y - snap(this.heroTop) - (BAR_GAP + BAR_TALL) * P + this.rig.y;
+    this.heart.setPosition(x, y - P);
+    this.heroBar.setPosition(x + (HEART_W - 1) * P, y);
+    this.heroBarSig = this.pixelBar(this.heroBar, this.heroBarSig, HERO_BAR_W, BAR_TALL, b.playerHp / max, this.heroTrail.hp / max, BAR_HERO);
+  }
+
+  /**
+   * The boss bar near the top. It follows the boss on screen rather than core, so the killing blow
+   * still empties it before it fades; between waves and while the player picks the next world
+   * (phase 'choice') there is no boss and it stays hidden.
+   */
+  private updateBossBar(g: GameState, dt: number) {
+    const b = g.battle;
+    let f: Foe | undefined;
+    for (const x of this.foes.values()) if (x.kind !== 'regular' && !x.dying) f = x;
+    const show = !!f && (b.phase !== 'choice' || f.pending > 0);
+    const ui = this.bossUi;
+    ui.setAlpha(show ? Math.min(1, ui.alpha + dt * 8) : Math.max(0, ui.alpha - dt * 4)).setVisible(ui.alpha > 0);
+    // (Fading out, it keeps showing its last state: an empty bar.)
+    if (!f || !show) return;
+    const name = enemyName(b.stage, f.id, f.kind);
+    if (name !== this.bossName.text) {
+      this.bossName.setText(name);
+      this.fitBossName();
     }
+    this.bossHp.setText(formatNumber(Math.max(0, Math.ceil(f.shownHp))));
+    const tones = f.kind === 'boss' ? BAR_BOSS : BAR_FOE;
+    this.bossSig = this.pixelBar(this.bossBar, this.bossSig, BOSS_BAR.w, BOSS_BAR.h, f.shownHp / f.maxHp, f.trail.hp / f.maxHp, tones);
   }
 }
 

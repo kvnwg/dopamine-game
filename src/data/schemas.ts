@@ -116,7 +116,6 @@ export const BalanceSchema = z.object({
     tutorialItem: z.object({ baseId: z.string(), rarity: RaritySchema, level: z.number().int().positive() }),
     defaultTheme: z.string(),
     luckPerLevel: nonNeg,
-    bigRevealMinRarity: RaritySchema,
   }),
   codex: z.object({
     entriesPerBonus: z.number().int().positive(),
@@ -222,6 +221,13 @@ export const BalanceSchema = z.object({
     autoFlipSeconds: positive,
     legendarySlowMoSeconds: nonNeg,
     rattleBeatSeconds: positive,
+    /**
+     * A roll this rare at the raccoon's current luck ("1 in X" for its tier or better, see luckOddsOneIn)
+     * gets the full-screen reveal; huge and insane ones get a longer, louder one.
+     */
+    bigRoll: z.object({ big: positive, huge: positive, insane: positive }),
+    /** A Scrap All worth this many minutes of fighting (see haulMinutes) gets a big, huge or mega haul moment. */
+    haul: z.object({ big: positive, huge: positive, mega: positive }),
     rattleBeatsByRarity: rarityRecord(z.number().int().positive()),
     revealSecondsByRarity: rarityRecord(positive),
     hotDumpsterStartPct: nonNeg,
@@ -336,7 +342,7 @@ export const EnemiesSchema = z.array(EnemySchema).min(1);
 
 export const StringsSchema = z.record(z.string(), z.string());
 
-/** Enemy art: hand-drawn stills (rat ... raccoonBoss) or animated sheets (raccoon, officer and the pack characters). */
+/** Enemy art: hand-drawn animated sheets (enemies.ts), the punk raccoon (the hero's sheet) and the farm animals (packs/farm.ts). */
 export const EnemyShapeSchema = z.enum([
   'rat', 'pigeon', 'raccoon', 'ratKing', 'raccoonBoss', 'officer', 'soldier', 'orc', 'pumpkin', 'doc', 'bigDemon',
   'hen', 'duck', 'bunny', 'ram', 'pig', 'cow',

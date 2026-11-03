@@ -95,6 +95,18 @@ body,
   -webkit-user-select: none;
   touch-action: manipulation;
   overscroll-behavior: none;
+  /* The pixel font's "fi" ligature draws like an "A" ("Aghts"): letters stay separate everywhere. */
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
+}
+
+/* Form controls and the canvas text do not inherit the setting above. */
+button,
+input,
+textarea,
+select {
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
 }
 
 button {

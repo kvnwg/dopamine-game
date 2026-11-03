@@ -76,7 +76,7 @@
   "settings.reduceMotion": "Reduce motion",
   "settings.version": "Dumpster Legend v{version}",
   "settings.devTools": "Dev tools",
-  "settings.credits": "Raccoon by Kevin. Characters: Mucho Pixels, Tiny RPG Soldier & Orc, 0x72 Dungeon Tileset II. Effects: Pixel Art Assets - Will Tice / unTied Games. Clothes: Modern Pixel Clothes. Props: MV Icons. Font: Pixelify Sans.",
+  "settings.credits": "Raccoon by Kevin. Dungeon: 0x72 Dungeon Tileset II. Farm animals: farm animal sprite pack. Effects: Pixel Art Assets - Will Tice / unTied Games. Clothes: Modern Pixel Clothes. Props: MV Icons. Font: Pixelify Sans.",
   "reveal.mintStamp": "MINT IN BOX!",
   "toast.levelUp": "Level up! You are now level {level}",
   "toast.codexBonus": "Codex bonus unlocked! +{gems} Gems",
@@ -376,5 +376,13 @@
   "choice.next": "Next world",
   "choice.auto": "in {s}",
   "choice.rewards": "+{gems} gems and a Luck Potion",
-  "toast.equippedN": "Equipped {n} upgrades!"
+  "toast.equippedN": "Equipped {n} upgrades!",
+  "reveal.skip": "Tap to skip",
+  "reveal.forYou": "That is 1 in {odds} even with your luck!",
+  "haul.big": "BIG HAUL!",
+  "haul.huge": "HUGE HAUL!",
+  "haul.mega": "MEGA HAUL!",
+  "haul.minutes": "That's {n} minutes of fighting!",
+  "haul.hours": "That's {n} hours of fighting!",
+  "haul.items": "{n} items scrapped"
 }

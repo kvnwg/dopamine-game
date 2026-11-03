@@ -62,15 +62,41 @@ export function rarityChances(luck: number, minRarity: Rarity = 'junk'): Record<
  * enchantments (their count and tiers, at the base enchant chance). Shown on every item.
  */
 export function itemOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: number }> }): number {
-  let p = rarityChances(1)[item.rarity];
-  const n = item.enchants.length;
-  if (n > 0) {
-    const e = BAL.enchant;
-    const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
-    p *= e.baseChance * (e.countWeights[Math.min(n, e.countWeights.length) - 1] / sum(e.countWeights));
-    for (const en of item.enchants) p *= e.tierWeights[en.tier - 1] / sum(e.tierWeights);
-  }
-  return Math.max(1, Math.round(1 / p));
+  return Math.max(1, Math.round(1 / (rarityChances(1)[item.rarity] * enchantOdds(item.enchants))));
+}
+
+/** The chance of rolling exactly these enchantments (their count and tiers) at the base enchant chance. */
+function enchantOdds(enchants: Array<{ tier: number }>): number {
+  const n = enchants.length;
+  if (n === 0) return 1;
+  const e = BAL.enchant;
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  let p = e.baseChance * (e.countWeights[Math.min(n, e.countWeights.length) - 1] / sum(e.countWeights));
+  for (const en of enchants) p *= e.tierWeights[en.tier - 1] / sum(e.tierWeights);
+  return p;
+}
+
+/**
+ * How rare a roll is for the raccoon that rolled it: "1 in X" for its tier or better at `luck`
+ * (enchantments at their base odds, as in itemOddsOneIn). A Legendary is a 1 in 1,000 event at
+ * luck 1 but only 1 in 100 at luck 10, so the big reveal follows what is rare for you right now.
+ */
+export function luckOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: number }> }, luck: number): number {
+  const c = rarityChances(Math.max(1, luck));
+  let p = 0;
+  for (const r of RARITIES) if (rarityAtLeast(r, item.rarity)) p += c[r];
+  return Math.max(1, Math.round(1 / (p * enchantOdds(item.enchants))));
+}
+
+export type RollDrama = 'big' | 'huge' | 'insane';
+
+/** How big a deal a roll is, from its odds at the raccoon's luck (feel.bigRoll); null for an everyday roll. */
+export function rollDrama(luckOdds: number): RollDrama | null {
+  const b = BAL.feel.bigRoll;
+  if (luckOdds >= b.insane) return 'insane';
+  if (luckOdds >= b.huge) return 'huge';
+  if (luckOdds >= b.big) return 'big';
+  return null;
 }
 
 /** Rolls a rarity: tiers are tried from rarest down; anything below `minRarity` is never rolled. */

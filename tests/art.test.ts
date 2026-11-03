@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DATA } from '../src/data';
 import { alphaAt, bounds, checkRows, fromRows, toHex, type PixelBuf } from '../src/render/pixel/buf';
 import { CHARACTER_OUTLINE } from '../src/render/pixel/palette';
-import { ENEMY_ART, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
+import { ENEMY_ART, ENEMY_SHEETS, checkArt, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
 import { FOE_SHAPES, FOE_SHEETS, sheetFrames } from '../src/render/pixel/foes';
 import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf, type GearSlot } from '../src/render/pixel/hero';
 import { checkSheet, frameBuf } from '../src/render/pixel/indexed';
@@ -89,6 +89,32 @@ describe('pixel art', () => {
       const b = recolorEnemy(shape as EnemyShape, '#0000ff', '#ffff00');
       expect(a.w).toBe(b.w);
       expect(same(a, b), `${shape} changes with world colors`).toBe(false);
+    }
+  });
+
+  it('every hand-drawn enemy is an animated sheet in the world\'s colors, outlined in the raccoon\'s brown in every frame', () => {
+    for (const shape of Object.keys(ENEMY_ART) as EnemyShape[]) checkArt(shape);
+    for (const [shape, s] of Object.entries(ENEMY_SHEETS)) {
+      const look = FOE_SHEETS[shape];
+      expect(look?.sheet, `${shape} plays its own sheet`).toBe(s.sheet);
+      checkSheet(shape, s.sheet);
+      expect(s.sheet.faces, shape).toBe('left');
+      for (const anim of ['idle', 'walk', 'attack', 'hurt']) expect(s.sheet.anims[anim], `${shape} ${anim}`).toBeDefined();
+      expect(s.sheet.anims.attack.loop || s.sheet.anims.hurt.loop, `${shape} attack and hurt play once`).toBe(false);
+      const a = sheetFrames(look, '#7A6A72', '#E53935');
+      const b = sheetFrames(look, '#2B4C7E', '#F2C14E');
+      expect(same(a[0], b[0]), `${shape} changes with world colors`).toBe(false);
+      a.forEach((buf, f) => {
+        // An edge pixel has open space beside, above or below it (the feet stand on the bottom row).
+        const open = (x: number, y: number) => x >= 0 && y >= 0 && x < buf.w && y < buf.h && !buf.px[(y * buf.w + x) * 4 + 3];
+        for (let y = 0; y < buf.h; y++) {
+          for (let x = 0; x < buf.w; x++) {
+            const i = (y * buf.w + x) * 4;
+            if (!buf.px[i + 3] || !(open(x - 1, y) || open(x + 1, y) || open(x, y - 1) || open(x, y + 1))) continue;
+            expect(toHex(buf.px[i], buf.px[i + 1], buf.px[i + 2]), `${shape} frame ${f} edge at ${x},${y}`).toBe(CHARACTER_OUTLINE);
+          }
+        }
+      });
     }
   });
 

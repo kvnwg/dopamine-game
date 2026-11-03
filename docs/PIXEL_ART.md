@@ -118,8 +118,6 @@ generated, never hand-edited, by the scripts in `tools/packs/` (Python with Pill
 
 ```bash
 python3 -I tools/packs/chars.py raccoon art-src/raccoon_sheet.png src/render/pixel/packs/raccoon.ts
-python3 -I tools/packs/chars.py fantasy <Tiny RPG "Characters(100x100 split)" dir> <0x72 frames dir> src/render/pixel/packs/fantasy.ts
-python3 -I tools/packs/chars.py humans <Mucho Pixels "Exported PNGs" dir> src/render/pixel/packs/humans.ts
 python3 -I tools/packs/fx.py <Super Pixel Effects PNG dir> src/render/pixel/packs/fx.ts
 python3 -I tools/packs/dungeon.py <0x72 frames dir> src/render/pixel/packs/dungeonTiles.ts
 python3 -I tools/packs/farm.py <sheep.aseprite> <pig.aseprite> <cow.aseprite> <chicken, duck and rabbit.aseprite> src/render/pixel/packs/farm.ts
@@ -140,7 +138,7 @@ cauldrons glow at night.
 Preview every animation of a sheet module:
 
 ```bash
-npx tsx tools/animSheet.ts packs/fantasy /path/to/fantasy.png --scale 6
+npx tsx tools/animSheet.ts packs/farm /path/to/farm.png --scale 6
 ```
 
 Licenses and the in-game credit line: `CREDITS.md`.

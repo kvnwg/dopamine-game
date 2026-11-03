@@ -1,15 +1,18 @@
 /**
- * Turns core events into UI moments: every reel's result pops in; Epic and up get a burst;
- * Legendary and up get a short build-up while the reels roll (glow, rattle, riser, silence drop)
- * and a full-screen reveal when they land. With several reels, sounds play once per spin for the
- * best result. Also toasts for level-ups, luck boosts, upgrades and rebirths.
+ * Turns core events into UI moments: every reel's result pops in; Epic and up get a burst. A roll
+ * that is rare for the raccoon's current luck (see luckOddsOneIn and feel.bigRoll) gets a build-up
+ * while the reels roll (glow, rattle, riser, silence drop) and the full-screen reveal when it lands
+ * (black screen, the item shining, its "1 in X" counting up). With several reels, sounds play once
+ * per spin for the best result. Also toasts for level-ups, luck boosts, upgrades and rebirths.
  */
 import { BAL, DATA } from '../data';
-import { formatNumber, itemName, rarityIndex, type CoreEvent } from '../core';
+import { currentLuck, formatNumber, haulMinutes, haulSize, itemName, luckOddsOneIn, rarityIndex, rollDrama, type CoreEvent, type Item } from '../core';
+import { getGame } from '../app/store';
 import { bus } from '../app/eventBus';
 import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
 import { t } from './i18n';
+import { revealTotalMs } from './revealTiming';
 import { useUi, type RollView } from './uiStore';
 
 let rollId = 1;
@@ -26,7 +29,13 @@ function next(): void {
   if (v) celebrate(v);
 }
 
-/** While the reels roll toward a Legendary or better: rising rattle, a riser, then a silence drop. */
+/** How rare an item is at the raccoon's luck right now, and how big a deal that makes it. */
+function rareness(item: Item): Pick<RollView, 'luckOdds' | 'drama'> {
+  const luckOdds = luckOddsOneIn(item, currentLuck(getGame(), Date.now()));
+  return { luckOdds, drama: rollDrama(luckOdds) };
+}
+
+/** While the reels roll toward a big roll: rising rattle, a riser, then a silence drop. */
 function buildUp(view: RollView, spinSeconds: number) {
   const tier = rarityIndex(view.item.rarity);
   useUi.setState({ charging: view });
@@ -42,20 +51,24 @@ function buildUp(view: RollView, spinSeconds: number) {
   setTimeout(() => audio.silenceDrop(0.15), Math.max(0, ms - 160));
 }
 
-/** The full-screen reveal for a Legendary or better, as its reel lands. */
+/** The full-screen reveal for a big roll, as its reel lands (RareReveal plays it and its sounds). */
 function celebrate(view: RollView) {
   useUi.setState({ charging: null, celebrate: view });
-  audio.material(material(view.item.baseId));
-  audio.reveal(view.item.rarity);
   haptics.impact('heavy');
-  [180, 300, 420].forEach((ms) => setTimeout(() => haptics.impact('light'), ms));
   if (revealTimer) clearTimeout(revealTimer);
   revealTimer = setTimeout(() => {
     if (useUi.getState().celebrate?.id === view.id) {
       useUi.setState({ celebrate: null });
       next();
     }
-  }, BAL.feel.revealSecondsByRarity[view.item.rarity] * 1000 + 600);
+  }, revealTotalMs(view, getGame().settings.reduceMotion));
+}
+
+/** RareReveal calls this when the counter lands: the item's own material and rarity sting. */
+export function revealLanded(view: RollView): void {
+  audio.material(material(view.item.baseId));
+  audio.reveal(view.item.rarity);
+  [0, 140, 280, 420].forEach((ms) => setTimeout(() => haptics.impact(ms ? 'light' : 'heavy'), ms));
 }
 
 export function skipReveal(): void {
@@ -95,11 +108,12 @@ export function installRollController(): () => void {
     for (const e of events) {
       switch (e.type) {
         case 'spinStart': {
-          const best = e.reels.reduce((a, b) => (rarityIndex(b.item.rarity) > rarityIndex(a.item.rarity) ? b : a));
-          if (rarityIndex(best.item.rarity) >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
+          const best = e.reels.reduce((a, b) => (b.odds > a.odds ? b : a));
+          const rare = rareness(best.item);
+          if (rare.drama) {
             const view: RollView = {
               id: -best.item.uid, item: best.item, odds: best.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false,
-              at: performance.now(),
+              at: performance.now(), ...rare,
             };
             buildUp(view, e.spinSeconds);
           }
@@ -110,14 +124,14 @@ export function installRollController(): () => void {
         case 'roll': {
           const view: RollView = {
             id: rollId++, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: e.placed, newRecord: e.newRecord,
-            at: performance.now(),
+            at: performance.now(), ...rareness(e.item),
           };
           // The big "last roll" card shows the best result of the spin; every result goes in Recent.
           if (e.reel === 0 || !spinBest || e.odds > spinBest.odds) spinBest = view;
           const shown = spinBest;
           useUi.setState({ lastRoll: shown });
           const tier = rarityIndex(e.item.rarity);
-          if (tier >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
+          if (view.drama) {
             if (!revealBusy()) celebrate(view);
             else if (queue.length < 3) queue.push(view);
             if (useUi.getState().charging?.item.uid === e.item.uid) useUi.setState({ charging: null });
@@ -177,9 +191,19 @@ export function installRollController(): () => void {
         case 'scrap':
           if (!e.auto) ui.toast(t('toast.scrapped', { gold: formatNumber(e.coins) }), 'info');
           break;
-        case 'scrapAll':
-          ui.toast(t('toast.scrappedAll', { n: e.count, gold: formatNumber(e.coins) }), 'good');
+        case 'scrapAll': {
+          // A haul worth many minutes of fighting gets its own moment; an everyday one a toast.
+          const minutes = haulMinutes(getGame(), e.coins, Date.now());
+          const size = Number.isFinite(minutes) ? haulSize(minutes) : null;
+          if (size) {
+            useUi.setState({ haul: { id: Date.now(), coins: e.coins, minutes, count: e.count, size } });
+            audio.haul(size === 'big' ? 0 : size === 'huge' ? 1 : 2);
+            haptics.impact('heavy');
+          } else {
+            ui.toast(t('toast.scrappedAll', { n: e.count, gold: formatNumber(e.coins) }), 'good');
+          }
           break;
+        }
       }
     }
     if (popped) popSound(popped);

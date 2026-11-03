@@ -1,20 +1,21 @@
 /**
  * World 1 battle scenery, "Sunny Suburbs", as pixel art (style rules: docs/PIXEL_ART.md). It is drawn
- * at the battle's pixel size (12 screen px per art pixel), the same as the raccoon's.
+ * at the battle's pixel size (12 screen px per art pixel), the same size as the raccoon's pixels.
  *
- * Four horizontally tiling parallax layers, each TILE_W art pixels wide, plus three clouds. Rows below
- * are rows of the 90 x 68 battle view (sceneryTypes.ts):
+ * Four horizontally tiling parallax layers, each TILE_W art pixels wide, plus three clouds; SUBURBS
+ * bundles them as a ScenerySet. Rows below are rows of the 90 x 68 battle view (sceneryTypes.ts):
  *  - far (17 to 46): hazy rolling hills, a distant tree line, a few far roofs and a water tower.
  *    Colors are pushed toward the sky (aerial perspective) and nothing is inked, so it reads as distance.
  *  - mid (18 to 49): the street. Three houses, two trees, picket and plank fences, hedges, a mailbox,
  *    a fire hydrant, two metal cans and the green dumpster, all inked in `k`, standing on the lawn
  *    that starts at row 46.
  *  - ground (48 to 67): lawn edge, curb, the sidewalk the fighters stand on (their feet on row 58,
- *    FEET_ROW) and a strip of verge.
+ *    FEET_ROW, mid-slab) and a strip of verge.
  *  - fg (58 to 67): a few grass tufts and flowers along the bottom, in front of the fighters.
- * At this size the houses, trees and props are authored pixel by pixel as rows; hills, fences and the
- * sidewalk are drawn in code. Every layer wraps seamlessly: sprites go down through wrapX and contours
- * are periodic. Light comes from the top left. Other worlds grade these colors later, so they stay natural.
+ * At this size the houses, trees and props are authored pixel by pixel as rows; hills, the far tree
+ * line, fences and the sidewalk are drawn in code. Every layer wraps seamlessly: sprites go down through
+ * wrapX and contours are periodic. Light comes from the top left. Other worlds grade these colors later,
+ * so they stay natural.
  */
 import {
   blank, blit, checkRows, clone, fill, fromRows, hash01, mix, outline, setPx, stamp,
@@ -250,20 +251,20 @@ export function farLayer(): PixelBuf {
 
 // ------------------------------------------------------------------ mid layer: houses
 
-/** House A: a front-gable cottage, cream walls, red roof, a round attic window. */
+/** House A: a front-gable cottage, cream walls, red roof (its eave shadow in tan), a round attic window. */
 const GABLE_HOUSE: Rows = [
   '..........eR..........',
   '.........eRrR.5555....',
   '........eRrrrR.Nn.....',
-  '.......eRrWWrrRNn.....',
-  '......eRrWWWWrrRn.....',
-  '.....eRrWWxxWWrrR.....',
-  '....eRrWWxccxWWrrR....',
-  '...eRrWWWxCCxWWWrrR...',
-  '..eRrWWWWWxxWWWWWrrR..',
-  '.eRrWWWWWWWWWWWWWWrrR.',
-  'eRrWWWWWWWWWWWWWWWWrrR',
-  '..WWWWWWWWWWWWWWWWWW..',
+  '.......eRrWTrrRNn.....',
+  '......eRrWWWTrrRn.....',
+  '.....eRrWWxxWTrrR.....',
+  '....eRrWWxccxWTrrR....',
+  '...eRrWWWxCCxWWTrrR...',
+  '..eRrWWWWWxxWWWWTrrR..',
+  '.eRrWWWWWWWWWWWWWTrrR.',
+  'eRrTWWWWWWWWWWWWWWTrrR',
+  '..TTWWWWWWWWWWWWWWTT..',
   '..WxxxxxWWWWWWxxxxxW..',
   '..WxcwcxWxxxxWxcwcxW..',
   '..WxwwwxWxuuxWxwwwxW..',
@@ -534,7 +535,10 @@ const CRACKS: readonly Rows[] = [
 
 const PEBBLE: Rows = ['43'];
 
-/** Ground-layer rows of the sidewalk (WALK0 to WALK1 - 1); fighters stand on row 10 (FEET_ROW). */
+/**
+ * Ground-layer rows of the sidewalk (WALK0 to WALK1 - 1, view rows 53 to 63). The fighters stand on
+ * row 10 (view row 58, FEET_ROW), with five rows of slab above their feet and five below.
+ */
 const WALK0 = 5;
 const WALK1 = 16;
 /** Width of one sidewalk slab; TILE_W is a whole number of slabs. */
@@ -631,14 +635,14 @@ export const CLOUDS: Rows[] = [
   [
     '.....www....',
     '.ww.wwwww...',
-    'wwwwwwwwwCw.',
+    'wwwwwwwwwww.',
     'CwwwwwwwwwwC',
     '.CCCCCCCCCC.',
   ],
   [
     '......wwww......',
     '.....wwwwww.....',
-    '..ww.wwwwwwCww..',
+    '..ww.wwwwwwwww..',
     '.wwwwwwwwwwwwwwC',
     'CwwwwwwwwwwwwwCC',
     '.CCCCCCCCCCCCCC.',
@@ -646,9 +650,9 @@ export const CLOUDS: Rows[] = [
   [
     '.......www..........',
     '......wwwwww........',
-    '...ww.wwwwwwCwww....',
+    '...ww.wwwwwwwwww....',
     '.wwwwwwwwwwwwwwwww..',
-    'wwwwwCwwwwwwwwwwwwwC',
+    'wwwwwwwwwwwwwwwwwwwC',
     'CCwwwwwwwwwwwwwwwCCC',
     '.CCCCCCCCCCCCCCCCCC.',
   ],

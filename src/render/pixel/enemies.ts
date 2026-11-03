@@ -22,30 +22,30 @@ export interface EnemyArt {
 
 /** Alley Rat: big pink ear, angry squint, buck tooth, hunched back, tail curling up behind. 14x9. */
 const ROWS_RAT: Rows = [
-  '.....xxx......',
-  '...xxWPPxxx...',
-  '..x3xPqqx33x..',
-  '.x3x3333332xx.',
-  'x3k33333332xPx',
+  '....xxx.......',
+  '...xWPPx...x..',
+  '...xPqqxxxxPx.',
+  '..x4xq3333xxPx',
+  '.x4k4333332xPx',
   'xP443333332xPx',
-  '.xw44433322xPx',
+  '.xw44333322xPx',
   '..xx44x222PPx.',
   '...xPPxxPPxx..',
 ];
 
-/** Porch Pigeon: orange glaring eye, white cere, iridescent neck, light chest, barred wing. 10x11. */
+/** Porch Pigeon: orange glaring eye, dark beak with a white cere, iridescent neck, puffed chest, barred wing. 10x11. */
 const ROWS_PIGEON: Rows = [
   '...xxx....',
   '..x443x...',
-  '.xWO33x...',
-  'x1x332x...',
+  '.x4O33x...',
+  'x1W332x...',
   '.xAa32x...',
   'xAag333x..',
   'x443x333x.',
   'x4433x3x2x',
-  '.x4333x22x',
-  '..x3222xx.',
-  '...xRxRx..',
+  'x44333x22x',
+  '.x33222xx.',
+  '..xxRxRx..',
 ];
 
 /** Punk Raccoon: three-fin mohawk, bandit mask, sneer with a fang, fists up, ringed tail. 24x32. */
@@ -84,16 +84,16 @@ const ROWS_RACCOON: Rows = [
   '......kkkkk.kkkkk.......',
 ];
 
-/** Big Earl: fat rat king with a jeweled crown, a scar through one eye, a royal robe over a cream belly, curled tail. 22x20. */
+/** Big Earl: fat rat king with a jeweled crown, angry brows, a scar through one eye, a royal robe over a cream belly, curled tail. 22x19. */
 const ROWS_RAT_KING: Rows = [
   '........x.x.x.........',
   '..xxx..xYxyxyx..xxx...',
   '.x3PPx.xYyRyyx.xPP3x..',
   '.x3PqxxxOOOOOxxxqP3x..',
-  '..x344444433333333x...',
-  '..x44x43333Px33332x...',
-  '..x444k3333k333332x...',
-  '.x444433333P333322x...',
+  '..x444444333333333x...',
+  '..x43x33333Px33332x...',
+  '..x433k3333k333332x...',
+  '.x444333333P333322x...',
   'xP4443333333333322x...',
   '.xwxx333333333322xx...',
   '.xxmmmmy3333ymmmVVVx..',
@@ -105,13 +105,12 @@ const ROWS_RAT_KING: Rows = [
   'xmVVVVxWWWWWTxVVVVvxPx',
   '.xVVVVVxxxxxxVVVVvxPx.',
   '..xPPPxxxxxPPPxvvxPx..',
-  '...xxx.....xxx.xxxx...',
 ];
 
-/** Vinnie "Two Lids": mob-boss raccoon in a fedora, gold tooth and chain, one lid raised and one held in front. 20x22. */
+/** Vinnie "Two Lids": mob-boss raccoon in a fedora, gold-tooth smirk, gold chain, one lid raised and one held in front, ringed tail. 20x21. */
 const ROWS_RACCOON_BOSS: Rows = [
   '......xxxxxxxx......',
-  '.....xeeereRRRx.....',
+  '.....xeeereRRrx.....',
   '.....xeRRRRRRrx.....',
   '...xxx11111111xxx...',
   '..xeeeRRRRRRRRRRrx..',
@@ -120,18 +119,17 @@ const ROWS_RACCOON_BOSS: Rows = [
   '...x1kw1VV1kw1xw543x',
   '...xm11WWWW11x55432x',
   '...xmVWWkkWWVx44332x',
-  '....xVWxyxWVVx4332x.',
+  '....xVWWWxyWVx4332x.',
   '.....xVWWWVVxmV32x..',
-  '...xxVVyVVVyVVVxx...',
-  '..xxxxxVyyyvVVxVVx..',
-  '.x5554xxWWWWvxvvVVx.',
-  'x5w5443xWWWWvxVVvvx.',
-  'x55mV43xWWWWvxvvVVx.',
-  'x44Vv33xWWWvxVVvvx..',
-  'x443332xVVVvxvvVx...',
+  '...xxVVyVVVyVVVxxx..',
+  '..xxxxxVyyyvVVxvvvx.',
+  '.x5554xxWWWWvxmVVvx.',
+  'x5w5443xWWWWvxmVVvx.',
+  'x55mV43xWWWWvxvvvvx.',
+  'x44Vv33xWWWvxmVVvx..',
+  'x443332xVVVvxvvvx...',
   '.x3332xVVVVvvxxx....',
   '..xxxx111x111x......',
-  '......xxx.xxx.......',
 ];
 
 /** Officer Dale: grumpy animal-control officer with cap, mustache, badge and a catch pole. 38x56. */
@@ -198,8 +196,8 @@ export const ENEMY_ART: Record<EnemyShape, EnemyArt> = {
   rat: { rows: ROWS_RAT, feet: { x: 6, y: 8 }, body: ['2', '3', '4'], accent: ['q', 'P', 'W'] },
   pigeon: { rows: ROWS_PIGEON, feet: { x: 5, y: 10 }, body: ['2', '3', '4'], accent: ['g', 'a', 'A'] },
   raccoon: { rows: ROWS_RACCOON, feet: { x: 11, y: 31 }, body: ['2', '3', '4'], accent: ['r', 'R', 'e'] },
-  ratKing: { rows: ROWS_RAT_KING, feet: { x: 8, y: 19 }, body: ['2', '3', '4'], accent: ['v', 'V', 'm'] },
-  raccoonBoss: { rows: ROWS_RACCOON_BOSS, feet: { x: 9, y: 21 }, body: ['v', 'V', 'm'], accent: ['r', 'R', 'e'] },
+  ratKing: { rows: ROWS_RAT_KING, feet: { x: 8, y: 18 }, body: ['2', '3', '4'], accent: ['v', 'V', 'm'] },
+  raccoonBoss: { rows: ROWS_RACCOON_BOSS, feet: { x: 9, y: 20 }, body: ['v', 'V', 'm'], accent: ['r', 'R', 'e'] },
   officer: { rows: ROWS_OFFICER, feet: { x: 23, y: 55 }, body: ['u', 'U', 'c'], accent: ['O', 'y', 'Y'] },
 };
 

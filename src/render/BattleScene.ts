@@ -50,8 +50,11 @@ const HERO_WALK_X = 52 * P;
 const HERO_FIGHT_X = 56 * P;
 /** Where the front enemy's leading edge stands while fighting (14 art pixels in front of the raccoon). */
 const ENGAGE_EDGE = 70 * P;
-/** How fast the ground goes by while he walks (screen px per second): his hops' stride. */
-const WALK_SPEED = 37 * P;
+/**
+ * How fast the ground goes by while he walks (screen px per second): his walk's stride at its frame
+ * rate (24 art px a second), so a planted foot keeps its place on the ground.
+ */
+const WALK_SPEED = HERO.walk.speed;
 /** Where coins fly when the HUD's gold counter ([data-gold-target]) can't be found. */
 const COIN_TARGET = { x: 694, y: 58 };
 /** Top of the boss HP bar: under the HUD row, with the boss's name (one or two lines) over it. */
@@ -371,6 +374,8 @@ export class BattleScene extends Phaser.Scene {
   private gearSig = '';
   /** Scene time until which the worn gear keeps its old look (an equipped item is still falling). */
   private gearHold = 0;
+  /** Scene time until which he stays squashed a pixel under an equip slam. */
+  private squashUntil = 0;
   private hpCache: { key: unknown; hp: number } = { key: null, hp: 1 };
   private healAcc = 0;
   private healTimer = 0;
@@ -1156,6 +1161,8 @@ export class BattleScene extends Phaser.Scene {
   /** Plays a foe's one-shot animation (attack / hurt) if it has one, then its base loop again. */
   private foeAct(f: Foe, anim: 'attack' | 'hurt') {
     if (f.dying || !f.tex.anims.has(anim)) return;
+    // A blow landing mid-attack doesn't cut the swing short: its flash and knockback show the hit.
+    if (anim === 'hurt' && f.spr.anims.isPlaying && f.spr.anims.currentAnim?.key === `${f.tex.key}:attack`) return;
     f.acting = true;
     f.spr.play(`${f.tex.key}:${anim}`);
     f.spr.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
@@ -1164,20 +1171,41 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * A foe's blow, over its attack animation (enemies.ts and farm_anim.py: the wind-up until 120 ms, the
+   * smear, the strike from 160 ms, 440 ms in all): it rocks back while it winds up, darts in so the blow
+   * lands at 170 ms (`contact`), holds a beat on the hero and goes back, 450 ms in all. One counter tween
+   * drives it (a chain idles a few frames between its tweens), so a hit-stop slows it with the frames.
+   */
   private lungeAt(f: Foe, contact: () => void, heavy: boolean) {
     this.foeAct(f, 'attack');
     if (this.reduceMotion) {
       contact();
       return;
     }
+    const back = 2 * P;
     const dist = heavy ? 10 * P : 6 * P;
-    this.tweens.chain({
-      targets: f,
-      tweens: [
-        { lunge: 2 * P, duration: 90, ease: 'Quad.easeOut' },
-        { lunge: -dist, duration: 80, ease: 'Quad.easeIn', onComplete: contact },
-        { lunge: 0, duration: 200, ease: 'Back.easeOut' },
-      ],
+    const { Quadratic, Back } = Phaser.Math.Easing;
+    let landed = false;
+    this.tweens.addCounter({
+      from: 0,
+      to: 450,
+      duration: 450,
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 0;
+        if (t < 120) f.lunge = back * Quadratic.Out(t / 120);
+        else if (t < 170) f.lunge = back - (back + dist) * Quadratic.In((t - 120) / 50);
+        else if (t < 250) f.lunge = -dist;
+        else f.lunge = -dist * (1 - Back.Out((t - 250) / 200));
+        if (!landed && t >= 170) {
+          landed = true;
+          contact();
+        }
+      },
+      onComplete: () => {
+        f.lunge = 0;
+        if (!landed) contact();
+      },
     });
   }
 
@@ -1263,10 +1291,8 @@ export class BattleScene extends Phaser.Scene {
     // The new look shows now.
     this.gearHold = 0;
     this.flash(this.heroSpr, 0xffffff, 70 + tier * 6);
-    if (!this.reduceMotion) {
-      this.rig.y = P;
-      this.time.delayedCall(90, () => this.rig.active && (this.rig.y = 0));
-    }
+    // A one-pixel squash under the blow (applied after animateHero, which sets his pose every frame).
+    if (!this.reduceMotion) this.squashUntil = this.time.now + 90 + tier * 4;
     this.dust.burst(4 + Math.min(6, tier), this.hero.x, FEET_Y - P, DUST);
     // Sparks: more, faster and longer-lived the rarer it is.
     const sparks: BitStyle = {
@@ -1655,7 +1681,7 @@ export class BattleScene extends Phaser.Scene {
     return this.hpCache.hp;
   }
 
-  /** Hero pose for this frame: hop while walking, short poses, idle loop. */
+  /** Hero pose for this frame: the walk cycle while walking, short poses, idle loop. */
   private animateHero(walking: boolean, dt: number) {
     if (this.dead) {
       this.rig.y = 0;
@@ -1666,7 +1692,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     if (this.mode === 'wake') {
-      // Let the wake-up play out before hopping or idling.
+      // Let the wake-up play out before walking or idling.
       this.rig.y = 0;
       if (this.heroSpr.anims.isPlaying && this.heroSpr.anims.currentAnim?.key === 'hero:wake') return;
       this.mode = 'idle';
@@ -1681,15 +1707,29 @@ export class BattleScene extends Phaser.Scene {
       }
       this.mode = 'idle';
     }
-    if (walking && !this.reduceMotion) {
-      // Hops along: crouch, stretch up into the air, land.
+    // Where he is on the ground (screen px): the ground going by, and his own way between the spots where
+    // he walks and where he fights.
+    const covered = this.heroX + this.heroDx + this.heroKnock + this.scroll.ground;
+    // After a walk, he steps up to where he fights.
+    const stepping = !walking && this.mode === 'walk' && HERO_FIGHT_X - this.heroX > P / 4;
+    if ((walking || stepping) && !this.reduceMotion) {
+      // Walks: Kevin's walk cycle (hero:walk's frames), a frame for each stride of ground he covers (at
+      // WALK_SPEED, its frame rate), so a planted foot keeps its place on the ground. He steps off from
+      // his idle stance, waits on that step while he slides back to where he walks, and dust puffs
+      // where a foot comes down, drifting off with the ground.
+      const w = HERO.walk;
+      if (this.mode !== 'walk') this.walkT = covered;
       this.mode = 'walk';
-      const before = this.walkT;
-      this.walkT += dt * 9;
-      const s = Math.abs(Math.sin(this.walkT));
-      this.rig.y = -Math.round(s * 2.4) * P;
-      this.heroFrame(s < 0.3 ? FRAME.squash : s > 0.7 ? FRAME.up : FRAME.stand);
-      if (Math.floor(this.walkT / Math.PI) !== Math.floor(before / Math.PI)) this.dust.burst(2, this.hero.x - 3 * P, FEET_Y - P, DUST);
+      this.rig.y = 0;
+      this.walkT = Math.min(this.walkT, covered);
+      const step = Math.floor(((covered - this.walkT) * w.fps) / w.speed);
+      const frame = w.frames[step % w.frames.length];
+      const foot = w.footfalls[frame];
+      if (foot !== undefined && this.heroSpr.frame.name !== String(frame)) {
+        const v = walking ? WALK_SPEED / P : 0;
+        this.dust.burst(2, this.hero.x + foot, FEET_Y - P, { ...DUST, speedX: [-v - 6, -v + 3], speedY: [-9, -3] });
+      }
+      this.heroFrame(frame);
       return;
     }
     this.mode = 'idle';
@@ -1732,6 +1772,7 @@ export class BattleScene extends Phaser.Scene {
     this.heroKnock += (0 - this.heroKnock) * (1 - Math.pow(0.0005, dt));
     this.hero.x = snap(this.heroX + this.heroDx + this.heroKnock);
     this.animateHero(walking, dt);
+    if (this.time.now < this.squashUntil) this.rig.y += P;
     this.followBody();
     this.updateAura(dt);
     void time;

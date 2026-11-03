@@ -319,6 +319,41 @@ look-around, cheer, dash, sit, lie down, sleep and wake. `src/render/pixel/hero.
 worn gear drawn for his shape (next section). `composeHero(frame, outfit)` draws the whole outfit
 into one buffer for previews.
 
+### Hero walk
+
+He walks between waves with a walk cycle drawn by hand in Kevin's style:
+`src/render/pixel/packs/raccoonWalk.ts`, appended to his sheet as frames 36 to 42 and the `walk`
+animation (`HERO_SHEET` in `hero.ts`). It isn't generated, so re-running `tools/packs/chars.py` on
+his sheet leaves it alone; it only uses his palette and is built from his own pieces: the 3/4 head
+he turns while looking around (frames 8 and 9, face mask included), those frames' torsos, and his
+tail in the places the look-around puts it, ringed in his mid fur.
+
+- Eight steps from seven frames (the passing pose serves both feet), 12 fps: down, passing, up,
+  contact, then the other foot. Facing left like the sheet, feet on its anchor row.
+- A planted foot moves back `WALK_STRIDE` (2) pixels a frame from contact to toe-off, so the ground
+  must go by at stride x fps: 24 art px a second, 144 screen px. The battle takes its walking speed
+  from that (`HERO.walk.speed` in `textures.ts`), and `animateHero` moves the cycle on a frame for
+  each stride of ground he covers (the ground going by plus his own slide between his walking and
+  fighting spots), so his feet stay put on the ground; dust puffs where a foot comes down
+  (`HERO_WALK.footfalls`) and drifts off with the ground.
+- The body bobs a pixel (down as a foot lands, up on the straight leg), the arms swing against the
+  legs (the back arm, nearer to us, wider), the tail flicks up as he drops and droops as he rises.
+- Start and stop: the first frame keeps the foot he stands on at idle where it is, so he steps off
+  from his stance (and waits on that step while he slides back to his walking spot); when the fight
+  starts he walks the last pixels up to his fighting spot before he goes back to idle.
+- Gear: `worn/body.ts` measures every walk frame like the rest (parts and landmarks): shoes ride
+  each foot, lifted ones too; gloves ride the swinging paws; the weapon's grip stays in the front
+  paw; a shield rides the forearm (`shield`, half the paw's swing, so an umbrella's canopy stays out
+  from behind his head). `tests/worn.test.ts` checks that a planted foot keeps its place on the
+  ground frame to frame.
+
+Edit a walk frame by hand in its rows, then its part rows and landmarks in `worn/body.ts`, and look
+at it bare and dressed:
+
+```bash
+npx tsx tools/pixelSheet.ts hero /path/to/hero.png --scale 10
+```
+
 ## Worn gear
 
 Every wearable item has worn art drawn for the raccoon himself, at his pixel size (1 art pixel = 1

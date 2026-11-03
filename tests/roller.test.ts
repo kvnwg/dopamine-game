@@ -65,21 +65,24 @@ describe('luck odds ("1 in X")', () => {
     });
   }
 
-  it('a roll is judged by how rare it is at your luck: a Legendary is big at luck 1, routine at luck 50', () => {
+  it('a roll is judged by how rare it is at your luck: a Mythic is big at luck 1, routine at luck 50; a Legendary never is', () => {
     const legendary = { rarity: 'legendary' as const, enchants: [] };
-    // At luck 1 it is about its own odds (this tier or better).
+    const mythic = { rarity: 'mythic' as const, enchants: [] };
+    // At luck 1 a tier is about its own odds (this tier or better).
     expect(luckOddsOneIn(legendary, 1)).toBeGreaterThan(BAL.rarityOdds.legendary * 0.9);
     expect(luckOddsOneIn(legendary, 1)).toBeLessThanOrEqual(BAL.rarityOdds.legendary);
     expect(luckOddsOneIn(legendary, 10)).toBeLessThan(luckOddsOneIn(legendary, 1) / 9);
-    expect(rollDrama(luckOddsOneIn(legendary, 1))).not.toBeNull();
-    expect(rollDrama(luckOddsOneIn(legendary, 50))).toBeNull();
+    // The reveal is for 1 in 2,500 or rarer at your luck: no Legendary, but a Mythic at low luck.
+    expect(rollDrama(luckOddsOneIn(legendary, 1))).toBeNull();
+    expect(rollDrama(luckOddsOneIn(mythic, 1))).toBe('big');
+    expect(rollDrama(luckOddsOneIn(mythic, 50))).toBeNull();
     // Enchantments make it rarer at any luck.
     expect(luckOddsOneIn({ rarity: 'legendary', enchants: [{ tier: 1 }] }, 10)).toBeGreaterThan(luckOddsOneIn(legendary, 10));
     // Bigger deals for rarer rolls.
     const b = BAL.feel.bigRoll;
     expect([rollDrama(b.big - 1), rollDrama(b.big), rollDrama(b.huge), rollDrama(b.insane)]).toEqual([null, 'big', 'huge', 'insane']);
-    expect(rollDrama(luckOddsOneIn({ rarity: 'mythic', enchants: [] }, 1))).toBe('huge');
-    expect(rollDrama(luckOddsOneIn({ rarity: 'vintage', enchants: [] }, 1))).toBe('insane');
+    expect(rollDrama(luckOddsOneIn({ rarity: 'vintage', enchants: [] }, 1))).toBe('huge');
+    expect(rollDrama(luckOddsOneIn({ rarity: 'prototype', enchants: [] }, 1))).toBe('insane');
   });
 
   it('a Scrap All haul is measured in minutes of fighting; long ones get a big, huge or mega moment', () => {

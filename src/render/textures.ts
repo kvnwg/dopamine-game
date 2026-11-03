@@ -11,7 +11,7 @@ import { DATA } from '../data';
 import { blank, bounds, fromRows, padEdges, rgb, setPx, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
 import { frameBuf, type AnimSheet } from './pixel/indexed';
-import { HERO_POINTS, HERO_SHEET, clothesOf, frameOffsets, gearSprite, handOffsets, heroFrame, weaponBuf, type BodyGear, type SpriteSlot } from './pixel/hero';
+import { HERO_POINTS, HERO_SHEET, HERO_WALK, clothesOf, frameOffsets, gearSprite, handOffsets, heroFrame, weaponBuf, type BodyGear, type SpriteSlot } from './pixel/hero';
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
 import { FOE_SHEETS, sheetFrames } from './pixel/foes';
 import { FX_SHEETS, type FxName } from './pixel/packs/fx';
@@ -43,6 +43,17 @@ export const HERO = {
   top: (S.anchor.y + 1 - Math.min(...IDLE.map((f) => bounds(frameBuf(S, f)).y))) * P,
   /** His body's center line relative to the feet origin (screen px): the frame's middle. */
   midX: (S.w / 2 - S.anchor.x - 0.5) * P,
+  /**
+   * His walk (pixel/hero.ts HERO_WALK): its frames and rate, how fast the ground must go by under it
+   * (screen px per second) so a planted foot keeps its place, and the frames where a foot lands, with
+   * the middle of that foot (screen px, mirrored) from the hero's x.
+   */
+  walk: {
+    frames: HERO_WALK.frames,
+    fps: HERO_WALK.fps,
+    speed: HERO_WALK.stride * HERO_WALK.fps * P,
+    footfalls: Object.fromEntries(Object.entries(HERO_WALK.footfalls).map(([f, x]) => [f, (flipCol(x) - S.anchor.x + 0.5) * P])) as Readonly<Record<string, number>>,
+  },
 };
 /** Most weapon art points up and to the right; the scene turns it this much to point straight up. */
 export const WEAPON_TILT = 45;

@@ -32,7 +32,7 @@ function next(): void {
   if (v) celebrate(v);
 }
 
-/** How rare an item is at the raccoon's luck right now, and how big a deal that makes it. */
+/** How rare an item is at the raccoon's luck right now, and how big a deal that makes it (feel.bigRoll). */
 function rareness(item: Item): Pick<RollView, 'luckOdds' | 'drama'> {
   const luckOdds = luckOddsOneIn(item, currentLuck(getGame(), Date.now()));
   return { luckOdds, drama: rollDrama(luckOdds) };

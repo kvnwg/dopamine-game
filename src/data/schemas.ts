@@ -238,6 +238,7 @@ export const BalanceSchema = z.object({
      * A roll this rare at the raccoon's current luck ("1 in X" for its tier or better, see luckOddsOneIn)
      * gets the full-screen reveal; huge and insane ones get a longer, louder one.
      */
+    /** The big reveal: a roll's tier-or-better odds at the raccoon's luck must reach `big` (`huge`, `insane` make it bigger). */
     bigRoll: z.object({ big: positive, huge: positive, insane: positive }),
     /** A Scrap All worth this many minutes of fighting (see haulMinutes) gets a big, huge or mega haul moment. */
     haul: z.object({ big: positive, huge: positive, mega: positive }),

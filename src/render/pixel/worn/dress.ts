@@ -1,16 +1,16 @@
 /**
- * Dresses the raccoon: every worn item's art, fitted to each frame of his sheet. Each item is drawn
- * for his shape (worn/*.ts) and placed on that frame's landmarks (body.ts): hats on the head, masks
- * on the face, gloves on the paws, shoes on the feet, bling at the neck, a shield on the back paw, a
- * pack at the neck. Garments are painted pixel by pixel over his torso and arms, so they follow
- * every pose exactly; everything else is clipped to the body part it sits on where it must not
- * leave it (a mask stays on his head, straps stay on his chest).
+ * Dresses the raccoon: every worn item's art, fitted to each frame of his sheet and his walk. Each
+ * item is drawn for his shape (worn/*.ts) and placed on that frame's landmarks (body.ts): hats on
+ * the head, masks on the face, gloves on the paws, shoes on the feet, bling at the neck, a shield on
+ * the back paw, a pack at the neck. Garments are painted pixel by pixel over his torso and arms, so
+ * they follow every pose exactly; everything else is clipped to the body part it sits on where it
+ * must not leave it (a mask stays on his head, straps stay on his chest).
  *
  * Everything is in the sheet's own pixels (facing left); the battle mirrors the dressed body.
  */
 import { alphaAt, blank, color, rgb, setPx, type PixelBuf } from '../buf';
 import { frameBuf } from '../indexed';
-import { RACCOON } from '../packs/raccoon';
+import { RACCOON_WITH_WALK } from '../packs/raccoonWalk';
 import { CHARACTER_OUTLINE } from '../palette';
 import { FRAME_COUNT, partAt, pose, type Part, type Point } from './body';
 import { BACKPACKS } from './backpacks';
@@ -24,8 +24,8 @@ import { SHOES } from './sneakers';
 import type { Colors, Cut, GarmentPixel, JacketArt, Piece } from './types';
 import { WEAPONS } from './weapons';
 
-export const W = RACCOON.w;
-export const H = RACCOON.h;
+export const W = RACCOON_WITH_WALK.w;
+export const H = RACCOON_WITH_WALK.h;
 export const OUTLINE = CHARACTER_OUTLINE;
 
 export type WornSlot = 'hat' | 'mask' | 'jacket' | 'gloves' | 'sneakers' | 'bling' | 'shield' | 'backpack';
@@ -74,7 +74,7 @@ export function paletteOf(pal: Colors): Set<string> {
 }
 
 /** The row he stands on: nothing worn goes below it. */
-const GROUND = RACCOON.anchor.y;
+const GROUND = RACCOON_WITH_WALK.anchor.y;
 
 /**
  * Pixels of a piece with its `at` pixel on (x, y), kept where `keep` allows. `flip` mirrors the piece
@@ -106,14 +106,14 @@ const frames = new Map<number, PixelBuf>();
 export function bare(frame: number): PixelBuf {
   let b = frames.get(frame);
   if (!b) {
-    b = frameBuf(RACCOON, frame);
+    b = frameBuf(RACCOON_WITH_WALK, frame);
     frames.set(frame, b);
   }
   return b;
 }
 
 const [OR, OG, OB] = rgb(OUTLINE);
-const FUR = [3, 5, 7].map((k) => rgb(RACCOON.pal[k]));
+const FUR = [3, 5, 7].map((k) => rgb(RACCOON_WITH_WALK.pal[k]));
 
 /** Is the raccoon's pixel his outline brown? */
 function isLine(b: PixelBuf, x: number, y: number): boolean {
@@ -273,11 +273,13 @@ function blingPixels(id: string, frame: number): WornPixels {
 
 function shieldPixels(id: string, frame: number): WornPixels {
   const a = SHIELDS[id];
-  const h = pose(frame).offHand;
+  const p = pose(frame);
+  const h = p.offHand;
   if (!a || !h) return NONE;
   const at = h.reach === 'down' ? a.art.at : (a.raised ?? a.art.at);
+  const on = p.shield ?? h;
   const behind = new Set<Part>(a.behind ?? []);
-  return { back: [], front: placed(a.pal, { rows: a.art.rows, at }, h.x, h.y, (x, y) => !behind.has(partAt(frame, x, y) as Part)) };
+  return { back: [], front: placed(a.pal, { rows: a.art.rows, at }, on.x, on.y, (x, y) => !behind.has(partAt(frame, x, y) as Part)) };
 }
 
 const STRAP_PARTS = new Set<Part>(['n', 'b', 'f', 'k']);

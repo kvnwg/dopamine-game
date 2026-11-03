@@ -1,10 +1,10 @@
 /**
- * The raccoon's body, frame by frame, measured by hand from his sheet (packs/raccoon.ts) so worn
- * gear can fit every pose: which body part each pixel belongs to, and where his head, face, paws,
- * feet and neck are. Everything is in the sheet's own pixels (24 x 24, facing left, tail on the
- * right); the battle mirrors the dressed body.
+ * The raccoon's body, frame by frame, measured by hand from his sheet (packs/raccoon.ts) and his walk
+ * (packs/raccoonWalk.ts, frames 36 to 42) so worn gear can fit every pose: which body part each pixel
+ * belongs to, and where his head, face, paws, feet and neck are. Everything is in the sheet's own
+ * pixels (24 x 24, facing left, tail on the right); the battle mirrors the dressed body.
  */
-import { RACCOON } from '../packs/raccoon';
+import { RACCOON_WITH_WALK } from '../packs/raccoonWalk';
 
 /**
  * Body parts: h head (ears, face and their outline), n neck, b torso, f front arm (holds the weapon),
@@ -561,6 +561,139 @@ const PART_ROWS: Readonly<Record<number, readonly string[]>> = {
     '......oooooooooooott....', // 18
     '.......oooooooooooo.....', // 19
   ],
+  // Walk (packs/raccoonWalk.ts), 3/4 like the look-around: 36 down.
+  36: [
+    '........................', // 4
+    '........hh....hh........', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhh.......', // 10
+    '.......hhhhhhhhhhtt.....', // 11
+    '.......hhhhhhhhhhttt....', // 12
+    '........hhnnhhhhtttt....', // 13
+    '.......fbbbbbbbbtttt....', // 14
+    '......fffbbbbbbkkkt.....', // 15
+    '......pppbbbbbqqqq......', // 16
+    '.......bbbbbbqq.........', // 17
+    '........llllooo.........', // 18
+    '........ooo.............', // 19
+  ],
+  // Walk 37: passing (a pixel up).
+  37: [
+    '........hh....hh........', // 4
+    '.......hhhhhhhhhh.......', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhht......', // 10
+    '.......hhhhhhhhhhtt.....', // 11
+    '........hhnnhhhhtttt....', // 12
+    '.......fbbbbbbbbtttt....', // 13
+    '......fffbbbbbbkkktt....', // 14
+    '......pppbbbbbbqqqt.....', // 15
+    '.......bbbbbbbbbb.......', // 16
+    '........lllllll.........', // 17
+    '........ooooo...........', // 18
+    '..........ooo...........', // 19
+  ],
+  // Walk 38: up.
+  38: [
+    '........hh....hh........', // 4
+    '.......hhhhhhhhhh.......', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhhtt.....', // 10
+    '.......hhhhhhhhhhttt....', // 11
+    '........hhnnhhhhtttt....', // 12
+    '.......fbbbbbbbbkktt....', // 13
+    '......fffbbbbbbbkkk.....', // 14
+    '.....pppbbbbbbbbqqq.....', // 15
+    '......ppbbbbbbbbqq......', // 16
+    '.......llllllll.........', // 17
+    '.......ooo..ooo.........', // 18
+    '............ooo.........', // 19
+  ],
+  // Walk 39: contact.
+  39: [
+    '........................', // 4
+    '........hh....hh........', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhhtt.....', // 10
+    '.......hhhhhhhhhhttt....', // 11
+    '.......hhhhhhhhhhttt....', // 12
+    '........hhnnhhhhtttt....', // 13
+    '.......fbbbbbbbbkkt.....', // 14
+    '......fffbbbbbbbkkk.....', // 15
+    '.....pppbbbbbbbbqqq.....', // 16
+    '......ppbbbbbbbbqq......', // 17
+    '.......llll.llll........', // 18
+    '......ooo.....ooo.......', // 19
+  ],
+  // Walk 40: down, the other foot.
+  40: [
+    '........................', // 4
+    '........hh....hh........', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhh.......', // 10
+    '.......hhhhhhhhhhtt.....', // 11
+    '.......hhhhhhhhhhttt....', // 12
+    '........hhnnhhhhtttt....', // 13
+    '.......fbbbbbbbbkktt....', // 14
+    '......fffbbbbbbbkkk.....', // 15
+    '.....pppbbbbbbbbqqq.....', // 16
+    '......ppbbbbbbbbqq......', // 17
+    '........llllooo.........', // 18
+    '........ooo.............', // 19
+  ],
+  // Walk 41: up, the other foot.
+  41: [
+    '........hh....hh........', // 4
+    '.......hhhhhhhhhh.......', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhhtt.....', // 10
+    '.......hhhhhhhhhhttt....', // 11
+    '........hhnnhhhhtttt....', // 12
+    '.......fbbbbbbbbtttt....', // 13
+    '......fffbbbbbbkkkt.....', // 14
+    '......pppbbbbbqqqq......', // 15
+    '.......bbbbbbqq.........', // 16
+    '.......llllllll.........', // 17
+    '.......ooo..ooo.........', // 18
+    '............ooo.........', // 19
+  ],
+  // Walk 42: contact, the other foot.
+  42: [
+    '........................', // 4
+    '........hh....hh........', // 5
+    '.......hhhhhhhhhh.......', // 6
+    '.......hhhhhhhhhh.......', // 7
+    '.......hhhhhhhhhh.......', // 8
+    '.......hhhhhhhhhh.......', // 9
+    '.......hhhhhhhhhhtt.....', // 10
+    '.......hhhhhhhhhhttt....', // 11
+    '.......hhhhhhhhhhttt....', // 12
+    '........hhnnhhhhtttt....', // 13
+    '.......fbbbbbbbbttt.....', // 14
+    '......fffbbbbbbkkk......', // 15
+    '......pppbbbbbqqqq......', // 16
+    '.......bbbbbbqq.........', // 17
+    '.......llll.llll........', // 18
+    '......ooo.....ooo.......', // 19
+  ],
 };
 
 const art = (frame: number) => SAME_FRAME[frame] ?? frame;
@@ -592,6 +725,11 @@ export interface Pose {
   /** The front paw (it holds the weapon) and the back paw (it wears the shield). */
   hand: Paw | null;
   offHand: Paw | null;
+  /**
+   * Where the shield rides, when not on the back paw: walking, that paw swings across his belly, and a
+   * shield strapped to the arm swings only half as far (an umbrella would go behind his head).
+   */
+  shield?: Point;
   /** The bottom pixel of the front foot and of the back foot. */
   feet: readonly [Point | null, Point | null];
   /** The middle of the neck, just under the chin. */
@@ -605,6 +743,14 @@ const STAND: Pose = {
   head: P(0, 0), face: face(0, 0), hand: paw(6, 16, 'down'), offHand: paw(17, 16, 'down'), feet: [P(9, 19), P(14, 19)], neck: P(11, 13),
 };
 const CURLED: Pose = { head: null, face: null, hand: null, offHand: null, feet: [null, null], neck: null };
+/**
+ * A walk frame: the body `dy` from the reference (0 or -1), the front and back paws' columns, the feet,
+ * and the shield's column when it isn't the back paw's.
+ */
+const WALK =(dy: number, hand: number, offHand: number, feet: readonly [Point, Point], shield?: number): Pose => ({
+  head: P(0, dy), face: face(-1, dy), hand: paw(hand, 16 + dy, 'down'), offHand: paw(offHand, 16 + dy, 'down'), feet, neck: P(10, 13 + dy),
+  ...(shield === undefined ? {} : { shield: P(shield, 16 + dy) }),
+});
 
 /** Landmarks of every frame (frames not listed repeat another frame, see SAME_FRAME). */
 const POSES: Readonly<Record<number, Pose>> = {
@@ -646,6 +792,17 @@ const POSES: Readonly<Record<number, Pose>> = {
   31: CURLED,
   32: CURLED,
   33: { head: P(0, 2), face: face(0, 0, true), hand: paw(8, 14, 'up'), offHand: paw(17, 12, 'up'), feet: [P(9, 19), P(15, 19)], neck: P(11, 12) },
+  // Walk: his 3/4 head (eyes a pixel left, like frames 8 and 9), down a pixel on the low steps and up
+  // one on the straight leg. The front paw swings a pixel (7 hanging, 6 forward), the back paw three
+  // (14 forward over his belly, 16 hanging, 17 back) and his shield, on the forearm, one (16 to 17).
+  // Feet: the planted one first (it's drawn over the other).
+  36: WALK(0, 7, 14, [P(9, 19), P(13, 18)], 16),
+  37: WALK(-1, 7, 16, [P(11, 19), P(9, 18)]),
+  38: WALK(-1, 6, 17, [P(13, 19), P(8, 18)]),
+  39: WALK(0, 6, 17, [P(7, 19), P(15, 19)]),
+  40: WALK(0, 6, 17, [P(9, 19), P(13, 18)]),
+  41: WALK(-1, 7, 14, [P(13, 19), P(8, 18)], 16),
+  42: WALK(0, 7, 14, [P(7, 19), P(15, 19)], 16),
 };
 
 /** A frame's landmarks. */
@@ -653,5 +810,5 @@ export function pose(frame: number): Pose {
   return POSES[art(frame)] ?? CURLED;
 }
 
-/** Number of frames in the sheet. */
-export const FRAME_COUNT = RACCOON.frames.length;
+/** Number of frames in the sheet (his walk included). */
+export const FRAME_COUNT = RACCOON_WITH_WALK.frames.length;

@@ -1,6 +1,7 @@
 /**
  * The hero: Kevin's raccoon (art-src/raccoon_sheet.png, generated into packs/raccoon.ts by
- * tools/packs/chars.py), drawn 1:1 like every other battle sprite, and dressed in his gear.
+ * tools/packs/chars.py) with his walk cycle (packs/raccoonWalk.ts, drawn by hand in his style), drawn
+ * 1:1 like every other battle sprite, and dressed in his gear.
  *
  * Every wearable item has worn art drawn for the raccoon's own shape at his pixel size (worn/), fitted
  * to each frame of the sheet by landmarks measured by hand (worn/body.ts): hats ride his head with his
@@ -15,16 +16,37 @@
  */
 import { blank, blit, flipX, setPx, type PixelBuf, type SheetEntry } from './buf';
 import { frameBuf } from './indexed';
-import { RACCOON } from './packs/raccoon';
+import { RACCOON_WITH_WALK, WALK_STRIDE } from './packs/raccoonWalk';
 import { pose } from './worn/body';
 import { WEAPONS, WORN, WORN_SLOTS, dress, keyColor, wornOver, type Outfit as WornOutfit } from './worn/dress';
 
-export const HERO_SHEET = RACCOON;
+/** Kevin's sheet and the walk drawn for it (frames 36 to 42, animation `walk`). */
+export const HERO_SHEET = RACCOON_WITH_WALK;
+
+/** The columns of his feet on the ground row in a frame (as drawn). */
+function planted(frame: number): number[] {
+  return pose(frame).feet.flatMap((p) => (p && p.y === HERO_SHEET.anchor.y ? [p.x] : []));
+}
+
+/**
+ * The walk (packs/raccoonWalk.ts): its frames and frame rate, and how far a planted foot moves back
+ * each frame (art px). The ground must go by at stride x fps art px a second, or his feet slide.
+ * `footfalls` are the frames where a foot comes down, with that foot's column (as drawn).
+ */
+export const HERO_WALK = (() => {
+  const { frames, fps } = HERO_SHEET.anims.walk;
+  const footfalls: Record<number, number> = {};
+  frames.forEach((f, i) => {
+    const before = planted(frames[(i + frames.length - 1) % frames.length]);
+    for (const x of planted(f)) if (!before.includes(x - WALK_STRIDE)) footfalls[f] = x;
+  });
+  return { frames, fps, stride: WALK_STRIDE, footfalls: footfalls as Readonly<Record<number, number>> };
+})();
 
 /** Landmarks of the reference pose (frame 0), in frame pixels as drawn (facing left). */
 export const HERO_POINTS = {
   /** Ground contact (the bottom edge of this row). */
-  feet: RACCOON.anchor,
+  feet: HERO_SHEET.anchor,
   /** The front paw (left as drawn, toward the enemies once mirrored): it holds the weapon. */
   hand: { x: pose(0).hand!.x, y: pose(0).hand!.y },
   /** The back paw, by the tail: shields. */
@@ -51,7 +73,7 @@ let headOffsets: FrameOffset[] | null = null;
 
 /** Every frame's head offset from the reference pose (measured by hand, worn/body.ts). */
 export function frameOffsets(): readonly FrameOffset[] {
-  headOffsets ??= RACCOON.frames.map((_, f) => {
+  headOffsets ??= HERO_SHEET.frames.map((_, f) => {
     const h = pose(f).head;
     return h ? { dx: h.x, dy: h.y, head: true } : { dx: 0, dy: 0, head: false };
   });
@@ -65,7 +87,7 @@ let pawOffsets: FrameOffset[] | null = null;
  * arms, ducks into a dash or squats. `head` as in frameOffsets.
  */
 export function handOffsets(): readonly FrameOffset[] {
-  pawOffsets ??= RACCOON.frames.map((_, f) => {
+  pawOffsets ??= HERO_SHEET.frames.map((_, f) => {
     const p = pose(f);
     return p.hand && p.head ? { dx: p.hand.x - HERO_POINTS.hand.x, dy: p.hand.y - HERO_POINTS.hand.y, head: true } : { dx: 0, dy: 0, head: false };
   });
@@ -91,7 +113,7 @@ const bodyCache = new Map<string, PixelBuf>();
 /** One body frame in the given gear (as drawn, facing left). */
 export function heroFrame(f: number, gear: BodyGear = {}): PixelBuf {
   const slots = WORN_SLOTS.filter((s) => gear[s as keyof BodyGear]);
-  if (!slots.length) return frameBuf(RACCOON, f);
+  if (!slots.length) return frameBuf(HERO_SHEET, f);
   const key = `${f}|${slots.map((s) => `${s}:${gear[s as keyof BodyGear]}`).join('|')}`;
   let b = bodyCache.get(key);
   if (!b) {
@@ -162,16 +184,16 @@ export type Outfit = Partial<Record<GearSlot | 'weapon', string>>;
 export function composeHero(f: number, outfit: Outfit, pad = 10): PixelBuf {
   const o = handOffsets()[f];
   const body = flipX(dress(f, outfit as WornOutfit));
-  const out = blank(RACCOON.w + pad * 2, RACCOON.h + pad * 2);
+  const out = blank(HERO_SHEET.w + pad * 2, HERO_SHEET.h + pad * 2);
   blit(out, body, pad, pad);
   const w = outfit.weapon && o.head ? weaponBuf(outfit.weapon) : null;
-  if (w) blit(out, w.buf, pad + RACCOON.w - 1 - (HERO_POINTS.hand.x + o.dx) - w.grip.x, pad + HERO_POINTS.hand.y + o.dy - w.grip.y);
+  if (w) blit(out, w.buf, pad + HERO_SHEET.w - 1 - (HERO_POINTS.hand.x + o.dx) - w.grip.x, pad + HERO_POINTS.hand.y + o.dy - w.grip.y);
   return out;
 }
 
-/** Preview: every frame, every worn item on frame 0, then a few frames in sample outfits. */
+/** Preview: every frame, every worn item on frame 0, then a few frames in sample outfits, then the walk in both. */
 export function sheet(): SheetEntry[] {
-  const out: SheetEntry[] = RACCOON.frames.map((_, f) => ({ name: `frame ${f}`, buf: frameBuf(RACCOON, f) }));
+  const out: SheetEntry[] = HERO_SHEET.frames.map((_, f) => ({ name: `frame ${f}`, buf: frameBuf(HERO_SHEET, f) }));
   for (const slot of WORN_SLOTS) for (const id of Object.keys(WORN[slot])) out.push({ name: id, buf: dress(0, { [slot]: id }) });
   for (const id of Object.keys(WEAPONS)) out.push({ name: id, buf: composeHero(0, { weapon: id }, 4) });
   const a: Outfit = {
@@ -184,5 +206,7 @@ export function sheet(): SheetEntry[] {
   };
   for (const f of [0, 2, 4, 13, 15]) out.push({ name: `outfit a ${f}`, buf: composeHero(f, a) });
   for (const f of [0, 2, 4, 13, 15]) out.push({ name: `outfit b ${f}`, buf: composeHero(f, b) });
+  HERO_SHEET.anims.walk.frames.forEach((f, i) => out.push({ name: `walk a ${i}`, buf: composeHero(f, a) }));
+  HERO_SHEET.anims.walk.frames.forEach((f, i) => out.push({ name: `walk b ${i}`, buf: composeHero(f, b) }));
   return out;
 }

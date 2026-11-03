@@ -36,6 +36,8 @@ interface Run {
 /** A landed result for the plate under the reels. */
 interface Shown {
   id: number;
+  /** The spin it landed in. */
+  spin: string;
   reel: number;
   cell: StripCell;
   name: string;
@@ -144,9 +146,9 @@ export function WatchPanel() {
       setSwooshes((w) => [...w.slice(-6), { id: swooshId++, reel: i, big }]);
       const { name, mult } = r.reels[i];
       setShown((cur) => {
-        // The plate shows the rarest result of the spin so far.
-        if (cur && runRef.current?.key === r.key && rarityIndex(cur.cell.rarity) > rarityIndex(cellAt.rarity)) return cur;
-        return { id: swooshId++, reel: i, cell: cellAt, name, mult };
+        // The plate shows the rarest result of this spin so far (a new spin starts it over).
+        if (cur && cur.spin === r.key && rarityIndex(cur.cell.rarity) > rarityIndex(cellAt.rarity)) return cur;
+        return { id: swooshId++, spin: r.key, reel: i, cell: cellAt, name, mult };
       });
       if (!best.current || cellAt.odds > best.current.odds) best.current = { name, odds: cellAt.odds };
     };

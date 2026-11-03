@@ -112,20 +112,20 @@ export const BACKPACKS: Readonly<Record<string, PackArt>> = {
     ]),
     straps: STRAPS('g'),
   },
-  // Paper grocery bag, celery leaves and an apple sticking out of the top.
-  backpack_paper_grocery_bag: {
-    pal: { L: 'L', l: 'l', G: 'G', e: 'e', R: 'R', T: 'T', t: 't', N: 'N' },
+  // Striped popcorn bucket, popcorn heaped over the rim.
+  backpack_popcorn_bucket: {
+    pal: { W: 'W', w: 'w', Y: 'Y', T: 'T', R: 'R', r: 'r' },
     back: bag([
-      '.##.#.',
-      '#Ll#e#',
-      '#lG#R#',
-      '######',
-      '#TTTt#',
-      '#TttN#',
-      '#tttN#',
-      '######',
+      '.##.##.',
+      '#Ww#WY#',
+      '#WYWWT#',
+      '#######',
+      '#WRWRr#',
+      '#WRWRr#',
+      '.#RWR#.',
+      '..###..',
     ]),
-    straps: piece([3, -1], ['.......N', '.......N']),
+    straps: STRAPS('r'),
   },
   // Red shopping basket, its handles up, slots in its sides.
   backpack_shopping_basket: {

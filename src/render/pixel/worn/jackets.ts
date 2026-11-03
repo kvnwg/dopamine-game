@@ -327,7 +327,8 @@ export const JACKETS: Readonly<Record<string, JacketArt>> = {
     },
   },
   // Hot dog costume: the sausage down his front with a mustard zigzag, the bun round his sides and arms; the
-  // sausage's tip pokes up between his ears and the bun rises behind his shoulders.
+  // sausage's tip pokes up between his ears (never above row 2 in his idle loop, under his HP bar) and the bun
+  // rises behind his shoulders.
   jacket_hot_dog: {
     pal: { r: 'r', R: 'R', e: 'e', N: 'N', t: 't', T: 'T', y: 'y' },
     cut: 'coat',
@@ -339,11 +340,10 @@ export const JACKETS: Readonly<Record<string, JacketArt>> = {
       }
       return shade(['N', 't', 'T'], g);
     },
-    back: piece([7, 11], [
+    back: piece([7, 10], [
       '.......##.......',
       '......#eR#......',
       '.....#eRRr#.....',
-      '.....#RRRr#.....',
       '.##..#RRRr#..##.',
       '#Tt#.#RRRr#.#tN#',
       '#Tt#.#RRRr#.#tN#',

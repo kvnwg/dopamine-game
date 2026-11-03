@@ -124,9 +124,9 @@ export const GLOVES: Readonly<Record<string, GloveArt>> = {
   },
   // Fingerless biker gloves: black leather, a silver stud, his furry fingertips poking out.
   gloves_fingerless_biker: {
-    pal: { b: '1', x: 'x', a: '5', n: 'n' },
-    down: piece([1, 1], ['#b#.', '#ab#', '#nn#', '.##.']),
-    out: piece([1, 1], ['.###.', '#nab.', '#nxb.', '.###.']),
+    pal: { b: '2', x: '1', a: 'w', n: 'n' },
+    down: piece([1, 1], ['#x#.', '#ab#', '#nn#', '.##.']),
+    out: piece([1, 1], ['.###.', '#nab.', '#nbx.', '.###.']),
     up: piece([1, 1], ['.##.', '#nn#', '#ab#', '#bx#']),
   },
   // An ice cream cone in each paw, held up: a strawberry scoop over the waffle cone.

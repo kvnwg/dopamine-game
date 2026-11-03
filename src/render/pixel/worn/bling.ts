@@ -80,10 +80,10 @@ export const BLING: Readonly<Record<string, BlingArt>> = {
     pal: { e: 'e', R: 'R', r: 'r', w: 'w', x: 'x' },
     art: piece([2, -2], ['eRRr', 'wxww']),
   },
-  // Blue bandana knotted at his neck, its point down his chest.
-  bling_bandana: {
-    pal: { c: 'c', U: 'U', u: 'u', w: 'w' },
-    art: piece([2, 0], ['.cUu.', 'cUwUu', '.cUu.', '..u..']),
+  // Coach's whistle on a red cord.
+  bling_whistle: {
+    pal: { R: 'R', w: 'w', 5: '5', 4: '4', 3: '3' },
+    art: piece([2, 0], ['.R.R.', '..R..', '#5w4#', '#433#', '.###.']),
   },
   // Scratched CD hanging from a string, a rainbow glint on it.
   bling_cd_pendant: {

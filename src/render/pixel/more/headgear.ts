@@ -7,7 +7,7 @@ import type { Rows } from '../buf';
 
 // ------------------------------------------------------------------ Hats: upright, brim or opening on rows 12 to 14
 
-/** Takeout box: white paper, a red stamp, the wire handle up top. */
+/** Open takeout box: noodles heaped up, chopsticks stuck in, a red band. */
 const HAT_TAKEOUT_BOX: Rows = [
   '................',
   '...........kk...',
@@ -127,7 +127,7 @@ const HAT_TINFOIL: Rows = [
   '................',
 ];
 
-/** Pleated cream lampshade with a red trim and fringe. */
+/** Pink lampshade, its top opening dark, a gold fringe round the bottom. */
 const HAT_LAMPSHADE: Rows = [
   '................',
   '................',
@@ -309,24 +309,24 @@ const MASK_CLOWN_NOSE: Rows = [
   '................',
 ];
 
-/** Red bandana with white dots, folded and tied outlaw style. */
-const MASK_BANDANA: Rows = [
+/** Fake Santa beard: sideburns, a curly mustache over the mouth, a fluffy white beard. */
+const MASK_SANTA_BEARD: Rows = [
   '................',
   '................',
-  '................',
-  '.kk..........kk.',
-  'kekkkkkkkkkkkkrk',
-  '.keeeeeeeeeeeRk.',
-  '..keRRwRRRwRRk..',
-  '..keRRRRRRRRrk..',
-  '...kRwRRRwRRk...',
-  '...keRRRRRRrk...',
-  '....kRRwRRrk....',
-  '....keRRRRrk....',
-  '.....kRRRrk.....',
-  '......kRrk......',
-  '.......kk.......',
-  '................',
+  '..kk........kk..',
+  '.kwWk......kW5k.',
+  '.kwWWk....kWW5k.',
+  '.kwWWkkkkkkWW5k.',
+  'kwWkwwWWWW55kW5k',
+  'kwWWkkk55kkkWW5k',
+  'kwWWWWkxxkWWWW5k',
+  'kwWW5WWkkWW5WW5k',
+  '.kWWW5WWWW5WW5k.',
+  '.kWW5WW5WW5W5k..',
+  '..kWWW5WW5WW5k..',
+  '...kWW5WW5W5k...',
+  '....kkWWW55k....',
+  '......kkkk......',
 ];
 
 /** Fake nose and glasses: bushy brows, thick frames, a big pink nose and a mustache. */
@@ -369,7 +369,7 @@ const MASK_CUCUMBER_SLICES: Rows = [
   '................',
 ];
 
-/** Ski goggles: a white frame, an orange mirror lens, a striped strap. */
+/** Ski goggles: a white frame, a gold mirror lens, a blue strap. */
 const MASK_SKI_GOGGLES: Rows = [
   '................',
   '................',
@@ -429,7 +429,7 @@ const MASK_WELDING: Rows = [
   '................',
 ];
 
-/** A cereal box cut into a robot face: bottle cap eyes, a grille mouth, a straw antenna. */
+/** A cereal box cut into a robot face: bottle cap eyes, a red stripe, a grille mouth, a wire antenna. */
 const MASK_CEREAL_BOX_ROBOT: Rows = [
   '.......kk.......',
   '......kRek......',
@@ -489,7 +489,7 @@ const MASK_MONOCLE: Rows = [
   '.........kyyyk..',
 ];
 
-/** Blue luchador mask: gold flames round the eyes, a white crest, laced up. */
+/** Blue luchador mask: gold flames round the eyes, a white crest, a red mouth. */
 const MASK_LUCHADOR: Rows = [
   '.....kkkkkk.....',
   '....kUUwwUUk....',
@@ -511,7 +511,7 @@ const MASK_LUCHADOR: Rows = [
 
 // ------------------------------------------------------------------ Unique: richer detail and a gold sparkle
 
-/** Crown of the Curb King: a gold band hammered from bottle caps, a cap on every point, a sparkle. */
+/** Crown of the Curb King: gold points, a band studded with bottle caps, a sparkle. */
 const HAT_UNIQUE_CURB_CROWN: Rows = [
   '............k...',
   '...........kYk..',
@@ -548,7 +548,7 @@ export const SPRITES: Record<string, Rows> = {
   hat_unique_curb_crown: HAT_UNIQUE_CURB_CROWN,
   mask_paper_bag: MASK_PAPER_BAG,
   mask_clown_nose: MASK_CLOWN_NOSE,
-  mask_bandana: MASK_BANDANA,
+  mask_santa_beard: MASK_SANTA_BEARD,
   mask_groucho_glasses: MASK_GROUCHO_GLASSES,
   mask_cucumber_slices: MASK_CUCUMBER_SLICES,
   mask_ski_goggles: MASK_SKI_GOGGLES,

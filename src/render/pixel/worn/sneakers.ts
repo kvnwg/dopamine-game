@@ -76,10 +76,10 @@ export const SHOES: Readonly<Record<string, ShoeArt>> = {
     pal: { A: 'A', a: 'a', g: 'g' },
     front: piece([4, 1], ['....#gg#', '#AAAaagg#']),
   },
-  // Cowboy boots: brown, up the leg, a pointy toe and a stacked heel.
+  // Cowboy boots: brown, up the leg with a stitched top, a pointy toe and a stacked heel.
   sneakers_cowboy_boots: {
-    pal: { N: 'N', n: 'n', t: 't', b: 'b' },
-    front: piece([2, 2], ['..#Nn#', '.#tNn#', '#tNNbb#']),
+    pal: { T: 'T', N: 'N', n: 'n', t: 't', b: 'b' },
+    front: piece([2, 2], ['..#Tt#', '.#tNn#', '#tNNbb#']),
   },
   // Clown shoes: long and red, a huge round toe, a yellow bow at the ankle.
   sneakers_clown_shoes: {

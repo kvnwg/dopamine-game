@@ -2,7 +2,7 @@
  * Masks and glasses, drawn on frame 0's face: `at` is the pixel over his left eye (9,10 as drawn;
  * the right eye is 13,10, the nose 11,11, the muzzle 10 to 12 on rows 11 and 12, the chin row 13).
  * They are clipped to his head. A squashed face (eyes and nose on one row) uses `squash`; parts that hang
- * off his head (a bandana's point, a monocle's chain, a gas mask's filter) are `free`. Masks over his whole
+ * off his head (a beard, a monocle's chain, a gas mask's filter) are `free`. Masks over his whole
  * face leave his head's outline (x 7 and 16) showing, so it frames them; walking, his eyes move a pixel
  * toward the front of his 3/4 head and a sliver of his fur shows behind the mask.
  */
@@ -147,7 +147,6 @@ export const MASKS: Readonly<Record<string, MaskArt>> = {
     ] },
     on: EYE,
   },
-  // >>> headgear
   // Paper bag pulled over his head, ears poking out the top: two eye holes and a marker smile.
   mask_paper_bag: {
     pal: { T: 'T', t: 't', N: 'N', n: 'n' },
@@ -187,22 +186,23 @@ export const MASKS: Readonly<Record<string, MaskArt>> = {
     ] },
     on: EYE,
   },
-  // Red bandana tied over his muzzle outlaw style, white dots, the point hanging under his chin.
-  mask_bandana: {
-    pal: { e: 'e', R: 'R', r: 'r', w: 'w' },
+  // Fake Santa beard: a white mustache under his nose, sideburns up his cheeks, the beard hanging past his chin.
+  mask_santa_beard: {
+    pal: { w: 'w', W: 'W', '5': '5' },
     art: { at: { x: 1, y: -1 }, rows: [
-      'eeeeeeeR',
-      'RRwRRRwr',
-      '#R...Rr#',
+      'W.....W',
+      'wWWW5W5',
+      'WW...W5',
     ] },
     squash: { at: { x: 1, y: -1 }, rows: [
-      'eRwRRRwR',
-      '#R...Rr#',
+      'wWWW5W5',
+      'WW...W5',
     ] },
     free: { at: { x: 0, y: -3 }, rows: [
-      '.RRr',
-      '#Rr#',
-      '.##.',
+      '.WW5.',
+      '#wW5#',
+      '.#W#.',
+      '..#..',
     ] },
     on: EYE,
   },
@@ -351,7 +351,7 @@ export const MASKS: Readonly<Record<string, MaskArt>> = {
     ] },
     on: EYE,
   },
-  // Blue luchador mask: a white crest up the middle, gold flames round the eyes, laced up tight.
+  // Blue luchador mask: a white crest up the middle, gold flames round the eyes, a red mouth.
   mask_luchador: {
     pal: { c: 'c', U: 'U', u: 'u', w: 'w', y: 'y', Y: 'Y', R: 'R' },
     art: { at: { x: 1, y: 3 }, rows: [
@@ -373,5 +373,4 @@ export const MASKS: Readonly<Record<string, MaskArt>> = {
     ] },
     on: EYE,
   },
-  // <<< headgear
 };

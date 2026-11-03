@@ -18,12 +18,15 @@ describe('game data', () => {
     expect(DATA.affixes).toHaveLength(12);
   });
 
-  it('has at least 6 base items per slot plus 3 unique Legendaries for the curbside theme', () => {
+  it('has at least 6 base items per slot plus 7 unique Legendaries for the curbside theme, among the last unlocks', () => {
     for (const slot of SLOTS) {
       const n = DATA.items.filter((i) => i.theme === 'curbside' && i.slot === slot && !i.unique).length;
       expect(n, slot).toBeGreaterThanOrEqual(6);
     }
-    expect(DATA.items.filter((i) => i.unique)).toHaveLength(3);
+    // The first three, then one for each group of the item expansion (headgear, clothes, arms, carry).
+    const uniques = DATA.items.filter((i) => i.unique);
+    expect(uniques).toHaveLength(7);
+    for (const u of uniques) expect(u.unlock, u.id).toBeGreaterThanOrEqual(4);
   });
 
   it('rejects malformed data with a readable error', () => {

@@ -30,23 +30,23 @@ const BACKPACK_FROG_KIDDIE: Rows = [
   '................',
 ];
 
-/** Brown paper grocery bag, celery and an apple poking out of the top. */
-const BACKPACK_PAPER_GROCERY_BAG: Rows = [
+/** Red and white striped popcorn bucket, heaped with buttery popcorn. */
+const BACKPACK_POPCORN_BUCKET: Rows = [
   '................',
-  '...kk.kk....k...',
-  '..kLlkLlk..kGk..',
-  '..klGlGlk.knkk..',
-  '...kGlGk.keRRrk.',
-  '...kLlLk.kRRRrk.',
-  '...kLlLk.kRRrrk.',
-  '..kkkkkkkkkkkkk.',
-  '..kTTTTTTTTNNNk.',
-  '..kTtttttttNnNk.',
-  '..kTtttttttNnNk.',
-  '..kTtttttttNnNk.',
-  '..kTtttttttNnNk.',
-  '..kNNNNNNNNnnnk.',
-  '..kkkkkkkkkkkkk.',
+  '....kk.kkk.kk...',
+  '...kwWkWwWkwWk..',
+  '..kwWTYWWTWWTYk.',
+  '.kWTWwWYwWWwWWk.',
+  '.kkkkkkkkkkkkkk.',
+  '.kWWRRWWRRWWRrk.',
+  '.kWWRRWWRRWWRrk.',
+  '..kWRRWWRRWWrk..',
+  '..kWRRWWRRWWrk..',
+  '..kWRRWWRRWWrk..',
+  '...kRWWRRWWrk...',
+  '...kRWWRRWW5k...',
+  '...kkkkkkkkkk...',
+  '................',
   '................',
 ];
 
@@ -232,23 +232,23 @@ const BLING_NAME_TAG: Rows = [
   '................',
 ];
 
-/** Blue bandana with white dots, tied at the neck. */
-const BLING_BANDANA: Rows = [
-  '................',
-  '................',
-  '.kkkkkkkkkkkkkk.',
-  '.kcUUUUUUUUUUuk.',
-  '.kuuuuuuuuuuuuk.',
-  '.kcUUwUUUUUwUuk.',
-  '..kcUUUUwUUUuk..',
-  '...kcwUUUUUuk...',
-  '....kcUUUwuk....',
-  '.....kcUUuk.....',
-  '......kcuk......',
-  '.......kk.......',
-  '................',
-  '................',
-  '................',
+/** Coach's silver whistle on a red cord. */
+const BLING_WHISTLE: Rows = [
+  '.kRk............',
+  '..kRk...........',
+  '...kRk.......k..',
+  '....kRk.....kRk.',
+  '.....kRkkkkkRk..',
+  '......kRRRRRkk..',
+  '.......kk53kk.k.',
+  '..kkkkk554453k..',
+  '.k45ww5x4w443k..',
+  '.k344444444443k.',
+  '.k333334444443k.',
+  '..kkkkk544443k..',
+  '......k334433k..',
+  '.......kk33kk...',
+  '.........kk.....',
   '................',
 ];
 
@@ -394,22 +394,22 @@ const BLING_BIG_CLOCK: Rows = [
 
 // ------------------------------------------------------------------ Rings
 
-/** Puffy lilac velvet scrunchie, gathered into folds. */
+/** Puffy lilac scrunchie with white polka dots, gathered into folds. */
 const RING_SCRUNCHIE: Rows = [
   '................',
   '................',
-  '....kkkkkkkk....',
-  '...kVMMMVMMVk...',
-  '..kMmmmmmmmmVk..',
-  '.kMmmmVVVVmmmVk.',
-  'kMmmmVkkkkVmmmVk',
-  'kMVmVk....kMmmVk',
-  'kMmmVkkkkkkMmVVk',
-  'kVmmmMMMMMMmmmVk',
-  '.kVmmmmmmmmmmVk.',
-  '..kVVmmmmmmVVk..',
-  '...kVVVVVVVVk...',
-  '....kkkkkkkk....',
+  '.....kkkkkk.....',
+  '...kkVMwMVVkk...',
+  '..kMMmmmmmmwVk..',
+  '.kMmmmVVVVmmVVk.',
+  '.kMVmVkkkkVmmVk.',
+  '.kMmVk....kMmwk.',
+  '.kMwmVkkkkMmmVk.',
+  '.kMmmmMMMMmmVVk.',
+  '.kVmVmmmmmmmmVk.',
+  '..kVVmwmVmwVVk..',
+  '...kkVVVVVVkk...',
+  '.....kkkkkk.....',
   '................',
   '................',
 ];
@@ -454,43 +454,43 @@ const RING_RUBBER_DUCK: Rows = [
   '.....kkkkkk.....',
 ];
 
-/** Roll of silver duct tape, its loose end hanging off. */
-const RING_DUCT_TAPE: Rows = [
-  '................',
+/** Rubber tire off a toy truck, its tread showing, a yellow hub. */
+const RING_TOY_TIRE: Rows = [
   '................',
   '.....kkkkkk.....',
-  '...kk555544kk...',
-  '..k55w555444k...',
-  '.k5w5kkkkk444k..',
-  '.k55kTTTTtk44k..',
-  '.k54kTkkkNk43k..',
-  '.k44kTtttNk43k..',
-  '.k444kkkkk433k..',
-  '.k34444444333k..',
-  '..k333433322kk..',
-  '...kkk3kkkkk2k..',
-  '.....k43k..k3k..',
-  '......kk...k2k..',
-  '............k...',
+  '...kk2222xxk....',
+  '..k221111111k...',
+  '..k21111111xxk..',
+  '.k211yyy111111k.',
+  '.k211YYyy11xxxk.',
+  '.k21yYkyy11111k.',
+  '.k21yykyO111xxk.',
+  '.k211yyyO11111k.',
+  '.kx11yyO111xxxk.',
+  '..k2111111111k..',
+  '..kxx11111xxk...',
+  '...kkxxxx11k....',
+  '.....kkkkkk.....',
+  '................',
 ];
 
-/** Mini donut with pink frosting and sprinkles. */
-const RING_DONUT: Rows = [
-  '................',
-  '................',
-  '.....kkkkkk.....',
-  '...kkPPPPPqkk...',
-  '..kPPwPYPPPqqk..',
-  '.kPwPPkkkkPcqqk.',
-  '.kPPlk....kPqqk.',
-  '.kPPPk....kqqqk.',
-  '.kTPPqkkkkqqwtk.',
-  '.ktPqPPqPqqqttk.',
-  '..ktTqqqqqqttk..',
-  '...kktttttNkk...',
-  '.....kkkkkk.....',
-  '................',
-  '................',
+/** Mini pretzel, twisted and salted. */
+const RING_PRETZEL: Rows = [
+  '...kkkk..kkkk...',
+  '..ktttnkktttnk..',
+  '.ktNwnNttNnwNnk.',
+  '.ktnkknNNnkktnk.',
+  '.ktnk.ktnk.ktnk.',
+  '.ktnkktNNnkktnk.',
+  '.ktNttNnnNttNnk.',
+  '.ktNnnnkknnnNnk.',
+  '.ktnkkk..kkktnk.',
+  '.knwk......kwnk.',
+  '..ktnkk..kktnk..',
+  '..knNtnkkttNnk..',
+  '...knnnttnnnk...',
+  '....kkknnkkk....',
+  '.......kk.......',
   '................',
 ];
 
@@ -574,23 +574,23 @@ const RING_FIDGET_SPINNER: Rows = [
   '................',
 ];
 
-/** Gold cake topper crown with three gems on a purple band. */
-const RING_CAKE_CROWN: Rows = [
-  '................',
-  '..k....kk....k..',
-  '.kRk..kYyk..kUk.',
-  '.kyk..kyOk..kyk.',
-  '.kyyk.kyOk.kyOk.',
-  '.kyyykyyyOkyyOk.',
-  '.kYyyyyyyyyyyOk.',
-  '.kyRyyyUyyyGyOk.',
-  '.kOOOOOOOOOOOok.',
-  '..kkmMMMMMMVkk..',
-  '..kmMkkkkkkmVk..',
-  '.kmMk......kVVk.',
-  '..kmVkkkkkkVvk..',
-  '...kkVVVVvvkk...',
-  '.....kkkkkk.....',
+/** Mirror disco ball on a gold band, sparkling. */
+const RING_DISCO_BALL: Rows = [
+  '.......kk.......',
+  '.k...kk44kk.....',
+  'kwk.k444433k....',
+  '.k.k4ww4m433k...',
+  '..k4455544332k..',
+  '..k54ww554C43k..',
+  '..k4444443322k..',
+  '..k4455444333k..',
+  '..k3333333222kk.',
+  '...k3M4333Y3kkwk',
+  '...k22222222k.k.',
+  '....kk3233kk....',
+  '..kyYkkkkkkOOk..',
+  '...kyOkkkkOok...',
+  '....kkOOOOkk....',
   '................',
 ];
 
@@ -619,7 +619,7 @@ const BACKPACK_UNIQUE_SODA_JETPACK: Rows = [
 /** Every carry icon by item id, in itemsCarry.json order. */
 export const SPRITES: Record<string, Rows> = {
   backpack_frog_kiddie: BACKPACK_FROG_KIDDIE,
-  backpack_paper_grocery_bag: BACKPACK_PAPER_GROCERY_BAG,
+  backpack_popcorn_bucket: BACKPACK_POPCORN_BUCKET,
   backpack_shopping_basket: BACKPACK_SHOPPING_BASKET,
   backpack_birdhouse: BACKPACK_BIRDHOUSE,
   backpack_toaster: BACKPACK_TOASTER,
@@ -629,7 +629,7 @@ export const SPRITES: Record<string, Rows> = {
   backpack_fishbowl: BACKPACK_FISHBOWL,
   bling_bell_collar: BLING_BELL_COLLAR,
   bling_name_tag: BLING_NAME_TAG,
-  bling_bandana: BLING_BANDANA,
+  bling_whistle: BLING_WHISTLE,
   bling_cd_pendant: BLING_CD_PENDANT,
   bling_headphones: BLING_HEADPHONES,
   bling_lei: BLING_LEI,
@@ -640,12 +640,12 @@ export const SPRITES: Record<string, Rows> = {
   ring_scrunchie: RING_SCRUNCHIE,
   ring_bubble_wand: RING_BUBBLE_WAND,
   ring_rubber_duck: RING_RUBBER_DUCK,
-  ring_duct_tape: RING_DUCT_TAPE,
-  ring_donut: RING_DONUT,
+  ring_toy_tire: RING_TOY_TIRE,
+  ring_pretzel: RING_PRETZEL,
   ring_sea_glass: RING_SEA_GLASS,
   ring_toy_spider: RING_TOY_SPIDER,
   ring_lucky_die: RING_LUCKY_DIE,
   ring_fidget_spinner: RING_FIDGET_SPINNER,
-  ring_cake_crown: RING_CAKE_CROWN,
+  ring_disco_ball: RING_DISCO_BALL,
   backpack_unique_soda_jetpack: BACKPACK_UNIQUE_SODA_JETPACK,
 };

@@ -100,7 +100,6 @@ export const HATS: Readonly<Record<string, HatArt>> = {
     on: { x: 6, y: 1 },
     ears: 0,
   },
-  // >>> headgear
   // Open takeout box perched between his ears: noodles heaped up, chopsticks stuck in, a red band.
   hat_takeout_box: {
     pal: { T: 'T', t: 't', y: 'y', Y: 'Y', w: 'w', W: 'W', '5': '5', R: 'R', r: 'r' },
@@ -308,5 +307,4 @@ export const HATS: Readonly<Record<string, HatArt>> = {
     on: { x: 8, y: 1 },
     ears: 2,
   },
-  // <<< headgear
 };

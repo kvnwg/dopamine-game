@@ -32,6 +32,7 @@ import { SLAM_FROM, SLAM_HEIGHT, slamAnchor, slamBridge } from './equipSlam';
 import { reelStops } from '../ui/reelTiming';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
+import { blank, setPx } from './pixel/buf';
 import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type FaceName, type TextStyle } from './pixel/font';
 import { SPRITE_SLOTS } from './pixel/hero';
 import { CHARACTER_OUTLINE, PAL } from './pixel/palette';
@@ -161,8 +162,7 @@ const CONFETTI_COLORS = [0xff5a7a, 0xffd54f, 0x5bd23a, 0x4fc3f7] as const;
 const CONFETTI: BitStyle = { speed: [53, 127], angle: [200, 340], gravity: 150, drag: 1.2, life: [900, 1500], colors: CONFETTI_COLORS, tumble: 90 };
 /** A foe pops when it goes down: a ring of bits, more and faster for bigger foes (see die). */
 const KILL_POP: BitStyle = { speed: [30, 64], life: [200, 380], drag: 2.6, colors: [0xffffff, 0xfff6c8], fade: [0xffe14a, 0xffb300], sizes: [2, 1] };
-/** XP sparks on their way to the XP bar: they twinkle between these and leave a short trail. */
-const XP_SPARK = [0xd8ffd0, 0x7ef08f] as const;
+/** XP sparks on their way to the XP bar (xpSparkTex) leave a short trail. */
 const XP_TRAIL: BitStyle = { speed: [0, 2], life: [140, 220], colors: [0x7ef08f], fade: [0x2fb150], alpha: [0.8, 0.45] };
 /** "+N" gold and "+N XP" pop-ups. */
 const GOLD_GAIN = bands(GOLD, 'big');
@@ -296,6 +296,23 @@ function blowsFirst(events: readonly CoreEvent[]): CoreEvent[] {
     out.push(e);
   });
   return out;
+}
+
+/**
+ * An XP spark (1 texel per art pixel: draw with setScale(P)): a 5 x 5 pixel diamond with a green rim,
+ * white in the middle and light green arms, or the other way round (it twinkles between the two).
+ */
+function xpSparkTex(scene: Phaser.Scene, frame: 0 | 1): string {
+  const key = `xp_spark_${frame}`;
+  if (!scene.textures.exists(key)) {
+    const b = blank(5, 5);
+    const [core, arm] = frame ? ['#b6ffa8', '#ffffff'] : ['#ffffff', '#b6ffa8'];
+    for (const [x, y] of [[2, 0], [1, 1], [3, 1], [0, 2], [4, 2], [1, 3], [3, 3], [2, 4]]) setPx(b, x, y, '#2fb150');
+    for (const [x, y] of [[2, 1], [1, 2], [3, 2], [2, 3]]) setPx(b, x, y, arm);
+    setPx(b, 2, 2, core);
+    scene.textures.addCanvas(key, toCanvas(b, 1));
+  }
+  return key;
 }
 
 /**
@@ -1268,7 +1285,7 @@ export class BattleScene extends Phaser.Scene {
     const coins = info ? (kind === 'boss' ? 16 : kind === 'miniboss' ? 9 : 3) : 2;
     // (A heist's coins pay the run, not the gold counter: they fly but don't land on it.)
     this.coinBurst(p.x, p.y, coins, info && info.gold.left > 0 ? info.gold : null);
-    if (info) this.xpSparks(p.x, p.y, kind === 'boss' ? 5 : big ? 4 : 2, info.xp, info.xpGain);
+    if (info) this.xpSparks(p.x, p.y, kind === 'boss' ? 6 : big ? 4 : 3, info.xp, info.xpGain);
     const now = performance.now();
     if (now - this.streak.at > 5000) this.streak.n = 0;
     audio.kill(big, this.streak.n++, false);
@@ -1404,7 +1421,8 @@ export class BattleScene extends Phaser.Scene {
     const OUT = 160;
     const FLY = 560;
     for (let i = 0; i < n; i++) {
-      const s = this.gridLock(this.add.image(snap(x), snap(y), 'bit2').setOrigin(0.5, 0.5).setDepth(37).setTint(XP_SPARK[0]));
+      // (Origin at its middle pixel's top-left corner: drawn at a whole art pixel, it's on the grid.)
+      const s = this.gridLock(this.add.image(snap(x), snap(y), xpSparkTex(this, 0)).setOrigin(0.4, 0.4).setScale(P).setDepth(37));
       const out = { x: x + Phaser.Math.Between(-12, 12) * P, y: y - Phaser.Math.Between(5, 14) * P };
       const hang = 60 + i * 60;
       const last = i === n - 1;
@@ -1417,7 +1435,8 @@ export class BattleScene extends Phaser.Scene {
         onUpdate: (tw) => {
           if (!s.active) return;
           const t = tw.getValue() ?? 0;
-          s.setTint(XP_SPARK[Math.floor(t / 60) % 2]);
+          const twinkle = xpSparkTex(this, (Math.floor(t / 70) % 2) as 0 | 1);
+          if (s.texture.key !== twinkle) s.setTexture(twinkle);
           if (t < OUT) {
             const k = easeOutQuad(t / OUT);
             s.setPosition(lerp(x, out.x, k), lerp(y, out.y, k));

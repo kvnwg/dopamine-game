@@ -225,6 +225,9 @@ export function heistWinRewards(state: GameState, id: LocationId, tier = heistTi
  * (fractional) world `tier` with HP and ATK multiplied by `hpMult` and `atkMult`: (your HP x your
  * DPS) / (its HP x its DPS), with lifesteal, regen, dodge, the gear's echo, burn and thorns, boss
  * damage (against elites and bosses) and its specials counted. Under 1 the enemy wins.
+ * Blows are discrete: an enemy's first lands a full attack interval after it steps up, so it only
+ * hurts for the time it lives past that. (A raccoon that kills fast takes far less than its DPS
+ * suggests; one that is all HP, more.)
  */
 function oneOnOne(state: GameState, def: EnemyDef, tier: number, hpMult: number, atkMult: number): number {
   const base = computeStats(state);
@@ -250,7 +253,9 @@ function oneOnOne(state: GameState, def: EnemyDef, tier: number, hpMult: number,
   // Burns tick between hits; thorns hand back part of every hit taken.
   const yourDps = hitDps + atk * fx.burn * bonus + fx.thorns * theirDps * bonus;
   const sustain = ((base.LIFESTEAL * sc.LIFESTEAL) / 100) * hitDps + base.REGEN * sc.REGEN;
-  return ((hp * yourDps) / foeHp + sustain) / Math.max(1e-9, theirDps);
+  const time = foeHp / Math.max(1e-9, yourDps);
+  const exposed = Math.max(time * 0.15, time - 1 / def.atkSpd);
+  return hp / (Math.max(1e-9, theirDps) * exposed) + sustain / Math.max(1e-9, theirDps);
 }
 
 /**

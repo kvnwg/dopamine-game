@@ -1680,7 +1680,8 @@ export class BattleScene extends Phaser.Scene {
     e.reels.forEach((r, i) => {
       if (!r.mults.length) return;
       const stops = reelStops(e, i);
-      const chain = { tokens: [] as Phaser.GameObjects.Image[], total: null as PixelText | null, mult: 1, y: (24 + row * 19) * P };
+      // Under the gold and XP pop-ups that sit beneath the top bar (TopHud).
+      const chain = { tokens: [] as Phaser.GameObjects.Image[], total: null as PixelText | null, mult: 1, y: (35 + row * 19) * P };
       row++;
       stops.forEach((st, j) => {
         if (st.token === null) {

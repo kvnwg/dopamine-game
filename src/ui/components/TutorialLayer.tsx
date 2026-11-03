@@ -247,7 +247,7 @@ export function TutorialLayer() {
       bus.on((events: CoreEvent[]) => {
         const done = events.find((e): e is Extract<CoreEvent, { type: 'tutorialDone' }> => e.type === 'tutorialDone');
         // After the slam (about a second) and the power count (about two more) have had their moment.
-        if (done) setTimeout(() => setFinale(done.gems), 3700);
+        if (done) setTimeout(() => setFinale(done.gems), 3900);
       }),
     [],
   );

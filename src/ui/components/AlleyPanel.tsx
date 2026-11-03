@@ -1,5 +1,5 @@
 /**
- * The Roll tab: the wheel spins on its own (Trash Bags make turbo spins). Shows luck, spin speed,
+ * The Roll tab: the reels roll on their own (Trash Bags make turbo spins). Shows luck, spin speed,
  * the lucky-spin meter, the latest result with its "1 in X", recent results, and equipped gear.
  * Items are equipped by dragging them onto the raccoon.
  */
@@ -14,10 +14,10 @@ import { haptics } from '../../services';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
-import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, ChartIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
+import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { fmtLuck } from './StatStrip';
-import { Wheel } from './Wheel';
+import { ReelBank } from './Reel';
 import s from './alley.module.css';
 
 export function fmtOdds(x: number): string {
@@ -77,7 +77,7 @@ function LastRoll() {
           ) : (
             <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
           )}
-          {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('wheel.golden')}</span>}
+          {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('reel.golden')}</span>}
           {last.lucky && <span className={`${s.chip} ${s.chipLucky}`}>{t('roll.lucky')}</span>}
           {last.newRecord && <span className={`${s.chip} ${s.chipRecord}`}>{t('roll.newRecord')}</span>}
           {it.enchants.map((en) => (
@@ -165,17 +165,7 @@ export function AlleyPanel() {
   return (
     <div className={s.panel}>
       <div className={`${s.top} card`}>
-        <div className={s.wheelBox}>
-          <Wheel />
-        </div>
-        <div className={s.miniBtns}>
-          <button className={s.mini} onClick={() => open('luck')} aria-label={t('roll.odds')}>
-            <ChartIcon size={44} />
-          </button>
-          <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')}>
-            <BookIcon size={44} />
-          </button>
-        </div>
+        <ReelBank />
         <div className={s.info}>
           <div className={s.infoHead}>
             <span className={s.binTitle}>{t('roll.dumpster', { level })}</span>
@@ -211,6 +201,10 @@ export function AlleyPanel() {
               <span className={s.luckWord}>{t('roll.luckLabel')}</span>
             </button>
             {pityOn && <span className={s.pity}>{t('roll.pity', { n: Math.max(1, spell - dry) })}</span>}
+            <span style={{ flex: 1 }} />
+            <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')}>
+              <BookIcon size={44} />
+            </button>
           </div>
         </div>
       </div>

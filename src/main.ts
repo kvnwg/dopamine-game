@@ -1,8 +1,9 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@fontsource/lilita-one/latin-400.css';
-import '@fontsource/nunito/latin-800.css';
+import '@fontsource/pixelify-sans/latin-500.css';
+import '@fontsource/pixelify-sans/latin-700.css';
 import './ui/global.css';
+import './ui/pixel.css';
 import { DATA } from './data'; // validates every JSON file at boot
 import { boot } from './app/session';
 import { dispatch, getGame } from './app/store';

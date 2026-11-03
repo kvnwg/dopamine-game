@@ -8,7 +8,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { BAL, DATA, nodeKey, type HexNode } from '../../data';
 import {
-  drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, spinCycle, upgradeDef,
+  drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef,
   upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef,
 } from '../../core';
 import { dispatch, getGame, useGame } from '../../app/store';
@@ -21,7 +21,7 @@ import { useUi } from '../uiStore';
 import { Chunky } from './Chunky';
 import {
   BackpackIcon, BagIcon, BoltIcon, BookIcon, CheckIcon, ClockIcon, CloverIcon, CoinIcon, DiceIcon, DropIcon, GemIcon,
-  HeartIcon, LockIcon, PotionIcon, PowerIcon, ShieldIcon, SkullIcon, StarIcon, SwordIcon, TargetIcon, TrashIcon, WheelIcon,
+  HeartIcon, LockIcon, PotionIcon, PowerIcon, ShieldIcon, SkullIcon, StarIcon, SwordIcon, TargetIcon, TrashIcon, ReelIcon,
 } from './Icons';
 import s from './hexmap.module.css';
 
@@ -68,12 +68,13 @@ export function roman(n: number): string {
 const ICONS: Record<string, (n: number) => ReactNode> = {
   luck: (n) => <CloverIcon size={n} />,
   clover: (n) => <CloverIcon size={n} />,
-  rollSpeed: (n) => <WheelIcon size={n} />,
+  extraReel: (n) => <ReelIcon size={n} gold />,
+  rollSpeed: (n) => <ReelIcon size={n} />,
   bagFind: (n) => <BagIcon size={n} />,
   luckyRoll: (n) => <DiceIcon size={n} />,
   luckyMult: (n) => <StarIcon size={n} />,
-  goldenWheel: (n) => <WheelIcon size={n} gold />,
-  goldenSpin: (n) => <WheelIcon size={n} gold />,
+  goldenWheel: (n) => <ReelIcon size={n} gold />,
+  goldenSpin: (n) => <ReelIcon size={n} gold />,
   turboPower: (n) => <BoltIcon size={n} />,
   enchant: (n) => <StarIcon size={n} />,
   enchantTier: (n) => <GemIcon size={n} />,
@@ -145,6 +146,8 @@ export function effectAt(g: GameState, def: UpgradeDef, level: number): string {
       return t('upgradeFx.pity', { v: drySpell(st) });
     case 'potionTime':
       return t('upgradeFx.potionTime', { v: potionSeconds(st) });
+    case 'reels':
+      return t('upgradeFx.reels', { v: reelCount(st) });
     default:
       return t(`upgradeFx.${def.effect}`, { v: Number.isInteger(v) ? formatNumber(v) : v.toFixed(1) });
   }

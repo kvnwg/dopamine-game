@@ -33,22 +33,23 @@ export type CoreEvent =
   | { type: 'stageStart'; stage: number; push: boolean }
   | { type: 'bossAttempt'; stage: number }
   | { type: 'levelUp'; level: number }
-  /** The wheel starts turning; `item` is where it will land after `spinSeconds`. */
+  /** The reels start rolling; each reel's `item` is where it will land after `spinSeconds`. */
   | {
       type: 'spinStart';
-      item: Item;
+      reels: { item: Item; odds: number }[];
       lucky: boolean;
       golden: boolean;
-      odds: number;
       luck: number;
       turbo: boolean;
       spinSeconds: number;
       restSeconds: number;
     }
-  /** The wheel lands. */
+  /** One reel lands (a spin with several reels sends one of these per reel). */
   | {
       type: 'roll';
       item: Item;
+      /** Which reel, from 0 (left). */
+      reel: number;
       lucky: boolean;
       golden: boolean;
       source: 'free' | 'turbo';

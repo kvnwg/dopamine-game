@@ -1,9 +1,10 @@
 /**
- * The always-on dumpster wheel (RNG-game style):
- * - every roll is one spin: the result is rolled when the spin starts, lands when it stops, then
- *   the wheel rests briefly and spins again (Spin Speed upgrades shorten the cycle);
+ * The always-on dumpster reels (RNG-game style):
+ * - every spin rolls one item per reel (1 reel, more with the Extra Reel upgrade): the results are
+ *   rolled when the spin starts, land when it stops, then the reels rest and spin again
+ *   (Spin Speed upgrades shorten the cycle);
  * - a Trash Bag from fights makes a spin a faster turbo spin;
- * - every Nth spin is a lucky spin;
+ * - every Nth spin is a lucky spin, and a golden spin can strike any spin (both cover every reel);
  * - new items go to the bag; the player equips by dragging them onto the raccoon;
  * - the bag has limited space and always keeps the highest-power items (the rest are scrapped).
  */
@@ -134,19 +135,17 @@ function decidePlacement(d: GameState, item: Item): RollPlacement {
   return worst >= 0 && item.power > d.inventory[worst].power ? 'bag' : 'scrapped';
 }
 
-/** Rolls the next item (the wheel's target) without placing it. */
-function rollItem(d: GameState, rng: Rng, now: number): { item: Item; lucky: boolean; golden: boolean; luck: number } {
-  const dz = d.dumpster;
-  const theme = dz.theme;
+/** How many reels roll at once (1, plus the Extra Reel upgrade). */
+export function reelCount(state: Pick<GameState, 'upgrades'>): number {
+  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels)));
+}
+
+/** Lucky and golden are decided once per spin and cover every reel. The tutorial spin is neither. */
+function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; golden: boolean; luck: number } {
+  let luck = currentLuck(d, now);
   let lucky = false;
   let golden = false;
-  let luck = currentLuck(d, now);
-  let item: Item;
-  if (!dz.firstDiveDone) {
-    const t = BAL.dumpster.tutorialItem;
-    item = createItem(DATA.itemsById.get(t.baseId)!, t.rarity, t.level, theme, rng, d.nextItemUid++);
-    dz.firstDiveDone = true;
-  } else {
+  if (d.dumpster.firstDiveDone) {
     const up = upgradeEffects(d);
     d.roll.sinceLucky += 1;
     if (d.roll.sinceLucky >= luckyEvery(d)) {
@@ -158,64 +157,89 @@ function rollItem(d: GameState, rng: Rng, now: number): { item: Item; lucky: boo
       golden = true;
       luck *= BAL.roll.goldenLuckMult;
     }
-    let rarity: Rarity;
-    const bl = BAL.dumpster.badLuck;
-    if (dz.forcedRarity) {
-      rarity = dz.forcedRarity;
-      dz.forcedRarity = null;
-    } else if (dz.level >= bl.minDumpsterLevel && dz.dryStreak >= drySpell(d)) {
-      rarity = rollRarity(luck, rng, bl.minRarity);
-    } else {
-      rarity = rollRarity(luck, rng);
-    }
-    const slot = rollSlot(rng);
-    const level = rollItemLevel(d.player.level, rng);
-    const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
-    rarity = bumpRarity(rarity, rarityBump(enchants));
-    const base = pickBaseItem(slot, theme, rarity, rng);
-    item = createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
   }
-  return { item, lucky, golden, luck };
+  return { lucky, golden, luck };
 }
 
-/** Starts a spin. A Trash Bag, if there is one, pays for a faster turbo spin. */
+/**
+ * Rolls one reel's item at `luck`. `dry` is the bad-luck streak as of this reel (earlier reels in
+ * the same spin count), so protection triggers at most once per streak.
+ */
+function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number): Item {
+  const dz = d.dumpster;
+  const theme = dz.theme;
+  if (!dz.firstDiveDone) {
+    const t = BAL.dumpster.tutorialItem;
+    dz.firstDiveDone = true;
+    return createItem(DATA.itemsById.get(t.baseId)!, t.rarity, t.level, theme, rng, d.nextItemUid++);
+  }
+  const up = upgradeEffects(d);
+  let rarity: Rarity;
+  const bl = BAL.dumpster.badLuck;
+  if (dz.forcedRarity) {
+    rarity = dz.forcedRarity;
+    dz.forcedRarity = null;
+  } else if (dz.level >= bl.minDumpsterLevel && dry >= drySpell(d)) {
+    rarity = rollRarity(luck, rng, bl.minRarity);
+  } else {
+    rarity = rollRarity(luck, rng);
+  }
+  const slot = rollSlot(rng);
+  const level = rollItemLevel(d.player.level, rng);
+  const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
+  rarity = bumpRarity(rarity, rarityBump(enchants));
+  const base = pickBaseItem(slot, theme, rarity, rng);
+  return createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
+}
+
+/** Starts a spin: rolls every reel's result. A Trash Bag, if there is one, pays for a faster turbo spin. */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const turbo = d.currencies.bags >= 1;
   if (turbo) d.currencies.bags -= 1;
-  const { item, lucky, golden, luck } = rollItem(d, rng, now);
+  const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
+  const reels: { item: Item; odds: number }[] = [];
+  let dry = d.dumpster.dryStreak;
+  for (let i = 0, n = reelCount(d); i < n; i++) {
+    const item = rollReelItem(d, rng, luck, dry);
+    dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
+    reels.push({ item, odds: itemOddsOneIn(item) });
+  }
   const cycle = spinCycle(d, turbo);
   const spinSeconds = cycle * spinShare();
   const restSeconds = cycle - spinSeconds;
-  const odds = itemOddsOneIn(item);
-  d.roll.current = { item, lucky, golden, luck, odds, turbo, spinSeconds, restSeconds, landed: false };
+  d.roll.current = { reels, lucky, golden, luck, turbo, spinSeconds, restSeconds, landed: false };
   d.roll.timer = 0;
-  ev.push({ type: 'spinStart', item: snap(item), lucky, golden, luck, odds, turbo, spinSeconds, restSeconds });
+  ev.push({
+    type: 'spinStart', reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds })), lucky, golden, luck, turbo, spinSeconds, restSeconds,
+  });
 }
 
-/** The wheel stops: records, Codex, then equip, bag, or scrap. */
+/** The reels stop: for each result, records, Codex, then bag or scrap. */
 function landSpin(d: GameState, ev: CoreEvent[]): void {
   const spin = d.roll.current;
   if (!spin || spin.landed) return;
   spin.landed = true;
-  const item = snap(spin.item);
   const dz = d.dumpster;
-  d.roll.count += 1;
-  dz.totalDives += 1;
-  dz.dryStreak = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dz.dryStreak + 1;
-  const newRecord = spin.odds > d.records.bestOdds;
-  if (newRecord) {
-    d.records.bestOdds = spin.odds;
-    d.records.bestItemName = itemName(item);
-    d.records.bestRarity = item.rarity;
-  }
-  const placed = decidePlacement(d, item);
-  ev.push({
-    type: 'roll', item, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: spin.odds, luck: spin.luck,
-    placed, newRecord,
+  spin.reels.forEach((r, reel) => {
+    const item = snap(r.item);
+    d.roll.count += 1;
+    dz.totalDives += 1;
+    dz.dryStreak = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dz.dryStreak + 1;
+    const newRecord = r.odds > d.records.bestOdds;
+    if (newRecord) {
+      d.records.bestOdds = r.odds;
+      d.records.bestItemName = itemName(item);
+      d.records.bestRarity = item.rarity;
+    }
+    const placed = decidePlacement(d, item);
+    ev.push({
+      type: 'roll', item, reel, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: r.odds, luck: spin.luck,
+      placed, newRecord,
+    });
+    registerCodex(d, item, ev);
+    if (placed === 'bag') addToBag(d, item, ev);
+    else scrapItem(d, item, ev, true);
   });
-  registerCodex(d, item, ev);
-  if (placed === 'bag') addToBag(d, item, ev);
-  else scrapItem(d, item, ev, true);
 }
 
 /** True when `item` would beat what is equipped in its slot (or the slot is empty). */
@@ -224,18 +248,23 @@ export function isUpgrade(state: Pick<GameState, 'equipped'>, item: Item): boole
   return !cur || item.power > cur.power;
 }
 
-/** One whole roll right now (spin start and landing at once). Used by tests and tools. */
-export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): Item {
+/** One whole spin right now (start and landing at once); returns every reel's item. Used by tests and tools. */
+export function performSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): Item[] {
   if (d.roll.current && !d.roll.current.landed) landSpin(d, ev);
   startSpin(d, rng, now, ev);
-  const item = snap(d.roll.current!.item);
+  const items = d.roll.current!.reels.map((r) => snap(r.item));
   landSpin(d, ev);
   d.roll.current = null;
   d.roll.timer = 0;
-  return item;
+  return items;
 }
 
-/** Advances the wheel by `dt` seconds: spin, land, rest, spin again. */
+/** One whole spin right now; returns the first reel's item. Used by tests and tools. */
+export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): Item {
+  return performSpin(d, rng, now, ev)[0];
+}
+
+/** Advances the reels by `dt` seconds: spin, land, rest, spin again. */
 export function rollTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[], dt: number): void {
   let t = dt;
   for (let guard = 0; guard < BAL.roll.maxRollsPerTick * 2 + 2; guard++) {

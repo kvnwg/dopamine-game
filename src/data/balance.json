@@ -407,7 +407,23 @@
       "mint": 5.0
     },
     "hotDumpsterStartPct": 50,
-    "maxCatchUpTicksPerFrame": 50
+    "maxCatchUpTicksPerFrame": 50,
+    "reels": {
+      "fillerWeights": {
+        "junk": 12,
+        "decent": 16,
+        "shiny": 18,
+        "epic": 20,
+        "legendary": 18,
+        "mythic": 10,
+        "mint": 6
+      },
+      "nearMissChance": 0.65,
+      "flairChance": 0.3,
+      "cellsPerSecond": 13,
+      "minCells": 9,
+      "firstStopShare": 0.55
+    }
   },
   "mockAds": {
     "watchSeconds": 1.5
@@ -420,6 +436,7 @@
     "turboSpeedMult": 2,
     "minTurboCycleSeconds": 0.45,
     "maxRollsPerTick": 3,
+    "maxReels": 5,
     "luckyRollEvery": 10,
     "luckyRollMinEvery": 4,
     "luckyRollMult": 2,
@@ -484,6 +501,22 @@
       },
       "special": true,
       "path": "n"
+    },
+    {
+      "id": "extraReel",
+      "effect": "reels",
+      "perLevel": 1,
+      "max": 4,
+      "cost": {
+        "base": 250000000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 1
+      },
+      "special": true,
+      "path": "nw*4"
     },
     {
       "id": "rollSpeed",

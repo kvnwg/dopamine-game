@@ -1,30 +1,35 @@
 /**
- * Item and UI art as data URLs for React, cached. One place to switch art sets:
- * every icon the UI shows comes through here.
+ * Item and UI art as data URLs for React, cached. Every icon the UI shows comes through here,
+ * all drawn as pixel art (src/render/pixel).
  */
-import type { Rarity, Slot } from '../data';
-import { dumpsterBody, dumpsterLid, emptySlotIcon, gearIcon } from './cel';
+import { DATA, type Slot } from '../data';
+import { fromRows, silhouette } from './pixel/buf';
+import { pixelUrl } from './pixel';
+import { ITEM_SPRITES } from './pixel/items';
+import { FX, UI_SPRITES, type UiIcon } from './pixel/ui';
 
-const ICON_PX = 192;
-const cache = new Map<string, string>();
-
-function url(key: string, make: () => HTMLCanvasElement): string {
-  let u = cache.get(key);
-  if (!u) {
-    u = make().toDataURL('image/png');
-    cache.set(key, u);
-  }
-  return u;
+function firstOfSlot(slot: Slot): string {
+  return DATA.items.find((i) => i.slot === slot && !i.unique)?.id ?? DATA.items[0].id;
 }
 
-export function itemIconUrl(slot: Slot, rarity: Rarity): string {
-  return url(`i_${slot}_${rarity}`, () => gearIcon(slot, rarity, ICON_PX));
+/** The icon for a base item: its own art, in its natural colors (rarity shows on the frame). */
+export function itemArtUrl(baseId: string): string {
+  const rows = ITEM_SPRITES[baseId] ?? ITEM_SPRITES[firstOfSlot(DATA.itemsById.get(baseId)?.slot ?? 'hat')];
+  return pixelUrl(`item:${baseId}`, () => fromRows(rows));
 }
 
+/** An empty gear slot: a dim silhouette of a typical item for that slot. */
 export function emptyIconUrl(slot: Slot): string {
-  return url(`e_${slot}`, () => emptySlotIcon(slot, ICON_PX));
+  return pixelUrl(`empty:${slot}`, () => silhouette(fromRows(ITEM_SPRITES[firstOfSlot(slot)]), '#4a4466'));
+}
+
+export function uiIconUrl(name: UiIcon): string {
+  return pixelUrl(`ui:${name}`, () => fromRows(UI_SPRITES[name]));
 }
 
 export function dumpsterArt(): { body: string; lid: string } {
-  return { body: url('bin_body', dumpsterBody), lid: url('bin_lid', dumpsterLid) };
+  return {
+    body: pixelUrl('dumpster:body', () => fromRows(FX.dumpsterBody)),
+    lid: pixelUrl('dumpster:lid', () => fromRows(FX.dumpsterLid)),
+  };
 }

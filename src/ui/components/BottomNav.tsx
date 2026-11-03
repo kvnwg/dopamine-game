@@ -5,7 +5,7 @@ import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { useUi, type Tab } from '../uiStore';
-import { ArrowUpIcon, BagIcon, GlobeIcon, RebirthIcon, WheelIcon } from './Icons';
+import { ArrowUpIcon, BagIcon, GlobeIcon, RebirthIcon, ReelIcon } from './Icons';
 import s from './nav.module.css';
 
 interface TabDef {
@@ -14,7 +14,7 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { id: 'alley', icon: (n) => <WheelIcon size={n} /> },
+  { id: 'alley', icon: (n) => <ReelIcon size={n} /> },
   { id: 'bag', icon: (n) => <BagIcon size={n} /> },
   { id: 'upgrades', icon: (n) => <ArrowUpIcon size={n} /> },
   { id: 'rebirth', icon: (n) => <RebirthIcon size={n} /> },

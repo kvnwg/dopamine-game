@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, type Slot } from '../data';
 import type { Item } from './types';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export const SubstatSchema = z.object({
   affixId: z.string(),
@@ -34,13 +34,13 @@ export const ItemSchema = z.object({
   power: z.number(),
 });
 
-/** One spin of the wheel. The item is rolled when the spin starts and lands when the spin ends. */
+/** One spin of the reels. Each reel's item is rolled when the spin starts and lands when the spin ends. */
 export const SpinSchema = z.object({
-  item: ItemSchema,
+  /** One result per reel, decided when the spin starts. */
+  reels: z.array(z.object({ item: ItemSchema, odds: z.number() })).min(1),
   lucky: z.boolean(),
   /** A Golden Spin (x5 luck). */
   golden: z.boolean(),
-  odds: z.number(),
   luck: z.number(),
   /** Paid for with a Trash Bag: spins faster. */
   turbo: z.boolean(),
@@ -128,7 +128,7 @@ export const GameStateSchema = z.object({
     adSpeedupDay: z.string(),
     adSpeedupsUsed: z.number().int().nonnegative(),
   }),
-  /** The wheel: the spin in progress (its result is decided when it starts) and seconds into it. */
+  /** The reels: the spin in progress (its results are decided when it starts) and seconds into it. */
   roll: z.object({
     timer: z.number(),
     current: SpinSchema.nullable(),

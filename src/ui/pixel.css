@@ -1,0 +1,13 @@
+/*
+ * Pixel look, applied over every component: square corners everywhere (pixel UIs have no
+ * rounded corners), crisp scaling for pixel images, and the pixel font for text drawn in canvases.
+ */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+img {
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}

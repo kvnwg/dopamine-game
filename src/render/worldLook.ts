@@ -1,23 +1,26 @@
 /**
- * Per-world look: a sky gradient plus a hue / saturation / brightness grade applied to the shared
- * cel scenery (dark outline pixels are left alone so line work stays crisp). Used by the battle
- * scene (full-size layers) and the Worlds tab (small preview cards).
+ * Per-world look for the pixel scenery: a sky in flat color bands (stars and a pixel moon at
+ * night) plus a hue / saturation / brightness grade applied to the shared scenery layers (dark
+ * outline pixels are left alone so line work stays crisp). Used by the battle scene (full-size
+ * layers) and the Worlds tab (small preview cards).
  */
 import { DATA, type WorldDef } from '../data';
-import { farLayer, fgLayer, groundLayer, midLayer } from './cel';
+import { blank, blit, clone, fill, fromRows, hash01, mix, rgb, toHex, type PixelBuf } from './pixel/buf';
+import { P, toCanvas } from './pixel';
+import { LAYERS, fgLayer, farLayer, groundLayer, midLayer } from './pixel/scenery';
 
 export type Look = WorldDef['look'];
 
 export interface BaseLayers {
-  far: HTMLCanvasElement;
-  mid: HTMLCanvasElement;
-  ground: HTMLCanvasElement;
-  fg: HTMLCanvasElement;
+  far: PixelBuf;
+  mid: PixelBuf;
+  ground: PixelBuf;
+  fg: PixelBuf;
 }
 
 let base: BaseLayers | null = null;
 
-/** The ungraded scenery tiles, painted once. */
+/** The ungraded scenery tiles, built once. */
 export function baseLayers(): BaseLayers {
   if (!base) base = { far: farLayer(), mid: midLayer(), ground: groundLayer(), fg: fgLayer() };
   return base;
@@ -54,117 +57,94 @@ function isIdentity(look: Look): boolean {
 }
 
 /** A graded copy of `src`. Near-black pixels (the outlines) keep their color. */
-export function grade(src: HTMLCanvasElement, look: Look): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = src.width;
-  c.height = src.height;
-  const ctx = c.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(src, 0, 0);
-  if (isIdentity(look)) return c;
-  const img = ctx.getImageData(0, 0, c.width, c.height);
-  const d = img.data;
+export function gradeBuf(src: PixelBuf, look: Look): PixelBuf {
+  const out = clone(src);
+  if (isIdentity(look)) return out;
+  const d = out.px;
   const m = colorMatrix(look);
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;
     const r = d[i];
     const g = d[i + 1];
     const b = d[i + 2];
-    // Keep line work dark: fade the grade in above a low luminance.
     const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     const k = lum < 0.16 ? 0 : lum > 0.3 ? 1 : (lum - 0.16) / 0.14;
-    const nr = m[0] * r + m[1] * g + m[2] * b;
-    const ng = m[3] * r + m[4] * g + m[5] * b;
-    const nb = m[6] * r + m[7] * g + m[8] * b;
-    d[i] = r + (nr - r) * k;
-    d[i + 1] = g + (ng - g) * k;
-    d[i + 2] = b + (nb - b) * k;
+    d[i] = r + (m[0] * r + m[1] * g + m[2] * b - r) * k;
+    d[i + 1] = g + (m[3] * r + m[4] * g + m[5] * b - g) * k;
+    d[i + 2] = b + (m[6] * r + m[7] * g + m[8] * b - b) * k;
   }
-  ctx.putImageData(img, 0, 0);
-  return c;
+  return out;
 }
 
-/** Deterministic pseudo-random in 0..1 for star placement. */
-function hash(i: number): number {
-  let h = Math.imul(i + 1, 0x9e3779b1);
-  h ^= h >>> 15;
-  h = Math.imul(h, 0x2c1b3c6d);
-  h ^= h >>> 12;
-  return ((h >>> 0) % 10000) / 10000;
-}
+const MOON = [
+  '..kkkk..',
+  '.kWWWWk.',
+  'kWWW5W.k',
+  'kWWWW..k',
+  'kWW5W..k',
+  'kWWWWW.k',
+  '.kWWWWk.',
+  '..kkkk..',
+];
 
-/** The world's sky: a vertical gradient, with stars and a soft moon at night. */
-export function skyCanvas(w: number, h: number, look: Look): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext('2d')!;
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, look.skyTop);
-  g.addColorStop(0.72, look.skyBottom);
-  g.addColorStop(1, look.skyBottom);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
+/** The world's sky in `w` x `h` art pixels: flat bands from top to bottom, with stars and a moon at night. */
+export function skyBuf(w: number, h: number, look: Look): PixelBuf {
+  const b = blank(w, h);
+  const bands = 7;
+  const span = Math.ceil((h * 0.75) / bands);
+  for (let i = 0; i < bands; i++) {
+    const c = mix(look.skyTop, look.skyBottom, i / (bands - 1));
+    fill(b, 0, i * span, w, i === bands - 1 ? h - i * span : span, c);
+  }
   if (look.night) {
-    for (let i = 0; i < 70; i++) {
-      const x = hash(i) * w;
-      const y = hash(i + 500) * h * 0.6;
-      const r = 1 + hash(i + 900) * 2.6 * (w / 1080);
-      ctx.globalAlpha = 0.45 + hash(i + 1300) * 0.55;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
+    for (let i = 0; i < 46; i++) {
+      const x = Math.floor(hash01(i) * w);
+      const y = Math.floor(hash01(i + 500) * h * 0.55);
+      const bright = hash01(i + 900) > 0.7;
+      fill(b, x, y, 1, 1, bright ? '#ffffff' : mix(look.skyTop, '#ffffff', 0.6));
+      if (bright && hash01(i + 1300) > 0.6) {
+        const [r, g, bl] = rgb(mix(look.skyTop, '#ffffff', 0.35));
+        const dim = toHex(r, g, bl);
+        fill(b, x - 1, y, 1, 1, dim);
+        fill(b, x + 1, y, 1, 1, dim);
+        fill(b, x, y - 1, 1, 1, dim);
+        fill(b, x, y + 1, 1, 1, dim);
+      }
     }
-    ctx.globalAlpha = 1;
-    const mx = w * 0.82;
-    const my = h * 0.16;
-    const mr = w * 0.06;
-    const glow = ctx.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 3);
-    glow.addColorStop(0, 'rgba(255,255,240,0.35)');
-    glow.addColorStop(1, 'rgba(255,255,240,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(mx - mr * 3, my - mr * 3, mr * 6, mr * 6);
-    ctx.fillStyle = '#fff8e1';
-    ctx.beginPath();
-    ctx.arc(mx, my, mr, 0, Math.PI * 2);
-    ctx.fill();
+    blit(b, fromRows(MOON), Math.floor(w * 0.8), Math.floor(h * 0.1));
   }
-  return c;
+  return b;
 }
 
-/** Layer placement in the 1080 x 820 battle view. */
-export const LAYER_Y = { far: 202, mid: 224, ground: 580, fg: 700 } as const;
-export const SCROLL0 = { far: 260, mid: 40, ground: 500, fg: 700 } as const;
+/** Layer placement in the 1080 x 820 battle view (multiples of the pixel size, so pixels line up). */
+export const LAYER_Y = { far: LAYERS.far.y * P, mid: LAYERS.mid.y * P, ground: LAYERS.ground.y * P, fg: LAYERS.fg.y * P } as const;
+export const SCROLL0 = { far: 43 * P, mid: 7 * P, ground: 83 * P, fg: 117 * P } as const;
 
 const thumbs = new Map<number, string>();
 
-/** A small preview of a world (sky + graded scenery) as a data URL, cached. */
-export function worldThumbUrl(world: number, w = 420, h = 200): string {
-  const key = world * 100000 + w * 100 + h;
-  const hit = thumbs.get(key);
+/** A preview of a world (sky + graded scenery) as a data URL, cached. Pixel-crisp at 3x. */
+export function worldThumbUrl(world: number): string {
+  const hit = thumbs.get(world);
   if (hit) return hit;
   const def = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
   const L = baseLayers();
-  // Show the battle view's band from y=170 to y=730 (the houses, trees and road).
-  const y0 = 170;
-  const y1 = 730;
-  const k = h / (y1 - y0);
-  const viewW = w / k;
-  const scenery = document.createElement('canvas');
-  scenery.width = w;
-  scenery.height = h;
-  const sctx = scenery.getContext('2d')!;
-  sctx.imageSmoothingQuality = 'high';
-  const put = (src: HTMLCanvasElement, sx: number, y: number) => {
-    sctx.drawImage(src, sx, 0, viewW, src.height, 0, (y - y0) * k, w, src.height * k);
+  // The band of the battle view with the houses, trees and road.
+  const top = 26;
+  const w = 160;
+  const h = 96;
+  const out = skyBuf(w, h + top, def.look);
+  const view = blank(w, h + top);
+  const put = (src: PixelBuf, sx: number, y: number) => {
+    for (let x = 0; x < w; x += src.w) blit(view, src, x - (sx % src.w), y);
+    blit(view, src, w - (sx % src.w), y);
   };
-  put(L.far, SCROLL0.far, LAYER_Y.far);
-  put(L.mid, SCROLL0.mid, LAYER_Y.mid);
-  put(L.ground, SCROLL0.ground, LAYER_Y.ground);
-  const graded = grade(scenery, def.look);
-  const out = skyCanvas(w, h, def.look);
-  out.getContext('2d')!.drawImage(graded, 0, 0);
-  const url = out.toDataURL('image/png');
-  thumbs.set(key, url);
+  put(gradeBuf(L.far, def.look), SCROLL0.far / P, LAYERS.far.y);
+  put(gradeBuf(L.mid, def.look), SCROLL0.mid / P, LAYERS.mid.y);
+  put(gradeBuf(L.ground, def.look), SCROLL0.ground / P, LAYERS.ground.y);
+  blit(out, view, 0, 0);
+  const cropped = blank(w, h);
+  blit(cropped, out, 0, -top);
+  const url = toCanvas(cropped, 3).toDataURL('image/png');
+  thumbs.set(world, url);
   return url;
 }

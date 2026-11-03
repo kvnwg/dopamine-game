@@ -1,0 +1,206 @@
+/**
+ * 16x16 pixel icons for every base item in src/data/items.json, drawn to docs/PIXEL_ART.md.
+ */
+import { checkRows, fromRows, type Rows, type SheetEntry } from './buf';
+import { REF_CONE } from './reference';
+
+const TODO: Rows = [
+  '................',
+  '................',
+  '..kkkkkkkkkkkk..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..k4444444444k..',
+  '..kkkkkkkkkkkk..',
+  '................',
+  '................',
+];
+
+// ------------------------------------------------------------------ hats
+
+const HAT_LAWN_GNOME: Rows = [
+  '................',
+  '............k...',
+  '..........kkRk..',
+  '.........keRrk..',
+  '........keRrk...',
+  '.......keRrk....',
+  '......keRRrk....',
+  '.....keRRRrk....',
+  '....kewRRRRrk...',
+  '...kewRRRRRrk...',
+  '..keeRRRRRRRrk..',
+  '..keRRRRRRRrrk..',
+  '.keRRRRRRRRRrrk.',
+  '.krrrrrrrrrrrrk.',
+  '..kkkkkkkkkkkk..',
+  '................',
+];
+
+const HAT_FLOWER_POT: Rows = [
+  '................',
+  '........kkk.....',
+  '.......kmmVk....',
+  '......kmVYVvk...',
+  '.......kVvvk....',
+  '......kllGk.....',
+  '....kkkkkGkk....',
+  '...keoooooonk...',
+  '...keoooooonk...',
+  '..keoooooooonk..',
+  '..keoooooooonk..',
+  '.keeeeeeeeeeeok.',
+  '.keooooooooonnk.',
+  '.koooooooooonnk.',
+  '..kkkkkkkkkkkk..',
+  '................',
+];
+
+const HAT_YOGURT_TUB: Rows = [
+  '................',
+  '................',
+  '.....kkkkkk.....',
+  '....kwww554k....',
+  '...kww555554k...',
+  '...kww555554k...',
+  '..kww55555544k..',
+  '..kPPPGlGPPqqk..',
+  '..kPPReRRrPqqk..',
+  '..kPPRRYRrPqqk..',
+  '..kPPPRRrPPqqk..',
+  '..kPPPPrPPPqqk..',
+  '..kww55555544k..',
+  '.kww5555555544k.',
+  '..kkkkkkkkkkkk..',
+  '................',
+];
+
+const HAT_PAINT_BUCKET: Rows = [
+  '................',
+  '....kkkkkkkk....',
+  '...k55555544k...',
+  '..k5kkkkkkkk4k..',
+  '.k5k........k4k.',
+  '.k5k........k4k.',
+  '.k4kkkkkkkkkk3k.',
+  '.kWWWWWWWWWWWTk.',
+  '.kWTTTTTTTTTTtk.',
+  '.k5TT44TT44T33k.',
+  '.k5tw44Tt44t33k.',
+  '.k55w44t444433k.',
+  '.k55w444444433k.',
+  '.k554444444333k.',
+  '..kkkkkkkkkkkk..',
+  '................',
+];
+
+const HAT_BIKE_HELMET: Rows = [
+  '................',
+  '................',
+  '.....kkkkk......',
+  '...kkCCCcck.....',
+  '..kCCwwCccck....',
+  '.kCCcccuucccUk..',
+  '.kCcuucccuucUk..',
+  '.kcccccccccUUk..',
+  '.kcUUUUUUUUUuuk.',
+  '.kWW555555544k..',
+  '..k555555544k...',
+  '...kkkkkkkkk....',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+// ------------------------------------------------------------------ registry (items.json order)
+
+export const ITEM_SPRITES: Record<string, Rows> = {
+  hat_traffic_cone: REF_CONE,
+  hat_lawn_gnome: HAT_LAWN_GNOME,
+  hat_flower_pot: HAT_FLOWER_POT,
+  hat_yogurt_tub: HAT_YOGURT_TUB,
+  hat_paint_bucket: HAT_PAINT_BUCKET,
+  hat_bike_helmet: HAT_BIKE_HELMET,
+  mask_tube_sock: TODO,
+  mask_gas_station_shades: TODO,
+  mask_pool_snorkel: TODO,
+  mask_peewee_hockey: TODO,
+  mask_egg_carton: TODO,
+  mask_coffee_filter: TODO,
+  jacket_garbage_bag: TODO,
+  jacket_lawn_chair: TODO,
+  jacket_bubble_wrap: TODO,
+  jacket_ugly_sweater: TODO,
+  jacket_blue_tarp: TODO,
+  jacket_dog_raincoat: TODO,
+  weapon_hose_whip: TODO,
+  weapon_broken_rake: TODO,
+  weapon_bbq_spatula: TODO,
+  weapon_pool_noodle: TODO,
+  weapon_wiffle_bat: TODO,
+  weapon_tiki_torch: TODO,
+  shield_welcome_mat: TODO,
+  shield_trash_lid: TODO,
+  shield_chewed_frisbee: TODO,
+  shield_hubcap: TODO,
+  shield_cookie_tin: TODO,
+  shield_for_sale_sign: TODO,
+  gloves_dish: TODO,
+  gloves_gardening: TODO,
+  gloves_oven_mitts: TODO,
+  gloves_kid_boxing: TODO,
+  gloves_lost_mittens: TODO,
+  gloves_baseball_mitt: TODO,
+  sneakers_crocs: TODO,
+  sneakers_flip_flops: TODO,
+  sneakers_roller_skates: TODO,
+  sneakers_bunny_slippers: TODO,
+  sneakers_rain_boots: TODO,
+  sneakers_light_up: TODO,
+  backpack_lunchbox: TODO,
+  backpack_fanny_pack: TODO,
+  backpack_picnic_cooler: TODO,
+  backpack_diaper_bag: TODO,
+  backpack_recycling_bin: TODO,
+  backpack_reusable_tote: TODO,
+  bling_bottle_cap_chain: TODO,
+  bling_lost_house_key: TODO,
+  bling_dog_tag: TODO,
+  bling_wind_chime: TODO,
+  bling_soda_tab_bracelet: TODO,
+  bling_xmas_ornament: TODO,
+  ring_onion: TODO,
+  ring_pull_tab: TODO,
+  ring_candy: TODO,
+  ring_rubber_band: TODO,
+  ring_twist_tie: TODO,
+  ring_hardware_washer: TODO,
+  weapon_unique_leaf_blower: TODO,
+  jacket_unique_hoa_vest: TODO,
+  shield_unique_mailbox: TODO,
+};
+
+export const WEAPON_GRIP: Record<string, { x: number; y: number }> = {
+  weapon_hose_whip: { x: 3, y: 12 },
+  weapon_broken_rake: { x: 3, y: 12 },
+  weapon_bbq_spatula: { x: 3, y: 12 },
+  weapon_pool_noodle: { x: 3, y: 12 },
+  weapon_wiffle_bat: { x: 3, y: 12 },
+  weapon_tiki_torch: { x: 3, y: 12 },
+  weapon_unique_leaf_blower: { x: 3, y: 12 },
+};
+
+export function sheet(): SheetEntry[] {
+  return Object.entries(ITEM_SPRITES).map(([name, rows]) => {
+    checkRows(name, rows);
+    return { name, buf: fromRows(rows) };
+  });
+}

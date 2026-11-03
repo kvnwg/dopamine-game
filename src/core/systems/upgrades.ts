@@ -41,7 +41,7 @@ export type UpgradeEffects = Record<UpgradeEffect, number>;
 const EFFECTS: UpgradeEffect[] = [
   'luck', 'goldPct', 'rollSpeed', 'capacity', 'luckyEvery', 'enchantChance', 'atkPct', 'hpPct', 'bagFind',
   'turboPower', 'luckyMult', 'goldenSpin', 'enchantTier', 'pity', 'scrapPct', 'xpPct', 'potionTime', 'offlinePct',
-  'lifesteal', 'critChance', 'critDmg', 'bossDmg',
+  'lifesteal', 'critChance', 'critDmg', 'bossDmg', 'reels',
 ];
 
 export function upgradeEffects(state: Pick<GameState, 'upgrades'>): UpgradeEffects {

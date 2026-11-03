@@ -86,14 +86,14 @@
   transform: rotate(10deg);
 }
 
-.spinIcon svg {
-  animation: navSpin 2.6s linear infinite;
+.spinIcon img {
+  animation: navRoll 0.7s steps(2) infinite;
 }
-@keyframes navSpin {
-  to { transform: rotate(360deg); }
+@keyframes navRoll {
+  50% { transform: translateY(4px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .spinIcon svg {
+  .spinIcon img {
     animation: none;
   }
 }

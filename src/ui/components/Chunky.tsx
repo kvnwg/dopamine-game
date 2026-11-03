@@ -13,10 +13,14 @@ export const GRADIENTS = {
 
 export type Grad = keyof typeof GRADIENTS;
 
-/** Big outlined display text with a vertical gradient fill (title cards, "LEGENDARY!", "FIGHT!"). */
+/** Big outlined display text in banded colors (title cards, "LEGENDARY!", "FIGHT!"). */
 export function Chunky({ text, size = 64, grad = 'white', className, style }: { text: string; size?: number; grad?: Grad; className?: string; style?: CSSProperties }) {
   const stops = GRADIENTS[grad];
-  const fill = grad === 'rainbow' ? `linear-gradient(90deg, ${stops.join(', ')})` : `linear-gradient(180deg, ${stops[0]} 15%, ${stops[1]} 55%, ${stops[2]} 95%)`;
+  // Hard color bands, not a smooth blend: pixel-art lettering.
+  const fill =
+    grad === 'rainbow'
+      ? `linear-gradient(90deg, ${stops.map((c, i) => `${c} ${(i * 100) / stops.length}% ${((i + 1) * 100) / stops.length}%`).join(', ')})`
+      : `linear-gradient(180deg, ${stops[0]} 0 36%, ${stops[1]} 36% 70%, ${stops[2]} 70% 100%)`;
   return (
     <span className={`${s.chunky} ${className ?? ''}`} data-text={text} style={{ fontSize: size, ['--fill' as string]: fill, ...style } as CSSProperties}>
       {text}

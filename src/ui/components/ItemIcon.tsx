@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { DATA, type Slot } from '../../data';
 import { formatNumber, itemOddsOneIn, rarityAtLeast, type Item } from '../../core';
-import { emptyIconUrl, itemIconUrl } from '../../render/icons';
+import { emptyIconUrl, itemArtUrl } from '../../render/icons';
 import { rarityColor } from '../../render/art';
 import { useItemDrag } from '../drag';
 import { CheckIcon, LockIcon } from './Icons';
@@ -63,7 +63,7 @@ export function ItemIcon({
     >
       <div className={[s.tile, s[r] ?? '', rare ? s.shine : ''].join(' ')}>
         <span className={s.glow} />
-        <img className={s.art} src={itemIconUrl(item.slot, r)} alt="" draggable={false} />
+        <img className={s.art} src={itemArtUrl(item.baseId)} alt="" draggable={false} />
         {item.enchants.length > 0 && (
           <span className={s.pips}>
             {item.enchants.map((en) => (

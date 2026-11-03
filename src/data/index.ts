@@ -133,7 +133,6 @@ export function buildGameData(raw: {
   for (const u of balance.upgrades) {
     const parent = u.requires && balance.upgrades.find((x) => x.id === u.requires!.id);
     if (parent && u.requires!.level > parent.max) fail(`upgrade ${u.id} requires ${parent.id} tier ${u.requires!.level}, past its max`);
-    if (u.special && u.max !== 1) fail(`special upgrade ${u.id} must have exactly one tier`);
   }
   const upgradeMap = layoutUpgradeMap(balance.upgrades);
   if (upgradeMap.errors.length > 0) fail(upgradeMap.errors.join('; '));

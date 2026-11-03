@@ -37,7 +37,7 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
   const tone = threat.level === 'easy' ? 'green' : threat.level === 'tough' ? 'gold' : 'red';
   return (
     <Modal title={t('battle.worldLabel', { n: world, name: def.name })} tone={tone} onClose={onClose}>
-      <img className={s.worldThumb} src={worldThumbUrl(world, 840, 340)} alt="" draggable={false} />
+      <img className={s.worldThumb} src={worldThumbUrl(world)} alt="" draggable={false} />
       <div className={s.threatRow}>
         <ThreatChip level={threat.level} big />
         <span className={s.threatText}>{t(`worlds.margin${threat.level[0].toUpperCase()}${threat.level.slice(1)}`)}</span>

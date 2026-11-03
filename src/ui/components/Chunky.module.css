@@ -2,12 +2,12 @@
   position: relative;
   display: inline-block;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   line-height: 1.1;
   letter-spacing: 0.02em;
   color: var(--ink);
   -webkit-text-stroke: 0.2em var(--ink);
-  text-shadow: 0 0.09em 0 var(--ink);
+  text-shadow: 0 0.1em 0 var(--ink);
   white-space: nowrap;
 }
 .chunky::after {

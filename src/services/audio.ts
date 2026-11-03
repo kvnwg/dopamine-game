@@ -235,7 +235,7 @@ class AudioEngine {
     this.noise(at, 0.02, { freq: 3000, q: 2, gain: 0.03 });
   }
 
-  /** A peg of the wheel clicking past the pointer: brighter while fast, a fuller clack as it slows. */
+  /** An item clicking past the reel's win line: brighter while fast, a fuller clack as it slows. */
   wheelTick(speed01: number): void {
     const ctx = this.live;
     if (!ctx || !this.gate('wheelTick', 28)) return;
@@ -245,7 +245,7 @@ class AudioEngine {
     this.noise(at, 0.014, { freq: 4200 - 1600 * slow, q: 4, gain: 0.02 + 0.03 * slow });
   }
 
-  /** The wheel settles on its result. */
+  /** A reel clunks to a stop on its result. */
   wheelStop(): void {
     const ctx = this.live;
     if (!ctx || !this.gate('wheelStop', 120)) return;

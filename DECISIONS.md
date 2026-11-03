@@ -2,6 +2,20 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
+## Pixel art, reels and Extra Reels (Nov 3, latest)
+
+Kevin asked for the whole game in pixel art, for rolling to look like items scrolling down until one lands (not a wheel), for the items rolling past to be blacked out but show their odds, leaning rarer than the real odds to entice, and for expensive upgrades that add more reels. These rows replace V1's wheel and R14's cel-shaded look.
+
+| # | Decision | Why |
+|---|---|---|
+| X1 | All art is pixel art drawn in code from one 39-color palette, as rows of palette characters (`src/render/pixel/`, rules in `docs/PIXEL_ART.md`). The battle is drawn at 6 screen pixels per art pixel with nearest-neighbor scaling (the view is 180 x 137 art pixels); weapons rotate during swings, but the hero and enemies no longer stretch or tilt. | "Make the game all pixel art." |
+| X2 | Each of the 63 base items has its own 16 x 16 icon in its natural colors; rarity shows on the tile around it. On the raccoon, hats, shields, backpacks and weapons reuse the icons; masks, jackets, shoes, necklaces and gloves have worn versions fitted to the body. Rings are too small to show. | One look per item instead of one per slot. |
+| X3 | The UI uses Pixelify Sans, square corners everywhere, pixel borders on buttons and cards, and flat color bands instead of gradients. | Match the pixel art. |
+| X4 | The wheel is gone. Each reel is a vertical strip that rolls downward, slows, and stops its result under a gold win line, with a small clunk. While rolling, every item is a black silhouette with its "1 in X" odds showing in its rarity color; the result flashes into color as its reel stops. | "I do not mean an actual wheel... rolling downwards until it lands on something." |
+| X5 | The items rolling past are a tease, not a sample: their rarities are weighted Junk 12, Decent 16, Shiny 18, Epic 20, Legendary 18, Mythic 10, Mint in Box 6 (the real odds are 1 in 3, 12, 80, 1,000, 25,000 and 1,000,000), 30% of the Epic-or-better ones show enchanted odds, and next to 65% of results below Legendary sits a Legendary-or-better near miss. Only the landed results come from the real odds, which the Luck popup lists. Every spin is free; per the Dopamine Playbook, this tease must never be used on a spin bought with real money. | "It shouldn't be faithful... more rare things in the mystery items to entice the player." |
+| X6 | Extra Reel: a gold line on the upgrade map next to Luck I, 4 tiers, each adding a reel (up to 5). It costs 250 million gold, then 100 times more per tier. Each reel rolls its own item; a lucky or golden spin covers every reel; bad-luck protection triggers once per streak, not once per reel. Reels stop left to right, but an Epic-or-better result always stops last. The big "last roll" card shows the spin's best result. | "Upgrades that add how many things are rolling at the same time, but expensive." Cheaper reels (1 million) doubled the pace in the simulator. |
+| X7 | Save version 6: the spin state holds one result per reel; nothing is in flight after loading. | |
+
 ## Hex upgrade map (Nov 3, later)
 
 Kevin shared a Roblox upgrade map (a honeycomb of hexes, one per tier, with "?" hexes ahead and a big CLOSE button) as the look to aim for. These rows replace V6 and the per-level amounts in V7.
@@ -21,7 +35,7 @@ Kevin asked for a real spinning wheel instead of nonstop rolling, Scrap All and 
 
 | # | Decision | Why |
 |---|---|---|
-| V1 | Every roll is one spin of a prize wheel. The result is decided with the seeded Rng when the spin starts; the wheel spins for 2.0 s, lands on it, rests 0.6 s, and the next spin starts on its own. One cycle is 2.6 s. Each Spin Speed level makes it 6% faster (compounding), down to a 0.7 s floor (0.75 s at the max level, 20). | "It should actually have a spinning wheel animation that you can speed up through upgrades. The base should be 2-3 seconds." |
+| V1 | *The wheel is replaced by reels (X4).* Every roll is one spin of a prize wheel. The result is decided with the seeded Rng when the spin starts; the wheel spins for 2.0 s, lands on it, rests 0.6 s, and the next spin starts on its own. One cycle is 2.6 s. Each Spin Speed level makes it 6% faster (compounding), down to a 0.7 s floor (0.75 s at the max level, 20). | "It should actually have a spinning wheel animation that you can speed up through upgrades. The base should be 2-3 seconds." |
 | V2 | Trash Bags won in fights are spent one per spin as turbo spins: 2x as fast (Turbo Power raises it to 4x), never under 0.45 s per cycle. The wheel's 12 wedges show the target item plus 11 fillers drawn from your real current odds; the animation never changes the result. For Legendary and better, the build-up (glow, rattle, riser, silence drop) plays during the spin, and the reveal fires as it lands. | One roll is one visible spin, and bags still feel like a boost. |
 | V3 | Nothing is equipped automatically. Every roll goes into the bag (when the bag is full, the weakest unlocked item, or the new roll if it is weaker still, is scrapped, as in R5). To equip, drag an item onto the raccoon or the gear row: with a mouse, press and drag; on touch, hold for 0.17 s, then drag (a quick swipe still scrolls). Items that would raise their slot's power get a green ▲ badge, and the Bag tab gets a dot. There is no "Equip best" button (Kevin withdrew that request). | "It shouldn't even auto equip. They have to drag it on themselves." |
 | V4 | The bag sorts by Power or by Rarity (rarest first, then power); the choice is remembered on the device. Scrap All scraps every unlocked bag item at once for the usual scrap gold and XP; it takes two taps and shows the gold first. Equipped and locked items are never scrapped. | "There should be a Scrap All button, and also a sort by rarity button." |
@@ -68,7 +82,7 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 | R11 | Enemies got x2.4 HP and x1.7 ATK. | With a constant stream of gear, fights were over too fast to read and stages fell too quickly (simulator). |
 | R12 | Save version 2. The migration moves an undecided dive item into the bag, adds the enchantment and lock fields, and drops Auto-Dive. | |
 | R13 | *Timing updated by V2.* Legendary and better rolls get a short build-up (the dumpster shakes and glows in the rarity's color, then a silence drop) and a full-screen reveal. Big rolls that land during a reveal wait their turn, up to 3. Epic gets a sting and a burst; lower rarities get a pop from the dumpster. | Big moments stay big, even when rolls are constant. |
-| R14 | The look is now a bright, clean cel-shaded cartoon, matching the clean mobile-RPG style Kevin referenced (Capybara Go!), with our own characters and props. It replaces the painterly placeholder set. | Kevin's request. |
+| R14 | *Superseded by X1.* The look is now a bright, clean cel-shaded cartoon, matching the clean mobile-RPG style Kevin referenced (Capybara Go!), with our own characters and props. It replaces the painterly placeholder set. | Kevin's request. |
 | R15 | Battle choreography: the raccoon closes to melee range, winds up and swings. Hit effects (slash trail, impact star, numbers, knockback, hit-stop on crits) play at the swing's impact frame, about 0.1 s after core resolves the hit, and an enemy stays on screen until its killing blow lands. HP bars with numbers sit under every fighter; FIGHT!, BOSS! and VICTORY! banners sweep across. | "Not just the character bumping into the other one." |
 | R16 | Screen layout: battle (with the top HUD over the sky), a stat strip (Power, HP, ATK, DEF, Luck), then five tabs: Roll, Bag, Upgrades, Rebirth, Worlds. (The Shop placeholder tab gave way to Worlds.) | |
 
@@ -154,13 +168,13 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 
 ## Balance
 
-The simulator (`npm run sim`) plays the real core with a bot that lets the wheel spin, equips any bag item that beats what it wears (a simulated drag), lets the battle push through worlds on its own, buys the cheapest open hex it can afford every second, upgrades the dumpster when it can, rebirths as soon as it is allowed, and every 10 seconds jumps to the hardest world that reads Easy. With the current numbers, across 4 seeds over 2 hours:
+The simulator (`npm run sim`) plays the real core with a bot that lets the reels roll, equips any bag item that beats what it wears (a simulated drag), lets the battle push through worlds on its own, buys the cheapest open hex it can afford every second (Extra Reels included), upgrades the dumpster when it can, rebirths as soon as it is allowed, and every 10 seconds jumps to the hardest world that reads Easy. With the current numbers, across 4 seeds over 2 hours:
 
 - World 2 beaten at 1.5 to 3 minutes, World 3 at 4 to 7, World 4 at 8 to 10, World 5 at 14 to 16. Each world takes longer than the last.
-- Rebirths at about 15, 30 to 35, 47 to 54, 66 to 73 and 99 to 104 minutes. Each cycle starts from World 1 with nothing and ends a world or two further than the last: the best world after 2 hours is 12 or 13. World 20 is long-term play.
-- Per 2 hours: about 7,500 spins, 146 to 161 Legendaries, 5 to 12 Mythics, 0 to 2 Mint in Box. 60 to 73 deaths, nearly all failed pushes into the next world.
+- Rebirths at about 15, 30 to 35, 47 to 54, 64 to 70, 85 to 89 and 105 to 111 minutes. Each cycle starts from World 1 with nothing and ends a world or two further than the last: the best world after 2 hours is 15. The second reel arrives late in a cycle. World 20 is long-term play.
+- Per 2 hours: about 10,000 to 12,000 items rolled, 250 to 320 Legendaries, 18 to 36 Mythics, 0 or 1 Mint in Box.
 
-Earlier results (the tap-to-dive version, the single-neighborhood roller, the nonstop roller and the small-level upgrade tree) are in the git history.
+Earlier results (the tap-to-dive version, the single-neighborhood roller, the nonstop roller, the small-level upgrade tree and the single reel) are in the git history.
 
 ## Tech
 

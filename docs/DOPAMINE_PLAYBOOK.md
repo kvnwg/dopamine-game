@@ -264,9 +264,10 @@ A few tricks raise spending for a week, then bring refunds, store rejections, re
 What the build already does from this playbook (the rest is scheduled in `DECISIONS.md`):
 
 - Scripted Legendary on the very first roll (first few seconds).
-- Constant small wins: the dumpster's prize wheel spins on its own and lands an item every 2.6 seconds, faster with the Spin Speed upgrade and Trash Bag turbo spins.
+- Constant small wins: the dumpster's reels roll on their own and land an item every 2.6 seconds per reel, faster with the Spin Speed upgrade and Trash Bag turbo spins; Extra Reels (expensive) add more items per spin.
+- Near misses on free spins only: the blacked-out items rolling past show their odds and lean much rarer than the real odds, often with a Legendary-or-better right next to the result. Only landed results use the real odds. This must stay off any spin bought with real money (see "Lines not to cross").
 - A visible variable-ratio beat: the Lucky Spin meter fills toward a x2-luck spin, and once unlocked, a Golden Spin (x5 luck) can strike any spin.
-- Legendary and better: while the wheel spins, it glows in the rarity's color with rising rattle beats, a riser and a silence drop; when it lands, a full-screen reveal (rays, confetti, giant "1 in X" odds, NEW BEST FIND!). Big rolls never get lost; they queue.
+- Legendary and better: while the reels roll, the reel bank glows in the rarity's color with rising rattle beats, a riser and a silence drop; when it lands, a full-screen reveal (rays, confetti, giant "1 in X" odds, NEW BEST FIND!). Big rolls never get lost; they queue.
 - Every item wears its "1 in X" odds on a big banner (pulsing for Epic, gold for Legendary, rainbow for Mythic), so the bag itself shows how lucky you got.
 - Equipping is hands-on: you drag the item onto the raccoon, and it puts it on right there in the fight.
 - The upgrade map only shows one step past what you can buy, as "?" hexes, so every purchase reveals something new; affordable hexes glow with a red "!".

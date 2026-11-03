@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyAction, canRebirth, combatEffects, createItem, currentLuck, enchantPowerMult, goldMult, inventoryCapacity,
   computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng,
-  spinCycle, spinShare, tick,
+  performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick,
   sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
@@ -122,7 +122,46 @@ describe('the wheel', () => {
     const ticksToLand = Math.ceil(((start as Extract<CoreEvent, { type: 'spinStart' }>).spinSeconds) * 10);
     const { events: ev2 } = runTicks(st, ticksToLand + 1, new Rng(11));
     const landed = ev2.find((e) => e.type === 'roll');
-    expect(landed?.type === 'roll' && start?.type === 'spinStart' && landed.item.uid).toBe(start?.type === 'spinStart' ? start.item.uid : -1);
+    expect(landed?.type === 'roll' && start?.type === 'spinStart' && landed.item.uid).toBe(start?.type === 'spinStart' ? start.reels[0].item.uid : -1);
+  });
+
+  it('Extra Reels roll one item per reel on every spin, sharing the spin\'s lucky and golden luck', () => {
+    const rng = new Rng(21);
+    const st = rollingState();
+    st.currencies.bags = 0;
+    expect(reelCount(st)).toBe(1);
+    st.upgrades.luck = 1;
+    st.upgrades.extraReel = 2;
+    expect(reelCount(st)).toBe(3);
+    st.upgrades.extraReel = 99;
+    expect(reelCount(st)).toBe(BAL.roll.maxReels);
+    st.upgrades.extraReel = 2;
+    st.roll.sinceLucky = luckyEvery(st) - 1;
+    const ev: CoreEvent[] = [];
+    const before = st.roll.count;
+    const items = performSpin(st, rng, T0, ev);
+    expect(items).toHaveLength(3);
+    expect(new Set(items.map((i) => i.uid)).size).toBe(3);
+    expect(st.roll.count).toBe(before + 3);
+    const start = ev.find((e) => e.type === 'spinStart');
+    expect(start?.type === 'spinStart' && start.reels).toHaveLength(3);
+    const rolls = ev.filter((e) => e.type === 'roll');
+    expect(rolls.map((e) => e.type === 'roll' && e.reel)).toEqual([0, 1, 2]);
+    // Lucky is decided once per spin and covers every reel.
+    expect(rolls.every((e) => e.type === 'roll' && e.lucky)).toBe(true);
+  });
+
+  it('bad-luck protection fires once per streak even with several reels', () => {
+    const rng = new Rng(22);
+    const st = rollingState();
+    st.currencies.bags = 0;
+    st.upgrades.luck = 1;
+    st.upgrades.extraReel = 4;
+    st.dumpster.level = BAL.dumpster.badLuck.minDumpsterLevel;
+    st.dumpster.dryStreak = 999;
+    const ev: CoreEvent[] = [];
+    const items = performSpin(st, rng, T0, ev);
+    expect(rarityAtLeast(items[0].rarity, BAL.dumpster.badLuck.minRarity)).toBe(true);
   });
 
   it('Spin Speed upgrades shorten the cycle, down to a floor', () => {

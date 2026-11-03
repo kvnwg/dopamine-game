@@ -129,6 +129,11 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return { ...s, saveVersion: 5, upgrades };
   },
+  /** v5 -> v6: several reels per spin. The spin state now holds one result per reel; none is in flight after loading. */
+  5: (s) => {
+    const roll = (s.roll ?? {}) as Record<string, unknown>;
+    return { ...s, saveVersion: 6, roll: { ...roll, timer: 0, current: null } };
+  },
 };
 
 export function migrate(

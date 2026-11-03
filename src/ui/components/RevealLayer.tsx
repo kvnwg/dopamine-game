@@ -90,7 +90,7 @@ function Celebrate() {
           <b>{fmtOdds(view.odds)}</b>
         </span>
         <div className={s.tags}>
-          {view.golden && <span className={`${s.tag} ${s.tagGold}`}>{t('wheel.golden')}</span>}
+          {view.golden && <span className={`${s.tag} ${s.tagGold}`}>{t('reel.golden')}</span>}
           {view.lucky && <span className={`${s.tag} ${s.tagLucky}`}>{t('reveal.lucky')}</span>}
           {view.newRecord && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
         </div>

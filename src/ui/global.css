@@ -1,10 +1,10 @@
 /*
- * Bright, clean cartoon UI: dark navy chrome, cream cards with thick dark outlines,
- * chunky beveled buttons that squash, Lilita One display text with an outline and drop shadow.
+ * Pixel-art UI: dark navy chrome, cream cards and chunky buttons with square pixel borders,
+ * Pixelify Sans everywhere. pixel.css (loaded after this file) squares every corner.
  */
 :root {
-  --ink: #2e2523;
-  --outline: #2e2523;
+  --ink: #1a1326;
+  --outline: #1a1326;
   --navy: #23263a;
   --navy-2: #2d3150;
   --navy-3: #3a3f63;
@@ -39,8 +39,13 @@
   --r-mythic-gradient: linear-gradient(135deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
   --r-mint-gradient: linear-gradient(135deg, #ffffff, #fff4d6, #ffd54f, #ffffff);
 
-  --font-display: 'Lilita One', 'Trebuchet MS', 'Arial Rounded MT Bold', sans-serif;
-  --font-body: 'Nunito', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Pixelify Sans', 'Courier New', monospace;
+  --font-body: 'Pixelify Sans', 'Courier New', monospace;
+  /* One art pixel at the stage's scale (sprites are drawn at 6x). */
+  --px: 6px;
+  --pixel-edge: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink);
+  --pixel-text: 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 4px 4px 0 var(--ink), -4px 4px 0 var(--ink),
+    4px -4px 0 var(--ink), -4px -4px 0 var(--ink), 0 8px 0 var(--ink);
 }
 
 * {
@@ -59,7 +64,7 @@ body,
   background: #11131f;
   color: var(--text);
   font-family: var(--font-body);
-  font-weight: 800;
+  font-weight: 600;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
@@ -86,77 +91,79 @@ button {
   text-shadow: 0 4px 0 var(--ink);
 }
 
-/* ---------------------------------------------------------------- buttons (squash 8% on press) */
+/* ---------------------------------------------------------------- buttons: flat bands, pixel border, press = drop */
 .btn {
-  --b: var(--green);
-  --bd: var(--green-d);
+  --b: #5dc14c;
+  --bd: #2f8a45;
+  --bl: #b0ec6c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 96px;
-  padding: 0 34px;
-  border-radius: 999px;
+  min-height: 92px;
+  padding: 0 32px;
+  border: none;
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 42px;
   color: #fff;
-  -webkit-text-stroke: 6px var(--ink);
-  paint-order: stroke fill;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--b) 70%, #fff) 0%, var(--b) 45%, var(--bd) 100%);
-  border: 6px solid var(--ink);
-  box-shadow: 0 9px 0 var(--ink), inset 0 -6px 0 rgba(0, 0, 0, 0.18), inset 0 5px 0 rgba(255, 255, 255, 0.45);
-  transition: transform 130ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 130ms, filter 130ms;
+  -webkit-text-stroke: 0;
+  text-shadow: var(--pixel-text);
+  background: linear-gradient(180deg, var(--bl) 0 14%, var(--b) 14% 76%, var(--bd) 76% 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  transition: transform 70ms steps(2);
 }
 .btn:active {
-  transform: scale(0.92) translateY(6px);
-  box-shadow: 0 3px 0 var(--ink), inset 0 -6px 0 rgba(0, 0, 0, 0.18), inset 0 5px 0 rgba(255, 255, 255, 0.45);
+  transform: translateY(var(--px));
+  box-shadow: var(--pixel-edge);
 }
 .btn:disabled {
-  filter: grayscale(0.85) brightness(0.7);
+  filter: grayscale(0.85) brightness(0.72);
   cursor: default;
 }
 .btn.gold {
-  --b: var(--gold);
-  --bd: var(--gold-d);
+  --b: #f5c638;
+  --bd: #ef8a22;
+  --bl: #fff28c;
 }
 .btn.red {
-  --b: var(--red);
-  --bd: var(--red-d);
+  --b: #e14a43;
+  --bd: #9c2230;
+  --bl: #ff8f7a;
 }
 .btn.blue {
-  --b: var(--blue);
-  --bd: var(--blue-d);
+  --b: #3fa1e3;
+  --bd: #2f56a6;
+  --bl: #9edcf7;
 }
 .btn.gray {
-  --b: #7c82a8;
-  --bd: #4f557c;
+  --b: #7f7c94;
+  --bd: #5b5870;
+  --bl: #a7a5b8;
 }
 .btn.small {
-  min-height: 74px;
+  min-height: 72px;
   font-size: 32px;
-  padding: 0 24px;
-  border-width: 5px;
-  -webkit-text-stroke-width: 5px;
+  padding: 0 22px;
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 .breathe {
-  animation: breathe 1.3s ease-in-out infinite;
+  animation: breathe 0.9s steps(2) infinite;
 }
 .breathe:active {
   animation: none;
 }
 
-/* Cream card with a thick outline. */
+/* Cream card with a pixel border. */
 .card {
   background: var(--cream);
   color: var(--text-dark);
-  border: 6px solid var(--ink);
-  border-radius: 28px;
-  box-shadow: 0 8px 0 var(--ink);
+  border: none;
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
 }
 
 /* Currency icons. */

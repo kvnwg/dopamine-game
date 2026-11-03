@@ -12,8 +12,10 @@ import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
 import { rarityColorNum } from './art';
 import {
-  FRONT_ORDER, HERO, enemyTex, gearTex, generateTextures, heroBody, heroPaw, releaseWorlds, texSize, weaponTex, worldTextures,
+  FRONT_ORDER, HERO, WEAPON_TILT, enemyTex, gearTex, generateTextures, heroBody, heroPaw, heroTail, releaseWorlds, texSize, weaponTex,
+  worldTextures,
 } from './textures';
+import { P } from './pixel';
 import { LAYER_Y, SCROLL0 } from './worldLook';
 
 export const BATTLE_W = 1080;
@@ -25,11 +27,11 @@ const HERO_FIGHT_X = 330;
 const ENGAGE_EDGE = 470;
 const COIN_TARGET = { x: 694, y: 58 };
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
-const FONT = '"Lilita One", "Trebuchet MS", sans-serif';
-const INK = '#2E2523';
-const INK_N = 0x2e2523;
+const FONT = '"Pixelify Sans", "Courier New", monospace';
+const INK = '#1A1326';
+const INK_N = 0x1a1326;
 /** Weapon angles in degrees (0 = pointing up, clockwise positive). */
-const REST = 22;
+const REST = WEAPON_TILT;
 const WIND = -100;
 const STRIKE = 128;
 const HAND = { x: HERO.hand.x - HERO.feet.x, y: HERO.hand.y - HERO.feet.y };
@@ -93,6 +95,8 @@ export class BattleScene extends Phaser.Scene {
   private hero!: Phaser.GameObjects.Container;
   private rig!: Phaser.GameObjects.Container;
   private heroImg!: Phaser.GameObjects.Image;
+  private tailImg!: Phaser.GameObjects.Image;
+  private pawImg!: Phaser.GameObjects.Image;
   private gearBack!: Phaser.GameObjects.Container;
   private gearFront!: Phaser.GameObjects.Container;
   private arm!: Phaser.GameObjects.Container;
@@ -170,7 +174,7 @@ export class BattleScene extends Phaser.Scene {
     this.sky = this.add.image(0, 0, k.sky).setOrigin(0, 0).setDepth(0);
     const cloudY = [86, 132, 60, 170];
     for (let i = 0; i < 4; i++) {
-      const img = this.add.image(120 + i * 330, cloudY[i], `bg_cloud${i % 3}`).setDepth(1).setScale(i === 3 ? 0.7 : 1);
+      const img = this.add.image(120 + i * 330, cloudY[i], `bg_cloud${i % 3}`).setDepth(1);
       this.clouds.push({ img, speed: 6 + i * 3 });
     }
     this.far = this.add.tileSprite(0, LAYER_Y.far, BATTLE_W, texSize(k.far).h, k.far).setOrigin(0, 0).setDepth(2);
@@ -212,21 +216,24 @@ export class BattleScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ hero
   private buildHero() {
+    const tail = heroTail(this);
     const body = heroBody(this);
-    const paw = heroPaw(this);
+    const paw = heroPaw(this, null);
     this.hero = this.add.container(HERO_WALK_X, FEET_Y).setDepth(20);
     const shadow = this.add.ellipse(0, 2, 160, 30, INK_N, 0.18);
     this.aura = this.add.graphics();
     this.rig = this.add.container(0, 0);
     this.gearBack = this.add.container(0, 0);
+    this.tailImg = this.add.image(0, 0, tail.key).setOrigin(tail.ox, tail.oy);
     this.heroImg = this.add.image(0, 0, body.key).setOrigin(body.ox, body.oy);
     this.gearFront = this.add.container(0, 0);
     this.arm = this.add.container(HAND.x, HAND.y);
     const w = weaponTex(this, null);
-    this.weapon = this.add.image(0, 0, w.key).setOrigin(w.ox, w.oy).setAngle(REST);
-    const pawImg = this.add.image(0, 0, paw.key).setOrigin(paw.ox, paw.oy);
-    this.arm.add([this.weapon, pawImg]);
-    this.rig.add([this.gearBack, this.heroImg, this.gearFront, this.arm]);
+    this.weapon = this.add.image(0, 0, w.key).setOrigin(w.ox, w.oy);
+    this.aimWeapon(REST);
+    this.pawImg = this.add.image(0, 0, paw.key).setOrigin(paw.ox, paw.oy);
+    this.arm.add([this.weapon, this.pawImg]);
+    this.rig.add([this.tailImg, this.gearBack, this.heroImg, this.gearFront, this.arm]);
     this.hero.add([shadow, this.aura, this.rig]);
   }
 
@@ -234,18 +241,17 @@ export class BattleScene extends Phaser.Scene {
     this.gearBack.removeAll(true);
     this.gearFront.removeAll(true);
     const pack = g.equipped.backpack;
-    if (pack) {
-      const i = gearTex(this, 'backpack', pack.rarity);
-      this.gearBack.add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
-    }
+    const packTex = pack ? gearTex(this, 'backpack', pack.baseId) : null;
+    if (packTex) this.gearBack.add(this.add.image(0, 0, packTex.key).setOrigin(packTex.ox, packTex.oy));
     for (const slot of FRONT_ORDER) {
       const it = g.equipped[slot];
-      if (!it) continue;
-      const i = gearTex(this, slot, it.rarity);
-      this.gearFront.add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
+      const i = it ? gearTex(this, slot, it.baseId) : null;
+      if (i) this.gearFront.add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
     }
-    const w = weaponTex(this, g.equipped.weapon?.rarity ?? null);
+    const w = weaponTex(this, g.equipped.weapon?.baseId ?? null);
     this.weapon.setTexture(w.key).setOrigin(w.ox, w.oy);
+    const paw = heroPaw(this, g.equipped.gloves?.baseId ?? null);
+    this.pawImg.setTexture(paw.key).setOrigin(paw.ox, paw.oy);
     // A soft aura for Legendary-or-better gear.
     let best: Rarity | null = null;
     for (const s of SLOTS) {
@@ -262,6 +268,11 @@ export class BattleScene extends Phaser.Scene {
       this.aura.setAlpha(0.6);
       this.tweens.add({ targets: this.aura, alpha: 1, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
+  }
+
+  /** Points the weapon `angle` degrees from straight up (the art itself is drawn tilted). */
+  private aimWeapon(angle: number) {
+    this.weapon.setAngle(angle - WEAPON_TILT);
   }
 
   /** The swing pose at progress k (0..1). Fast swings skip most of the wind-up. */
@@ -303,9 +314,10 @@ export class BattleScene extends Phaser.Scene {
       onUpdate: (tw) => {
         const k = tw.getValue() ?? 0;
         const p = this.pose(k, fast);
-        this.weapon.setAngle(p.angle);
+        this.aimWeapon(p.angle);
         this.heroDx = this.reduceMotion ? 0 : p.dx;
-        this.rig.setAngle(this.reduceMotion ? 0 : p.lean).setScale(p.sx, p.sy);
+        // Pixel art stays crisp: only a small lean, no squash.
+        this.rig.setAngle(this.reduceMotion ? 0 : p.lean * 0.5);
         if (!landed && k >= impactAt) {
           landed = true;
           this.impact(s);
@@ -313,7 +325,7 @@ export class BattleScene extends Phaser.Scene {
       },
       onComplete: () => {
         if (!landed) this.impact(s);
-        this.weapon.setAngle(REST);
+        this.aimWeapon(REST);
         this.rig.setAngle(0).setScale(1);
         this.heroDx = 0;
         this.nextSwing();
@@ -463,9 +475,8 @@ export class BattleScene extends Phaser.Scene {
     const handY = FEET_Y + HAND.y;
     const slash = this.add
       .image(handX, handY, 'fx_slash')
-      .setOrigin(98 / 300, 154 / 300)
       .setDepth(32)
-      .setScale(s.crit ? 1.45 : 1.25)
+      .setScale(s.crit ? 1.25 : 1)
       .setAlpha(1);
     if (s.echo) slash.setTint(0xc9a6ff);
     this.tweens.add({ targets: slash, alpha: 0, scale: slash.scale * 1.12, angle: 12, duration: 240, ease: 'Quad.easeOut', onComplete: () => slash.destroy() });
@@ -475,9 +486,9 @@ export class BattleScene extends Phaser.Scene {
     }
     f.pending = Math.max(0, f.pending - 1);
     const p = this.foeHitPoint(f);
-    const star = this.add.image(p.x, p.y, 'fx_impact').setDepth(33).setScale(0.35).setAngle(Phaser.Math.Between(0, 45));
-    this.tweens.add({ targets: star, scale: s.crit ? 1.5 : 1.1, duration: 70, ease: 'Quad.easeOut' });
-    this.tweens.add({ targets: star, alpha: 0, scale: s.crit ? 1.8 : 1.3, delay: 70, duration: 150, onComplete: () => star.destroy() });
+    const star = this.add.image(p.x, p.y, 'fx_impact').setDepth(33).setScale(0.5);
+    this.tweens.add({ targets: star, scale: s.crit ? 2 : 1.5, duration: 70, ease: 'Stepped', easeParams: [2] });
+    this.tweens.add({ targets: star, alpha: 0, scale: s.crit ? 2 : 1.5, delay: 70, duration: 150, onComplete: () => star.destroy() });
     this.flash(f.img, 0xffffff, 60);
     f.knockV += s.crit ? 900 : 560;
     if (!this.reduceMotion) {
@@ -534,7 +545,7 @@ export class BattleScene extends Phaser.Scene {
   private coinBurst(x: number, y: number, n: number) {
     for (let i = 0; i < n && this.coinsFlying < 50; i++) {
       this.coinsFlying++;
-      const c = this.add.image(x, y, 'fx_coin').setDepth(36).setScale(0.9);
+      const c = this.add.image(x, y, 'fx_coin').setDepth(36);
       const vx = Phaser.Math.Between(-260, 260);
       const landX = x + vx * 0.45;
       const peak = y - Phaser.Math.Between(90, 190);
@@ -558,7 +569,7 @@ export class BattleScene extends Phaser.Scene {
   private bagBurst(count: number) {
     const from = { x: ENGAGE_EDGE + 80, y: FEET_Y - 120 };
     for (let i = 0; i < Math.min(count, 6); i++) {
-      const bag = this.add.image(from.x + i * 30, from.y, 'fx_bag').setDepth(36).setScale(0.2);
+      const bag = this.add.image(from.x + i * 30, from.y, 'fx_bag').setDepth(36).setScale(0.6);
       this.tweens.add({ targets: bag, scale: 1, y: from.y - 120, duration: 260, ease: 'Back.easeOut', delay: i * 70 });
       this.tweens.add({
         targets: bag, x: BAG_TARGET.x, y: BAG_TARGET.y, scale: 0.5, angle: -40, duration: 520, ease: 'Cubic.easeIn',
@@ -583,7 +594,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private boom(x: number, y: number) {
-    const ring = this.add.image(x, y, 'fx_puff').setDepth(34).setScale(0.4).setTint(0xff8a3d);
+    const ring = this.add.image(x, y, 'fx_puff').setDepth(34).setScale(1).setTint(0xff8a3d);
     this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 380, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
     this.bigSparks.explode(10, x, y);
     this.flames.explode(10, x, y);
@@ -596,13 +607,13 @@ export class BattleScene extends Phaser.Scene {
       // Way out of its league: make it obvious.
       this.stamp(this.hero.x + 30, FEET_Y - 300, t('battle.oneShot'), '#FF5A5A', 72);
       this.shake(320, 0.02);
-      const star = this.add.image(this.hero.x + 40, FEET_Y - 170, 'fx_impact').setDepth(33).setScale(0.5);
+      const star = this.add.image(this.hero.x + 40, FEET_Y - 170, 'fx_impact').setDepth(33).setScale(1.2);
       this.tweens.add({ targets: star, scale: 2.2, alpha: 0, duration: 320, onComplete: () => star.destroy() });
     }
     this.heroKnock = this.reduceMotion ? 0 : heavy ? -40 : -18;
     const p = { x: this.hero.x + 10, y: FEET_Y - 170 };
     if (heavy) {
-      const star = this.add.image(p.x + 40, p.y, 'fx_impact').setDepth(33).setScale(0.4).setTint(0xffb3a8);
+      const star = this.add.image(p.x + 40, p.y, 'fx_impact').setDepth(33).setScale(1).setTint(0xffb3a8);
       this.tweens.add({ targets: star, scale: 1.3, alpha: 0, duration: 220, onComplete: () => star.destroy() });
       this.shake(220, 0.012);
     }
@@ -642,7 +653,10 @@ export class BattleScene extends Phaser.Scene {
   /** Tints the whole hero (body, gear, weapon) for a moment; a multiply tint keeps the drawing readable. */
   private flashHero(color: number, ms: number) {
     if (this.reduceFlashing) return;
-    const imgs = [this.heroImg, this.weapon, ...(this.gearBack.list as Phaser.GameObjects.Image[]), ...(this.gearFront.list as Phaser.GameObjects.Image[])];
+    const imgs = [
+      this.tailImg, this.heroImg, this.weapon, this.pawImg,
+      ...(this.gearBack.list as Phaser.GameObjects.Image[]), ...(this.gearFront.list as Phaser.GameObjects.Image[]),
+    ];
     for (const i of imgs) i.setTint(color);
     this.time.delayedCall(ms, () => imgs.forEach((i) => i.active && i.clearTint()));
   }
@@ -764,7 +778,7 @@ export class BattleScene extends Phaser.Scene {
           if (!events.some((x) => x.type === 'worldFirstClear')) this.confetti.forEach((em) => em.explode(5, BATTLE_W / 2 + 120, 420));
           break;
         case 'levelUp': {
-          const ring = this.add.image(this.hero.x, FEET_Y - 140, 'fx_puff').setDepth(33).setScale(0.3).setTint(0xffe14a);
+          const ring = this.add.image(this.hero.x, FEET_Y - 140, 'fx_puff').setDepth(33).setScale(0.8).setTint(0xffe14a);
           this.tweens.add({ targets: ring, scale: 3.2, alpha: 0, duration: 700, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
           this.bigSparks.explode(16, this.hero.x, FEET_Y - 160);
           this.number(this.hero.x, FEET_Y - 320, t('battle.levelUp'), { size: 54, grad: ['#fff6a8', '#ffa21a'], life: 1100 });
@@ -817,7 +831,7 @@ export class BattleScene extends Phaser.Scene {
     c.add([shadow, rig, bar]);
     const num = this.label(0, 0, 21).setDepth(41);
     // Idle breathing so nothing sits perfectly still.
-    this.tweens.add({ targets: img, scaleY: 1.035, duration: 520 + (uid % 5) * 60, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: img, y: -P, duration: 420 + (uid % 5) * 60, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [1] });
     return {
       uid, id: enemyId, kind, c, rig, img, bar, num, front: tex.front, back: tex.back, height: tex.oy * tex.h,
       x: startX, lunge: 0, knock: 0, knockV: 0, shownHp: hp, ghostHp: hp, maxHp, pending: 0, dead: false, dying: false, burnT: 0,
@@ -881,14 +895,15 @@ export class BattleScene extends Phaser.Scene {
   private drawBar(g: Phaser.GameObjects.Graphics, cx: number, y: number, w: number, h: number, pct: number, ghost: number, color: number) {
     const x = cx - w / 2;
     const r = h / 2;
-    g.fillStyle(INK_N, 1).fillRoundedRect(x - 4, y - 4, w + 8, h + 8, r + 4);
-    g.fillStyle(0x4a3b38, 1).fillRoundedRect(x, y, w, h, r);
+    void r;
+    g.fillStyle(INK_N, 1).fillRect(x - 6, y - 6, w + 12, h + 12);
+    g.fillStyle(0x4a3b38, 1).fillRect(x, y, w, h);
     const gw = w * Phaser.Math.Clamp(ghost, 0, 1);
-    if (gw > 2) g.fillStyle(0xffffff, 0.95).fillRoundedRect(x, y, gw, h, Math.min(r, gw / 2));
+    if (gw > 2) g.fillStyle(0xffffff, 0.95).fillRect(x, y, gw, h);
     const fw = w * Phaser.Math.Clamp(pct, 0, 1);
     if (fw > 2) {
-      g.fillStyle(color, 1).fillRoundedRect(x, y, fw, h, Math.min(r, fw / 2));
-      g.fillStyle(0xffffff, 0.35).fillRoundedRect(x + 3, y + 2, Math.max(0, fw - 6), h * 0.32, Math.min(r * 0.5, fw / 4));
+      g.fillStyle(color, 1).fillRect(x, y, fw, h);
+      g.fillStyle(0xffffff, 0.35).fillRect(x, y, fw, Math.max(P, Math.round(h * 0.3)));
     }
   }
 
@@ -940,16 +955,15 @@ export class BattleScene extends Phaser.Scene {
       if (walking && !this.reduceMotion) {
         this.walkT += dt * 11;
         const s = Math.abs(Math.sin(this.walkT));
-        this.rig.y = -s * 16;
-        this.rig.setAngle(Math.sin(this.walkT) * 3.5);
-        this.rig.setScale(1 + (1 - s) * 0.04, 1 - (1 - s) * 0.05);
-        this.weapon.setAngle(REST + Math.sin(this.walkT * 2) * 4);
+        this.rig.y = -Math.round((s * 16) / P) * P;
+        this.rig.setAngle(0);
+        this.rig.setScale(1);
+        this.aimWeapon(REST);
         if (Math.floor(this.walkT / Math.PI) !== Math.floor((this.walkT - dt * 11) / Math.PI)) this.dust.explode(1, this.hero.x - 30, FEET_Y - 6);
       } else {
-        this.rig.y = 0;
-        const br = Math.sin(time / 380);
+        this.rig.y = Math.floor(time / 420) % 2 === 0 ? 0 : -P;
         this.rig.setAngle(0);
-        this.rig.setScale(1 - br * 0.008, 1 + br * 0.018);
+        this.rig.setScale(1);
       }
     } else if (!this.dead) {
       this.rig.y = 0;
@@ -999,7 +1013,7 @@ export function createBattleGame(parent: HTMLElement): Phaser.Game {
     height: BATTLE_H,
     backgroundColor: '#35C6F7',
     scale: { mode: Phaser.Scale.NONE },
-    render: { antialias: true, pixelArt: false, roundPixels: false },
+    render: { antialias: false, pixelArt: true, roundPixels: true },
     fps: { target: 60, smoothStep: true },
     input: { mouse: false, touch: false, keyboard: false, gamepad: false },
     audio: { noAudio: true },

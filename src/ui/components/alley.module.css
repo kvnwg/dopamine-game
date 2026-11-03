@@ -12,24 +12,9 @@
   position: relative;
   height: 330px;
   flex: none;
-  padding: 14px 18px 14px 350px;
+  padding: 16px 18px 16px 20px;
   display: flex;
-}
-.wheelBox {
-  position: absolute;
-  left: 16px;
-  top: 7px;
-  width: 316px;
-  height: 316px;
-}
-.miniBtns {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 .mini {
   width: 60px;

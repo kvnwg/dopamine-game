@@ -1,19 +1,30 @@
 /**
- * Registers the cel-shaded placeholder art (src/render/cel) as Phaser textures, once per game.
- * Real art replaces these through assets.json without touching the scene.
+ * Registers the pixel art (src/render/pixel) as Phaser textures, once per game. Every texture is
+ * drawn at P screen pixels per art pixel, so the battle reads as one pixel grid. Real art can
+ * replace these through assets.json without touching the scene.
  */
 import Phaser from 'phaser';
-import { DATA, type Rarity, type Slot } from '../data';
-import {
-  RACCOON_FRAME, bagSprite, cloudSprite, coinSprite, confetti, enemySprite, gearOverlay, impactStar, puff, raccoonBody,
-  raccoonPaw, slashArc, sparkle, weaponSprite, type EnemyShape, type Pt,
-} from './cel';
-import { baseLayers, grade, skyCanvas } from './worldLook';
+import { DATA, type Slot } from '../data';
+import { blank, bounds, fromRows, type PixelBuf } from './pixel/buf';
+import { P, toCanvas } from './pixel';
+import { HERO_BODY, HERO_POINTS, HERO_SIZE, HERO_TAIL, gearBuf, pawBuf, weaponBuf, type GearSlot } from './pixel/hero';
+import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
+import { CLOUDS } from './pixel/scenery';
+import { FX } from './pixel/ui';
+import { baseLayers, gradeBuf, skyBuf } from './worldLook';
 
-export const HERO = RACCOON_FRAME;
-export const BG_TILE_W = 2048;
-/** Gear drawn over the body, back to front. The backpack goes behind the body; the weapon sits in the paw. */
-export const FRONT_ORDER: Array<Exclude<Slot, 'weapon'>> = ['sneakers', 'jacket', 'bling', 'shield', 'gloves', 'ring', 'mask', 'hat'];
+/** The hero frame in battle pixels: feet (ground contact), the paw's grip, the top of the head. */
+export const HERO = {
+  w: HERO_SIZE * P,
+  h: HERO_SIZE * P,
+  feet: { x: HERO_POINTS.feet.x * P + P / 2, y: (HERO_POINTS.feet.y + 1) * P },
+  hand: { x: HERO_POINTS.hand.x * P + P / 2, y: HERO_POINTS.hand.y * P + P / 2 },
+  head: { x: HERO_POINTS.head.x * P + P / 2, y: HERO_POINTS.head.y * P },
+};
+/** Weapon art points up and to the right; the scene turns it this much to point straight up. */
+export const WEAPON_TILT = 45;
+/** Gear drawn over the body, back to front. The backpack goes between tail and body; the weapon sits in the paw. */
+export const FRONT_ORDER: Array<Exclude<Slot, 'weapon' | 'backpack'>> = ['sneakers', 'jacket', 'bling', 'shield', 'gloves', 'ring', 'mask', 'hat'];
 
 export interface SpriteInfo {
   key: string;
@@ -26,7 +37,7 @@ export interface SpriteInfo {
 
 const info = new Map<string, SpriteInfo>();
 
-function put(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement, origin?: Pt): SpriteInfo {
+function put(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement, origin?: { x: number; y: number }): SpriteInfo {
   if (!scene.textures.exists(key)) scene.textures.addCanvas(key, canvas);
   const known = info.get(key);
   if (known) return known;
@@ -41,39 +52,50 @@ function put(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement, origin
   return i;
 }
 
-function lazy(scene: Phaser.Scene, key: string, make: () => { canvas: HTMLCanvasElement; origin?: Pt }): SpriteInfo {
+function lazy(scene: Phaser.Scene, key: string, make: () => { canvas: HTMLCanvasElement; origin?: { x: number; y: number } }): SpriteInfo {
   const known = info.get(key);
   if (known && scene.textures.exists(key)) return known;
   const m = make();
   return put(scene, key, m.canvas, m.origin);
 }
 
+export function heroTail(scene: Phaser.Scene): SpriteInfo {
+  return lazy(scene, 'hero_tail', () => ({ canvas: toCanvas(fromRows(HERO_TAIL)), origin: HERO.feet }));
+}
+
 export function heroBody(scene: Phaser.Scene): SpriteInfo {
-  return lazy(scene, 'hero_body', () => ({ canvas: raccoonBody(), origin: HERO.feet }));
+  return lazy(scene, 'hero_body', () => ({ canvas: toCanvas(fromRows(HERO_BODY)), origin: HERO.feet }));
 }
 
-export function heroPaw(scene: Phaser.Scene): SpriteInfo {
-  return lazy(scene, 'hero_paw', () => {
-    const p = raccoonPaw();
-    return { canvas: p.canvas, origin: p.center };
+/** The front paw (in glove colors when gloves are worn), centered on the grip. */
+export function heroPaw(scene: Phaser.Scene, glovesId: string | null = null): SpriteInfo {
+  return lazy(scene, `hero_paw_${glovesId ?? 'none'}`, () => {
+    const b = pawBuf(glovesId);
+    return { canvas: toCanvas(b), origin: { x: (Math.floor(b.w / 2) + 0.5) * P, y: (Math.floor(b.h / 2) + 0.5) * P } };
   });
 }
 
-export function weaponTex(scene: Phaser.Scene, rarity: Rarity | null): SpriteInfo {
-  return lazy(scene, `weapon_${rarity ?? 'none'}`, () => {
-    const w = weaponSprite(rarity);
-    return { canvas: w.canvas, origin: w.grip };
+/** A weapon with its grip as origin (empty paw: an invisible 1px texture). */
+export function weaponTex(scene: Phaser.Scene, baseId: string | null): SpriteInfo {
+  return lazy(scene, `weapon_${baseId ?? 'none'}`, () => {
+    const w = baseId ? weaponBuf(baseId) : null;
+    if (!w) return { canvas: toCanvas(blank(1, 1)) };
+    return { canvas: toCanvas(w.buf), origin: { x: (w.grip.x + 0.5) * P, y: (w.grip.y + 0.5) * P } };
   });
 }
 
-/** Gear overlays share the hero frame, so their origin is the hero's feet. */
-export function gearTex(scene: Phaser.Scene, slot: Exclude<Slot, 'weapon'>, rarity: Rarity): SpriteInfo {
-  return lazy(scene, `gear_${slot}_${rarity}`, () => ({ canvas: gearOverlay(slot, rarity), origin: HERO.feet }));
+/** One worn item in the hero frame (origin at the hero's feet), or null if it has no worn look. */
+export function gearTex(scene: Phaser.Scene, slot: Exclude<Slot, 'weapon'>, baseId: string): SpriteInfo | null {
+  const key = `gear_${baseId}`;
+  if (info.has(key) && scene.textures.exists(key)) return info.get(key)!;
+  const b = gearBuf(slot as GearSlot, baseId);
+  if (!b) return null;
+  return put(scene, key, toCanvas(b), HERO.feet);
 }
 
 /**
  * Enemy sprite in a world's colors, with its feet as origin; `front` is how far the sprite reaches
- * left of the feet.
+ * left of the feet, `back` how far right.
  */
 export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): SpriteInfo & { front: number; back: number } {
   const ph = DATA.assets.placeholders.enemies[enemyId] ?? { shape: 'rat', color: '#888888', accent: '#bbbbbb', size: 110 };
@@ -82,8 +104,9 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): S
   const color = foe?.color ?? ph.color;
   const accent = foe?.accent ?? ph.accent;
   const i = lazy(scene, `enemy_${world}_${enemyId}`, () => {
-    const s = enemySprite(ph.shape as EnemyShape, ph.size, color, accent);
-    return { canvas: s.canvas, origin: s.feet };
+    const shape = ph.shape as EnemyShape;
+    const feet = ENEMY_ART[shape].feet;
+    return { canvas: toCanvas(recolorEnemy(shape, color, accent)), origin: { x: (feet.x + 0.5) * P, y: (feet.y + 1) * P } };
   });
   return { ...i, front: i.ox * i.w, back: (1 - i.ox) * i.w };
 }
@@ -96,18 +119,17 @@ export interface WorldKeys {
   fg: string;
 }
 
-/** Sky and graded scenery tiles for a world (painted on first visit). */
+/** Sky and graded scenery tiles for a world (built on first visit). */
 export function worldTextures(scene: Phaser.Scene, world: number, w: number, h: number): WorldKeys {
   const def = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
-  const L = baseLayers();
   const keys: WorldKeys = {
     sky: `w${world}_sky`, far: `w${world}_far`, mid: `w${world}_mid`, ground: `w${world}_ground`, fg: `w${world}_fg`,
   };
-  put(scene, keys.sky, skyCanvas(w, h, def.look), { x: 0, y: 0 });
-  if (!scene.textures.exists(keys.far)) put(scene, keys.far, grade(L.far, def.look), { x: 0, y: 0 });
-  if (!scene.textures.exists(keys.mid)) put(scene, keys.mid, grade(L.mid, def.look), { x: 0, y: 0 });
-  if (!scene.textures.exists(keys.ground)) put(scene, keys.ground, grade(L.ground, def.look), { x: 0, y: 0 });
-  if (!scene.textures.exists(keys.fg)) put(scene, keys.fg, grade(L.fg, def.look), { x: 0, y: 0 });
+  if (!scene.textures.exists(keys.sky)) put(scene, keys.sky, toCanvas(skyBuf(Math.ceil(w / P), Math.ceil(h / P), def.look)), { x: 0, y: 0 });
+  const L = baseLayers();
+  for (const layer of ['far', 'mid', 'ground', 'fg'] as const) {
+    if (!scene.textures.exists(keys[layer])) put(scene, keys[layer], toCanvas(gradeBuf(L[layer], def.look)), { x: 0, y: 0 });
+  }
   return keys;
 }
 
@@ -124,17 +146,28 @@ export function releaseWorlds(scene: Phaser.Scene, keep: number): void {
   }
 }
 
+/** A sprite's buffer padded to its tight bounds' center (FX art can be any size). */
+function centered(b: PixelBuf): { canvas: HTMLCanvasElement; origin: { x: number; y: number } } {
+  const bb = bounds(b);
+  return { canvas: toCanvas(b), origin: { x: (bb.x + bb.w / 2) * P, y: (bb.y + bb.h / 2) * P } };
+}
+
 export function generateTextures(scene: Phaser.Scene, w: number, h: number): void {
+  heroTail(scene);
   heroBody(scene);
-  heroPaw(scene);
-  put(scene, 'fx_slash', slashArc(), { x: 98, y: 154 });
-  put(scene, 'fx_impact', impactStar());
-  put(scene, 'fx_puff', puff());
-  put(scene, 'fx_sparkle', sparkle());
-  put(scene, 'fx_coin', coinSprite());
-  put(scene, 'fx_bag', bagSprite());
-  for (const k of [0, 1, 2, 3] as const) put(scene, `fx_conf${k}`, confetti(k));
-  for (const k of [0, 1, 2]) put(scene, `bg_cloud${k}`, cloudSprite(k));
+  heroPaw(scene, null);
+  const slash = fromRows(FX.slash);
+  // The slash hangs off its left edge, at mid height (where the swing starts).
+  put(scene, 'fx_slash', toCanvas(slash), { x: 0, y: (slash.h / 2) * P });
+  const fx: Array<[string, readonly string[]]> = [
+    ['fx_impact', FX.impact], ['fx_puff', FX.puff], ['fx_sparkle', FX.sparkle], ['fx_coin', FX.coin], ['fx_bag', FX.bag],
+  ];
+  for (const [key, rows] of fx) {
+    const c = centered(fromRows(rows));
+    put(scene, key, c.canvas, c.origin);
+  }
+  FX.confetti.forEach((rows, k) => put(scene, `fx_conf${k}`, toCanvas(fromRows(rows))));
+  CLOUDS.forEach((rows, k) => put(scene, `bg_cloud${k}`, toCanvas(fromRows(rows))));
   void w;
   void h;
 }

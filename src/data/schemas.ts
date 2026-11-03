@@ -130,7 +130,7 @@ export const BalanceSchema = z.object({
   }),
   start: z.object({ coins: nonNeg, gems: nonNeg, bags: nonNeg }),
   /**
-   * The wheel: each roll is one spin (spinSeconds) then a short rest (restSeconds). Spin Speed
+   * The reels: each roll is one spin (spinSeconds) then a short rest (restSeconds). Spin Speed
    * upgrades shrink the whole cycle; a Trash Bag makes one spin turboSpeedMult times faster.
    */
   roll: z.object({
@@ -141,6 +141,8 @@ export const BalanceSchema = z.object({
     turboSpeedMult: positive,
     minTurboCycleSeconds: positive,
     maxRollsPerTick: z.number().int().positive(),
+    /** Most reels a spin can roll at once (1 + Extra Reel tiers). */
+    maxReels: z.number().int().positive(),
     luckyRollEvery: z.number().int().positive(),
     luckyRollMinEvery: z.number().int().positive(),
     luckyRollMult: positive,
@@ -174,14 +176,14 @@ export const BalanceSchema = z.object({
         effect: z.enum([
           'luck', 'goldPct', 'rollSpeed', 'capacity', 'luckyEvery', 'enchantChance', 'atkPct', 'hpPct', 'bagFind',
           'turboPower', 'luckyMult', 'goldenSpin', 'enchantTier', 'pity', 'scrapPct', 'xpPct', 'potionTime', 'offlinePct',
-          'lifesteal', 'critChance', 'critDmg', 'bossDmg',
+          'lifesteal', 'critChance', 'critDmg', 'bossDmg', 'reels',
         ]),
         perLevel: positive,
         max: z.number().int().positive(),
         cost: z.object({ base: positive, growth: positive }),
         /** The upgrade map: this line's first tier hangs off tier `level` of line `id`. */
         requires: z.object({ id: z.string().min(1), level: z.number().int().positive() }).optional(),
-        /** A one-off gold node with a big effect. */
+        /** Drawn as gold hexes: one-off big bonuses, and the expensive Extra Reel line. */
         special: z.boolean().optional(),
         /**
          * Hex-map layout: space-separated steps (n, ne, se, s, sw, nw, optionally `dir*count`) from the
@@ -215,6 +217,21 @@ export const BalanceSchema = z.object({
     revealSecondsByRarity: rarityRecord(positive),
     hotDumpsterStartPct: nonNeg,
     maxCatchUpTicksPerFrame: z.number().int().positive(),
+    /**
+     * The reels' look. The items rolling past are a tease, not a sample: their rarities follow
+     * `fillerWeights` (much rarer than the real odds), and right next to a non-Legendary result
+     * there is a Legendary-or-better near miss `nearMissChance` of the time. Only the landed
+     * results come from the real odds. `flairChance`: share of fillers shown with enchantment odds.
+     */
+    reels: z.object({
+      fillerWeights: rarityRecord(nonNeg),
+      nearMissChance: z.number().min(0).max(1),
+      flairChance: z.number().min(0).max(1),
+      cellsPerSecond: positive,
+      minCells: z.number().int().positive(),
+      /** When the first of several reels stops, as a share of the spin (the last stops at the end). */
+      firstStopShare: z.number().min(0.1).max(1),
+    }),
   }),
   mockAds: z.object({ watchSeconds: nonNeg }),
 });

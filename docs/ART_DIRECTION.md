@@ -344,7 +344,19 @@ Milestone 1 uses code-drawn placeholder art that follows this doc, so real art c
 
 Not yet (later milestones): skeletal rigs, expression sheet, idle variants and rare idles, puddle reflections that wobble, moths and rain, holo foil, real bloom, Heist interiors, cardboard torn edges.
 
-## Style update (Nov 2, later): bright clean cel-shaded cartoon
+## Style update (Nov 3): pixel art
+
+Kevin asked for the whole game in pixel art, which replaces the cel-shaded cartoon below. The rules,
+palette and sprite format are in [`PIXEL_ART.md`](PIXEL_ART.md). In short:
+
+- **Grid**: everything in the battle is drawn at 6 screen pixels per art pixel (the view is 180 x 137 art pixels), with nearest-neighbor scaling so pixels stay square and crisp. UI icons are 16 x 16.
+- **Palette**: one shared 39-color palette; every outline is the same dark ink `#1A1326`; three-tone shading with light from the top left.
+- **Characters**: a chunky chibi raccoon (about 40 art pixels tall, facing right) whose tail is its own layer; worn gear is drawn to fit the body (masks, jackets, shoes, necklaces, gloves), while hats, shields, backpacks and weapons reuse the item icons. Enemies face left and are recolored per world.
+- **Items**: every one of the 63 base items has its own 16 x 16 icon in natural colors; rarity shows on the tile around it.
+- **UI**: Pixelify Sans everywhere, square corners, buttons and cards with pixel borders (4 offset shadows) and flat color bands instead of gradients.
+- Sprites live in `src/render/pixel/` and preview with `npx tsx tools/pixelSheet.ts <module> out.png`.
+
+## Style update (Nov 2, later): bright clean cel-shaded cartoon (superseded)
 
 Kevin's latest direction, which replaces the painterly update below: match the premium, clean look of mobile RPGs like Capybara Go! (his reference recording), with our own characters.
 

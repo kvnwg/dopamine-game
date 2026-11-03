@@ -1,7 +1,8 @@
 /**
- * Turns core events into UI moments: every roll pops out of the dumpster; Epic and up get a
- * burst; Legendary and up get a short build-up (shake, glow, rising tone, silence drop) and a
- * full-screen reveal. Also toasts for level-ups, luck boosts, upgrades and rebirths.
+ * Turns core events into UI moments: every reel's result pops in; Epic and up get a burst;
+ * Legendary and up get a short build-up while the reels roll (glow, rattle, riser, silence drop)
+ * and a full-screen reveal when they land. With several reels, sounds play once per spin for the
+ * best result. Also toasts for level-ups, luck boosts, upgrades and rebirths.
  */
 import { BAL, DATA } from '../data';
 import { formatNumber, itemName, rarityIndex, type CoreEvent } from '../core';
@@ -25,7 +26,7 @@ function next(): void {
   if (v) celebrate(v);
 }
 
-/** While the wheel spins toward a Legendary or better: rising rattle, a riser, then a silence drop. */
+/** While the reels roll toward a Legendary or better: rising rattle, a riser, then a silence drop. */
 function buildUp(view: RollView, spinSeconds: number) {
   const tier = rarityIndex(view.item.rarity);
   useUi.setState({ charging: view });
@@ -41,7 +42,7 @@ function buildUp(view: RollView, spinSeconds: number) {
   setTimeout(() => audio.silenceDrop(0.15), Math.max(0, ms - 160));
 }
 
-/** The full-screen reveal for a Legendary or better, as the wheel lands. */
+/** The full-screen reveal for a Legendary or better, as its reel lands. */
 function celebrate(view: RollView) {
   useUi.setState({ charging: null, celebrate: view });
   audio.material(material(view.item.baseId));
@@ -68,19 +69,39 @@ function material(baseId: string): Material {
   return (DATA.itemsById.get(baseId)?.material ?? 'plastic') as Material;
 }
 
+/** The best result of the spin landing right now, for the "last roll" card. */
+let spinBest: RollView | null = null;
+/** The best non-Legendary result in this batch of events: its sound plays once. */
+let popped: { tier: number; item: RollView['item'] } | null = null;
+
+function popSound(p: { tier: number; item: RollView['item'] }): void {
+  audio.autoPop(p.item.rarity);
+  if (p.tier >= rarityIndex('epic')) {
+    audio.material(material(p.item.baseId), true);
+    audio.reveal(p.item.rarity);
+    haptics.impact('medium');
+  } else if (p.tier >= rarityIndex('shiny')) {
+    haptics.impact('light');
+  }
+}
+
 export function installRollController(): () => void {
   return bus.on((events: CoreEvent[]) => {
     const ui = useUi.getState();
+    popped = null;
     for (const e of events) {
       switch (e.type) {
         case 'spinStart': {
-          if (rarityIndex(e.item.rarity) >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
+          const best = e.reels.reduce((a, b) => (rarityIndex(b.item.rarity) > rarityIndex(a.item.rarity) ? b : a));
+          if (rarityIndex(best.item.rarity) >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
             const view: RollView = {
-              id: -e.item.uid, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false, at: performance.now(),
+              id: -best.item.uid, item: best.item, odds: best.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false,
+              at: performance.now(),
             };
             buildUp(view, e.spinSeconds);
           }
           if (e.golden) audio.jingle(5);
+          spinBest = null;
           break;
         }
         case 'roll': {
@@ -88,23 +109,19 @@ export function installRollController(): () => void {
             id: rollId++, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: e.placed, newRecord: e.newRecord,
             at: performance.now(),
           };
-          useUi.setState((s) => ({ lastRoll: view, recent: [view, ...s.recent].slice(0, 8) }));
+          // The big "last roll" card shows the best result of the spin; every result goes in Recent.
+          if (e.reel === 0 || !spinBest || e.odds > spinBest.odds) spinBest = view;
+          const shown = spinBest;
+          useUi.setState((st) => ({ lastRoll: shown, recent: [view, ...st.recent].slice(0, 8) }));
           const tier = rarityIndex(e.item.rarity);
           if (tier >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
             if (!revealBusy()) celebrate(view);
             else if (queue.length < 3) queue.push(view);
             if (useUi.getState().charging?.item.uid === e.item.uid) useUi.setState({ charging: null });
-          } else {
-            audio.autoPop(e.item.rarity);
-            if (tier >= rarityIndex('epic')) {
-              audio.material(material(e.item.baseId), true);
-              audio.reveal(e.item.rarity);
-              haptics.impact('medium');
-            } else if (tier >= rarityIndex('shiny')) {
-              haptics.impact('light');
-            }
+          } else if (!popped || tier > popped.tier) {
+            popped = { tier, item: e.item };
           }
-          if (e.lucky) audio.jingle(3);
+          if (e.lucky && e.reel === 0) audio.jingle(3);
           break;
         }
         case 'codexEntry':
@@ -159,5 +176,6 @@ export function installRollController(): () => void {
           break;
       }
     }
+    if (popped) popSound(popped);
   });
 }

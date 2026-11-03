@@ -256,11 +256,12 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 
 ## Balance
 
-The simulator (`npm run sim`) plays the real core with a bot that lets the reels roll, equips any bag item that beats what it wears (a simulated drag), lets the battle push through worlds on its own, buys the cheapest open hex it can afford every second (Extra Reels included), upgrades the dumpster when it can, rebirths as soon as it is allowed, and every 10 seconds jumps to the hardest world that reads Easy. With power-is-rarity and the 100x upgrade growth (Q1 to Q4), across 3 seeds over 2 hours:
+The simulator (`npm run sim`) plays the real core with a bot that lets the reels roll, equips any bag item that beats what it wears (a simulated drag), lets the battle push through worlds on its own, taps Next 1.5 seconds after a world boss falls, buys the cheapest open hex it can afford every second (Extra Reels included), upgrades the dumpster when it can, rebirths as soon as it is allowed, and every 10 seconds jumps to the hardest world that reads Easy. With the slower climb (S1), the boss choice (S5), luck tokens (T5) and rebirth unlocks (T8), across 3 seeds over 2 hours:
 
-- World 2 beaten at 3.5 to 8.5 minutes, World 3 at 7.5 to 23, World 4 at 20 to 39, World 5 at 42 to 52, World 6 at 81 to 91 and World 7 at about 100 to 110. Each world takes longer than the last.
-- The first rebirth comes at 42 to 52 minutes and the second at about 100 to 110; the best world after 2 hours is 5 to 7 (it was 11 to 14 before S1).
-- Per 2 hours: about 4,000 items rolled, 16 to 19 Legendaries, no Mythic or Mint in Box.
+- World 2 beaten at 6.5 to 8.5 minutes, World 3 at 16 to 22, World 4 at 26 to 36, World 5 at 35 to 56, World 6 at 78 to 98 and World 7 at 85 to 106. Each world takes longer than the last.
+- The first rebirth comes at 35 to 56 minutes and the second at 85 to 106; the best world after 2 hours is 7.
+- Per 2 hours: about 3,500 items rolled, 18 to 22 Legendaries, 1 to 3 Mythics and now and then a Vintage. Tokens added about 20% luck on average without moving the pace (before them: first rebirth at 30 to 56 minutes, second at 84 to 111).
+- Unlocks don't change power (power is rarity), only which items turn up.
 
 Earlier results (the tap-to-dive version, the single-neighborhood roller, the nonstop roller, the small-level upgrade tree and the single reel) are in the git history.
 

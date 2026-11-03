@@ -36,11 +36,6 @@
   background: #2d2a52;
   box-shadow: 0 calc(-1 * var(--u)) 0 0 var(--ink), 0 var(--u) 0 0 var(--ink), calc(-1 * var(--u)) 0 0 0 var(--ink), var(--u) 0 0 0 var(--ink);
 }
-.art {
-  width: calc(16 * var(--u));
-  height: calc(16 * var(--u));
-  image-rendering: pixelated;
-}
 
 .fx {
   position: absolute;

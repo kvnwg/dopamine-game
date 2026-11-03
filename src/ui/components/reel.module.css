@@ -247,3 +247,27 @@
     opacity: 0;
   }
 }
+
+/* A reel's stacked-up luck tokens ("×6"): rides on its top edge while it spins on to the item. */
+.chain {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  top: var(--px);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1;
+  color: #7ef08f;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  pointer-events: none;
+  animation: chainDrop 0.27s steps(3) both;
+}
+@keyframes chainDrop {
+  from {
+    transform: translateY(calc(-2 * var(--px)));
+    color: #ffffff;
+  }
+}

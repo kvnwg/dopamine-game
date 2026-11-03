@@ -16,7 +16,9 @@ import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
 import { multOf } from '../reelTiming';
-import { iconArt, itemArt, UNIT } from '../hdArt';
+import { itemArt, itemArtHd, luckTokenArt, luckTokenArtHd, uiIcon, UI_PX, type Art } from '../../render/icons';
+import { LUCK_TOKENS } from '../../render/pixel/ui';
+import { PixelArt } from './PixelArt';
 import { useUi } from '../uiStore';
 import { fmtLuck, fmtOdds } from './AlleyPanel';
 import s from './watch.module.css';
@@ -40,6 +42,8 @@ interface Shown {
   mult: number;
 }
 
+const UNIT = UI_PX;
+
 /** Sizes by reel count: art scale (1 or Scale2x), cell height, window size (stage px, whole units). */
 function layout(n: number) {
   const hd = n <= 2;
@@ -49,6 +53,15 @@ function layout(n: number) {
   // A sliver of the cells above and below shows motion; more for the small cells of 3+ reels.
   const winH = Math.round((cell * (hd ? 1.25 : 1.75)) / UNIT) * UNIT;
   return { hd, art, cell, winW, winH };
+}
+
+/** A cell's art: its item (Scale2x when big) or its luck token. */
+function cellArt(c: StripCell, hd: boolean): Art {
+  if (c.token !== null) {
+    if (c.token in LUCK_TOKENS) return hd ? luckTokenArtHd(c.token) : luckTokenArt(c.token as keyof typeof LUCK_TOKENS);
+    return uiIcon('clover', 'lg');
+  }
+  return hd ? itemArtHd(c.baseId) : itemArt(c.baseId);
 }
 
 let swooshId = 1;
@@ -175,7 +188,7 @@ export function WatchPanel() {
     >
       <div className={s.top}>
         <span className={s.luck}>
-          <img src={iconArt('clover')} alt="" className={s.icon} draggable={false} />
+          <PixelArt art={uiIcon('clover', 'sm')} />
           {t('watch.luck', { luck: fmtLuck(luck) })}
         </span>
         {!hideUi && (
@@ -220,20 +233,13 @@ export function WatchPanel() {
                         data-revealed={(c.real && (!isResult || done)) || (!run && c.real) || undefined}
                         style={{ top: -j * L.cell - L.cell / 2 }}
                       >
-                        {c.token !== null ? (
-                          <>
-                            <img className={s.art} src={iconArt('clover', L.hd)} alt="" draggable={false} />
-                            <b className={s.tokenX}>×{c.token}</b>
-                          </>
-                        ) : (
-                          <>
-                            <span className={s.odds}>
-                              <i>{t('reel.oneIn')}</i>
-                              {formatNumber(c.odds)}
-                            </span>
-                            <img className={s.art} src={itemArt(c.baseId, L.hd)} alt="" draggable={false} />
-                          </>
+                        {c.token === null && (
+                          <span className={s.odds}>
+                            <i>{t('reel.oneIn')}</i>
+                            {formatNumber(c.odds)}
+                          </span>
                         )}
+                        <PixelArt art={cellArt(c, L.hd)} className={s.art} />
                       </div>
                     );
                   })}

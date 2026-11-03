@@ -92,6 +92,12 @@ export function luckTokenArt(x: keyof typeof LUCK_TOKENS): Art {
   return art(`token:${x}`, () => fromRows(LUCK_TOKENS[x]));
 }
 
+/** A luck token at twice the resolution (Scale2x, 32 x 32), for the Watch tab's big reels. */
+export function luckTokenArtHd(x: number): Art {
+  const rows = LUCK_TOKENS[x as keyof typeof LUCK_TOKENS] ?? UI_SPRITES.clover;
+  return art(`token2x:${x}`, () => scale2x(fromRows(rows)));
+}
+
 /** A small UI piece (payline arrows). `flip` mirrors it left to right. */
 export function uiBitArt(name: keyof typeof UI_BITS, flip = false): Art {
   return art(`bit:${name}:${flip ? 1 : 0}`, () => {

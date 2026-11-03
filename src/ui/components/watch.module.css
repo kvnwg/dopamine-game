@@ -48,9 +48,6 @@
   background: #23213f;
   box-shadow: 0 calc(-1 * var(--u)) 0 0 var(--ink), 0 var(--u) 0 0 var(--ink), calc(-1 * var(--u)) 0 0 0 var(--ink), var(--u) 0 0 0 var(--ink);
 }
-.icon {
-  display: none;
-}
 .hide {
   font-size: 32px;
   color: #d9d6f2;
@@ -159,9 +156,6 @@
   justify-content: center;
 }
 .art {
-  width: var(--art);
-  height: var(--art);
-  image-rendering: pixelated;
   flex: none;
 }
 /* Everything rolls past in color, a little dimmed; a result lights up fully when it lands. Tokens always shine. */
@@ -190,23 +184,6 @@
 .stage[data-n='4'] .odds,
 .stage[data-n='5'] .odds {
   font-size: 26px;
-}
-.tokenX {
-  position: absolute;
-  right: calc(2 * var(--u));
-  bottom: calc(2 * var(--u));
-  font-size: 64px;
-  font-weight: 700;
-  color: #7cff6b;
-  -webkit-text-stroke: 9px var(--ink);
-  paint-order: stroke fill;
-}
-.stage[data-n='3'] .tokenX,
-.stage[data-n='4'] .tokenX,
-.stage[data-n='5'] .tokenX {
-  font-size: 44px;
-  right: var(--u);
-  bottom: var(--u);
 }
 /* The payline: gold bars above and below the center cell. */
 .payline {

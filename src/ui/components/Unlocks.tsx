@@ -1,14 +1,15 @@
 /**
  * Item unlocks through rebirths: the Rebirth tab previews what the next rebirth adds to the
  * dumpster, and right after a rebirth a card shows the new items. Art is drawn at the game's one
- * pixel size (hdArt UNIT).
+ * pixel size (PixelArt).
  */
 import { useEffect } from 'react';
 import { DATA } from '../../data';
 import { finalUnlock, unlocksAt } from '../../core';
 import { useGame } from '../../app/store';
 import { audio } from '../../services/audio';
-import { itemArt } from '../hdArt';
+import { itemArt } from '../../render/icons';
+import { PixelArt } from './PixelArt';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import s from './unlocks.module.css';
@@ -18,7 +19,7 @@ function Strip({ ids }: { ids: string[] }) {
     <div className={s.strip}>
       {ids.map((id) => (
         <div key={id} className={s.tile} title={DATA.itemsById.get(id)?.name}>
-          <img className={s.art} src={itemArt(id)} alt="" draggable={false} />
+          <PixelArt art={itemArt(id)} />
         </div>
       ))}
     </div>

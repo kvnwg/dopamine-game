@@ -10,6 +10,7 @@ import { t } from '../i18n';
 import { Chunky } from './Chunky';
 import { ArrowUpIcon, CheckIcon, CloverIcon, CoinIcon, RebirthIcon, SwordIcon } from './Icons';
 import s from './panels.module.css';
+import { UnlockPreview } from './Unlocks';
 
 function discount(n: number): number {
   return Math.round((1 - Math.pow(1 - BAL.rebirth.upgradeDiscountPer, n)) * 100);
@@ -86,6 +87,9 @@ export function RebirthPanel() {
         </div>
         <span className={s.rbNote}>{t('rebirth.resets')}</span>
         <span className={s.rbNote}>{t('rebirth.keeps')}</span>
+      </div>
+      <div className={`${s.rbCard} card`}>
+        <UnlockPreview />
       </div>
       <button className={`btn ${ready ? 'gold breathe' : 'gray'} ${s.rbGo}`} disabled={!ready} onClick={go}>
         <RebirthIcon size="md" />

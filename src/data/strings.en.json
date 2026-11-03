@@ -400,5 +400,6 @@
   "rebirth.allUnlocked": "Every item is unlocked",
   "rebirth.unlockedTitle": "NEW IN THE DUMPSTER",
   "codex.locked": "Rebirth {n}",
-  "codex.lockedHint": "Unlocks at Rebirth {n}"
+  "codex.lockedHint": "Unlocks at Rebirth {n}",
+  "battle.luck": "LUCK"
 }

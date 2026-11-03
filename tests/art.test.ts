@@ -2,15 +2,57 @@ import { describe, expect, it } from 'vitest';
 import { DATA } from '../src/data';
 import { alphaAt, bounds, checkRows, fromRows, toHex, type PixelBuf } from '../src/render/pixel/buf';
 import { CHARACTER_OUTLINE } from '../src/render/pixel/palette';
-import { ENEMY_ART, ENEMY_SHEETS, checkArt, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
+import { ATTACK_FPS, CAST_COLORS, ENEMY_ART, ENEMY_SHEETS, checkArt, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
 import { FOE_SHAPES, FOE_SHEETS, sheetFrames } from '../src/render/pixel/foes';
 import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf, type GearSlot } from '../src/render/pixel/hero';
-import { checkSheet, frameBuf } from '../src/render/pixel/indexed';
+import { checkSheet, frameBuf, type AnimSheet } from '../src/render/pixel/indexed';
 import { ITEM_SPRITES, WEAPON_GRIP } from '../src/render/pixel/items';
+import { BUNNY, COW, DUCK, HEN, PIG, RAM } from '../src/render/pixel/packs/farm';
 import { LAYERS, TILE_W, farLayer, fgLayer, groundLayer, midLayer } from '../src/render/pixel/scenery';
 import { FX, UI_SPRITES } from '../src/render/pixel/ui';
 
 const same = (a: { px: Uint8ClampedArray }, b: { px: Uint8ClampedArray }) => Buffer.from(a.px).equals(Buffer.from(b.px));
+
+/** When a foe's lunge lands its blow (BattleScene lungeAt), in ms from the start of its attack. */
+const CONTACT_MS = 170;
+
+/** How far a frame's art reaches toward the hero (its leftmost column, from the anchor) and whether it stands on the feet row. */
+function reachOf(s: AnimSheet, f: number): { left: number; grounded: boolean } {
+  const b = frameBuf(s, f);
+  let left = Infinity;
+  let grounded = false;
+  for (let y = 0; y < b.h; y++) {
+    for (let x = 0; x < b.w; x++) {
+      if (!b.px[(y * b.w + x) * 4 + 3]) continue;
+      left = Math.min(left, x - s.anchor.x);
+      if (y === s.anchor.y) grounded = true;
+    }
+  }
+  return { left, grounded };
+}
+
+/**
+ * An attack drawn pose by pose and timed to the lunge: a wind-up away from the hero, the smear while it
+ * darts in, the blow showing when it lands (its farthest reach, well past where the foe stands) and held,
+ * then back to its standing pose, feet on the ground throughout, in at most 500 ms.
+ */
+function expectAttack(name: string, s: AnimSheet): void {
+  const a = s.anims.attack;
+  const ms = 1000 / a.fps;
+  const at = (t: number) => a.frames[Math.floor(t / ms)];
+  const reach = (f: number) => reachOf(s, f).left;
+  expect(a.loop, name).toBe(false);
+  expect(a.frames.length * ms, `${name} plays in at most 500 ms`).toBeLessThanOrEqual(500);
+  const [windup, smear, blow] = [at(100), at(140), at(CONTACT_MS)];
+  expect(new Set([windup, smear, blow]).size, `${name}: wind-up, smear and blow are three poses`).toBe(3);
+  for (const f of a.frames) expect(reach(f), `${name} frame ${f} reaches no further than the blow`).toBeGreaterThanOrEqual(reach(blow));
+  const standing = reach(s.anims.idle.frames[0]);
+  expect(standing - reach(blow), `${name} strikes well past where it stands`).toBeGreaterThanOrEqual(3);
+  expect(reach(windup) - reach(blow), `${name} winds up away from the blow`).toBeGreaterThanOrEqual(3);
+  expect(a.frames.filter((f) => f === blow).length * ms, `${name} holds the blow`).toBeGreaterThanOrEqual(100);
+  expect(Math.abs(reach(a.frames[a.frames.length - 1]) - standing), `${name} settles back`).toBeLessThanOrEqual(1);
+  for (const f of a.frames) expect(reachOf(s, f).grounded, `${name} frame ${f} keeps its feet on the ground`).toBe(true);
+}
 
 describe('pixel art', () => {
   it('every base item has its own valid 16x16 icon, and every weapon has a grip on the art', () => {
@@ -116,6 +158,26 @@ describe('pixel art', () => {
         }
       });
     }
+  });
+
+  it('every hand-drawn enemy has 13 poses on one palette: outline, the world\'s body and accent ramps, then fixed cast colors', () => {
+    for (const [shape, s] of Object.entries(ENEMY_SHEETS)) {
+      // Standing, breathing, blinking, two steps; the attack's six (frames 5 to 10); the flinch's two.
+      expect(s.sheet.frames, shape).toHaveLength(13);
+      expect([...new Set(s.sheet.anims.attack.frames)], `${shape} attack poses`).toEqual([5, 6, 7, 8, 9, 10]);
+      expect(s.sheet.anims.attack.fps, shape).toBe(ATTACK_FPS);
+      expect(s.sheet.anims.hurt.frames, `${shape} flinch`).toEqual([11, 12]);
+      expect([s.body, s.accent], shape).toEqual([[1, 2, 3], [4, 5, 6]]);
+      expect(s.sheet.pal[0], shape).toBe(CHARACTER_OUTLINE);
+      const fixed = new Set(Object.values(CAST_COLORS));
+      for (const c of s.sheet.pal.slice(7)) expect(fixed.has(c), `${shape} ${c} is a cast color`).toBe(true);
+    }
+  });
+
+  it('the hand-drawn cast and the farm animals attack in drawn poses timed to the lunge', () => {
+    const sheets: Record<string, AnimSheet> = { ...Object.fromEntries(Object.entries(ENEMY_SHEETS).map(([k, v]) => [k, v.sheet])), HEN, DUCK, BUNNY, RAM, PIG, COW };
+    expect(Object.keys(sheets)).toHaveLength(16);
+    for (const [name, s] of Object.entries(sheets)) expectAttack(name, s);
   });
 
   it('pack characters stand on their anchor in their idle pose', () => {

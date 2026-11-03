@@ -21,10 +21,11 @@ import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
 import { rarityColor, rarityColorNum } from './art';
 import {
-  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, itemTex, releaseWorlds,
+  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, itemTex, luckTokenTex, releaseWorlds,
   shadowTex, texOrigin, texSize, weaponTex, worldTextures, type FoeTex, type WorldKeys,
 } from './textures';
 import { SLAM, SLAM_FROM, SLAM_HEIGHT } from './equipSlam';
+import { reelStops } from '../ui/reelTiming';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
 import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type FaceName, type TextStyle } from './pixel/font';
@@ -1234,6 +1235,76 @@ export class BattleScene extends Phaser.Scene {
     this.time.delayedCall(ms, () => imgs.forEach((i) => i.active && i.clearTint()));
   }
 
+  // ------------------------------------------------------------------ luck chains
+
+  /**
+   * A reel that lands on luck tokens shows them near the top of the battle as they land: the first
+   * clover drops in, each next one lands beside it, and the running total (×2 → ×10 LUCK) sits after
+   * them. When the reel lands its item the row flashes and steps out. Timed like the reels
+   * (reelTiming.ts), so a token shows here the moment it stops on the reel.
+   */
+  private showLuckChains(e: Extract<CoreEvent, { type: 'spinStart' }>) {
+    let row = 0;
+    e.reels.forEach((r, i) => {
+      if (!r.mults.length) return;
+      const stops = reelStops(e, i);
+      const chain = { tokens: [] as Phaser.GameObjects.Image[], total: null as PixelText | null, mult: 1, y: (24 + row * 19) * P };
+      row++;
+      stops.forEach((st, j) => {
+        if (st.token === null) {
+          this.time.delayedCall(st.at + 150, () => this.endLuckChain(chain));
+          return;
+        }
+        this.time.delayedCall(st.at, () => this.addLuckToken(chain, st.token!, j));
+      });
+    });
+  }
+
+  private addLuckToken(chain: { tokens: Phaser.GameObjects.Image[]; total: PixelText | null; mult: number; y: number }, x: number, step: number) {
+    if (!this.sys.isActive()) return;
+    chain.mult *= x;
+    const tex = luckTokenTex(this, x);
+    const gap = 18 * P;
+    const n = chain.tokens.length + 1;
+    // The row (tokens, then the total) stays centered; earlier tokens slide over a whole pixel at a time.
+    const left = snap(BATTLE_W / 2 - ((n - 1) * gap) / 2 - 12 * P);
+    chain.tokens.forEach((t, k) => this.tweens.add({ targets: t, x: left + k * gap, duration: 120, ease: 'Stepped', easeParams: [3] }));
+    const tx = left + (n - 1) * gap;
+    if (tex) {
+      const img = this.add.image(tx, chain.y - (this.reduceMotion ? 0 : 6 * P), tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(44);
+      chain.tokens.push(img);
+      if (!this.reduceMotion) this.tweens.add({ targets: img, y: chain.y, duration: 160, ease: 'Bounce.easeOut' });
+      if (!this.reduceFlashing) {
+        img.setTintFill(0xffffff);
+        this.time.delayedCall(70, () => img.active && img.clearTint());
+      }
+    }
+    this.bits.burst(10 + step * 6, tx, chain.y, { speed: [30, 80], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
+    if (step > 0) this.shake(90, 0.002 + step * 0.001);
+    // The running total after the tokens.
+    chain.total?.destroy();
+    const total = this.texts.add(`×${formatNumber(chain.mult)} ${t('battle.luck')}`, { face: 'big', fill: ['#d8ffd0', '#46d36b'], shadow: true }).setDepth(44);
+    total.place(snap(tx + 9 * P + (total.artW * P) / 2), chain.y);
+    if (!this.reduceFlashing) {
+      total.setFlash(true);
+      this.time.delayedCall(80, () => total.active && total.setFlash(false));
+    }
+    chain.total = total;
+  }
+
+  private endLuckChain(chain: { tokens: Phaser.GameObjects.Image[]; total: PixelText | null }) {
+    const parts: Array<{ setAlpha(a: number): unknown; destroy(): void; active: boolean }> = [...chain.tokens, ...(chain.total ? [chain.total] : [])];
+    for (const p of parts) if ('setTintFill' in p && !this.reduceFlashing) (p as Phaser.GameObjects.Image).setTintFill(0xffffff);
+    this.time.delayedCall(80, () => {
+      for (const p of parts) if (p.active && 'clearTint' in p) (p as Phaser.GameObjects.Image).clearTint();
+    });
+    [0.66, 0.33, 0].forEach((a, k) =>
+      this.time.delayedCall(700 + k * 90, () => {
+        for (const p of parts) if (p.active) (a ? p.setAlpha(a) : p.destroy());
+      }),
+    );
+  }
+
   // ------------------------------------------------------------------ equip slam (equipSlam.ts)
 
   /** Equipped gear drops out of the sky and slams onto him; the rarer, the bigger (see SLAM_FROM). */
@@ -1390,6 +1461,7 @@ export class BattleScene extends Phaser.Scene {
     let lastSwing: Swing | null = null;
     let slamIndex = 0;
     for (const e of events) {
+      if (e.type === 'spinStart') this.showLuckChains(e);
       switch (e.type) {
         case 'playerHit': {
           lastSwing = { targetUid: e.targetUid, amount: e.amount, crit: e.crit, echo: e.echo, killed: e.killed, riders: [] };

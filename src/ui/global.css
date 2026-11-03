@@ -4,8 +4,9 @@
  */
 
 /*
- * Dumpster Digits: just a clearer 2 and 5 (Pixelify Sans draws them like Z and S), on Pixelify Sans's
- * own grid. Listed first in the font stacks; every other character falls through to Pixelify Sans.
+ * Dumpster Digits: clearer 0, 2, 5, 6 and 8 (Pixelify Sans draws them like O, Z, S, G and B), on
+ * Pixelify Sans's own grid. Listed first in the font stacks; every other character falls through to
+ * Pixelify Sans.
  * Made by tools/fonts/digits.py.
  */
 @font-face {
@@ -13,14 +14,14 @@
   src: url('../assets/fonts/dumpster-digits-500.woff') format('woff');
   font-weight: 400 500;
   font-display: block;
-  unicode-range: U+0032, U+0035;
+  unicode-range: U+0030, U+0032, U+0035, U+0036, U+0038;
 }
 @font-face {
   font-family: 'Dumpster Digits';
   src: url('../assets/fonts/dumpster-digits-700.woff') format('woff');
   font-weight: 600 900;
   font-display: block;
-  unicode-range: U+0032, U+0035;
+  unicode-range: U+0030, U+0032, U+0035, U+0036, U+0038;
 }
 :root {
   --ink: #1a1326;

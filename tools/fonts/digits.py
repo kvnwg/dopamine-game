@@ -1,6 +1,6 @@
 """
-Builds "Dumpster Digits": a tiny font with only a clearer 2 and 5 for Pixelify Sans, so UI numbers
-stop reading as Z and S (Pixelify Sans draws 2 like Z and 5 like S). The glyphs are drawn on
+Builds "Dumpster Digits": a tiny font with clearer digits for Pixelify Sans, so UI numbers stop
+reading as letters (Pixelify Sans draws 2 like Z, 5 like S, 8 like B, 0 like O and 6 like G). The glyphs are drawn on
 Pixelify Sans's own grid: 5 columns by 7 rows whose edges are the strokes of its 3 (bars and columns
 keep their exact thickness at each weight). The 5 gets a flat top bar with square corners over a
 round bowl; the 2 gets a round top, a stepped diagonal and a flat base. CSS lists this font first
@@ -42,6 +42,37 @@ GLYPHS = {
         '#####',
     ],
 }
+# Digits that read like letters in Pixelify Sans get shapes no letter has: an 8 pinched to a point
+# at the waist (B has a straight back and a full middle bar), a dotted 0 (not O) and a 6 with a curled top (not G).
+GLYPHS['eight'] = [
+    '.###.',
+    '#...#',
+    '#...#',
+    '.#.#.',
+    '#...#',
+    '#...#',
+    '.###.',
+]
+GLYPHS['zero'] = [
+    '.###.',
+    '#...#',
+    '#...#',
+    '#.#.#',
+    '#...#',
+    '#...#',
+    '.###.',
+]
+GLYPHS['six'] = [
+    '..##.',
+    '.#...',
+    '#....',
+    '####.',
+    '#...#',
+    '#...#',
+    '.###.',
+]
+EXTRA = [('zero', 0x30), ('six', 0x36), ('eight', 0x38)]
+
 # Bold diagonal steps are doubled sideways so they keep the stroke weight.
 BOLD_TWO = [
     '.###.',
@@ -76,11 +107,15 @@ def glyph(rows, grid):
 def build(weight, out_path):
     g = GRIDS[weight]
     fb = FontBuilder(1000, isTTF=True)
-    fb.setupGlyphOrder(['.notdef', 'two', 'five'])
-    fb.setupCharacterMap({0x32: 'two', 0x35: 'five'})
+    names = ['two', 'five'] + [n for n, _ in EXTRA]
+    fb.setupGlyphOrder(['.notdef'] + names)
+    fb.setupCharacterMap({0x32: 'two', 0x35: 'five', **{cp: n for n, cp in EXTRA}})
     two = BOLD_TWO if weight >= 600 else GLYPHS['two']
-    fb.setupGlyf({'.notdef': TTGlyphPen(None).glyph(), 'two': glyph(two, g), 'five': glyph(GLYPHS['five'], g)})
-    fb.setupHorizontalMetrics({'.notdef': (g['adv'], 0), 'two': (g['adv'], g['x'][0]), 'five': (g['adv'], g['x'][0])})
+    glyphs = {'.notdef': TTGlyphPen(None).glyph(), 'two': glyph(two, g)}
+    for n in names[1:]:
+        glyphs[n] = glyph(GLYPHS[n], g)
+    fb.setupGlyf(glyphs)
+    fb.setupHorizontalMetrics({'.notdef': (g['adv'], 0), **{n: (g['adv'], g['x'][0]) for n in names}})
     fb.setupHorizontalHeader(ascent=ASCENT, descent=DESCENT)
     fb.setupOS2(sTypoAscender=ASCENT, sTypoDescender=DESCENT, sTypoLineGap=LINE_GAP,
                 usWinAscent=WIN_ASCENT, usWinDescent=WIN_DESCENT, usWeightClass=weight)

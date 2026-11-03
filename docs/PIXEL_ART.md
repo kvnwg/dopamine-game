@@ -312,6 +312,52 @@ npx tsx tools/animSheet.ts packs/farm /path/to/farm.png --scale 6
 
 Licenses and the in-game credit line: `CREDITS.md`.
 
+## Enemy attacks
+
+Every enemy hits with an attack drawn pose by pose: the hand-drawn cast in `src/render/pixel/enemies.ts`
+(`CastDef.attack`, moves on the drawn fill) and the farm animals in `tools/packs/farm_anim.py` (each
+recipe's poses, regenerated into `packs/farm.ts`). Six poses, played at 25 fps:
+
+- **wind** (40 ms) and **coil** (80 ms): the anticipation. It leans back, head first (`band`: rows above
+  the legs slide a pixel or two, more at the top), crouches or rears up, and raises what it hits with:
+  sword, club, nightstick, scepter, lid, fists, beak or head.
+- **smear** (40 ms, while the foe darts in): the body stretched toward the hero and the moving part
+  smeared along its path: a crescent swept by a swung tip (`smear()`, one solid outlined shape behind
+  the art, lightest on its leading edge), or the part itself stretched out (`widen`).
+- **strike** (from 160 ms, held 120 ms): the blow at full reach, the farthest any frame goes.
+- **recoil** and **settle** (80 ms each): back to the standing pose.
+
+The rat rears up snarling with a claw raised, then pounces and bites. The pigeon cocks its neck and fans
+a wing, then darts its head out. The soldier, orc, officer and Big Earl swing sword, club, nightstick
+and scepter over the top. The pumpkin head-butts, its head squashed flat on impact. The plague doc jabs
+a syringe. The demon slams down both fists from over his horns, and Vinnie throws a haymaker with his
+raised lid. On the farm the hen and duck peck (the duck quacks its bill open), the bunny turns and
+donkey-kicks with both hind feet, the ram and the pig charge, and the cow rears up and stomps into a
+head-butt.
+
+BattleScene's `lungeAt` moves the foe in step, on one counter tween: back 2 px while it winds up (to
+120 ms), in 6 px (10 for a heavy hit) in 50 ms so the blow lands at 170 ms, a beat on the hero, then
+home by 450 ms. A blow landing mid-attack doesn't cut the swing short; its flash and knockback show it.
+The flinch (`hurt`) is two poses at 8 fps: the head snaps back, then eases forward.
+
+- **Keep the character**: the same palette keys (the world still tints the body and accent ramps),
+  outlined in the raccoon's brown in every frame, lit from the top left. Rigid props move as one piece
+  (erase and redraw them: shields, the hay fork, the lids), so leans never shear them.
+- **Feet stay put**: nothing goes below the feet row, and every attack frame stands on it.
+- **Reach**: the battle stands a foe at `ENGAGE_EDGE` plus its sheet's reach, so the blow always lands
+  on the same spot and a longer strike makes the foe stand farther back (and its shadow wider). Keep
+  strikes to about 7 px past the standing art (bosses 9).
+- `tests/art.test.ts` checks every attack: wind-up, smear and blow are three poses; the blow shows at
+  170 ms, reaches farthest, at least 3 px past the standing pose and past the wind-up, held 100 ms or
+  more; it settles back; feet down throughout; 500 ms at most.
+
+Preview the cast's attacks (`<shape>_attack1` to `6`) after their standing poses, and the farm's:
+
+```bash
+npx tsx tools/pixelSheet.ts enemies /path/to/enemies.png --cols 6
+npx tsx tools/animSheet.ts packs/farm /path/to/farm.png --scale 6
+```
+
 ## The hero
 
 The hero is Kevin's raccoon sheet (`art-src/raccoon_sheet.png`, 6 x 6 frames of 24 x 24): idle,

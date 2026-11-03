@@ -16,7 +16,7 @@ import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
 import { FOE_SHEETS, sheetFrames } from './pixel/foes';
 import { FX_SHEETS, type FxName } from './pixel/packs/fx';
 import { CHARACTER_OUTLINE } from './pixel/palette';
-import { FX } from './pixel/ui';
+import { FX, LUCK_TOKENS } from './pixel/ui';
 import { ITEM_SPRITES } from './pixel/items';
 import { VIEW_MARGIN } from './pixel/sceneryTypes';
 import { worldArt, type SceneryKeys } from './worldLook';
@@ -525,6 +525,13 @@ function coinFrames(): PixelBuf[] {
     }
     return out;
   });
+}
+
+/** A luck token's clover badge (16 x 16 art px, centered origin), or null for a value without art; draw with setScale(P). */
+export function luckTokenTex(scene: Phaser.Scene, x: number): SpriteInfo | null {
+  const rows = LUCK_TOKENS[x as keyof typeof LUCK_TOKENS];
+  if (!rows) return null;
+  return lazy(scene, `token_${x}`, () => ({ canvas: toCanvas(fromRows(rows), 1) }));
 }
 
 /** A base item's icon (16 x 16 art px, centered origin) for the equip slam; draw with setScale(P). */

@@ -2,8 +2,10 @@
 Moves for the farm animals (used by farm.py). Each animal is drawn once in its pack, standing and
 facing left; its other frames are made here from that pose the way a pixel artist would: a whole
 part (head, legs, tail, ears) moved by an art pixel or two, the body squashed or stretched by one row
-at a seam, an eye closed for a blink. Frames only reuse the sprite's own colors, and every gap a
-move opens in the outline is closed with the outline color, so the art stays clean (build() checks
+at a seam, an eye closed for a blink. The attack's poses go further (attack() below): the body leaned
+in bands, reared up or turned round, a part stretched along its path for the smear, and a few pixels
+drawn in (an open bill, kicking feet, dust). Frames only reuse the sprite's own colors, and every gap
+a move opens in the outline is closed with the outline color, so the art stays clean (build() checks
 that no frame gains a color, a stray pixel or a loose piece).
 
 Coordinates are pixels of the drawn pose (x right, y down; '0' is the outline, the darkest color of
@@ -95,9 +97,47 @@ class Pose:
         self.px = out
         return self.close(set())
 
+    def rear(self, *bands):
+        """Rears up: each (x0, x1, dy) band of columns rises by -dy, the hind legs staying planted."""
+        return self.move(*[(self.box(x0, -FAR, x1, FAR), 0, dy) for x0, x1, dy in bands])
+
+    def narrow(self, x, y0=-FAR, y1=FAR):
+        """Drops column x (between rows y0..y1): everything left of it comes a pixel right (squashed on impact)."""
+        out = {}
+        for (xx, y), c in self.px.items():
+            if y0 <= y <= y1 and xx <= x:
+                if xx == x:
+                    continue
+                xx += 1
+            out[(xx, y)] = c
+        self.px = out
+        return self.close(set())
+
     def lean(self, *bands):
         """Shears the pose: each (y0, y1, dx) band of rows slides sideways while the feet stay planted."""
         return self.move(*[(self.box(-FAR, y0, FAR, y1), dx, 0) for y0, y1, dx in bands])
+
+    def draw(self, x, y, rows, under=False):
+        """
+        Paints rows of the sprite's own keys with their top-left at (x, y) ('.' leaves a pixel, '_' clears
+        it): an open bill, kicking feet, dust. `under` only fills open pixels, so it passes behind the art.
+        Nothing is painted below the feet.
+        """
+        for dy, r in enumerate(rows):
+            for dx, c in enumerate(r):
+                p = (x + dx, y + dy)
+                if c == '.' or (under and p in self.px) or p[1] > self.ground:
+                    continue
+                if c == '_':
+                    self.px.pop(p, None)
+                else:
+                    self.px[p] = c
+        return self.close(set())
+
+    def mirror(self, cx):
+        """Turned round about column cx (its back to the hero), feet where they were."""
+        self.px = {(2 * cx - x, y): c for (x, y), c in self.px.items()}
+        return self
 
     def lift(self, dy):
         """The whole pose up (dy < 0) off the ground, mid-hop."""
@@ -183,16 +223,27 @@ def placed(rows, ground):
 # Each recipe names its parts by box (pixels of the drawn pose) and builds poses from 'stand' (the
 # drawn pose). Shared beats: idle breathes on a 1 s cycle (2 beats up, 2 down at 4 fps) with a blink
 # and a little extra (tail, ear, nod) now and then; walk is 4 frames at 8 fps with the body a pixel
-# lower on the contact frames; attack is wind-up, strike, follow-through at 10 fps, which puts the
-# strike on the battle's lunge contact (170 ms); hurt is a flinch, then a breath, at 8 fps.
+# lower on the contact frames; hurt is a flinch, then a breath, at 8 fps. The attack is six drawn
+# poses (attack() below): wind and coil rock back into the wind-up, smear is the blow in motion (the
+# moving part stretched or swept along its path), hit is the blow at full reach, back and settle
+# return to idle.
 
-IDLE_FPS, WALK_FPS, ATTACK_FPS, HURT_FPS = 4, 8, 10, 8
+IDLE_FPS, WALK_FPS, ATTACK_FPS, HURT_FPS = 4, 8, 25, 8
 
 
 def idle(extra1, extra2, extra3=None):
     """16 beats: breathing, with three of the up beats swapped for extra poses (a blink, a flick)."""
     return (IDLE_FPS, True, ['stand', 'stand', 'low', 'low', 'stand', extra1, 'low', 'low',
                              extra2, 'stand', 'low', 'low', 'stand', extra3 or 'stand', 'low', 'low'])
+
+
+def attack():
+    """
+    The attack at 25 fps (40 ms a beat), timed to the battle's lunge (BattleScene lungeAt): wind 40 ms
+    and coil 80 ms while it rocks back, the smear while it lunges (120 to 160 ms), the hit from 160 ms
+    (the blow lands at 170 ms) held 120 ms, then back and settle, 80 ms each: 440 ms in all.
+    """
+    return (ATTACK_FPS, False, ['wind', 'coil', 'coil', 'smear', 'hit', 'hit', 'hit', 'back', 'back', 'settle', 'settle'])
 
 
 def hen(base, extra):
@@ -213,17 +264,25 @@ def hen(base, extra):
         'tail': base.copy().stretch(6, 8, 14),           # tail feathers up a pixel
         'step': swapped(base.copy()),
         'step_low': swapped(base.copy()).squash(8),
-        'wind': base.copy().stretch(6, 0, 7),            # neck up
-        'peck': base.copy().move((head, -2, 0), (neck, -1, 0)),
-        'peck2': base.copy().move((head | neck, -1, 0)),
+        # The peck: neck up and back, tail cocked; the head darts down at the hero, smeared; then it rights itself.
+        'wind': base.copy().stretch(6, 0, 7).lean((-FAR, 12, 1)),
+        'coil': base.copy().stretch(6, 0, 7).stretch(6, 0, 7).stretch(6, 8, 14).lean((-FAR, 6, 2), (7, 12, 1)),
+        'smear': base.copy().lean((-FAR, 6, -2), (7, 12, -1)).widen(1, -FAR, 6).widen(1, -FAR, 6),
+        'hit': base.copy().lean((-FAR, 6, -4), (7, 9, -2), (10, 12, -1)).squash(6, -FAR, 2),
+        'back': base.copy().lean((-FAR, 6, -1)),
+        'settle': base.copy().squash(8),
         'hurt': shut().move((head | neck, 1, 0)).squash(8),
     }
     return poses, {
         'idle': idle('stand', 'blink', 'tail'),
         'walk': (WALK_FPS, True, ['low', 'stand', 'step_low', 'step']),
-        'attack': (ATTACK_FPS, False, ['wind', 'peck', 'peck2']),
+        'attack': attack(),
         'hurt': (HURT_FPS, False, ['hurt', 'low']),
     }
+
+
+# The duck's bill wide open: upper bill, the dark of the mouth, lower bill.
+OPEN_BILL = ['888', '000', '668']
 
 
 def duck(base, extra):
@@ -244,26 +303,35 @@ def duck(base, extra):
         'tail': base.copy().stretch(9, 12, 14),          # tail tip up a pixel
         'step': swapped(base.copy()),
         'step_low': swapped(base.copy()).squash(10),
-        'wind': base.copy().stretch(6, 0, 7),            # neck up
-        'bite': base.copy().move((head, -2, 0), (ring, -1, 0)),
-        'bite2': base.copy().move((head | ring, -1, 0)),
+        # The bite: neck up and back with the bill open, a lunge on a smeared neck, the bill snapping at the hero.
+        'wind': base.copy().stretch(6, 0, 7).lean((-FAR, 13, 1)),
+        'coil': base.copy().stretch(6, 0, 7).stretch(6, 0, 7).stretch(9, 12, 14).lean((-FAR, 6, 2), (7, 13, 1)).draw(4, 1, OPEN_BILL),
+        'smear': base.copy().lean((-FAR, 6, -2), (7, 13, -1)).widen(2, -FAR, 6).widen(2, -FAR, 6).draw(-3, 3, OPEN_BILL),
+        'hit': base.copy().lean((-FAR, 6, -4), (7, 10, -2), (11, 13, -1)).draw(-3, 3, OPEN_BILL),
+        'back': base.copy().lean((-FAR, 6, -1)),
+        'settle': base.copy().squash(10),
         'hurt': shut().move((head | ring, 1, 0)).squash(10),
     }
     return poses, {
         'idle': idle('stand', 'blink', 'tail'),
         'walk': (WALK_FPS, True, ['low', 'stand', 'step_low', 'step']),
-        'attack': (ATTACK_FPS, False, ['wind', 'bite', 'bite2']),
+        'attack': attack(),
         'hurt': (HURT_FPS, False, ['hurt', 'low']),
     }
 
 
 def bunny(base, extra):
-    """Gray rabbit: breathes, twitches nose and ear, blinks; hops; pounces; cowers when hit."""
+    """Gray rabbit: breathes, twitches nose and ear, blinks; hops; donkey-kicks; cowers when hit."""
     eye, nose = (4, 8), (2, 9)
     # The sheet's crouching rabbit, recolored gray; the gray rabbit's ear tips are white.
     crouch = placed(extra['crouch'], base.ground)
     top = min(y for _, y in crouch.px)
     crouch.put('6', (2, top + 1), (6, top + 1))
+
+    def kick():
+        """Turned round on its front paws, head down and rump up, the haunch lifted off the ground."""
+        return base.copy().mirror(7).draw(1, 12, ['_____'] * 3).squash(10, 7, 14).stretch(11, -FAR, 6)
+
     poses = {
         'stand': base,
         'low': base.copy().squash(10),
@@ -273,14 +341,20 @@ def bunny(base, extra):
         'crouch': crouch,
         'hop': base.copy().lift(-2),
         'hop2': base.copy().lift(-1),
-        'pounce': base.copy().lean((3, 11, -1)).lift(-1),   # head forward, ears trailing, off the ground
-        'lunge': base.copy().lean((3, 11, -1)),
+        # The kick: crouches, turns its back on the hero and plants its front paws, then thrusts both hind
+        # feet out at it (smeared along the way); then it turns back, crouched.
+        'wind': crouch.copy().lean((-FAR, top + 8, 1)),
+        'coil': crouch.copy().squash(top + 8).lean((-FAR, top + 7, 1)),
+        'smear': kick().draw(-4, 9, ['...66333', '.66333333', '63333333331', '.11111111', '...111']),
+        'hit': kick().draw(-5, 10, ['633333331', '111111111', '.6333331', '.1111111']),
+        'back': crouch.copy(),
+        'settle': base.copy().squash(10),
         'hurt': crouch.copy().put('1', (3, top + 6), (4, top + 6)),             # eyes squeezed shut
     }
     return poses, {
         'idle': idle('sniff', 'blink', 'ear'),
         'walk': (WALK_FPS, True, ['crouch', 'hop', 'hop2', 'stand']),
-        'attack': (ATTACK_FPS, False, ['crouch', 'pounce', 'lunge']),
+        'attack': attack(),
         'hurt': (HURT_FPS, False, ['hurt', 'low']),
     }
 
@@ -306,15 +380,20 @@ def ram(base, extra):
         'nod': head_down(base.copy()),
         'step_a': base.copy().move((ff, 1, 0), (bf, -1, 0), (fn, -1, 0), (bn, 1, 0)).squash(12),
         'step_b': base.copy().move((ff, -1, 0), (bf, 1, 0), (fn, 1, 0), (bn, -1, 0)).squash(12),
+        # The charge: rears back with the head up and the front legs tucked, then drives the horns down into
+        # the hero, the head smeared ahead of the body.
         'wind': head_up(base.copy()).lean((-FAR, 14, 1)),
-        'butt': head_down(base.copy()).widen(10, -FAR, 11).lean((-FAR, 14, -1)),   # horns down and forward
-        'butt2': base.copy().lean((-FAR, 14, -1)),
+        'coil': head_up(head_up(base.copy())).move((fn, 1, -1), (ff, 1, -1)).lean((-FAR, 9, 3), (10, 15, 2)),
+        'smear': head_down(base.copy()).lean((-FAR, 9, -2), (10, 13, -2), (14, 15, -1)).widen(9, -FAR, 11).widen(9, -FAR, 11),
+        'hit': head_down(head_down(base.copy())).lean((-FAR, 9, -5), (10, 13, -4), (14, 15, -2)).narrow(4, -FAR, 13),
+        'back': base.copy().lean((-FAR, 9, -2), (10, 15, -1)),
+        'settle': base.copy().squash(12),
         'hurt': head_up(shut()).lean((-FAR, 14, 1)),
     }
     return poses, {
         'idle': idle('stand', 'blink', 'nod'),
         'walk': (WALK_FPS, True, ['step_a', 'stand', 'step_b', 'stand']),
-        'attack': (ATTACK_FPS, False, ['wind', 'butt', 'butt2']),
+        'attack': attack(),
         'hurt': (HURT_FPS, False, ['hurt', 'low']),
     }
 
@@ -332,21 +411,26 @@ def pig(base, extra):
         'wag': base.copy().move((tail, 0, 1)),
         'step_a': base.copy().move((ff, 1, 0), (bf, -1, 0), (fn, -1, 0), (bn, 1, 0)).squash(6),
         'step_b': base.copy().move((ff, -1, 0), (bf, 1, 0), (fn, 1, 0), (bn, -1, 0)).squash(6),
+        # The charge: sits back on its hind legs with its face down, then rams the hero snout first, the
+        # body smeared along the dash and the snout flattened on impact.
         'wind': base.copy().lean((-FAR, 14, 1)),
-        'charge': base.copy().squash(14, 0, 6).lean((-FAR, 14, -1)),   # face down (seam before the far ear), body forward
-        'charge2': base.copy().lean((-FAR, 14, -1)),
+        'coil': base.copy().squash(14, 0, 6).move((bn, 1, 0), (bf, 1, 0)).lean((-FAR, 8, 3), (9, 14, 2)).squash(9),
+        'smear': base.copy().squash(14, 0, 6).lean((-FAR, 14, -2), (15, 16, -2), (17, 18, -1)).widen(14, -FAR, 14).widen(14, -FAR, 14),
+        'hit': base.copy().squash(14, 0, 6).lean((-FAR, 8, -6), (9, 14, -5), (15, 16, -3), (17, 18, -1)).narrow(3, -FAR, 14),
+        'back': base.copy().lean((-FAR, 14, -2), (15, 17, -1)),
+        'settle': base.copy().squash(6),
         'hurt': shut().lean((-FAR, 14, 1)),
     }
     return poses, {
         'idle': idle('wag', 'blink', 'wag'),
         'walk': (WALK_FPS, True, ['step_a', 'stand', 'step_b', 'stand']),
-        'attack': (ATTACK_FPS, False, ['wind', 'charge', 'charge2']),
+        'attack': attack(),
         'hurt': (HURT_FPS, False, ['hurt', 'low']),
     }
 
 
 def cow(base, extra):
-    """Spotted cow (the boss): breathes, blinks, swishes her tail, nods; walks; headbutts; recoils when hit."""
+    """Spotted cow (the boss): breathes, blinks, swishes her tail, nods; walks; rears up and stomps into a headbutt; recoils when hit."""
     tail = base.box(28, 16, 30, 18)                               # tail tip
     fn, bn = base.box(11, 19, 13, 24), base.box(23, 19, 26, 24)   # near legs below the knee
     ff = base.box(9, 19, 10, 23)                                  # far front leg (the far hind leg is hidden)
@@ -367,15 +451,21 @@ def cow(base, extra):
         'nod': head_down(base.copy()),
         'step_a': base.copy().move((ff, 1, 0), (fn, -1, 0), (bn, 1, 0)).squash(14),
         'step_b': base.copy().move((ff, -1, 0), (fn, 1, 0), (bn, -1, 0)).squash(14),
+        # The stomp: rears up with her front hooves off the ground and her head high, then comes down hard,
+        # hooves stamping (a puff of dust) and her head butting the hero.
         'wind': head_up(base.copy()).lean((-FAR, 16, 1)),
-        'butt': head_down(base.copy()).lean((-FAR, 16, -1)),
-        'butt2': base.copy().lean((-FAR, 16, -1)),
+        'coil': head_up(base.copy()).rear((-FAR, 10, -3), (11, 15, -2), (16, 20, -1)).lean((-FAR, 13, 1)),
+        'smear': head_down(base.copy()).rear((-FAR, 10, -1)).lean((-FAR, 13, -2), (14, 18, -1)).widen(12, -FAR, 13).widen(12, -FAR, 13),
+        'hit': head_down(head_down(base.copy())).lean((-FAR, 13, -4), (14, 18, -2)).squash(14)
+              .draw(5, 22, ['.gg', 'gffg', 'gfff'], under=True).draw(14, 23, ['gg', 'ffg'], under=True),
+        'back': base.copy().lean((-FAR, 13, -1), (14, 18, -1)),
+        'settle': base.copy().squash(14),
         'hurt': head_up(shut()).lean((-FAR, 16, 1)),
     }
     return poses, {
         'idle': idle('swish', 'blink', 'nod'),
         'walk': (WALK_FPS, True, ['step_a', 'stand', 'step_b', 'stand']),
-        'attack': (ATTACK_FPS, False, ['wind', 'butt', 'butt2']),
+        'attack': attack(),
         'hurt': (HURT_FPS, False, ['hurt', 'low']),
     }
 

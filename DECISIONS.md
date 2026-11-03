@@ -231,9 +231,9 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 
 The simulator (`npm run sim`) plays the real core with a bot that lets the reels roll, equips any bag item that beats what it wears (a simulated drag), lets the battle push through worlds on its own, buys the cheapest open hex it can afford every second (Extra Reels included), upgrades the dumpster when it can, rebirths as soon as it is allowed, and every 10 seconds jumps to the hardest world that reads Easy. With power-is-rarity and the 100x upgrade growth (Q1 to Q4), across 3 seeds over 2 hours:
 
-- World 2 beaten at about 3 minutes, World 3 at 5 to 8, World 4 at 9 to 14, World 5 at 14 to 24. Each world takes longer than the last.
-- Rebirths at about 14 to 24, 29 to 53, 62 to 76 and 80 to 112 minutes (4 or 5 in 2 hours); each cycle reaches further, and the best world after 2 hours is 11 to 14 (it was about 15 with 8 to 10x upgrade growth).
-- Per 2 hours: about 5,000 to 6,000 items rolled (fewer Spin Speed tiers are bought), 50 to 60 Legendaries, 0 to 6 Mythics, no Mint in Box.
+- World 2 beaten at 3.5 to 8.5 minutes, World 3 at 7.5 to 23, World 4 at 20 to 39, World 5 at 42 to 52, World 6 at 81 to 91 and World 7 at about 100 to 110. Each world takes longer than the last.
+- The first rebirth comes at 42 to 52 minutes and the second at about 100 to 110; the best world after 2 hours is 5 to 7 (it was 11 to 14 before S1).
+- Per 2 hours: about 4,000 items rolled, 16 to 19 Legendaries, no Mythic or Mint in Box.
 
 Earlier results (the tap-to-dive version, the single-neighborhood roller, the nonstop roller, the small-level upgrade tree and the single reel) are in the git history.
 

@@ -59,6 +59,8 @@ class AudioEngine {
   private step = 0;
   private coinStack = 0;
   private lastCoinAt = 0;
+  private landStack = 0;
+  private lastLandAt = 0;
   private lastPlayed = new Map<string, number>();
   private seed = 0x5eed;
 
@@ -644,21 +646,34 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Pitch stacking: each coin in a chain plays one step higher, then resets after a pause. `kaching`
-   * adds one big ka-ching (the last coin of a big burst).
-   */
-  coin(kaching = false): void {
+  /** Pitch stacking: each coin in a chain plays one step higher, then resets after a pause. */
+  coin(): void {
     const ctx = this.live;
-    if (!ctx) return;
-    if (kaching) this.kaChing(ctx.currentTime + 0.07);
-    if (!this.gate('coin', 50)) return;
+    if (!ctx || !this.gate('coin', 50)) return;
     const now = performance.now();
     if (now - this.lastCoinAt > 1400) this.coinStack = 0;
     this.lastCoinAt = now;
     const note = LADDER[Math.min(LADDER.length - 1, 5 + this.coinStack)];
     this.coinStack = Math.min(this.coinStack + 1, 10);
     this.bell(midi(note) * 2, ctx.currentTime + 0.02, 0.18, 0.035);
+  }
+
+  /**
+   * A coin from the battle lands on the gold counter: a tink a step up the scale from the last one, so a
+   * burst climbs (coin 1, coin 2, coin 3...) and the next kill's coins start over after a short pause.
+   * `kaching` rings the big ka-ching after it (the last coin of a boss's burst).
+   */
+  coinLand(kaching = false): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    if (kaching) this.kaChing(ctx.currentTime + 0.07);
+    const now = performance.now();
+    if (now - this.lastLandAt > 600) this.landStack = 0;
+    this.lastLandAt = now;
+    const step = this.landStack;
+    this.landStack = Math.min(this.landStack + 1, 7);
+    if (!this.gate('coinLand', 40)) return;
+    this.bell(midi(LADDER[5 + step]) * 2, ctx.currentTime + 0.01, 0.16, 0.032);
   }
 
   /** XP reaches the XP bar: a soft upward blip. */

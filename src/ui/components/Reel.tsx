@@ -45,6 +45,7 @@ import { RAINBOW, raysUrl } from '../rays';
 import { flickerMs, glowAt, landFx, teasePlan, tierLight, type Tease } from '../reelDrama';
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
 import { tokenHoldMs } from '../reelTiming';
+import { useUi } from '../uiStore';
 import { Chunky, type Grad } from './Chunky';
 import { PixelArt } from './PixelArt';
 import s from './reel.module.css';
@@ -189,6 +190,8 @@ interface Fx {
   kind: 'land' | 'token';
   reel: number;
   tier: number;
+  /** The full-screen reveal covers the reels: skip what nobody would see (confetti). */
+  covered?: boolean;
 }
 let fxId = 1;
 
@@ -378,7 +381,7 @@ function Landing({ f, x, y, layout, calm }: { f: Fx; x: number; y: number; layou
           />
         </div>
       )}
-      {!calm && look.confetti && <Confetti n={30} />}
+      {!calm && look.confetti && !f.covered && <Confetti n={22} />}
     </>
   );
 }
@@ -553,7 +556,11 @@ export function ReelBank() {
               bank.style.setProperty('--prize', tierLight(tier));
             }
             // Plain results stay light: their thud, drop and flashes are all straight on the DOM.
-            if (tier >= 2) addFx({ kind: 'land', reel: i, tier }, landFx(tier).confetti ? 2400 : landFx(tier).stamp ? 1900 : 900);
+            if (tier >= 2) {
+              const ui = useUi.getState();
+              const covered = ui.charging !== null || ui.celebrate !== null;
+              addFx({ kind: 'land', reel: i, tier, covered }, landFx(tier).confetti ? 2400 : landFx(tier).stamp ? 1900 : 900);
+            }
             if (landFx(tier).rays && !calm) setRays((m) => ({ ...m, [i]: tier }));
           }
         }

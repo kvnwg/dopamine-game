@@ -120,7 +120,7 @@ export function flickerMs(plan: Tease): number {
  */
 export function landFx(tier: number): { sparks: number; rays: boolean; stamp: boolean; confetti: boolean } {
   return {
-    sparks: tier >= 5 ? 16 : tier >= 4 ? 12 : tier >= 3 ? 10 : tier >= 2 ? 6 : 0,
+    sparks: tier >= 4 ? 10 : tier >= 3 ? 8 : tier >= 2 ? 6 : 0,
     rays: tier >= 3,
     stamp: tier >= 4,
     confetti: tier >= 5,

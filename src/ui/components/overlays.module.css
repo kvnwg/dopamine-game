@@ -586,10 +586,14 @@
   color: var(--ink);
   font-size: 32px;
   text-align: center;
-  animation: toastIn 240ms steps(3);
+  animation: toastIn 260ms both;
 }
+/* A toast drops in, overshoots a pixel and settles (whole pixels, each keyframe held). */
 @keyframes toastIn {
-  from { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
+  0% { transform: translateY(calc(-4 * var(--px))); opacity: 0; animation-timing-function: steps(1, end); }
+  30% { transform: translateY(calc(-1 * var(--px))); opacity: 1; animation-timing-function: steps(1, end); }
+  60% { transform: translateY(var(--px)); animation-timing-function: steps(1, end); }
+  100% { transform: translateY(0); }
 }
 .toastGood {
   background: #d9f9bf;

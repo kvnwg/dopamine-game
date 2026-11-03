@@ -442,8 +442,7 @@ export class BattleScene extends Phaser.Scene {
   private snapped = false;
   /** Running squash-and-stretch tweens, by the object they squash. */
   private squashes = new Map<object, Phaser.Tweens.Tween>();
-  /** Blows in a row on one foe (the hit sound climbs with them) and kills in this wave (so do kills). */
-  private combo = { uid: -1, n: 0, at: 0 };
+  /** Kills in this wave (the kill sound climbs with them) and when the last one was. */
   private streak = { n: 0, at: 0 };
   /** When the last light buzz went off (they're kept at least 120 ms apart). */
   private buzzAt = 0;
@@ -1228,8 +1227,8 @@ export class BattleScene extends Phaser.Scene {
     f.knockV += (s.crit ? 100 : 62) * P;
     this.foeAct(f, 'hurt');
     this.squashFoe(f, s.crit ? 1 : 0);
-    f.shownHp = Math.max(0, f.shownHp - s.amount);
     this.hitSound(f, s.crit);
+    f.shownHp = Math.max(0, f.shownHp - s.amount);
     if (s.crit) {
       this.bits.burst(12, p.x, p.y, BIG_SPARK);
       const num = this.number(p.x, p.y - 8 * P, formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950, floor: this.barTop(f), rise: 4 });
@@ -1257,12 +1256,14 @@ export class BattleScene extends Phaser.Scene {
     this.squash(f.rig, 1, w, h, [[rows, 70], [-1, 60]]);
   }
 
-  /** The blow's sound: a semitone higher with each blow in a row on the same foe (a new foe or a pause starts over). */
+  /**
+   * The blow's sound, up to an octave higher the more of the foe's HP is gone before it lands: each blow
+   * in a row on a foe rises, the killing blow highest, a fresh foe starts low again, and a boss's long
+   * fight climbs all the way to its last blow instead of sitting at the top. (Kills climb per wave.)
+   */
   private hitSound(f: Foe, crit: boolean) {
-    const now = performance.now();
-    const c = this.combo;
-    this.combo = c.uid === f.uid && now - c.at < 1500 ? { uid: f.uid, n: c.n + 1, at: now } : { uid: f.uid, n: 0, at: now };
-    audio.hit(crit, this.combo.n);
+    const lost = f.maxHp > 0 ? 1 - f.shownHp / f.maxHp : 0;
+    audio.hit(crit, Math.round(12 * Phaser.Math.Clamp(lost, 0, 1)));
   }
 
   /**
@@ -1408,7 +1409,7 @@ export class BattleScene extends Phaser.Scene {
           this.coinsFlying--;
           if (held) land(held, last ? Infinity : share);
           if (i === 0 && total > 0) this.counterNote('gold', total);
-          audio.coin(last && count >= 9);
+          audio.coinLand(last && count >= 9);
         },
       });
     }

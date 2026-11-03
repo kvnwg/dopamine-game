@@ -2,7 +2,22 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A locked start, one feature at a time, and a cleaner Roll tab (Nov 3, newest)
+## Recorded sounds (Nov 3, newest)
+
+Kevin sent WAVs for sounds on the sound list (a page with every sound in the game, its file name and a button to hear it), one message per sound: "play sounds", "button click", "padlock tap", "these together, is the lock breaks", "reel stop", "rare crawl", "luck token, these three audios stacked. increase pitch each time it goes up", "glow climbs, increase pitch as it goes", "for the shake", "riser long", "riser short", "long jingle", "short jingle", "heartbeat, feel free to speed up etc etc", "these stacked together for slam"; and "reel tick is good, make it a bit louder".
+
+| # | Decision | Why |
+|---|---|---|
+| S1 | A sound with a recording (src/assets/sounds/<name>.mp3) plays it in place of its synthesized version; every other sound is still synthesized. The names are the sound list's: title_start (PLAY), tap (every button), lock_tap and lock_break (the padlocked dumpster), reel_land (each reel's stop), reel_creep (a rare crawl), token (luck token), glow_up (the build-up's glow climbing), rattle (the build-up's shake), riser_long and riser_short, jingle and jingle_long, heartbeat (the reveal's dark), slam (the reveal's number landing; gear from Limited Edition up slams onto the raccoon with it too, 1.5 dB louder per size up). | Kevin's sounds, one at a time, without losing the rest. |
+| S2 | tools/sounds.mjs makes the files with ffmpeg: several WAVs layered from the same start (the lock break's chain and stone smash; the token's three; the slam's impact, whoosh and chime, its tail cut at 5.5 s), silence trimmed from both ends, 48 kHz MP3 (VBR, about 190 kbps), layers that sum past full scale brought down to -1 dBFS. `--start` cuts a slow swell off the front (the reel stop's chime, 0.15 s, so it lands with the reel); `--last` keeps a long riser's end (the game only plays the end); `--length` keeps one lub-dub of the heartbeat loop. Fifteen files are about 0.8 MB. | Small enough for the one-page artifact; the WAVs were up to 96 kHz/24-bit. |
+| S3 | Recordings decode at startup in an OfflineAudioContext (decoding needs no tap), so the first tap's PLAY sound is ready; PLAY waits up to 0.25 s for them, then falls back to the synthesized sound. The artifact build inlines them as data: URLs, which are decoded by hand (the artifact page may not fetch them). The silence an MP3 encoder adds in front is skipped. One that fails to load stays synthesized. | |
+| S4 | Each plays at the loudness of the synthesized sound it replaces (`src/assets/sounds/levels.json`): both rendered offline through the game's mix and matched on max momentary loudness (BS.1770). The rare crawl's jackpot is 6 dB over the soft notches it replaces, so it carries over the build-up. | Keeps the mix: constant sounds (taps, reel stops) stay soft and big moments big. |
+| S5 | Sounds that climb (the token per token in a chain, the glow per step) climb the major scale (0, 2, 4, 5, 7, 9, 11, 12 semitones), an octave at most; quick taps still climb a semitone each (with a little random pitch). The recordings are in or near C major, so the climbs stay in the music's key. | "Increase pitch each time it goes up." |
+| S6 | Long recordings play once where the synthesized sound repeated: the jackpot from the crawl's first notch (only for rare build-ups; a small hopeful glow keeps the soft notches); the shake from the first beat, timed to end as the sound drops out before the find; the risers end where the synthesized riser did (the long one before a full-screen reveal, the short one before a smaller rare find). | They are phrases, not ticks. |
+| S7 | The heartbeat plays one lub-dub per beat in the dark, as before, a semitone higher, a little faster and 12% louder each beat (from 2 semitones up), so it closes up as the dark goes on. | "Feel free to speed up." The loop is 110 BPM; the reveal's beats come at about 140 to 170. |
+| S8 | The reel tick (still synthesized) is 1.4x louder, about 3 dB. | "Make it a bit louder." |
+
+## A locked start, one feature at a time, and a cleaner Roll tab (Nov 3)
 
 Kevin: "get rid of rarest ever, clean up, things that don't need to be there get removed. for the tutorial, have everything locked until the tutorial walks the player through it. when they first start playing, they have to click the spinner for the lock and metal to fall off and then it starts spinning".
 

@@ -517,7 +517,8 @@ export function ReelBank() {
         if (notch !== r.notch[i]) {
           r.notch[i] = notch;
           if (moving && !calm) {
-            if (crawl) audio.reelCreep(r.creep++);
+            // (A rare build-up's crawl, not a small hopeful glow's, can have its own recording.)
+            if (crawl) audio.reelCreep(r.creep++, plan.level >= 1);
             else audio.reelTick(Math.max(0, 1 - v / 16), i === r.lastReel ? 1 : 0);
           }
         }
@@ -577,7 +578,7 @@ export function ReelBank() {
           if (g.step > r.glowStep) {
             r.glowStep = g.step;
             // The last step is the pop, which has its own sounds.
-            if (g.step < plan.tiers.length - 1 && el - plan.times[g.step] < 200) audio.glowUp(g.tier);
+            if (g.step < plan.tiers.length - 1 && el - plan.times[g.step] < 200) audio.glowUp(g.tier, g.step);
           }
           let tierShown = g.tier;
           const since = el - plan.times[g.step];

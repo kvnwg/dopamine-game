@@ -52,12 +52,14 @@ function buildUp(view: RollView, ms: number) {
   useUi.setState({ charging: view });
   const beats = BAL.feel.rattleBeatsByRarity[view.item.rarity];
   for (let b = 0; b < beats; b++) {
+    const t = ms * 0.35 + (b * ms * 0.45) / beats;
     setTimeout(() => {
-      audio.rattle(b, beats, true);
+      // (A recorded shake plays once, from the first beat, peaking as the sound drops out.)
+      audio.rattle(b, beats, true, (ms - 160 - t) / 1000);
       haptics.impact('light');
-    }, ms * 0.35 + (b * ms * 0.45) / beats);
+    }, t);
   }
-  setTimeout(() => audio.riser(Math.max(0.3, (ms * 0.5) / 1000), tier), ms * 0.4);
+  setTimeout(() => audio.riser(Math.max(0.3, (ms * 0.5) / 1000), tier, true), ms * 0.4);
   setTimeout(() => audio.silenceDrop(0.15), Math.max(0, ms - 160));
 }
 
@@ -70,10 +72,11 @@ function buildUpSmall(plan: Tease) {
   const dur = plan.land - plan.from;
   const beats = plan.level >= 2 ? 3 : 2;
   for (let b = 0; b < beats; b++) {
+    const t = plan.from + dur * (0.2 + (0.6 * b) / beats);
     setTimeout(() => {
-      audio.rattle(b, beats + 2, false);
+      audio.rattle(b, beats + 2, false, (plan.land - t) / 1000);
       haptics.impact('light');
-    }, plan.from + dur * (0.2 + (0.6 * b) / beats));
+    }, t);
   }
   const top = plan.tiers[plan.tiers.length - 1];
   setTimeout(() => audio.riser(Math.max(0.3, (dur * 0.85) / 1000), Math.max(0, top - 3)), plan.from + dur * 0.1);

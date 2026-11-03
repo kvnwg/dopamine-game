@@ -1,8 +1,11 @@
 /**
- * Procedural sound and music with the Web Audio API: no audio files, everything is synthesized.
- * Rewards are tuned to the music's key (C major) so wins sound like the song resolving
- * (Dopamine Playbook). Audio starts on the first tap (browsers require a user gesture).
+ * Procedural sound and music with the Web Audio API. Every sound is synthesized unless it has a
+ * recording (src/assets/sounds, soundFiles.ts), which then plays in its place at the synthesized
+ * sound's loudness. Rewards are tuned to the music's key (C major) so wins sound like the song
+ * resolving (Dopamine Playbook). Audio starts on the first tap (browsers require a user gesture);
+ * recordings are decoded before that, at startup (preload).
  */
+import { SOUND_FILES, SOUND_LEVELS } from './soundFiles';
 
 export type Material = 'plastic' | 'metal' | 'glass' | 'ceramic' | 'food' | 'cloth' | 'paper' | 'wood' | 'rubber';
 export type Tier =
@@ -13,6 +16,9 @@ const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12);
 const LADDER = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84, 86, 88, 91, 93, 96];
 const TIERS: Tier[] = ['junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'vintage', 'limited', 'prototype', 'mint', 'gemMint', 'museum', 'grail'];
 const MINT = TIERS.indexOf('mint');
+/** Semitones a recording climbs by, step by step: up the major scale (do, re, mi...) to an octave, in key. */
+const CLIMB = [0, 2, 4, 5, 7, 9, 11, 12];
+const climb = (step: number) => CLIMB[Math.max(0, Math.min(CLIMB.length - 1, step))];
 
 // Lo-fi loop: Fmaj7 - Em7 - Dm7 - Cmaj7 at 78 BPM, swung eighths.
 const BPM = 78;
@@ -45,6 +51,45 @@ interface NoiseOpts {
   bus?: AudioNode;
 }
 
+interface Recording {
+  buf: AudioBuffer;
+  /** Where the sound starts (s), past the silence an MP3 encoder puts in front. */
+  from: number;
+}
+
+/** A file's bytes. The artifact build inlines files as data: URLs, read here (its page may not fetch them). */
+async function bytesOf(url: string): Promise<ArrayBuffer> {
+  if (!url.startsWith('data:')) return (await fetch(url)).arrayBuffer();
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+/** decodeAudioData in its promise form, or its callback form (older Safari). */
+function decode(ctx: BaseAudioContext, bytes: ArrayBuffer): Promise<AudioBuffer> {
+  return new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(bytes, resolve, reject) as Promise<AudioBuffer> | undefined;
+    p?.then(resolve, reject);
+  });
+}
+
+/** Seconds of near-silence at the start of a decoded recording (up to 0.1 s). */
+function leadIn(buf: AudioBuffer): number {
+  const max = Math.min(buf.length, Math.round(buf.sampleRate * 0.1));
+  let first = max;
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < first; i++) {
+      if (Math.abs(d[i]) > 1e-3) {
+        first = i;
+        break;
+      }
+    }
+  }
+  return first === max ? 0 : first / buf.sampleRate;
+}
+
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
@@ -63,6 +108,9 @@ class AudioEngine {
   private lastLandAt = 0;
   private lastPlayed = new Map<string, number>();
   private seed = 0x5eed;
+  private recs = new Map<string, Recording>();
+  private loading: Promise<void> | null = null;
+  private loaded = false;
 
   private rnd(): number {
     this.seed = (this.seed + 0x6d2b79f5) >>> 0;
@@ -70,6 +118,70 @@ class AudioEngine {
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  /**
+   * Decodes the recordings, so they are ready by the first tap (decoding needs none): call at startup.
+   * A sound whose recording fails to load stays synthesized.
+   */
+  preload(): Promise<void> {
+    this.loading ??= this.load()
+      .catch(() => {})
+      .then(() => {
+        this.loaded = true;
+      });
+    return this.loading;
+  }
+
+  private async load(): Promise<void> {
+    const names = Object.keys(SOUND_FILES);
+    const OAC = window.OfflineAudioContext ?? (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+    if (!OAC || names.length === 0) return;
+    // Decoded at 48 kHz, the rate most devices play at (any other is resampled as it plays).
+    const dec = new OAC(2, 1, 48000);
+    await Promise.all(
+      names.map(async (name) => {
+        try {
+          const buf = await decode(dec, await bytesOf(SOUND_FILES[name]));
+          this.recs.set(name, { buf, from: leadIn(buf) });
+        } catch {
+          /* stays synthesized */
+        }
+      }),
+    );
+  }
+
+  /**
+   * Plays the recording of `name` if there is one (true when it did: the caller skips its synthesized
+   * sound), at its matched level times `gain`, `semis` semitones up (as the synthesized sound would
+   * climb). `fit` (seconds) makes it end then, for a riser whose top must land on a moment: a longer
+   * one starts partway in (faded in), a shorter one waits.
+   */
+  private rec(name: string, at: number, o: { semis?: number; gain?: number; fit?: number } = {}): boolean {
+    const r = this.recs.get(name);
+    const ctx = this.ctx;
+    if (!r || !ctx) return false;
+    const rate = Math.pow(2, (o.semis ?? 0) / 12);
+    const level = (SOUND_LEVELS[name] ?? 1) * (o.gain ?? 1);
+    let start = at;
+    let from = r.from;
+    const src = ctx.createBufferSource();
+    src.buffer = r.buf;
+    src.playbackRate.value = rate;
+    const g = ctx.createGain();
+    g.gain.value = level;
+    if (o.fit !== undefined) {
+      const len = (r.buf.duration - r.from) / rate;
+      if (len > o.fit) {
+        from += (len - Math.max(0, o.fit)) * rate;
+        g.gain.setValueAtTime(0, start);
+        g.gain.linearRampToValueAtTime(level, start + 0.04);
+      } else start += o.fit - len;
+    }
+    src.connect(g);
+    g.connect(this.sfx);
+    src.start(start, from);
+    return true;
   }
 
   /** Call from a user gesture. Creates and resumes the audio context and starts the music. */
@@ -238,7 +350,10 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx || !this.gate('tap', 40)) return;
     const at = ctx.currentTime;
-    const up = Math.pow(2, Math.min(12, Math.max(0, streak)) / 12);
+    const semis = Math.min(12, Math.max(0, streak));
+    // (A hair of random pitch, so a run of taps never sounds stamped out.)
+    if (this.rec('tap', at, { semis: semis + (this.rnd() * 2 - 1) * 0.3 })) return;
+    const up = Math.pow(2, semis / 12);
     this.tone(this.vary(560) * up, at, 0.07, { gain: 0.09, freqEnd: this.vary(820) * up });
     this.noise(at, 0.02, { freq: 3000, q: 2, gain: 0.03 });
   }
@@ -281,15 +396,26 @@ class AudioEngine {
     if (!ctx || !this.gate('reelTick', 30)) return;
     const at = ctx.currentTime;
     const r = Math.max(0, Math.min(1, rise));
-    this.tone(this.vary(1000 * Math.pow(2, r * 1.25), 0.02), at, 0.03, { type: 'square', gain: 0.018 + 0.03 * r * (0.5 + loud), filter: 3800 });
-    this.noise(at, 0.012, { freq: 3800, q: 4, gain: 0.015 + 0.02 * r });
+    // (Kevin: "reel tick is good, make it a bit louder": 1.4x, about 3 dB.)
+    const v = 1.4;
+    this.tone(this.vary(1000 * Math.pow(2, r * 1.25), 0.02), at, 0.03, { type: 'square', gain: (0.018 + 0.03 * r * (0.5 + loud)) * v, filter: 3800 });
+    this.noise(at, 0.012, { freq: 3800, q: 4, gain: (0.015 + 0.02 * r) * v });
   }
 
-  /** A notch of a rare result's crawl toward the line: each one a step higher on the ladder (`step` from 0). */
-  reelCreep(step: number): void {
+  /**
+   * A notch of a result's crawl toward the line: each one a step higher on the ladder (`step` from 0).
+   * A rare result's crawl (`rare`: a build-up, not a small hopeful glow) with a recording plays it
+   * once, from the first notch, over the whole crawl.
+   */
+  reelCreep(step: number, rare = true): void {
     const ctx = this.live;
-    if (!ctx || !this.gate('reelCreep', 60)) return;
+    if (!ctx) return;
     const at = ctx.currentTime;
+    if (rare && this.recs.has('reel_creep')) {
+      if (step === 0) this.rec('reel_creep', at);
+      return;
+    }
+    if (!this.gate('reelCreep', 60)) return;
     const n = LADDER[Math.min(LADDER.length - 1, 3 + step)];
     this.tone(midi(n), at, 0.06, { type: 'square', gain: 0.03 + Math.min(0.03, step * 0.004), filter: 3200 });
     this.noise(at, 0.02, { freq: 2600, q: 5, gain: 0.04 });
@@ -305,17 +431,22 @@ class AudioEngine {
     const at = ctx.currentTime;
     const k = Math.max(0, Math.min(12, tier));
     const w = last ? 1.25 : 1;
+    if (this.rec('reel_land', at, { gain: w })) return;
     this.tone(150 + k * 8, at, 0.12 + k * 0.012, { gain: (0.13 + k * 0.018) * w, freqEnd: 60 + k * 3 });
     this.noise(at, 0.045, { freq: 2200 + k * 220, q: 3, gain: 0.06 + k * 0.006 });
     if (k >= 2) this.bell(midi(LADDER[Math.min(LADDER.length - 1, 2 + k)]), at + 0.01, 0.3 + k * 0.03, 0.03 + k * 0.004);
     if (k >= 4) this.noise(at + 0.02, 0.35, { type: 'highpass', freq: 5500, gain: 0.04, attack: 0.01 });
   }
 
-  /** The build-up glow climbs a tier: a quick upward flick, higher for rarer tiers (`tier` 1 to 12). */
-  glowUp(tier: number): void {
+  /**
+   * The build-up glow climbs a tier: a quick upward flick, higher for rarer tiers (`tier` 1 to 12). A
+   * recording climbs a step for each of the glow's steps (`step`, from 0) instead.
+   */
+  glowUp(tier: number, step = 0): void {
     const ctx = this.live;
     if (!ctx || !this.gate('glowUp', 60)) return;
     const at = ctx.currentTime;
+    if (this.rec('glow_up', at, { semis: climb(step) })) return;
     const n = LADDER[Math.min(LADDER.length - 2, 3 + tier)];
     this.tone(midi(n - 5), at, 0.08, { type: 'triangle', gain: 0.04, freqEnd: midi(n) });
     this.bell(midi(n), at + 0.05, 0.35, 0.045);
@@ -338,6 +469,7 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    if (this.rec('lock_tap', at)) return;
     this.tone(150, at, 0.22, { gain: 0.3, freqEnd: 70 });
     this.noise(at, 0.09, { freq: 2600, q: 4, gain: 0.14 });
     for (const p of [1, 2.41, 3.9]) this.tone(this.vary(610) * p, at, 0.3 / p, { gain: 0.05 / p, attack: 0.001 });
@@ -348,6 +480,11 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    if (this.rec('lock_break', at)) {
+      // (The recording's rubble runs on: the music stays down a little longer.)
+      this.duckMusic(0.4, 0.9);
+      return;
+    }
     this.bell(1480, at, 0.5, 0.09);
     this.tone(70, at + 0.12, 0.6, { gain: 0.5, freqEnd: 38 });
     this.noise(at + 0.12, 0.3, { type: 'lowpass', freq: 3000, freqEnd: 600, gain: 0.32 });
@@ -366,22 +503,34 @@ class AudioEngine {
     [72, 76, 79, 84].forEach((n, i) => this.bell(midi(n), at + i * 0.07, 0.35, 0.07));
   }
 
-  /** One rattle beat: each beat shakes louder and higher than the last. */
-  rattle(beat: number, beats: number, heartbeat: boolean): void {
+  /**
+   * One rattle beat: each beat shakes louder and higher than the last. A recording plays once instead,
+   * from the first beat, ending as the find lands (`landIn` seconds from now).
+   */
+  rattle(beat: number, beats: number, heartbeat: boolean, landIn = 1): void {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    if (this.recs.has('rattle')) {
+      if (beat === 0) this.rec('rattle', at, { fit: Math.max(0.3, landIn) });
+      return;
+    }
     const k = (beat + 1) / beats;
     this.noise(at, 0.07, { freq: 1900 + beat * 320, q: 6, gain: 0.05 + 0.1 * k });
     this.tone(150 + beat * 28, at, 0.06, { type: 'square', gain: 0.02 + 0.03 * k, filter: 1300 });
     if (heartbeat) this.tone(62, at, 0.2, { gain: 0.28, freqEnd: 40 });
   }
 
-  /** A rising tone under the build-up that seems to keep climbing (Shepard-style pair). */
-  riser(seconds: number, tierIndex: number): void {
+  /**
+   * A rising tone under the build-up that seems to keep climbing (Shepard-style pair), `seconds` long.
+   * A recording plays its last `seconds` instead: the long one before a full-screen reveal (`long`),
+   * the short one before a smaller rare find.
+   */
+  riser(seconds: number, tierIndex: number, long = false): void {
     const ctx = this.live;
     if (!ctx || seconds <= 0) return;
     const at = ctx.currentTime;
+    if (this.rec(long ? 'riser_long' : 'riser_short', at, { fit: seconds })) return;
     const top = 2 + tierIndex * 0.25;
     for (const [base, g] of [[180, 0.05], [360, 0.035]] as const) {
       const osc = ctx.createOscillator();
@@ -425,11 +574,15 @@ class AudioEngine {
     this.noise(at, 0.9, { type: 'lowpass', freq: 500, freqEnd: 120, gain: 0.16, attack: 0.01 });
   }
 
-  /** A heartbeat in the dark (lub-dub), a little higher and louder each beat. */
+  /**
+   * A heartbeat in the dark (lub-dub), a little higher and louder each beat. A recording also plays a
+   * little faster each beat (Kevin: "feel free to speed up"), its lub-dub closing up as the dark goes on.
+   */
   heartbeat(beat: number): void {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    if (this.rec('heartbeat', at, { semis: 2 + Math.min(4, beat), gain: 1 + 0.12 * Math.min(4, beat) })) return;
     const up = 1 + beat * 0.06;
     this.tone(62 * up, at, 0.14, { gain: Math.min(0.62, 0.42 + beat * 0.04), freqEnd: 40 });
     this.tone(56 * up, at + 0.17, 0.12, { gain: 0.3, freqEnd: 38 });
@@ -471,7 +624,9 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
-    const lift = Math.min(4, step) * 2 + (x >= 10 ? 5 : x >= 5 ? 3 : x >= 3 ? 1 : 0);
+    // (Kevin: "increase pitch each time it goes up": a recording climbs a step per token in the chain.)
+    if (this.rec('token', at, { semis: climb(step) })) return;
+    const lift =Math.min(4, step) * 2 + (x >= 10 ? 5 : x >= 5 ? 3 : x >= 3 ? 1 : 0);
     const base = [72, 76, 79, 84].map((n) => n + lift);
     base.forEach((n, k) => this.bell(midi(n), at + k * 0.045, 0.45, 0.06 + step * 0.01));
     this.tone(midi(base[0] - 12), at, 0.35, { type: 'triangle', gain: 0.05 });
@@ -493,6 +648,8 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    // (A recording: the same slam, 1.5 dB louder for each size up.)
+    if (this.rec('slam', at, { gain: [1, 1.19, 1.41][Math.max(0, Math.min(2, level))] })) return;
     this.tone(52, at, 0.9, { gain: 0.55, freqEnd: 32 });
     this.noise(at, 0.12, { type: 'lowpass', freq: 2400, gain: 0.3 });
     this.noise(at + 0.01, 1.4 + level * 0.5, { type: 'highpass', freq: 4500, gain: 0.07 + level * 0.02, attack: 0.005 });
@@ -740,6 +897,7 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    if (this.rec(len === 3 ? 'jingle' : 'jingle_long', at)) return;
     const notes = len === 3 ? [67, 72, 76] : [67, 72, 76, 79, 84];
     notes.forEach((n, k) => {
       this.bell(midi(n), at + k * 0.09, 0.5, 0.07);
@@ -894,6 +1052,7 @@ class AudioEngine {
     this.whenRunning((ctx) => {
       const at = ctx.currentTime;
       this.duckMusic(0.2, 1.4);
+      if (this.rec('title_start', at)) return;
       this.tone(150, at, 0.16, { gain: 0.34, freqEnd: 58 });
       this.noise(at, 0.035, { freq: 2800, q: 2, gain: 0.09 });
       this.tone(midi(48), at + 0.03, 0.55, { type: 'triangle', gain: 0.09 });
@@ -925,16 +1084,20 @@ class AudioEngine {
     this.tone(220, at + 0.1, 0.5, { type: 'triangle', gain: 0.04, freqEnd: 70 });
   }
 
-  /** Runs `play` once audio is running: now, or when the context this same tap is starting comes up. */
+  /**
+   * Runs `play` once audio is running: now, or when the context this same tap is starting comes up
+   * (and the recordings, if still decoding, are ready or a moment has passed).
+   */
   private whenRunning(play: (ctx: AudioContext) => void): void {
     const ctx = this.ctx;
     if (!ctx) return;
-    if (ctx.state === 'running') {
+    if (ctx.state === 'running' && (this.loaded || !this.loading)) {
       play(ctx);
       return;
     }
     const asked = performance.now();
-    ctx.resume().then(
+    const ready = Promise.race([this.loading, new Promise((r) => setTimeout(r, 250))]);
+    Promise.all([ctx.resume(), ready]).then(
       () => {
         // Much later it would no longer go with what it was for.
         if (ctx.state === 'running' && performance.now() - asked < 400) play(ctx);

@@ -134,6 +134,18 @@ export function stamp(dst: PixelBuf, rows: Rows, x: number, y: number, opts: { f
   blit(dst, fromRows(rows, opts.recolor), x, y, opts);
 }
 
+/** Every pixel becomes an n x n block (for art drawn at a coarser pixel size). */
+export function scaleUp(b: PixelBuf, n: number): PixelBuf {
+  const out = blank(b.w * n, b.h * n);
+  for (let y = 0; y < out.h; y++) {
+    for (let x = 0; x < out.w; x++) {
+      const si = (Math.floor(y / n) * b.w + Math.floor(x / n)) * 4;
+      out.px.set(b.px.subarray(si, si + 4), (y * out.w + x) * 4);
+    }
+  }
+  return out;
+}
+
 export function clone(b: PixelBuf): PixelBuf {
   return { w: b.w, h: b.h, px: new Uint8ClampedArray(b.px) };
 }

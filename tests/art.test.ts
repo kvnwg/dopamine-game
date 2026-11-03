@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DATA } from '../src/data';
 import { alphaAt, bounds, checkRows } from '../src/render/pixel/buf';
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
-import { HEADROOM, HERO_BODY, HERO_POINTS, HERO_SIZE, HERO_TAIL, WORN, gearBuf, weaponBuf } from '../src/render/pixel/hero';
+import { HERO_BODY, HERO_GRID, HERO_POINTS, HERO_TAIL, WORN, bodyBuf, gearBuf, weaponBuf } from '../src/render/pixel/hero';
 import { ITEM_SPRITES, WEAPON_GRIP } from '../src/render/pixel/items';
 import { CLOUDS, LAYERS, TILE_W, farLayer, fgLayer, groundLayer, midLayer } from '../src/render/pixel/scenery';
 import { FX, UI_SPRITES } from '../src/render/pixel/ui';
@@ -34,14 +34,14 @@ describe('pixel art', () => {
     for (const [id, w] of Object.entries(WORN)) checkRows(id, w.rows);
   });
 
-  it('the hero is drawn in a 40x40 grid with its feet and head on the art', () => {
+  it('the hero is drawn in his coarse grid, standing on his feet point with his head below the headroom', () => {
     checkRows('hero body', HERO_BODY);
     checkRows('hero tail', HERO_TAIL);
-    expect(HERO_BODY).toHaveLength(HERO_SIZE);
-    expect(HERO_BODY[0]).toHaveLength(HERO_SIZE);
-    const { feet, head } = HERO_POINTS;
-    expect(HERO_BODY[feet.y - HEADROOM - 1][feet.x - 4]).not.toBe('.');
-    expect(HERO_BODY[head.y - HEADROOM + 2][head.x]).not.toBe('.');
+    expect(HERO_BODY).toHaveLength(HERO_GRID.h);
+    expect(HERO_BODY[0]).toHaveLength(HERO_GRID.w);
+    const b = bounds(bodyBuf());
+    expect(b.y + b.h - 1, 'feet touch the ground point').toBe(HERO_POINTS.feet.y);
+    expect(b.y, 'ears start above the head point').toBeLessThan(HERO_POINTS.head.y);
   });
 
   it('every enemy shape the data uses has art, recolorable per world', () => {

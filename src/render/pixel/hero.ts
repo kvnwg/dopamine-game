@@ -1,125 +1,101 @@
 /**
- * The raccoon hero in pixel art, plus everything it can wear. A chunky chibi raccoon (flat
- * colors, bold outline, big shiny eyes in the mask, cream snout, blush), facing right in a
- * 40 x 40 frame drawn at 6x. The tail is its own layer so a backpack can sit between tail and
- * body. Hats, shields, backpacks and weapons reuse the item icons; masks, jackets, shoes,
- * necklaces and gloves have worn versions drawn to fit the body.
+ * The raccoon hero, drawn like Kevin's reference (a chunky low-res pixel raccoon): one blob for
+ * head and body, square ears with dark insides, cream brows, a dark mask with shiny black eyes, a
+ * cream muzzle with a black nose, flat tan fur with darker sides, stubby dark feet and a fat ringed
+ * tail. He is drawn in a coarse 30 x 23 grid and every one of his pixels is SCALE art pixels wide,
+ * so he reads as chunky next to the world. Masks, jackets, shoes, necklaces and gloves have worn
+ * versions in the same grid; hats, shields, backpacks and weapons are the item icons at normal size.
+ * The tail is its own layer so a backpack can sit between tail and body.
  */
-import { blank, blit, fromRows, type PixelBuf, type Rows, type SheetEntry } from './buf';
+import { blank, blit, fromRows, scaleUp, type PixelBuf, type Rows, type SheetEntry } from './buf';
 import { ITEM_SPRITES, WEAPON_GRIP } from './items';
 
-/** The raccoon is drawn in a 40 x 40 grid (HERO_BODY, HERO_TAIL, WORN); frames add headroom on top for tall hats. */
-export const HERO_SIZE = 40;
+/** The hero's grid, in hero pixels. */
+export const HERO_GRID = { w: 30, h: 23 } as const;
+/** Art pixels per hero pixel. */
+export const SCALE = 2;
+/** Room above the head for tall hats, in art pixels. */
 export const HEADROOM = 16;
-export const HERO_W = HERO_SIZE;
-export const HERO_H = HERO_SIZE + HEADROOM;
-/** Landmarks in frame pixels (headroom included): feet (ground contact), the front paw's grip, the top of the head. */
-export const HERO_POINTS = { feet: { x: 20, y: 35 + HEADROOM }, hand: { x: 32, y: 24 + HEADROOM }, head: { x: 20, y: 6 + HEADROOM } } as const;
+/** Hero frames in art pixels. */
+export const HERO_W = HERO_GRID.w * SCALE;
+export const HERO_H = HERO_GRID.h * SCALE + HEADROOM;
+/** Landmarks in frame pixels: feet (ground contact), the front paw's grip, the top of the head. */
+export const HERO_POINTS = {
+  feet: { x: 16 * SCALE, y: 22 * SCALE - 1 + HEADROOM },
+  hand: { x: 26 * SCALE, y: 13 * SCALE + HEADROOM },
+  head: { x: 16 * SCALE + 1, y: 3 * SCALE + HEADROOM },
+} as const;
 
 export const HERO_TAIL: Rows = [
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '.......kkkk.............................',
-  '.....kk3444k............................',
-  '....k3x14441k...........................',
-  '...k3xx111441k..........................',
-  '..k344xx1144xk..........................',
-  '..k34444xx41xk..........................',
-  '.k3x1144444xxk..........................',
-  '.k3xx1111444xk..........................',
-  '.k34xxx11144k...........................',
-  '.k3444xxx114k...........................',
-  '..k3444444x4k...........................',
-  '..k3x1114444k...........................',
-  '...kxxx11144k...........................',
-  '....k3444444k...........................',
-  '.....kk3344k............................',
-  '.......kkkk.............................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
+  '..............................',
+  '..............................',
+  '..............................',
+  '..............................',
+  '..............................',
+  '..............................',
+  '..............................',
+  '..............................',
+  '..kk..........................',
+  '.knnk.........................',
+  'knbbnk........................',
+  'kntnnnk.......................',
+  'knttnnnk......................',
+  '.knnttnnk.....................',
+  '.kttttnnk.....................',
+  '..knnnttnk....................',
+  '..kttttnnk....................',
+  '...knnnnnk....................',
+  '....ktttk.....................',
+  '.....kkk......................',
+  '..............................',
+  '..............................',
+  '..............................',
 ];
 
 export const HERO_BODY: Rows = [
-  '........................................',
-  '........................................',
-  '..........kk................kk..........',
-  '.........k33k..............k33k.........',
-  '........k3xx3k............k3xx3k........',
-  '........k3xx3kkkkkkkkkkkkkk3xx3k........',
-  '........k4334444444444444444334k........',
-  '.........k44554444442244444444k.........',
-  '........k4454444444422444444444k........',
-  '........k4544444444422444444444k........',
-  '.......k44444WWWWWW4224WWWWW4443k.......',
-  '.......k4444WWWWWWW4444WWWWWW443k.......',
-  '.......k442222kwwk222222kwwk2243k.......',
-  '.......k422222kwkk222222kwkk2223k.......',
-  '.......k422222kkkk222222kkkk2223k.......',
-  '.......k411111kkkk1Wk2kWkkkk1113k.......',
-  '.......k4444111111WWWkWWW1111143k.......',
-  '.......k444PP4444WWWWWWWWW44PP43k.......',
-  '........k44444444WWkWWWkWW44444k........',
-  '........k444444444WWkkkWW444444k........',
-  '.........k44444444455555444444k.........',
-  '..........k444444444444444333kk.........',
-  '.........kk44444444444444444444k........',
-  '........k44444444455555444444444k.......',
-  '.......k444444445555555554444443k.......',
-  '.......k444444445555555554444433k.......',
-  '.......k44444445555555555544443k........',
-  '........k444444555555555554433k.........',
-  '.........k44444555555555554433k.........',
-  '.........k44444555555555554433k.........',
-  '..........k444445555555554443k..........',
-  '..........k444445555555554333k..........',
-  '..........k144444455555444331k..........',
-  '..........k111444444444444111k..........',
-  '...........k11111kkkkkk11111k...........',
-  '............kkkkk......kkkkk............',
-  '........................................',
-  '........................................',
-  '........................................',
-  '........................................',
+  '........kkkk.........kkkk.....',
+  '.......kttttk.......kttttk....',
+  '.......ktbntk.......ktnbtk....',
+  '.......ktbntkkkkkkkkktnbtk....',
+  '.......ktttttttttttttttttk....',
+  '........kttttttttttttttNk.....',
+  '........ktTTTTtttttTTTTNk.....',
+  '.......knbwkbbbbbbbbbwkbnk....',
+  '.......knbkkbbTTTTTbbkkbnk....',
+  '.......kttttTTTkkkTTTttNNk....',
+  '.......kNttttTTTkTTTtttNNk....',
+  '.......kNttttttttttttttNNk....',
+  '......kkNttttttttttttttNNk....',
+  '.....knnNttttttttttttttNNk....',
+  '.....kbnNttttttttttttttNNk....',
+  '......kkNttttttttttttttNNk....',
+  '.......kNttttttttttttttNNk....',
+  '........kttttttttttttttNk.....',
+  '........kNNNNNNNNNNNNNNNk.....',
+  '........knnnnnNNNNNnnnnnk.....',
+  '........kbbbbbkkkkkbbbbbk.....',
+  '.........kkkkk.....kkkkk......',
+  '..............................',
 ];
 
-/** The front paw, drawn over the weapon's grip. */
+/** The front paw, drawn over the weapon's grip (hero pixels). */
 export const HERO_PAW: Rows = [
-  '.kkk.',
-  'k221k',
-  'k21xk',
-  '.kkk.',
+  '.kk.',
+  'knbk',
+  'kbbk',
+  '.kk.',
 ];
 /** A puffy glove paw (boxing gloves, mitts). */
 const BIG_PAW: Rows = [
-  '.kkkk.',
-  'k2222k',
-  'k2211k',
-  'k211xk',
-  '.kkkk.',
+  '.kkk.',
+  'knnbk',
+  'knbbk',
+  'kbbbk',
+  '.kkk.',
 ];
 const BIG_GLOVES = new Set(['gloves_kid_boxing', 'gloves_baseball_mitt', 'gloves_oven_mitts']);
 
-/** Glove colors (dark, mid, light) that replace the paw's x / 1 / 2. */
+/** Glove colors (dark, mid, light) that replace the paw's b / n / N. */
 export const GLOVE_RAMPS: Record<string, [string, string, string]> = {
   gloves_dish: ['o', 'y', 'Y'],
   gloves_gardening: ['G', 'l', 'L'],
@@ -129,382 +105,305 @@ export const GLOVE_RAMPS: Record<string, [string, string, string]> = {
   gloves_baseball_mitt: ['n', 'N', 't'],
 };
 
-/** Worn overlays in the 40 x 40 grid (x, y is the top-left corner of the rows; frames add HEADROOM). */
+/** Worn overlays in the hero grid (x, y is the top-left corner of the rows). */
 export const WORN: Record<string, { x: number; y: number; rows: Rows }> = {
-  mask_tube_sock: { x: 7, y: 8, rows: [
-    '.kkkkkkkkkkkkkkkkkkkkkkkk.',
-    'kRRRRRRRRRRRRRRRRRRRRRRRRk',
-    'kUUUUUUUUUUUUUUUUUUUUUUUUk',
-    'kWWWWWkkkkkkWWWWkkkkkk555k',
-    'kWWWWWk....kWWWWk....k555k',
-    'kWWWWWk....kWWWWk....k555k',
-    'kWWWWWk....kWWWWk....k555k',
-    'kWWWWWk....kWWWWk....k555k',
-    'kWWWWWkkkkkkWWWWkkkkkk555k',
-    '.kkkkk......kkkk......kkk.',
+  mask_tube_sock: { x: 7, y: 4, rows: [
+    '.kkkkkkkkkkkkkkkkk.',
+    'kRRRRRRRRRRRRRRRRRk',
+    'kUUUUUUUUUUUUUUUUUk',
+    'kWWkkWWWWWWWWWkk55k',
+    'kWWkkWWWWWWWWWkk55k',
+    'kWWWWWWWWWWWWWWW55k',
+    '.kkkkkkkkkkkkkkkkk.',
   ] },
-  mask_gas_station_shades: { x: 8, y: 11, rows: [
-    '.....kkkkkk....kkkkkk....',
-    '.kkkk111111kkkk111111kkk.',
-    'k1111xCwxxx1111xCwxxx111k',
-    '.kkkkxCxxxxkkkkxCxxxxkkk.',
-    '....kxxxxxxk..kxxxxxxk...',
-    '.....kkkkkk....kkkkkk....',
+  mask_gas_station_shades: { x: 8, y: 6, rows: [
+    '.kkkkkkkkkkkkkkk.',
+    'kCwxx1111111Cwxxk',
+    'kxxxxkkkkkkkxxxxk',
+    '.kkkk.......kkkk.',
   ] },
   mask_pool_snorkel: { x: 7, y: 0, rows: [
-    '.........................kRRk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.........................kyOk',
-    '.......kkkk......kkkk....kyOk',
-    '......kcccck....kcccck...kyOk',
-    '.kkkkkcCwccckkkkcCwccckkkkyOk',
-    'kUUUUUcckkccUUUUcckkccUUUkyOk',
-    '.kkkkkcckkkckkkkcckkkckkkkyOk',
-    '.....kcccccck..kcccccck..kyOk',
-    '......kkcckk....kkcckk...kyOk',
-    '........kk........kk.....kyOk',
-    '...................kkkkkkkyOk',
-    '..................kOOOOOOOOOk',
-    '...................kkkkkkkkk.',
+    '..................kRk',
+    '..................kyk',
+    '..................kyk',
+    '..................kyk',
+    '..................kyk',
+    '..kkkk.......kkkk.kyk',
+    '.kCwcckkkkkkkCwcckkyk',
+    'kUcckcUUUUUUUcckcUkyk',
+    '.kcckckkkkkkkcckckkyk',
+    '.kcccck.....kcccckkyk',
+    '..kkkk......kkkkkkkyk',
+    '...........kOOOOOOOOk',
+    '............kkkkkkkk.',
   ] },
-  mask_peewee_hockey: { x: 9, y: 7, rows: [
-    '......kkkkkkkkkkk......',
-    '....kkWWWWWRWWWWWkk....',
-    '...kWWWWWWWRWWWWWW5k...',
-    '..kWWWWWWWWRWWWWWW55k..',
-    '.kWWWWWWWWWRWWWWWW555k.',
-    'kWWWWkkkkWWRWWWkkkk555k',
-    'kWWWWk..kWWRWWWk..k555k',
-    'kWWWWk..kWWRWWWk..k555k',
-    'kWWWWkkkkWWRWWWkkkk555k',
-    'kWWWWWWWWWWRWWWWWW5555k',
-    '.kWW4WWWWWWRWWWWWW455k.',
-    '.kWWWWWW4WWRWW4WWW555k.',
-    '..kWWWWWWWW4WWWWWW55k..',
-    '...kWWWWWWWRWWWWWW5k...',
-    '....kkWWWWWRWWWWWkk....',
-    '......kkkkkkkkkkk......',
+  mask_peewee_hockey: { x: 8, y: 3, rows: [
+    '..kkkkkkkkkkkkk..',
+    '.kWWWWWWRWWWWW5k.',
+    'kWWWWWWWRWWWWW55k',
+    'kWWWWWWWRWWWWW55k',
+    'kWkkWWWWRWWWWkk5k',
+    'kWkkWWWWRWWWWkk5k',
+    'kWWWWWWWRWWWWW55k',
+    'kWWWWWWW4WWWWW55k',
+    'kWWWW4WWRWW4WW55k',
+    '.kWWWWWWRWWWWW5k.',
+    '..kkkkkkkkkkkkk..',
   ] },
-  mask_egg_carton: { x: 11, y: 9, rows: [
-    '..kkkkkk....kkkkkk..',
-    '.kTTTTTTkkkkTTTTTTk.',
-    'kTTTTTTTttttTTTTTTTk',
-    'kTTkkkkTttttTkkkkTTk',
-    'kTTk..kTttttTk..kTTk',
-    'kttk..kttttttk..kttk',
-    'kttkkkkttkkttkkkkttk',
-    '.kttttttk..kttttttk.',
-    '..kkttkk....kkttkk..',
-    '....kk........kk....',
+  mask_egg_carton: { x: 7, y: 5, rows: [
+    '.kkkkkk.....kkkkkk.',
+    'kTTTTTTkkkkkTTTTTTk',
+    'kTTkkTTtttttTTkkTTk',
+    'kttkkttkkkkkttkkttk',
+    'kttttttk...kttttttk',
+    '.kkkkkk.....kkkkkk.',
   ] },
-  mask_coffee_filter: { x: 8, y: 14, rows: [
-    '.........kkkkkkkkk.......',
-    '.kkkkkk.kW5WW5WW5Wk.kkkk.',
-    'k555555kWW5WW5WW5WWk5555k',
-    '.kkkkkk5WW5WW5WW5WW5kkkk.',
-    '......k5WW5WW5WW5WW5k....',
-    '......k5WW5WW5WW5WW5k....',
-    '.......kWW5WW5WW5WWk.....',
-    '........kW5WW5WW5Wk......',
-    '.........kkkk5kkkk.......',
-    '.............k...........',
+  mask_coffee_filter: { x: 7, y: 7, rows: [
+    '.kkkkkkkkkkkkkkkkk.',
+    'k55555W5W5W5W55555k',
+    '.kkkk5W5W5W5W5kkkk.',
+    '....k5W5W5W5W5k....',
+    '.....kW5W5W5Wk.....',
+    '......kkkkkkk......',
   ] },
-  jacket_garbage_bag: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kk11113111111311111131k.',
-    '.k31111113111111311111131k',
-    'k113111111311111131111113k',
-    'k1113111111311111131111xxk',
-    'k1111311111131111113111xk.',
-    '.k1111311111131111113xxk..',
-    '..k1111311111131111113xk..',
-    '..k111113111111311111x3k..',
-    '...k11111311111131111xk...',
-    '...k1k11k13k11k11k1xkxk...',
-    '....k.kk.kk.kk.kk.kk.k....',
+  jacket_garbage_bag: { x: 6, y: 10, rows: [
+    '..kkkkkkkkkkkkkkkkk.',
+    '.kx112111112111112xk',
+    '.kx11121111121111x2k',
+    'kkx11112111112111xxk',
+    'kk211111211111211xxk',
+    '.kx21111121111121xxk',
+    '.kx12111112111112xxk',
+    '..k112111112111112k.',
+    '..kxkxkxkxkxkxkxkxk.',
+    '...k.k.k.k.k.k.k.k..',
   ] },
-  jacket_lawn_chair: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kklWWllWWllWWllWWllWWlk.',
-    '.kWllWWllWWllWWllWWllWWllk',
-    'kllWWllWWllWWllWWllWWllWWk',
-    'kllWWllWWllWWllWWllWWllWWk',
-    'kWWllWWllWWllWWllWWllWWlk.',
-    '.kWllWWllWWllWWllWWllWWk..',
-    '..kWWllWWllWWllWWllWWllk..',
-    '..kWWllWWllWWllWWllWWllk..',
-    '...klWWllWWllWWllWWllWk...',
-    '...klWWllWWllWWllWWllWk...',
-    '....kkkkkkkkkkkkkkkkkk....',
+  jacket_lawn_chair: { x: 5, y: 10, rows: [
+    '...kkkkkkkkkkkkkkkkk.',
+    '..kWlWlWlWlWlWlWlWlWk',
+    '.kklWlWlWlWlWlWlWlWlk',
+    'k5GWlWlWlWlWlWlWlWlWk',
+    'kG5lWlWlWlWlWlWlWlWlk',
+    '.kkWlWlWlWlWlWlWlWlWk',
+    '..klWlWlWlWlWlWlWlWlk',
+    '...klWlWlWlWlWlWlWlk.',
+    '...kWlWlWlWlWlWlWlWk.',
+    '....kkkkkkkkkkkkkkk..',
   ] },
-  jacket_bubble_wrap: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kkwwwwwwwwwwwwwwwwwwwwk.',
-    '.kwwwwwwwwwwwwwwwwwwwwwwwk',
-    'kwwwwwwwwwwwwwwwwwwwwwwwCk',
-    'kwwwwwwwwwwwwwwwwwwwwwwwCk',
-    'kwwwwwwwwwwwwwwwwwwwwwwCk.',
-    '.kwwwwwwwwwwwwwwwwwwwCCk..',
-    '..kwwwwwwwwwwwwwwwwwwwCk..',
-    '..kwwwwwwwwwwwwwwwwwwCCk..',
-    '...kwwwwwwwwwwwwwwwwwwk...',
-    '...kwwwwwwwwwwwwwwwwCCk...',
-    '....kkkkkkkkkkkkkkkkkk....',
+  jacket_bubble_wrap: { x: 5, y: 10, rows: [
+    '...kkkkkkkkkkkkkkkkk.',
+    '..kwwwwwwwwwwwwwwwwCk',
+    '.kkCwwwwwwwwwwwwwwCwk',
+    'kcwCwwwwwwwwwwwwwwCCk',
+    'kccwwwwwwwwwwwwwwwwCk',
+    '.kkCwwwwwwwwwwwwwwCwk',
+    '..kCwwwwwwwwwwwwwwCCk',
+    '...kwwwwwwwwwwwwwwwk.',
+    '...kwCCwCCwCCwCCwCCk.',
+    '....kkkkkkkkkkkkkkk..',
   ] },
-  jacket_ugly_sweater: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kkeeeeeeeeeeeeeeeeeeeek.',
-    '.keeeWeeeWeeeWeeeWeeeWeeek',
-    'keeeeeeeeeeeeeeeeeeeeeeeRk',
-    'keeeeeeeeeeeeeeeeeeeeeeRRk',
-    'kWWGWWGWWGWWGWWGWWGWWGWWk.',
-    '.kGWWGWWGWWGWWGWWGWWGWWk..',
-    '..keeeeeeeeeeeeeeeeeeRRk..',
-    '..keeeeeeeeeeeeeeeeeeRRk..',
-    '...keeeeeeeeeeeeeeeeeRk...',
-    '...keeeeeeeeeeeeeeeRRRk...',
-    '....kkkkkkkkkkkkkkkkkk....',
+  jacket_ugly_sweater: { x: 5, y: 10, rows: [
+    '...kkkkkkkkkkkkkkkkk.',
+    '..kReeeeeeeeeeeeeeRRk',
+    '.kkReeeeeeeeeeeeeeRRk',
+    'krrReeeeeeeeeeeeeeRRk',
+    'kWGWGWGWGWGWGWGWGWGWk',
+    '.kkReeeeeeeeeeeeeeRRk',
+    '..kReeeeeeeeeeeeeeRRk',
+    '...keeeeeeeeeeeeeeRk.',
+    '...kRRRRRRRRRRRRRRRk.',
+    '....kkkkkkkkkkkkkkk..',
   ] },
-  jacket_blue_tarp: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kkcccccccccccccccccccck.',
-    '.kccc4cccccccccccccc4cccck',
-    'kcccccccccccccccccccccccUk',
-    'kccccccccccccccccccccccUUk',
-    'kccccccccccccccccccccccUk.',
-    '.kcccccccccccccccccccUUk..',
-    '..kccccccccccccccccccUUk..',
-    '..kccccccccccccccccccUUk..',
-    '...kcccccccccccccccccUk...',
-    '...kckcckcckcckcckcUkUk...',
-    '....k.kk.kk.kk.kk.kk.k....',
+  jacket_blue_tarp: { x: 5, y: 10, rows: [
+    '...kkkkkkkkkkkkkkkkk.',
+    '..kUccccccccccccccUUk',
+    '.kkUc4ccccccccccc4UUk',
+    'kuuUccccccccccccccUUk',
+    'kuuUccccccccccccccUUk',
+    '.kkUccccccccccccccUUk',
+    '..kUccccccccccccccUUk',
+    '...kccccccccccccccUk.',
+    '...kUkUkUkUkUkUkUkUk.',
+    '....k.k.k.k.k.k.k.k..',
   ] },
-  jacket_dog_raincoat: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kkYYYYYYYYYYYYYYYYYYYYk.',
-    '.kYYYYYYYYYYYYYYYYYYYYYYYk',
-    'kYYYYYYYYYYYYkYYYYYYYYYYyk',
-    'kYYYYYYYYYYYYYYYYYYYYYYyyk',
-    'kYYYYYYYYYYYYYYYYYYYYYYyk.',
-    '.kYYYYYYYYYYYkYYYYYYYyyk..',
-    '..kYYYYYYYYYYYYYYYYYYyyk..',
-    '..kYYYYYYYYYYYYYYYYYYyyk..',
-    '...kYYYYYYYYYkYYYYYYYyk...',
-    '...kYYYYYYYYYYYYYYYyyyk...',
-    '....kkkkkkkkkkkkkkkkkk....',
+  jacket_dog_raincoat: { x: 5, y: 10, rows: [
+    '...kkkkkkkkkkkkkkkkk.',
+    '..kyYYYYYYYYYYYYYYyyk',
+    '.kkyYYYYYYYkYYYYYYyyk',
+    'kOOyYYYYYYYYYYYYYYyyk',
+    'kOOyYYYYYYYYYYYYYYyyk',
+    '.kkyYYYYYYYkYYYYYYyyk',
+    '..kyYYYYYYYYYYYYYYyyk',
+    '...kYYYYYYYYYYYYYYyk.',
+    '...kyyyyyyyyyyyyyyyk.',
+    '....kkkkkkkkkkkkkkk..',
   ] },
-  jacket_unique_hoa_vest: { x: 7, y: 21, rows: [
-    '....kkkkkkkkkkkkkkkkkkkk..',
-    '..kkyyyyyyyyyyyyyyyyyyyyk.',
-    '.kyyyyyyyYyyyyyyyyyyyyyyyk',
-    'kyyyyyyyyyyyyyyyyyyyyyyyOk',
-    'kyyyyyyyyyyyyyyyyyyyyyyOOk',
-    'kwwwwwwwwwwwwwwwwwwwwwwwk.',
-    '.kyyyyyyyyyyyyyyyyyyyOOk..',
-    '..kyyyyyyyyyyyyyyyyyyOOk..',
-    '..kwwwwwwwwwwwwwwwwwwwwk..',
-    '...kyyyyyyyyyyyyyyyyyOk...',
-    '...kyyyyyyyyyyyyyyyOOOk...',
-    '....kkkkkkkkkkkkkkkkkk....',
+  jacket_unique_hoa_vest: { x: 5, y: 10, rows: [
+    '...kkkkkkkkkkkkkkkkk.',
+    '..kOyyyyyyyyyyyyyyOOk',
+    '.kkOyyyyYyyyyyyyyyOOk',
+    'kooOyyyyyyyyyyyyyyOOk',
+    'k55wwwwwwwwwwwwwwwwwk',
+    '.kkOyyyyyyyyyyyyyyOOk',
+    '..kwwwwwwwwwwwwwwwwwk',
+    '...kyyyyyyyyyyyyyyOk.',
+    '...kOOOOOOOOOOOOOOOk.',
+    '....kkkkkkkkkkkkkkk..',
   ] },
-  sneakers_crocs: { x: 10, y: 30, rows: [
-    '.kkkkkkkkkkkkkkkkkk.',
-    'kLLLLLLLLLLLLLLLlllk',
-    'kGLGLGLLLLLLLLGLGlGk',
-    'kGGGLLLLLLLLLLLLGGGk',
-    '.kGGGGGkkkkkkGGGGGk.',
-    '..kkkkk......kkkkk..',
+  sneakers_crocs: { x: 8, y: 18, rows: [
+    '.kkkkkkkkkkkkkkk.',
+    'kGGGGGlllllGGGGGk',
+    'kGGGGGkkkkkGGGGGk',
+    '.kkkkk.....kkkkk.',
   ] },
-  sneakers_flip_flops: { x: 11, y: 32, rows: [
-    '...k..........k...',
-    '.kkRkk......kkRkk.',
-    'kxxxRxk....kxxxRxk',
-    'ktttttk....ktttttk',
-    '.kkkkk......kkkkk.',
+  sneakers_flip_flops: { x: 8, y: 19, rows: [
+    '...k.........k...',
+    '.kkRkk.....kkRkk.',
+    'ktttttk...ktttttk',
+    '.kkkkk.....kkkkk.',
   ] },
-  sneakers_roller_skates: { x: 10, y: 30, rows: [
-    '.kkkkkkkkkkkkkkkkkk.',
-    'kwwwwwwwwwwwwwww555k',
-    'k4wwwwwwwwwwwwww554k',
-    'k444wwwwwwwwwwww444k',
-    '.k44444kkkkkk44444k.',
-    '..kkkkkk.....kkkkkk.',
-    '.k13kk13k...k13kk13k',
-    '..kk..kk.....kk..kk.',
+  sneakers_roller_skates: { x: 8, y: 18, rows: [
+    '.kkkkkkkkkkkkkkk.',
+    'k444445555544444k',
+    'k44444kkkkk44444k',
+    'k1kk1k....k1kk1k.',
+    '.k..k......k..k..',
   ] },
-  sneakers_bunny_slippers: { x: 10, y: 28, rows: [
-    '...k.k........k.k...',
-    '..kWkWk......kWkWk..',
-    '.kkWPWkkkkkkkkWPWkk.',
-    'kwwwwwwwwwwwwwwwWWWk',
-    'k5wwwkwwwwwwwwwwkW5k',
-    'k555wwwwwwwwwwww555k',
-    '.k55555kkkkkk55555k.',
-    '..kkkkk......kkkkk..',
+  sneakers_bunny_slippers: { x: 8, y: 17, rows: [
+    '..k.k.......k.k..',
+    '.kWkWkkkkkkkWkWk.',
+    'k55555WWWWW55555k',
+    'k55555kkkkk55555k',
+    '.kkkkk.....kkkkk.',
   ] },
-  sneakers_rain_boots: { x: 9, y: 27, rows: [
-    '.kkkkkkkkkkkkkkkkkkkk.',
-    'kYYYYYYYYYYYYYYYYYYyyk',
-    'kYYYYYYYYYYYYYYYYYYyyk',
-    '.kYYYYYYYYYYYYYYYYYyk.',
-    '.kYYYYYYYYYYYYYYYyyyk.',
-    '.kOYYYYYYYYYYYYYYyyOk.',
-    '.kOOOYYYYYYYYYYYYOOOk.',
-    '..kOOOOOkkkkkkOOOOOk..',
-    '...kkkkk......kkkkk...',
+  sneakers_rain_boots: { x: 7, y: 15, rows: [
+    '.kkkkkkkkkkkkkkkkk.',
+    'kyYYYYYYYYYYYYYYyyk',
+    '.kYYYYYYYYYYYYYYyk.',
+    '.kyyyyyyyyyyyyyyyk.',
+    '.kOOOOOyyyyyOOOOOk.',
+    '.kOOOOOkkkkkOOOOOk.',
+    '..kkkkk.....kkkkk..',
   ] },
-  sneakers_light_up: { x: 10, y: 30, rows: [
-    '.kkkkkkkkkkkkkkkkkk.',
-    'kwwwwwwwwwwwwwww555k',
-    'k4wwwwwwwwwwwwww554k',
-    'k444wwwwwwwwwwww444k',
-    '.kR4cR4kkkkkkR4cR4k.',
-    '..kkkkk......kkkkk..',
+  sneakers_light_up: { x: 8, y: 18, rows: [
+    '.kkkkkkkkkkkkkkk.',
+    'k444445555544444k',
+    'k4R44Rkkkkk4R44Rk',
+    '.kkkkk.....kkkkk.',
   ] },
-  bling_bottle_cap_chain: { x: 13, y: 21, rows: [
-    '.k...........k.',
-    'k4kk.......kk4k',
-    '.k34kkkkkkk43k.',
-    '..kk3434343kk..',
-    '....kkRRRkk....',
-    '.....kRyRk.....',
-    '.....kRRRk.....',
-    '......kkk......',
+  bling_bottle_cap_chain: { x: 11, y: 10, rows: [
+    '.k.......k.',
+    'k4kkkkkkk4k',
+    '.k3434343k.',
+    '..kkRyRkk..',
+    '....kRk....',
+    '.....k.....',
   ] },
-  bling_lost_house_key: { x: 13, y: 21, rows: [
-    '.k...........k.',
-    'kykk.......kkyk',
-    '.kOykkkkkkkyOk.',
-    '..kkOyOyOyOkk..',
-    '....kkyykkk....',
-    '.....kyYk......',
-    '......kyk......',
-    '......kyyk.....',
-    '.......kk......',
+  bling_lost_house_key: { x: 11, y: 10, rows: [
+    '.k.......k.',
+    'kykkkkkkkyk',
+    '.kOyOyOyOk.',
+    '..kkkykkk..',
+    '....kyyk...',
+    '.....kk....',
   ] },
-  bling_dog_tag: { x: 13, y: 21, rows: [
-    '.k...........k.',
-    'k4kk.......kk4k',
-    '.k54kkkkkkk45k.',
-    '..kk5454545kk..',
-    '....kk555kk....',
-    '.....k545k.....',
-    '.....k444k.....',
-    '......kkk......',
+  bling_dog_tag: { x: 11, y: 10, rows: [
+    '.k.......k.',
+    'k4kkkkkkk4k',
+    '.k5454545k.',
+    '..kk55kkk..',
+    '...k44k....',
+    '....kk.....',
   ] },
-  bling_wind_chime: { x: 13, y: 21, rows: [
-    '.k...........k.',
-    'k4kk.......kk4k',
-    '.k34kkkkkkk43k.',
-    '..kk3434343kk..',
-    '....k5k5k5k....',
-    '....k5k5k5k....',
-    '....k4kkk4k....',
-    '.....k...k.....',
+  bling_wind_chime: { x: 11, y: 10, rows: [
+    '.k.......k.',
+    'k4kkkkkkk4k',
+    '.k3434343k.',
+    '..k5k5k5k..',
+    '..k4kkk4k..',
+    '...k...k...',
   ] },
-  bling_xmas_ornament: { x: 13, y: 21, rows: [
-    '.k...........k.',
-    'kykk.......kkyk',
-    '.kOykkkkkkkyOk.',
-    '..kkOyOyOyOkk..',
-    '....kkkykkk....',
-    '.....kRRRk.....',
-    '.....kRwRk.....',
-    '......kRk......',
-    '.......k.......',
+  bling_xmas_ornament: { x: 11, y: 10, rows: [
+    '.k.......k.',
+    'kykkkkkkkyk',
+    '.kOyOyOyOk.',
+    '..kkkykkk..',
+    '...kRwRk...',
+    '....kRk....',
+    '.....k.....',
   ] },
-  bling_soda_tab_bracelet: { x: 27, y: 24, rows: [
-    '.k...',
-    'k5kk.',
-    'k445k',
-    '.kkk.',
+  bling_soda_tab_bracelet: { x: 23, y: 11, rows: [
+    '.k.',
+    'k5k',
+    'k4k',
+    '.k.',
   ] },
-  gloves_dish: { x: 6, y: 23, rows: [
-    '..kk..',
-    '.kYYk.',
-    'kYYyyk',
-    'kYyyok',
-    '.kyok.',
-    '..kk..',
+  gloves_dish: { x: 5, y: 12, rows: [
+    '.kk.',
+    'kyYk',
+    'koyk',
+    '.kk.',
   ] },
-  gloves_gardening: { x: 6, y: 23, rows: [
-    '..kk..',
-    '.kLLk.',
-    'kLLllk',
-    'kLllGk',
-    '.klGk.',
-    '..kk..',
+  gloves_gardening: { x: 5, y: 12, rows: [
+    '.kk.',
+    'klLk',
+    'kGlk',
+    '.kk.',
   ] },
-  gloves_oven_mitts: { x: 5, y: 22, rows: [
-    '...kk...',
-    '..keek..',
-    '.keeRRk.',
-    'keeRRRrk',
-    'keRRRrrk',
-    '.kRRrrk.',
-    '..krrk..',
-    '...kk...',
+  gloves_oven_mitts: { x: 4, y: 11, rows: [
+    '..kk.',
+    '.keek',
+    'kRRek',
+    'krrRk',
+    '.krrk',
+    '..kk.',
   ] },
-  gloves_kid_boxing: { x: 5, y: 22, rows: [
-    '...kk...',
-    '..keek..',
-    '.keeRRk.',
-    'keeRRRrk',
-    'keRRRrrk',
-    '.kRRrrk.',
-    '..krrk..',
-    '...kk...',
+  gloves_kid_boxing: { x: 4, y: 11, rows: [
+    '..kk.',
+    '.keek',
+    'kRRek',
+    'krrRk',
+    '.krrk',
+    '..kk.',
   ] },
-  gloves_lost_mittens: { x: 6, y: 23, rows: [
-    '..kk..',
-    '.kcck.',
-    'kccUUk',
-    'kcUUuk',
-    '.kUuk.',
-    '..kk..',
+  gloves_lost_mittens: { x: 5, y: 12, rows: [
+    '.kk.',
+    'kUck',
+    'kuUk',
+    '.kk.',
   ] },
-  gloves_baseball_mitt: { x: 5, y: 22, rows: [
-    '...kk...',
-    '..kttk..',
-    '.kttNNk.',
-    'kttNNNnk',
-    'ktNNNnnk',
-    '.kNNnnk.',
-    '..knnk..',
-    '...kk...',
+  gloves_baseball_mitt: { x: 4, y: 11, rows: [
+    '..kk.',
+    '.kttk',
+    'kNNtk',
+    'knnNk',
+    '.knnk',
+    '..kk.',
   ] },
 };
 
 export type GearSlot = 'hat' | 'mask' | 'jacket' | 'shield' | 'gloves' | 'sneakers' | 'backpack' | 'bling' | 'ring';
 
-function framed(rows: Rows): PixelBuf {
+/** Hero-grid rows as a full frame (scaled up, below the headroom). */
+function framed(rows: Rows, x = 0, y = 0): PixelBuf {
   const out = blank(HERO_W, HERO_H);
-  blit(out, fromRows(rows), 0, HEADROOM);
+  blit(out, scaleUp(fromRows(rows), SCALE), x * SCALE, y * SCALE + HEADROOM);
   return out;
 }
 
-/** The tail layer in a full frame. */
 export function tailBuf(): PixelBuf {
   return framed(HERO_TAIL);
 }
 
-/** The body layer in a full frame. */
 export function bodyBuf(): PixelBuf {
   return framed(HERO_BODY);
 }
 
-/** The front paw, in glove colors when gloves are worn. */
+/** The front paw (in glove colors when gloves are worn), scaled to hero pixels. */
 export function pawBuf(glovesId: string | null): PixelBuf {
   const ramp = glovesId ? GLOVE_RAMPS[glovesId] : undefined;
-  if (!ramp) return fromRows(HERO_PAW);
-  return fromRows(BIG_GLOVES.has(glovesId!) ? BIG_PAW : HERO_PAW, { x: ramp[0], '1': ramp[1], '2': ramp[2] });
+  const rows = ramp && BIG_GLOVES.has(glovesId!) ? BIG_PAW : HERO_PAW;
+  return scaleUp(fromRows(rows, ramp ? { b: ramp[0], n: ramp[1], N: ramp[2] } : undefined), SCALE);
 }
 
 function lowestRow(rows: Rows): number {
@@ -514,25 +413,18 @@ function lowestRow(rows: Rows): number {
 
 /** One worn item in a hero frame, or null if it has no worn look (rings). */
 export function gearBuf(slot: GearSlot, baseId: string): PixelBuf | null {
-  const out = blank(HERO_W, HERO_H);
   const icon = ITEM_SPRITES[baseId];
-  if (slot === 'hat' && icon) {
-    // Sits on the head: the icon's bottom row lands just below the top of the head.
-    blit(out, fromRows(icon), HERO_POINTS.head.x - 8, HERO_POINTS.head.y + 1 - lowestRow(icon));
-    return out;
-  }
-  if (slot === 'shield' && icon) {
-    blit(out, fromRows(icon), 0, 18 + HEADROOM);
-    return out;
-  }
-  if (slot === 'backpack' && icon) {
-    blit(out, fromRows(icon), 2, 14 + HEADROOM);
+  if ((slot === 'hat' || slot === 'shield' || slot === 'backpack') && icon) {
+    const out = blank(HERO_W, HERO_H);
+    const b = fromRows(icon);
+    // Hats sit on the head between the ears; shields hang on the back paw; backpacks peek out behind.
+    if (slot === 'hat') blit(out, b, HERO_POINTS.head.x - 8, HERO_POINTS.head.y + 3 - lowestRow(icon));
+    else if (slot === 'shield') blit(out, b, 4, 11 * SCALE + HEADROOM);
+    else blit(out, b, 2, 7 * SCALE + HEADROOM);
     return out;
   }
   const worn = WORN[baseId];
-  if (!worn) return null;
-  blit(out, fromRows(worn.rows), worn.x, worn.y + HEADROOM);
-  return out;
+  return worn ? framed(worn.rows, worn.x, worn.y) : null;
 }
 
 /** A weapon's art and grip (it points up and to the right; the scene turns it to point straight up). */
@@ -544,7 +436,7 @@ export function weaponBuf(baseId: string): { buf: PixelBuf; grip: { x: number; y
 
 /** The whole hero with gear, for previews. */
 export function dressed(gear: Partial<Record<GearSlot | 'weapon', string>>): PixelBuf {
-  const out = blank(HERO_W, HERO_H);
+  const out = blank(HERO_W + 12, HERO_H);
   blit(out, tailBuf(), 0, 0);
   if (gear.backpack) {
     const b = gearBuf('backpack', gear.backpack);

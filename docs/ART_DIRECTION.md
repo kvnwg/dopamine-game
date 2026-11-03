@@ -351,7 +351,7 @@ palette and sprite format are in [`PIXEL_ART.md`](PIXEL_ART.md). In short:
 
 - **Grid**: everything in the battle is drawn at 6 screen pixels per art pixel (the view is 180 x 137 art pixels), with nearest-neighbor scaling so pixels stay square and crisp. UI icons are 16 x 16.
 - **Palette**: one shared 39-color palette; every outline is the same dark ink `#1A1326`; three-tone shading with light from the top left.
-- **Characters**: a chunky chibi raccoon (about 40 art pixels tall, facing right) whose tail is its own layer; worn gear is drawn to fit the body (masks, jackets, shoes, necklaces, gloves), while hats, shields, backpacks and weapons reuse the item icons. Enemies face left and are recolored per world.
+- **Characters**: the raccoon copies Kevin's reference picture: a tan, low-res blob raccoon in a 30 x 23 grid whose pixels are drawn twice as big as the world's, with its tail on its own layer; worn gear is drawn to fit the body (masks, jackets, shoes, necklaces, gloves), while hats, shields, backpacks and weapons reuse the item icons. Enemies face left and are recolored per world.
 - **Items**: every one of the 63 base items has its own 16 x 16 icon in natural colors; rarity shows on the tile around it.
 - **UI**: Pixelify Sans everywhere, square corners, buttons and cards with pixel borders (4 offset shadows) and flat color bands instead of gradients.
 - Sprites live in `src/render/pixel/` and preview with `npx tsx tools/pixelSheet.ts <module> out.png`.

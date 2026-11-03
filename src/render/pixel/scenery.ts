@@ -659,7 +659,7 @@ export const CLOUDS: Rows[] = [
 export const SUBURBS: ScenerySet = {
   tileW: TILE_W,
   layers: LAYERS,
-  scroll0: { far: 72, mid: 33, ground: 41, fg: 58 },
+  scroll0: { far: 21, mid: 33, ground: 32, fg: 58 },
   sky: true,
   graded: true,
   far: farLayer,

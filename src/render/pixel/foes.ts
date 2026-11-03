@@ -31,12 +31,12 @@ export const FOE_SHEETS: Readonly<Record<string, SheetLook>> = {
   ...Object.fromEntries(
     Object.entries(ENEMY_SHEETS).map(([shape, s]) => [shape, { sheet: s.sheet, tint: { body: s.body, accent: s.accent } }]),
   ),
-  hen: { sheet: HEN, still: true },
-  duck: { sheet: DUCK, still: true },
-  bunny: { sheet: BUNNY, still: true },
-  ram: { sheet: RAM, still: true },
-  pig: { sheet: PIG, still: true },
-  cow: { sheet: COW, still: true },
+  hen: { sheet: HEN },
+  duck: { sheet: DUCK },
+  bunny: { sheet: BUNNY },
+  ram: { sheet: RAM },
+  pig: { sheet: PIG },
+  cow: { sheet: COW },
 };
 
 /** Every shape the enemy art knows. */

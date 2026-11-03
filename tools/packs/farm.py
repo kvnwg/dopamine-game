@@ -98,22 +98,20 @@ def animal(name, crop, extras):
     rows = indexed(px, w, h, index)
     more = {}
     for pose, (img, cmap) in extras.items():
-        epx = opaque(img)
-        # A color the twin lacks takes the nearest one it has; the pose stands on the same ground row.
+        # A color the twin lacks takes the twin's nearest color.
         near = lambda c: min(cmap, key=lambda k: sum((k[i] - c[i]) ** 2 for i in range(3)))
-        epx = {p: cmap[c] if c in cmap else cmap[near(c)] for p, c in epx.items()}
-        ew, eh = img.size
-        more[pose] = indexed(epx, ew, eh, index)
+        epx = {p: cmap[c] if c in cmap else cmap[near(c)] for p, c in opaque(img).items()}
+        more[pose] = indexed(epx, img.width, img.height, index)
     poses, anims = build(name, rows, more)
-    used = ['stand'] + [p for a in anims.values() for p in a[2] if p != 'stand']
-    order = list(dict.fromkeys(used))
-    frames, frame_of = [], {}
+    # Frame 0 is the drawn pose; poses that came out pixel-identical share a frame.
+    order = list(dict.fromkeys(['stand'] + [p for a in anims.values() for p in a[2]]))
+    frames, by_pixels, frame_of = [], {}, {}
     for n in order:
         sig = tuple(sorted(poses[n].px.items()))
-        if sig not in frame_of:
-            frame_of[sig] = len(frames)
+        if sig not in by_pixels:
+            by_pixels[sig] = len(frames)
             frames.append(poses[n])
-        frame_of[n] = frame_of[sig]
+        frame_of[n] = by_pixels[sig]
     allpx = [p for f in frames for p in f.px]
     x0, x1 = min(p[0] for p in allpx), max(p[0] for p in allpx)
     y0, y1 = min(p[1] for p in allpx), max(p[1] for p in allpx)
@@ -209,6 +207,7 @@ def main():
         if mirror:
             from PIL import ImageOps
             crop = ImageOps.mirror(crop)
+            extras = {k: (ImageOps.mirror(img), cmap) for k, (img, cmap) in extras.items()}
         a = animal(name, crop, extras)
         if mode == '--preview':
             preview(name, a, out)

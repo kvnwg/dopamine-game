@@ -4,10 +4,13 @@
  */
 import type { PixelBuf } from './buf';
 
-/** The battle view in art pixels. */
-export const VIEW = { w: 90, h: 68 } as const;
-/** The view row fighters stand on: the bottom edge of this row is the ground line. */
-export const FEET_ROW = 58;
+/** The battle view in art pixels (1080 x 820 screen pixels at P = 10). */
+export const VIEW = { w: 108, h: 82 } as const;
+/**
+ * The view row fighters stand on: the bottom edge of this row is the ground line (680 screen px).
+ * It leaves the bottom 14 rows for HP bars, the wave track and the foreground.
+ */
+export const FEET_ROW = 67;
 
 export interface LayerSpot {
   /** Top edge in view rows. */
@@ -29,7 +32,7 @@ export interface LightSpot {
   h: number;
   /** Windows are lit by chance (a share per world), lamps when a world turns them on, the rest always. */
   kind: 'window' | 'lamp' | 'torch' | 'fire' | 'water';
-  /** Per pixel of the rect: 'g' lit glass, 'f' frame or muntin (dark against the light), '.' untouched. */
+  /** Per pixel of the rect: 'g' lit glass, 'f' frame or muntin (dark against the light), 'u' curtain, '.' untouched. */
   mask?: readonly string[];
   /** A pool of light on the ground under it (ellipse center and radii, layer pixels). */
   pool?: { x: number; y: number; rx: number; ry: number };

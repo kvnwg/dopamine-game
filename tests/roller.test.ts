@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, canRebirth, combatEffects, createItem, currentLuck, enchantPowerMult, goldMult, inventoryCapacity,
-  computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng,
-  performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick,
-  sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item,
+  applyAction, canRebirth, combatEffects, createItem, currentLuck, goldMult, inventoryCapacity, computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng, performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick, sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item, bestUpgrades,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
 import { freshState, histogram, T0 } from './helpers';
@@ -258,6 +255,32 @@ describe('the wheel', () => {
   });
 });
 
+describe('Equip best', () => {
+  it('wears the biggest upgrade in every slot at once, and leaves nothing better in the bag', () => {
+    const rng = new Rng(8);
+    let st = rollingState();
+    st.equipped.hat = makeItem({ uid: 1, slot: 'hat', power: 20 });
+    st.inventory = [
+      makeItem({ uid: 10, slot: 'hat', power: 30 }),
+      makeItem({ uid: 11, slot: 'hat', power: 50 }),
+      makeItem({ uid: 12, slot: 'ring', power: 7 }),
+      makeItem({ uid: 13, slot: 'ring', power: 9 }),
+      makeItem({ uid: 14, slot: 'weapon', power: 4 }),
+    ];
+    expect(bestUpgrades(st).map((x) => x.uid).sort()).toEqual([11, 13, 14]);
+    const r = act(st, { type: 'equipBest' }, rng);
+    st = r.state;
+    expect(st.equipped.hat?.uid).toBe(11);
+    expect(st.equipped.ring?.uid).toBe(13);
+    expect(st.equipped.weapon?.uid).toBe(14);
+    expect(st.inventory.some((x) => x.uid === 1)).toBe(true);
+    expect(r.events.filter((e) => e.type === 'equip')).toHaveLength(3);
+    expect(bestUpgrades(st)).toHaveLength(0);
+    // Nothing to do: no events.
+    expect(act(st, { type: 'equipBest' }, rng).events.filter((e) => e.type === 'equip')).toHaveLength(0);
+  });
+});
+
 describe('"1 in X" item odds', () => {
   it('match the base chance of the rarity, and enchantments make an item rarer', () => {
     const c = rarityChances(1);
@@ -387,14 +410,16 @@ describe('enchantments', () => {
     expect(Math.abs((counts.get(1) ?? 0) / enchanted - w[0] / tot)).toBeLessThan(0.03);
   });
 
-  it('add power, and Prismatic bumps rarity', () => {
+  it('make an item rarer and so stronger, and Prismatic bumps rarity', () => {
     const rng = new Rng(12);
     const base = DATA.itemsById.get('hat_lawn_gnome')!;
     const plain = createItem(base, 'epic', 5, 'curbside', new Rng(1), 1);
     const ench = createItem(base, 'epic', 5, 'curbside', new Rng(1), 1, [{ id: 'golden', tier: 2 }]);
-    const mult = 1 + enchantPowerMult([{ id: 'golden', tier: 2 }]);
-    expect(Math.abs(ench.power - plain.power * mult)).toBeLessThanOrEqual(1.5);
+    const tier3 = createItem(base, 'epic', 5, 'curbside', new Rng(1), 1, [{ id: 'golden', tier: 3 }]);
+    expect(itemOddsOneIn(ench)).toBeGreaterThan(itemOddsOneIn(plain));
     expect(ench.power).toBeGreaterThan(plain.power);
+    // A higher enchantment tier is rarer still.
+    expect(tier3.power).toBeGreaterThan(ench.power);
     // Roll instantly (no wheel) until a Prismatic shows up on a forced Decent.
     const st = rollingState();
     st.upgrades.luck = 3;

@@ -1,7 +1,5 @@
 import { BAL, RARITIES } from '../../data';
-import {
-  enchantChance, formatDuration, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances,
-} from '../../core';
+import { enchantChance, formatDuration, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances, formatPct } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { fmtOdds } from '../components/AlleyPanel';
@@ -21,14 +19,14 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
   const lucky = rarityChances(b.total * BAL.roll.luckyRollMult);
   const bl = BAL.dumpster.badLuck;
   const rows: Array<[string, string]> = [
-    [t('luck.base'), '1.00'],
-    [t('luck.upgrades'), `+${b.upgrades.toFixed(2)}`],
-    [t('luck.dumpster', { level: g.dumpster.level }), `+${b.dumpster.toFixed(2)}`],
-    [t('luck.enchants'), `+${b.enchants.toFixed(2)}`],
-    [t('luck.rebirth', { n: g.rebirths }), `×${b.rebirthMult.toFixed(2)}`],
+    [t('luck.base'), '100%'],
+    [t('luck.upgrades'), `+${formatPct(b.upgrades)}`],
+    [t('luck.dumpster', { level: g.dumpster.level }), `+${formatPct(b.dumpster)}`],
+    [t('luck.enchants'), `+${formatPct(b.enchants)}`],
+    [t('luck.rebirth', { n: g.rebirths }), `+${formatPct(b.rebirthMult - 1)}`],
   ];
   if (b.boostMult > 1 && b.boostEndsAt) {
-    rows.push([`${t('luck.boost')} (${t('luck.boostLeft', { time: formatDuration((b.boostEndsAt - now) / 1000) })})`, `×${b.boostMult}`]);
+    rows.push([`${t('luck.boost')} (${t('luck.boostLeft', { time: formatDuration((b.boostEndsAt - now) / 1000) })})`, `+${formatPct(b.boostMult - 1)}`]);
   }
   return (
     <Modal title={t('luck.title')} tone="green" onClose={onClose}>

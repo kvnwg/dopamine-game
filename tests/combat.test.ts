@@ -44,7 +44,7 @@ describe('player stats', () => {
     expect(s.REGEN).toBe(1);
   });
 
-  it('applies per-level growth, flat gear, % bonuses, and caps', () => {
+  it('applies per-level growth, flat gear (grown by the raccoon\'s level), % bonuses, and caps', () => {
     const st = freshState();
     st.player.level = 11;
     st.equipped.weapon = {
@@ -54,8 +54,10 @@ describe('player stats', () => {
       bonus: [], mintPerkId: null, enchants: [], locked: false, tier: 1, power: 0,
     };
     const s = computeStats(st);
+    // Worn gear's own stats grow with the raccoon's level (World 1: no world growth yet).
+    const lv = 1 + BAL.items.levelScalePerLevel * 10;
     expect(s.HP).toBeCloseTo(100 + 12 * 10);
-    expect(s.ATK).toBeCloseTo((10 + 15 + 5) * 1.1);
+    expect(s.ATK).toBeCloseTo((10 + 15 + 5 * lv) * (1 + 0.1 * lv));
     expect(s.CRIT).toBe(BAL.player.caps.CRIT);
   });
 });

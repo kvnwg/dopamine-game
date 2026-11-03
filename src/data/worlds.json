@@ -35,21 +35,21 @@
       "bright": 1.0,
       "atmo": {
         "sky": ["#3C8FE0", "#5CB2F2", "#8DD0FA", "#C6ECFC"],
-        "horizon": 40,
+        "horizon": 48,
         "body": {
           "kind": "sun",
-          "x": 76,
-          "y": 15,
-          "r": 4,
+          "x": 91,
+          "y": 18,
+          "r": 5,
           "color": "#FFFBE6",
           "halo": "#FFF4B8",
-          "haloR": 16
+          "haloR": 19
         },
         "stars": 0,
         "clouds": {
           "style": "puffy",
           "cover": 0.5,
-          "y": 6,
+          "y": 7,
           "light": "#FFFFFF",
           "shade": "#A6CCEE",
           "rim": "#FFFFFF"
@@ -99,21 +99,21 @@
       "bright": 1.03,
       "atmo": {
         "sky": ["#3B3D78", "#69508E", "#C06E89", "#F0A26D", "#FFD889"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 66,
-          "y": 22,
-          "r": 5,
+          "x": 79,
+          "y": 26,
+          "r": 6,
           "color": "#FFF6CC",
           "halo": "#FFD27A",
-          "haloR": 28
+          "haloR": 34
         },
         "stars": 0.15,
         "clouds": {
           "style": "streaky",
           "cover": 0.55,
-          "y": 12,
+          "y": 14,
           "light": "#FFC98A",
           "shade": "#93679B",
           "rim": "#FFF0B0"
@@ -165,7 +165,7 @@
       "bright": 0.92,
       "atmo": {
         "sky": ["#55627D", "#6E7C96", "#8C98AD", "#A9B3C3"],
-        "horizon": 40,
+        "horizon": 48,
         "stars": 0,
         "clouds": {
           "style": "streaky",
@@ -221,21 +221,21 @@
       "bright": 1.06,
       "atmo": {
         "sky": ["#1AA3E8", "#3FC0F2", "#86DCF7", "#DFF6F2", "#FFF0C8"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 15,
-          "y": 16,
-          "r": 5,
+          "x": 18,
+          "y": 19,
+          "r": 6,
           "color": "#FFFFFF",
           "halo": "#FFF6C8",
-          "haloR": 20
+          "haloR": 24
         },
         "stars": 0,
         "clouds": {
           "style": "puffy",
           "cover": 0.35,
-          "y": 6,
+          "y": 7,
           "light": "#FFFFFF",
           "shade": "#9ED0EA",
           "rim": "#FFFFFF"
@@ -251,56 +251,69 @@
     }
   },
   {
-    "id": "autumn_avenue",
-    "name": "Autumn Avenue",
+    "id": "funky_farmland",
+    "name": "Funky Farmland",
     "theme": "curbside",
     "enemies": [
       {
-        "id": "alley_rat",
-        "name": "Leaf Rat",
-        "color": "#9C6B47",
-        "accent": "#F4A259"
+        "id": "angry_hen",
+        "name": "Angry Hen",
+        "color": "#9C5A2C",
+        "accent": "#D8402A"
       },
       {
-        "id": "porch_pigeon",
-        "name": "Harvest Pigeon",
-        "color": "#A0785A",
-        "accent": "#E76F51"
+        "id": "quacker",
+        "name": "Quacker",
+        "color": "#3E8A4A",
+        "accent": "#E8A030"
       },
       {
-        "id": "punk_raccoon",
-        "name": "Pumpkin Punk",
-        "color": "#7D6450",
-        "accent": "#F77F00"
+        "id": "mad_bunny",
+        "name": "Mad Bunny",
+        "color": "#8A8090",
+        "accent": "#F2A0B0"
+      },
+      {
+        "id": "hog_hooligan",
+        "name": "Hog Hooligan",
+        "color": "#E0907A",
+        "accent": "#B05A50"
+      },
+      {
+        "id": "ram_rager",
+        "name": "Ram Rager",
+        "color": "#2C2830",
+        "accent": "#F4EDE0"
       }
     ],
     "boss": {
-      "id": "big_earl",
-      "name": "Earl of Acorns",
-      "color": "#7A4E2D",
-      "accent": "#E9C46A"
+      "id": "mega_moo",
+      "name": "Mega Moo",
+      "color": "#F4F2EC",
+      "accent": "#2C2830"
     },
     "look": {
-      "hue": -38,
-      "sat": 1.15,
-      "bright": 1.0,
+      "hue": 0,
+      "sat": 1,
+      "bright": 1,
+      "scenery": "farm",
       "atmo": {
         "sky": ["#5A7FC4", "#8FA5D0", "#E6B38C", "#FFD09A"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 76,
-          "y": 21,
-          "r": 5,
+          "x": 91,
+          "y": 25,
+          "r": 6,
           "color": "#FFF2C8",
           "halo": "#FFC070",
-          "haloR": 24
+          "haloR": 29
         },
         "stars": 0,
         "clouds": {
           "style": "puffy",
           "cover": 0.45,
-          "y": 6,
+          "y": 7,
           "light": "#FFE2C0",
           "shade": "#B08AA0",
           "rim": "#FFF3D8"
@@ -352,22 +365,22 @@
       "bright": 0.58,
       "atmo": {
         "sky": ["#0D0B2A", "#1C1446", "#3A1E66", "#6A2A7E"],
-        "horizon": 44,
+        "horizon": 53,
         "body": {
           "kind": "moon",
-          "x": 70,
-          "y": 16,
-          "r": 4,
+          "x": 84,
+          "y": 19,
+          "r": 5,
           "color": "#F6EEDC",
           "accent": "#D8CCE8",
           "halo": "#B48CFF",
-          "haloR": 16
+          "haloR": 19
         },
         "stars": 0.6,
         "clouds": {
           "style": "streaky",
           "cover": 0.3,
-          "y": 8,
+          "y": 10,
           "light": "#6A4A9E",
           "shade": "#2A1E52",
           "rim": "#C08CFF"
@@ -417,23 +430,24 @@
       "hue": 0,
       "sat": 0.3,
       "bright": 1.22,
+      "props": ["snowman", "xmasTree", "presentRed", "pineSnowy", "presentBlue"],
       "atmo": {
         "sky": ["#7FB6E6", "#A8D0F0", "#D4E9F8", "#F2F8FC"],
-        "horizon": 40,
+        "horizon": 48,
         "body": {
           "kind": "sun",
-          "x": 20,
-          "y": 16,
-          "r": 4,
+          "x": 24,
+          "y": 19,
+          "r": 5,
           "color": "#FFFFFF",
           "halo": "#F4FBFF",
-          "haloR": 18
+          "haloR": 22
         },
         "stars": 0,
         "clouds": {
           "style": "puffy",
           "cover": 0.5,
-          "y": 4,
+          "y": 5,
           "light": "#FFFFFF",
           "shade": "#B4C8E0",
           "rim": "#FFFFFF"
@@ -491,7 +505,7 @@
       "scenery": "dungeon",
       "atmo": {
         "sky": ["#1A1326", "#3A2840"],
-        "horizon": 40,
+        "horizon": 48,
         "stars": 0,
         "haze": { "far": 0, "mid": 0 },
         "windows": 0,
@@ -536,23 +550,24 @@
       "hue": 55,
       "sat": 1.3,
       "bright": 0.86,
+      "props": ["cauldron", "pumpkinPale", "cauldron"],
       "atmo": {
         "sky": ["#29392D", "#496A3A", "#88A64A", "#D2E27A"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 60,
-          "y": 21,
-          "r": 5,
+          "x": 72,
+          "y": 25,
+          "r": 6,
           "color": "#F4FFB0",
           "halo": "#C8F060",
-          "haloR": 22
+          "haloR": 26
         },
         "stars": 0.1,
         "clouds": {
           "style": "streaky",
           "cover": 0.45,
-          "y": 10,
+          "y": 12,
           "light": "#C0E080",
           "shade": "#4A6A40",
           "rim": "#EAFFA0"
@@ -604,21 +619,21 @@
       "bright": 0.82,
       "atmo": {
         "sky": ["#2A0D12", "#5A1A1A", "#A8321E", "#F06A2A", "#FFB050"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 72,
-          "y": 22,
-          "r": 6,
+          "x": 86,
+          "y": 26,
+          "r": 7,
           "color": "#FFF0A0",
           "halo": "#FF8A3A",
-          "haloR": 22
+          "haloR": 26
         },
         "stars": 0,
         "clouds": {
           "style": "streaky",
           "cover": 0.5,
-          "y": 8,
+          "y": 10,
           "light": "#FF8A4A",
           "shade": "#4A1A1E",
           "rim": "#FFD070"
@@ -668,23 +683,24 @@
       "hue": 165,
       "sat": 1.1,
       "bright": 1.1,
+      "props": ["lollipopRed", "candyCane", "cupcake", "lollipopGreen", "candyCaneGreen", "lollipopSwirl"],
       "atmo": {
         "sky": ["#FF9FD8", "#FFB8E2", "#FFD6EE", "#FFF0F8"],
-        "horizon": 40,
+        "horizon": 48,
         "body": {
           "kind": "sun",
-          "x": 18,
-          "y": 15,
-          "r": 4,
+          "x": 22,
+          "y": 18,
+          "r": 5,
           "color": "#FFFFFF",
           "halo": "#FFE4F4",
-          "haloR": 16
+          "haloR": 19
         },
         "stars": 0,
         "clouds": {
           "style": "puffy",
           "cover": 0.55,
-          "y": 5,
+          "y": 6,
           "light": "#FFFFFF",
           "shade": "#F2A6D2",
           "rim": "#FFF6FB"
@@ -733,24 +749,25 @@
       "hue": 200,
       "sat": 0.6,
       "bright": 0.62,
+      "props": ["jackOLantern", "tombstone", "ghost", "tombstoneFlowers", "blackCat", "jackOLanternDim"],
       "atmo": {
         "sky": ["#120D22", "#241A40", "#3E2C5E", "#5E4A7E"],
-        "horizon": 44,
+        "horizon": 53,
         "body": {
           "kind": "moon",
-          "x": 22,
-          "y": 16,
-          "r": 5,
+          "x": 26,
+          "y": 19,
+          "r": 6,
           "color": "#E8F0D8",
           "accent": "#C2CCB0",
           "halo": "#8AB8A0",
-          "haloR": 20
+          "haloR": 24
         },
         "stars": 0.4,
         "clouds": {
           "style": "streaky",
           "cover": 0.4,
-          "y": 6,
+          "y": 7,
           "light": "#5A4A7A",
           "shade": "#1E1634",
           "rim": "#A8C8B0"
@@ -799,17 +816,18 @@
       "hue": 95,
       "sat": 0.8,
       "bright": 1.15,
+      "props": ["snowman", "pineSnowy", "presentBlue", "snowman"],
       "atmo": {
         "sky": ["#0E1F3A", "#1E3F66", "#3A7AA0", "#8AD6E0"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 16,
-          "y": 22,
-          "r": 4,
+          "x": 19,
+          "y": 26,
+          "r": 5,
           "color": "#FFFFFF",
           "halo": "#BFF4FF",
-          "haloR": 18
+          "haloR": 22
         },
         "stars": 0.3,
         "haze": { "far": 0.4, "mid": 0.12 },
@@ -859,21 +877,21 @@
       "bright": 1.0,
       "atmo": {
         "sky": ["#3A2A6A", "#6A4A9E", "#A87AC8", "#E6B8E6"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 70,
-          "y": 21,
-          "r": 5,
+          "x": 84,
+          "y": 25,
+          "r": 6,
           "color": "#FFF0F8",
           "halo": "#F0A8E0",
-          "haloR": 22
+          "haloR": 26
         },
         "stars": 0.2,
         "clouds": {
           "style": "streaky",
           "cover": 0.4,
-          "y": 10,
+          "y": 12,
           "light": "#E8B0E0",
           "shade": "#5A3A8A",
           "rim": "#FFF0FF"
@@ -925,16 +943,16 @@
       "bright": 0.75,
       "atmo": {
         "sky": ["#0A0820", "#1A1450", "#3A2A8A", "#6A4AC0"],
-        "horizon": 44,
+        "horizon": 53,
         "body": {
           "kind": "moon",
-          "x": 70,
-          "y": 14,
-          "r": 4,
+          "x": 84,
+          "y": 17,
+          "r": 5,
           "color": "#E8F0FF",
           "accent": "#C4CCF0",
           "halo": "#8A7AFF",
-          "haloR": 18
+          "haloR": 22
         },
         "stars": 0.7,
         "haze": { "far": 0.35, "mid": 0.12 },
@@ -984,7 +1002,7 @@
       "bright": 0.78,
       "atmo": {
         "sky": ["#1E2434", "#323A50", "#4A556E", "#6A7690"],
-        "horizon": 40,
+        "horizon": 48,
         "stars": 0,
         "clouds": {
           "style": "streaky",
@@ -1038,23 +1056,24 @@
       "hue": -42,
       "sat": 1.45,
       "bright": 1.12,
+      "props": ["wheat", "pumpkin", "cabbage", "wheat"],
       "atmo": {
         "sky": ["#4A5A9A", "#8A7AA8", "#E8A87A", "#FFD88A", "#FFF0B0"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 54,
-          "y": 21,
-          "r": 6,
+          "x": 65,
+          "y": 25,
+          "r": 7,
           "color": "#FFFBE0",
           "halo": "#FFE08A",
-          "haloR": 32
+          "haloR": 38
         },
         "stars": 0,
         "clouds": {
           "style": "streaky",
           "cover": 0.35,
-          "y": 10,
+          "y": 12,
           "light": "#FFE0A0",
           "shade": "#A07A9A",
           "rim": "#FFF8D0"
@@ -1106,16 +1125,16 @@
       "bright": 0.85,
       "atmo": {
         "sky": ["#03050F", "#070B1F", "#121A38", "#262E52"],
-        "horizon": 44,
+        "horizon": 53,
         "body": {
           "kind": "planet",
-          "x": 70,
-          "y": 17,
-          "r": 6,
+          "x": 84,
+          "y": 20,
+          "r": 7,
           "color": "#3A7AE0",
           "accent": "#5DC14C",
           "halo": "#6AA8FF",
-          "haloR": 18
+          "haloR": 22
         },
         "stars": 1,
         "haze": { "far": 0.3, "mid": 0.06 },
@@ -1165,23 +1184,23 @@
       "bright": 0.72,
       "atmo": {
         "sky": ["#0A0420", "#1A0A3A", "#3A1260", "#6A1A8A"],
-        "horizon": 44,
+        "horizon": 53,
         "body": {
           "kind": "planet",
-          "x": 22,
-          "y": 17,
-          "r": 5,
+          "x": 26,
+          "y": 20,
+          "r": 6,
           "color": "#E88AD8",
           "accent": "#FFD0F0",
           "halo": "#C060FF",
-          "haloR": 18,
+          "haloR": 22,
           "ring": true
         },
         "stars": 0.9,
         "clouds": {
           "style": "streaky",
           "cover": 0.35,
-          "y": 8,
+          "y": 10,
           "light": "#A04AD0",
           "shade": "#3A1260",
           "rim": "#FF8AE8"
@@ -1233,21 +1252,21 @@
       "bright": 0.88,
       "atmo": {
         "sky": ["#2A0A5A", "#5A3AFF", "#C04AD8", "#FF4FA3", "#FFB0D0"],
-        "horizon": 42,
+        "horizon": 50,
         "body": {
           "kind": "sun",
-          "x": 45,
-          "y": 20,
-          "r": 6,
+          "x": 54,
+          "y": 24,
+          "r": 7,
           "color": "#FFFFFF",
           "halo": "#FF8AF0",
-          "haloR": 26
+          "haloR": 31
         },
         "stars": 0.5,
         "clouds": {
           "style": "streaky",
           "cover": 0.4,
-          "y": 8,
+          "y": 10,
           "light": "#FF8AD8",
           "shade": "#3A1A8A",
           "rim": "#FFFFFF"

@@ -71,16 +71,16 @@ clean outline, three-tone shading, one highlight, no stray pixels.
 
 ## One pixel size in battle
 
-Every pixel in the battle is the same size: `P = 12` screen pixels per art pixel
-(`src/render/pixel/index.ts`), so the 1080 x 820 view is 90 x 68 art pixels
-(`src/render/pixel/sceneryTypes.ts`: `VIEW`, and `FEET_ROW`, the row fighters stand on).
+Every pixel in the battle is the same size: `P = 10` screen pixels per art pixel
+(`src/render/pixel/index.ts`), so the 1080 x 820 view is 108 x 82 art pixels
+(`src/render/pixel/sceneryTypes.ts`: `VIEW`, and `FEET_ROW` = 67, the row fighters stand on).
 Nothing in battle is scaled or squashed: sprites move, change frames, and only weapon swings and
-knock-outs rotate. Art drawn for the old, finer grid is either redrawn (the street, rats, pigeons,
-raccoon bosses) or shown at half resolution with `downsample2` (item icons worn by the hero, the
-older still effects).
+knock-outs rotate. Art drawn for a finer grid is either redrawn (the street, rats, pigeons, raccoon
+bosses) or shown at half resolution with `downsample2` (item icons worn by the hero, the older still
+effects, the icon-pack props).
 
-Size guide at this scale: the raccoon hero is about 15 x 15, rats and pigeons about 10 to 13, pack
-knights and orcs 16 to 22 tall, humans about 30, bosses 20 to 34.
+Size guide at this scale: the raccoon hero is about 15 x 17, rats, pigeons, hens, ducks and rabbits
+10 to 15, pack knights, orcs, pigs and rams 16 to 30, humans about 30, bosses 20 to 34.
 
 ## Atmosphere and light
 
@@ -122,7 +122,20 @@ python3 -I tools/packs/chars.py fantasy <Tiny RPG "Characters(100x100 split)" di
 python3 -I tools/packs/chars.py humans <Mucho Pixels "Exported PNGs" dir> src/render/pixel/packs/humans.ts
 python3 -I tools/packs/fx.py <Super Pixel Effects PNG dir> src/render/pixel/packs/fx.ts
 python3 -I tools/packs/dungeon.py <0x72 frames dir> src/render/pixel/packs/dungeonTiles.ts
+python3 -I tools/packs/farm.py <sheep.aseprite> <pig.aseprite> <cow.aseprite> <chicken, duck and rabbit.aseprite> src/render/pixel/packs/farm.ts
+python3 -I tools/packs/mvicons.py <MV Icons Complete Sheet Free - ALL.png> src/render/pixel/packs/props.ts
 ```
+
+`tools/packs/aseprite.py` reads `.aseprite` files directly (frames, layers, tags), for packs that
+ship no PNGs.
+
+### World props
+
+Worlds can list themed props (`look.props` in `worlds.json`: snowmen, jack-o'-lanterns,
+tombstones, candy canes...), icons from the MV icon sheet halved to the battle grid
+(`src/render/pixel/packs/props.ts`). `placeProps` in `src/render/worldLook.ts` stands them in the
+street's front yards, on stretches of plain grass, spread across the tile; jack-o'-lanterns and
+cauldrons glow at night.
 
 Preview every animation of a sheet module:
 

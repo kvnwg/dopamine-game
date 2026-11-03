@@ -7,10 +7,7 @@
  */
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { BAL, DATA, nodeKey, type HexNode } from '../../data';
-import {
-  drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef,
-  upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef,
-} from '../../core';
+import { drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
 import { dispatch, getGame, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
@@ -123,9 +120,12 @@ export function effectAt(g: GameState, def: UpgradeDef, level: number): string {
   const r = BAL.roll;
   switch (def.effect) {
     case 'luck':
-      return t('upgradeFx.luck', { v: v.toFixed(2) });
-    case 'rollSpeed':
-      return t('upgradeFx.rollSpeed', { v: spinCycle(st).toFixed(2) });
+      return t('upgradeFx.luck', { v: formatPct(v) });
+    case 'rollSpeed': {
+      // How much faster a spin is than with no Spin Speed tiers.
+      const base = spinCycle({ ...st, upgrades: { ...st.upgrades, [def.id]: 0 } } as GameState);
+      return t('upgradeFx.rollSpeed', { v: formatPct(base / spinCycle(st) - 1) });
+    }
     case 'capacity':
       return t('upgradeFx.capacity', { v: inventoryCapacity(st) });
     case 'luckyEvery':
@@ -133,9 +133,9 @@ export function effectAt(g: GameState, def: UpgradeDef, level: number): string {
     case 'enchantChance':
       return t('upgradeFx.enchantChance', { v: ((BAL.enchant.baseChance + v) * 100).toFixed(1) });
     case 'turboPower':
-      return t('upgradeFx.turboPower', { v: (r.turboSpeedMult + v).toFixed(2) });
+      return t('upgradeFx.turboPower', { v: formatPct(r.turboSpeedMult + v - 1) });
     case 'luckyMult':
-      return t('upgradeFx.luckyMult', { v: (r.luckyRollMult + v).toFixed(2) });
+      return t('upgradeFx.luckyMult', { v: formatPct(r.luckyRollMult + v - 1) });
     case 'goldenSpin':
       return t('upgradeFx.goldenSpin', { v: Math.round(v * 100) });
     case 'enchantTier': {
@@ -149,7 +149,7 @@ export function effectAt(g: GameState, def: UpgradeDef, level: number): string {
     case 'reels':
       return t('upgradeFx.reels', { v: reelCount(st) });
     default:
-      return t(`upgradeFx.${def.effect}`, { v: Number.isInteger(v) ? formatNumber(v) : v.toFixed(1) });
+      return t(`upgradeFx.${def.effect}`, { v: Number.isInteger(v) ? formatNumber(v) : (Math.round(v * 10) / 10).toString() });
   }
 }
 

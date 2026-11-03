@@ -1,33 +1,29 @@
 /**
- * The Bag tab: equipped gear (a drop target), then the bag. Drag an item onto the raccoon or the
- * gear panel to equip it. Sort by power or rarity; Scrap All clears every unlocked item.
+ * The Bag tab: equipped gear (a drop target), then the bag, always sorted by power (which is rarity:
+ * a rarer item always has more power). Drag an item up to equip it, or Equip best to wear the biggest
+ * upgrade in every slot at once; Scrap All clears every unlocked item.
  */
-import { useMemo, useState } from 'react';
-import { RARITIES } from '../../data';
-import { formatNumber, inventoryCapacity, isUpgrade, playerPower, scrapValue, type Item } from '../../core';
+import { useState } from 'react';
+import { formatNumber, inventoryCapacity, isUpgrade, playerPower, scrapValue } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { GearRow } from './AlleyPanel';
+import { EquipBestButton } from './EquipBest';
 import { ItemIcon } from './ItemIcon';
 import { CoinIcon, PowerIcon, TrashIcon } from './Icons';
 import s from './panels.module.css';
-
-function sortItems(items: Item[], by: 'power' | 'rarity'): Item[] {
-  if (by === 'power') return items;
-  return [...items].sort((a, b) => RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity) || b.power - a.power);
-}
 
 export function InventoryPanel() {
   const g = useGame((x) => x);
   const bag = g.inventory;
   const cap = inventoryCapacity(g);
   const power = playerPower(g);
-  const sort = useUi((u) => u.bagSort);
   const [armed, setArmed] = useState(false);
   const full = bag.length >= cap;
-  const shown = useMemo(() => sortItems(bag, sort), [bag, sort]);
+  // The core keeps the bag sorted by power.
+  const shown = bag;
   const unlocked = bag.filter((x) => !x.locked);
   const scrapGold = unlocked.reduce((n, it) => n + scrapValue(g, it).coins, 0);
   const scrapAll = () => {
@@ -66,20 +62,7 @@ export function InventoryPanel() {
         </button>
       </div>
       <div className={s.tools}>
-        <div className={s.segmented}>
-          {(['power', 'rarity'] as const).map((k) => (
-            <button
-              key={k}
-              className={`${s.segBtn} ${sort === k ? s.segOn : ''}`}
-              onClick={() => {
-                haptics.impact('light');
-                useUi.getState().setBagSort(k);
-              }}
-            >
-              {t(`bag.sort.${k}`)}
-            </button>
-          ))}
-        </div>
+        <EquipBestButton />
         <span style={{ flex: 1 }} />
         <button className={`btn small red ${s.scrapAll}`} disabled={unlocked.length === 0} onClick={scrapAll}>
           <TrashIcon size={38} />

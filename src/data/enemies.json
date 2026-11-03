@@ -122,5 +122,65 @@
       "everySeconds": 7,
       "damageMult": 2.0
     }
+  },
+  {
+    "id": "angry_hen",
+    "name": "Angry Hen",
+    "kind": "regular",
+    "hp": 21.6,
+    "atk": 9.35,
+    "def": 0,
+    "atkSpd": 1.4
+  },
+  {
+    "id": "quacker",
+    "name": "Quacker",
+    "kind": "regular",
+    "hp": 21.6,
+    "atk": 9.35,
+    "def": 0,
+    "atkSpd": 1.4
+  },
+  {
+    "id": "mad_bunny",
+    "name": "Mad Bunny",
+    "kind": "regular",
+    "hp": 28.8,
+    "atk": 11.05,
+    "def": 0,
+    "atkSpd": 1
+  },
+  {
+    "id": "hog_hooligan",
+    "name": "Hog Hooligan",
+    "kind": "regular",
+    "hp": 28.8,
+    "atk": 11.05,
+    "def": 0,
+    "atkSpd": 1
+  },
+  {
+    "id": "ram_rager",
+    "name": "Ram Rager",
+    "kind": "regular",
+    "hp": 38.4,
+    "atk": 14.45,
+    "def": 1,
+    "atkSpd": 0.9
+  },
+  {
+    "id": "mega_moo",
+    "name": "Mega Moo",
+    "kind": "boss",
+    "hp": 64,
+    "atk": 13,
+    "def": 2,
+    "atkSpd": 0.8,
+    "special": {
+      "type": "heavyHit",
+      "name": "Udder Chaos",
+      "everySeconds": 7,
+      "damageMult": 2.0
+    }
   }
 ]

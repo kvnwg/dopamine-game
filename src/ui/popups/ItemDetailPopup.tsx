@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { DATA, SLOTS } from '../../data';
-import { formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item } from '../../core';
+import { formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { haptics } from '../../services';
@@ -32,7 +32,9 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
   }
   const color = rarityColor(item.rarity);
   const cur = equippedMap[item.slot];
-  const diff = !equipped && cur ? item.power - cur.power : null;
+  const mult = gearPowerMult(g);
+  const worn = (it: { power: number }) => Math.round(it.power * mult);
+  const diff = !equipped && cur ? worn(item) - worn(cur) : null;
   const perk = item.mintPerkId ? DATA.mintPerksById.get(item.mintPerkId) : null;
   const scrapGold = scrapValue(g, item).coins;
   return (
@@ -47,12 +49,10 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
           <span className={s.itemName} style={{ color }}>
             {itemName(item)}
           </span>
-          <span className={s.meta}>
-            {t('item.meta', { slot: t(`slot.${item.slot}`), level: item.level })} · {t('item.worldTier', { n: item.tier })}
-          </span>
+          <span className={s.meta}>{t(`slot.${item.slot}`)}</span>
           <div className={s.powerBig}>
             <PowerIcon size={54} />
-            {formatNumber(item.power)}
+            {formatNumber(worn(item))}
             {diff !== null && (
               <span className={diff > 0 ? s.up : diff < 0 ? s.down : s.same}>
                 {diff > 0 ? t('item.better', { n: formatNumber(diff) }) : diff < 0 ? t('item.worse', { n: `-${formatNumber(-diff)}` }) : t('item.same')}
@@ -62,7 +62,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
         </div>
       </div>
       <div className={s.stats}>
-        {statLines(item).map((l) => (
+        {statLines(item, gearScale(g)).map((l) => (
           <div key={l.key} className={s.statRow}>
             <span className={l.main ? s.statMain : s.statSub}>
               {t(`stat.${l.stat}`)}

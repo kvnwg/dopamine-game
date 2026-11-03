@@ -294,6 +294,24 @@ export function equipFromBag(d: GameState, uid: number, ev: CoreEvent[]): boolea
   return true;
 }
 
+/** For each slot, the bag item that beats what's worn there by the most (none if nothing does). */
+export function bestUpgrades(state: Pick<GameState, 'inventory' | 'equipped'>): Item[] {
+  const best = new Map<string, Item>();
+  for (const it of state.inventory) {
+    if (!isUpgrade(state, it)) continue;
+    const cur = best.get(it.slot);
+    if (!cur || it.power > cur.power) best.set(it.slot, it);
+  }
+  return [...best.values()];
+}
+
+/** Equips the biggest upgrade in every slot at once; returns how many slots changed. */
+export function equipBest(d: GameState, ev: CoreEvent[]): number {
+  const picks = bestUpgrades(d);
+  for (const it of picks) equipFromBag(d, it.uid, ev);
+  return picks.length;
+}
+
 /** Scraps every unlocked item in the bag at once (one event, one XP grant). */
 export function scrapAllFromBag(d: GameState, ev: CoreEvent[]): number {
   let coins = 0;

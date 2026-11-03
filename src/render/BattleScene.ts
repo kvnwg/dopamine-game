@@ -39,8 +39,11 @@ const ENGAGE_EDGE = 456;
 const COIN_TARGET = { x: 694, y: 58 };
 /** Top of the boss HP bar: just under the HUD row. */
 const BOSS_BAR_Y = 176;
+/** Fighters' HP bars: how far under the feet, and how tall (slim, so a row of foes reads cleanly). */
+const BAR_DY = 16;
+const BAR_H = 12;
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
-const FONT = '"Pixelify Sans", "Courier New", monospace';
+const FONT = '"Dumpster Digits", "Pixelify Sans", "Courier New", monospace';
 const INK = '#1A1326';
 const INK_N = 0x1a1326;
 /** Weapon angles in degrees (0 = pointing up, clockwise positive). */
@@ -176,7 +179,7 @@ export class BattleScene extends Phaser.Scene {
     this.buildHero();
     this.buildEffects();
     this.heroBar = this.add.graphics().setDepth(40);
-    this.heroNum = this.label(0, 0, 22).setDepth(41);
+    this.heroNum = this.label(0, 0, 20).setDepth(41);
     this.bossBar = this.add.graphics().setDepth(40);
     // Boss name and HP bar sit right under the HUD (the sky below the HUD is otherwise clear).
     this.bossName = this.label(BATTLE_W / 2, BOSS_BAR_Y - 6, 32).setOrigin(0.5, 1).setDepth(41);
@@ -185,10 +188,17 @@ export class BattleScene extends Phaser.Scene {
     this.unsub = bus.on((events) => this.onEvents(events));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsub?.());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.unsub?.());
-    document.fonts?.ready.then(() => {
-      if (!this.sys.isActive()) return;
-      for (const tx of [this.heroNum, this.bossName]) tx.setFontFamily(FONT);
-    });
+    // Canvas text doesn't make the browser fetch a font limited to a few characters (the 2 and 5 of
+    // Dumpster Digits), so ask for both weights before redrawing the labels.
+    const fonts = document.fonts;
+    void Promise.all(
+      fonts ? ['500 20px "Dumpster Digits"', '700 20px "Dumpster Digits"'].map((f) => fonts.load(f, '25').catch(() => [])) : [],
+    )
+      .then(() => fonts?.ready)
+      .then(() => {
+        if (!this.sys.isActive()) return;
+        for (const tx of [this.heroNum, this.bossName]) tx.setFontFamily(FONT);
+      });
   }
 
   private label(x: number, y: number, size: number): Phaser.GameObjects.Text {
@@ -967,7 +977,7 @@ export class BattleScene extends Phaser.Scene {
     rig.add(spr);
     const bar = this.add.graphics();
     c.add([shadow, rig, bar]);
-    const num = this.label(0, 0, 21).setDepth(41);
+    const num = this.label(0, 0, 20).setDepth(41);
     spr.play(`${tex.key}:${tex.anims.has('walk') ? 'walk' : 'idle'}`);
     if (!tex.animated) {
       // Stills breathe: one pixel up and down so nothing sits perfectly still.
@@ -981,6 +991,7 @@ export class BattleScene extends Phaser.Scene {
 
   private syncFoes(g: GameState, dt: number) {
     const alive = new Set<number>();
+    const frontUid = g.battle.enemies[0]?.uid;
     let edge = ENGAGE_EDGE;
     g.battle.enemies.forEach((e, i) => {
       alive.add(e.uid);
@@ -990,7 +1001,8 @@ export class BattleScene extends Phaser.Scene {
         this.foes.set(e.uid, f);
       }
       const target = edge + f.front;
-      edge = target + f.back * 0.55 + P;
+      // Spaced apart (a little overlap for wide foes) so their HP bars never touch.
+      edge = target + f.back * 0.8 + 2 * P;
       if (f.dying) return;
       f.maxHp = e.maxHp;
       // Heals and resets show at once; damage waits until its blow visibly lands.
@@ -1028,11 +1040,14 @@ export class BattleScene extends Phaser.Scene {
       f.c.x = snap(f.x + f.lunge + (this.reduceMotion ? 0 : f.knock));
       f.ghostHp = f.ghostHp > f.shownHp ? Math.max(f.shownHp, f.ghostHp - f.maxHp * 0.9 * dt) : f.shownHp;
       const regular = f.kind === 'regular';
-      const w = regular ? Phaser.Math.Clamp((f.front + f.back) * 0.55, 96, 170) : 0;
+      const w = regular ? Phaser.Math.Clamp((f.front + f.back) * 0.42, 60, 120) : 0;
       f.bar.clear();
       if (regular) {
-        this.drawBar(f.bar, 0, 22, w, 16, f.shownHp / f.maxHp, f.ghostHp / f.maxHp, 0xff4d5e);
-        f.num.setText(formatNumber(Math.ceil(Math.max(0, f.shownHp)))).setPosition(f.c.x, FEET_Y + 30).setVisible(true);
+        this.drawBar(f.bar, 0, BAR_DY, w, BAR_H, f.shownHp / f.maxHp, f.ghostHp / f.maxHp, 0xff4d5e);
+        // Only the foe being fought shows its number; the rest just show their bars.
+        const fighting = f.uid === frontUid;
+        f.num.setVisible(fighting);
+        if (fighting) f.num.setText(formatNumber(Math.ceil(Math.max(0, f.shownHp)))).setPosition(f.c.x, FEET_Y + BAR_DY + BAR_H / 2);
       } else {
         f.num.setVisible(false);
       }
@@ -1041,7 +1056,8 @@ export class BattleScene extends Phaser.Scene {
 
   private drawBar(g: Phaser.GameObjects.Graphics, cx: number, y: number, w: number, h: number, pct: number, ghost: number, color: number) {
     const x = cx - w / 2;
-    g.fillStyle(INK_N, 1).fillRect(x - 6, y - 6, w + 12, h + 12);
+    const border = h >= 20 ? 6 : 4;
+    g.fillStyle(INK_N, 1).fillRect(x - border, y - border, w + border * 2, h + border * 2);
     g.fillStyle(0x4a3b38, 1).fillRect(x, y, w, h);
     const gw = w * Phaser.Math.Clamp(ghost, 0, 1);
     if (gw > 2) g.fillStyle(0xffffff, 0.95).fillRect(x, y, gw, h);
@@ -1159,8 +1175,8 @@ export class BattleScene extends Phaser.Scene {
     this.shownHeroHp += (b.playerHp - this.shownHeroHp) * (1 - Math.pow(0.0001, dt));
     this.heroBar.clear();
     if (!this.dead) {
-      this.drawBar(this.heroBar, this.hero.x - 4, FEET_Y + 22, 150, 16, b.playerHp / maxHp, this.shownHeroHp / maxHp, 0x5bd23a);
-      this.heroNum.setText(formatNumber(Math.max(0, Math.ceil(b.playerHp)))).setPosition(this.hero.x - 4, FEET_Y + 30).setVisible(true);
+      this.drawBar(this.heroBar, this.hero.x - 4, FEET_Y + BAR_DY, 132, BAR_H, b.playerHp / maxHp, this.shownHeroHp / maxHp, 0x5bd23a);
+      this.heroNum.setText(formatNumber(Math.max(0, Math.ceil(b.playerHp)))).setPosition(this.hero.x - 4, FEET_Y + BAR_DY + BAR_H / 2).setVisible(true);
     } else {
       this.heroNum.setVisible(false);
     }

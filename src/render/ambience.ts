@@ -1,6 +1,6 @@
 /**
  * The living parts of a world's backdrop, on the battle pixel grid (every sprite sits on whole art
- * pixels): twinkling stars and shooting stars at night, drifting particles (fireflies, leaves,
+ * pixels): twinkling stars and shooting stars at night, flocks of birds by day, drifting particles (fireflies, leaves,
  * petals, snow, rain, embers, spores, sparkles, wisps, dust motes), lightning in storms and the
  * flicker of torch flames and their glow. The still parts (sky, clouds, lit scenery) are painted by
  * pixel/atmosphere.ts; this only moves things.
@@ -44,6 +44,9 @@ const SPRITES: Record<string, readonly string[]> = {
   amb_leaf1: ['ww'],
   amb_leaf2: ['.w', 'w.'],
   amb_petal: ['ww'],
+  // A far-off bird, wings up and down.
+  amb_bird0: ['w...w', '.w.w.', '..w..'],
+  amb_bird1: ['.....', 'ww.ww', '..w..'],
   amb_flake: ['w'],
   // Torch flames (5 x 5, over the 5 x 4 flame painted on the wall; each frame covers it).
   amb_flame0: ['.....', '..Y..', '.yYy.', '.OYO.', '.oOo.'],
@@ -208,6 +211,9 @@ export class Ambience {
   private shooting: Array<{ img: Phaser.GameObjects.Image; k: number }> = [];
   private shoot = { active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, wait: 6 };
   private flickers: Flicker[] = [];
+  /** A small flock crossing a day sky now and then. */
+  private birds: Array<{ img: Phaser.GameObjects.Image; dx: number; dy: number; phase: number }> = [];
+  private flock = { active: false, x: 0, y: 0, vx: 0, t: 0, wait: 8 };
   private flash: Phaser.GameObjects.Image;
   private bolt: Phaser.GameObjects.Graphics;
   private storm = { wait: 4, bolt: 0, flash: 0 };
@@ -221,6 +227,12 @@ export class Ambience {
     this.bolt = scene.add.graphics().setDepth(depth.bolt).setVisible(false);
     for (let k = 0; k < 6; k++) {
       this.shooting.push({ img: scene.add.image(0, 0, 'amb_px').setOrigin(0, 0).setDepth(depth.stars).setVisible(false), k });
+    }
+    for (let k = 0; k < 5; k++) {
+      const img = scene.add.image(0, 0, 'amb_bird0').setOrigin(0, 0).setDepth(depth.stars + 0.6).setVisible(false);
+      // A V: the leader, then pairs trailing behind it, one above and one below.
+      const side = k === 0 ? 0 : k % 2 ? -1 : 1;
+      this.birds.push({ img, dx: Math.ceil(k / 2) * 6, dy: side * Math.ceil(k / 2) * 3, phase: k * 0.7 });
     }
   }
 
@@ -238,6 +250,9 @@ export class Ambience {
     this.twinkles = [];
     this.flickers = [];
     this.shoot.active = false;
+    this.flock = { active: false, x: 0, y: 0, vx: 0, t: 0, wait: 3 + this.rand() * 6 };
+    const ink = Phaser.Display.Color.HexStringToColor(w.atmo.sky[0]).darken(45).color;
+    for (const b of this.birds) b.img.setVisible(false).setTint(ink);
     this.storm = { wait: 3 + this.rand() * 4, bolt: 0, flash: 0 };
     this.bolt.clear().setVisible(false);
     this.flash.setAlpha(0).setVisible(false);
@@ -329,6 +344,7 @@ export class Ambience {
     }
 
     this.updateShootingStar(dt, w, still);
+    this.updateBirds(dt, w, still);
     this.updateStorm(dt, w, opts);
     this.updateFlicker(dt, w, scroll);
   }
@@ -425,6 +441,37 @@ export class Ambience {
     }
   }
 
+  /** Day skies only: every so often a small V of birds flaps across, wings in two frames. */
+  private updateBirds(dt: number, w: AmbienceWorld, still: boolean): void {
+    const f = this.flock;
+    const day = w.sky && w.atmo.body?.kind === 'sun' && w.atmo.stars < 0.3 && !w.atmo.weather;
+    if (!f.active) {
+      for (const b of this.birds) b.img.setVisible(false);
+      if (!day || still) return;
+      f.wait -= dt;
+      if (f.wait > 0) return;
+      const fromLeft = this.rand() < 0.5;
+      f.active = true;
+      f.vx = (fromLeft ? 1 : -1) * (9 + this.rand() * 5);
+      f.x = fromLeft ? -16 : VIEW.w + 16;
+      f.y = 12 + this.rand() * Math.max(4, w.atmo.horizon * 0.35);
+      f.t = 0;
+    }
+    f.t += dt;
+    f.x += f.vx * dt;
+    const bob = Math.round(Math.sin(f.t * 2.2));
+    for (const b of this.birds) {
+      const back = f.vx > 0 ? -1 : 1;
+      const frame = Math.floor((f.t + b.phase) / 0.18) % 2;
+      b.img.setTexture(frame ? 'amb_bird1' : 'amb_bird0').setVisible(true)
+        .setPosition(Math.round(f.x + back * Math.abs(b.dx)) * P, Math.round(f.y + b.dy + bob) * P);
+    }
+    if (f.x < -40 || f.x > VIEW.w + 40) {
+      f.active = false;
+      f.wait = 14 + this.rand() * 20;
+    }
+  }
+
   private updateStorm(dt: number, w: AmbienceWorld, opts: { reduceFlashing: boolean }): void {
     const st = this.storm;
     if (w.atmo.weather !== 'storm' || opts.reduceFlashing) {
@@ -501,6 +548,7 @@ export class Ambience {
       f.glow.destroy();
     }
     for (const s of this.shooting) s.img.destroy();
+    for (const b of this.birds) b.img.destroy();
     this.flash.destroy();
     this.bolt.destroy();
   }

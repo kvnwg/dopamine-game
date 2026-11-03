@@ -87,8 +87,10 @@ export const BalanceSchema = z.object({
   ),
   recycle: z.object({ perItemLevel: nonNeg }),
   items: z.object({
+    /** Every worn item's own stats grow this much per raccoon level (see gearScale in stats.ts). */
     levelScalePerLevel: nonNeg,
-    substatLevelScale: nonNeg,
+    /** Item power from rarity: base x (1 in X odds, enchantments included) ^ oddsExponent. */
+    power: z.object({ base: positive, oddsExponent: positive }),
     levelOffset: range,
     levelCap: z.number().int().positive(),
     slots: slotRecord(z.object({ main: z.array(z.object({ stat: StatIdSchema, base: positive })).min(1) })),
@@ -328,7 +330,10 @@ export const EnemiesSchema = z.array(EnemySchema).min(1);
 export const StringsSchema = z.record(z.string(), z.string());
 
 /** Enemy art: hand-drawn stills (rat ... raccoonBoss) or animated sheets (raccoon, officer and the pack characters). */
-export const EnemyShapeSchema = z.enum(['rat', 'pigeon', 'raccoon', 'ratKing', 'raccoonBoss', 'officer', 'soldier', 'orc', 'pumpkin', 'doc', 'bigDemon']);
+export const EnemyShapeSchema = z.enum([
+  'rat', 'pigeon', 'raccoon', 'ratKing', 'raccoonBoss', 'officer', 'soldier', 'orc', 'pumpkin', 'doc', 'bigDemon',
+  'hen', 'duck', 'bunny', 'ram', 'pig', 'cow',
+]);
 export type EnemyShape = z.infer<typeof EnemyShapeSchema>;
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'expected a #RRGGBB color');
@@ -416,7 +421,9 @@ export const WorldSchema = z.object({
     sat: z.number().nonnegative(),
     bright: z.number().positive(),
     /** Which backdrop the battle uses (default: the suburban street). */
-    scenery: z.enum(['suburbs', 'dungeon']).optional(),
+    scenery: z.enum(['suburbs', 'dungeon', 'farm']).optional(),
+    /** Themed props set into the yards behind the fight (ids in src/render/pixel/packs/props.ts). */
+    props: z.array(z.string().min(1)).optional(),
     atmo: AtmoSchema,
   }),
 });

@@ -26,15 +26,6 @@ export interface DragState {
   over: boolean;
 }
 
-export type BagSort = 'power' | 'rarity';
-
-function loadSort(): BagSort {
-  try {
-    return localStorage.getItem('dl.bagSort') === 'rarity' ? 'rarity' : 'power';
-  } catch {
-    return 'power';
-  }
-}
 
 export interface Toast {
   id: number;
@@ -59,7 +50,6 @@ interface UiState {
   equipPulse: { slot: string; id: number } | null;
   newCodexKeys: string[];
   drag: DragState | null;
-  bagSort: BagSort;
   /** Selected hex on the upgrade map (`${line id}:${tier}`). */
   upgradeSel: string;
   /** The tab to go back to when the full-screen upgrade map closes. */
@@ -68,7 +58,6 @@ interface UiState {
   mapView: { x: number; y: number; k: number } | null;
   /** The dev cheat panel is open (playtest builds; opened from Settings). */
   devOpen: boolean;
-  setBagSort: (s: BagSort) => void;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -90,19 +79,10 @@ export const useUi = create<UiState>((set) => ({
   equipPulse: null,
   newCodexKeys: [],
   drag: null,
-  bagSort: loadSort(),
   upgradeSel: 'luck:1',
   prevTab: 'alley',
   mapView: null,
   devOpen: false,
-  setBagSort: (bagSort) => {
-    set({ bagSort });
-    try {
-      localStorage.setItem('dl.bagSort', bagSort);
-    } catch {
-      /* private mode */
-    }
-  },
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),
   toast: (text, tone = 'info') => {

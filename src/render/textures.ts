@@ -221,7 +221,7 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
   }
   const front = i.ox * i.w;
   const height = i.oy * i.h - artTop * P;
-  return { ...i, front, back: (1 - i.ox) * i.w, height, animated: !!look };
+  return { ...i, front, back: (1 - i.ox) * i.w, height, animated: !!look && !look.still };
 }
 
 // ------------------------------------------------------------------ worlds

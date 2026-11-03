@@ -14,6 +14,17 @@ export function suffixForTier(tier: number): string {
  * 999, 1.2K, 3.4M, 5.6B, 7.8T, then aa, ab, ac...
  * Values are floored (never show more than the player has).
  */
+/**
+ * A fractional increase as a percentage without the sign: 0.15 -> "15%", 0.025 -> "2.5%", 12 -> "1.2K%".
+ * Used wherever a bonus is shown, so players never see "+0.15".
+ */
+export function formatPct(fraction: number): string {
+  const p = fraction * 100;
+  if (Math.abs(p) >= 1000) return `${formatNumber(p)}%`;
+  const r = Math.round(p * 10) / 10;
+  return `${Number.isInteger(r) || Math.abs(r) >= 10 ? Math.round(r) : r.toFixed(1)}%`;
+}
+
 export function formatNumber(value: number): string {
   if (!Number.isFinite(value)) return value > 0 ? '∞' : '-∞';
   const sign = value < 0 ? '-' : '';

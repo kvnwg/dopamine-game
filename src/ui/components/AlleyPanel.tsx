@@ -15,6 +15,7 @@ import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
+import { EquipBestButton } from './EquipBest';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { fmtLuck } from './StatStrip';
 import { ReelBank } from './Reel';
@@ -69,7 +70,7 @@ function LastRoll() {
           {itemName(it)}
         </span>
         <span className={s.lastMeta}>
-          {t(`rarity.${it.rarity}`)} · {t(`slot.${it.slot}`)} · {t('item.worldTier', { n: it.tier })}
+          {t(`rarity.${it.rarity}`)} · {t(`slot.${it.slot}`)}
         </span>
         <div className={s.chips}>
           {upgrade ? (
@@ -214,6 +215,7 @@ export function AlleyPanel() {
         <div className={s.gearHead}>
           <span>{t('roll.gear')}</span>
           <span className={s.gearPower}>{t('gear.power', { power: formatNumber(power) })}</span>
+          <EquipBestButton className={s.equipBest} />
           <span style={{ flex: 1 }} />
           <span className={s.record}>
             <StarIcon size={30} />

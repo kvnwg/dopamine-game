@@ -76,6 +76,8 @@ export type CoreEvent =
 
 export type GameAction =
   | { type: 'equipItem'; uid: number }
+  /** Equips the biggest upgrade in every slot from the bag. */
+  | { type: 'equipBest' }
   | { type: 'scrapItem'; uid: number }
   /** Scraps every unlocked item in the bag. */
   | { type: 'scrapAll' }

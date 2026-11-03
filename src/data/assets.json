@@ -134,6 +134,48 @@
         "accent": "#FFD54F",
         "size": 280,
         "label": "DUMPGOR"
+      },
+      "angry_hen": {
+        "shape": "hen",
+        "color": "#9C5A2C",
+        "accent": "#D8402A",
+        "size": 100,
+        "label": "HEN"
+      },
+      "quacker": {
+        "shape": "duck",
+        "color": "#3E8A4A",
+        "accent": "#E8A030",
+        "size": 100,
+        "label": "DUCK"
+      },
+      "mad_bunny": {
+        "shape": "bunny",
+        "color": "#8A8090",
+        "accent": "#F2A0B0",
+        "size": 100,
+        "label": "BUNNY"
+      },
+      "hog_hooligan": {
+        "shape": "pig",
+        "color": "#E0907A",
+        "accent": "#B05A50",
+        "size": 140,
+        "label": "HOG"
+      },
+      "ram_rager": {
+        "shape": "ram",
+        "color": "#2C2830",
+        "accent": "#F4EDE0",
+        "size": 150,
+        "label": "RAM"
+      },
+      "mega_moo": {
+        "shape": "cow",
+        "color": "#F4F2EC",
+        "accent": "#2C2830",
+        "size": 240,
+        "label": "MOO"
       }
     },
     "raccoon": {

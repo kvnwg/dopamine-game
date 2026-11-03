@@ -10,16 +10,20 @@ import { clone, crop, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
 import { SUBURBS } from './pixel/scenery';
 import { DUNGEON } from './pixel/packs/dungeon';
+import { FARM } from './pixel/farm';
 import {
   glowOverlay, lightLayer, litSpots, over, paintClouds, paintSky, paintVignette, type CloudStrip,
 } from './pixel/atmosphere';
 import { VIEW, type LayerName, type LightSpot, type ScenerySet } from './pixel/sceneryTypes';
+import { frameBuf } from './pixel/indexed';
+import { PROPS, type PropId } from './pixel/packs/props';
+import { blit } from './pixel/buf';
 
 export type Look = WorldDef['look'];
 
 export const LAYER_NAMES: readonly LayerName[] = ['far', 'mid', 'ground', 'fg'];
 
-const SETS: Record<NonNullable<Look['scenery']>, ScenerySet> = { suburbs: SUBURBS, dungeon: DUNGEON };
+const SETS: Record<NonNullable<Look['scenery']>, ScenerySet> = { suburbs: SUBURBS, dungeon: DUNGEON, farm: FARM };
 
 /** The backdrop a world uses. */
 export function scenerySet(def: WorldDef): ScenerySet {
@@ -106,6 +110,62 @@ export function gradeBuf(src: PixelBuf, look: Look): PixelBuf {
   return out;
 }
 
+/** Props that glow at night, and their light. */
+const GLOWING: Partial<Record<PropId, string>> = {
+  jackOLantern: '#FF9A3A',
+  jackOLanternDim: '#FF8A2A',
+  cauldron: '#7AFF6A',
+};
+
+/**
+ * Sets a world's themed props into a mid layer (already graded, so they keep their own colors):
+ * in the front yards, standing a few rows in front of the house line (the first fully opaque row),
+ * on stretches of plain grass, spread out across the tile. Returns light spots for the ones that glow.
+ */
+export function placeProps(mid: PixelBuf, ids: readonly string[], seed: number): LightSpot[] {
+  const W = mid.w;
+  const at = (x: number, y: number) => {
+    const i = (y * W + (((x % W) + W) % W)) * 4;
+    return mid.px[i + 3] > 0 ? (mid.px[i] << 16) | (mid.px[i + 1] << 8) | mid.px[i + 2] : -1;
+  };
+  let lawn = -1;
+  for (let y = 0; y < mid.h && lawn < 0; y++) {
+    let full = true;
+    for (let x = 0; x < W && full; x++) full = at(x, y) >= 0;
+    if (full) lawn = y;
+  }
+  const props = ids.filter((id): id is PropId => id in PROPS).map((id) => ({ id, buf: frameBuf(PROPS[id], 0) }));
+  if (lawn < 0 || props.length === 0) return [];
+  const base = Math.min(lawn + 3, mid.h - 2);
+  // Grass colors: the common ones on the yard rows.
+  const counts = new Map<number, number>();
+  for (let y = lawn; y <= base + 1; y++) for (let x = 0; x < W; x++) counts.set(at(x, y), (counts.get(at(x, y)) ?? 0) + 1);
+  const grass = new Set([...counts].filter(([, n]) => n >= W * 0.04).map(([c]) => c));
+  // A column is free when every yard row there is plain grass (no path, bed, mailbox or shadow).
+  const free = Array.from({ length: W }, (_, x) => {
+    for (let y = lawn; y <= base + 1; y++) if (!grass.has(at(x, y))) return false;
+    return true;
+  });
+  const spots: LightSpot[] = [];
+  const gap = Math.floor(W / (props.length + 1));
+  let start = Math.floor(((seed % 97) / 97) * gap);
+  for (const p of props) {
+    for (let k = 0; k < W; k++) {
+      const x = (start + k) % W;
+      let ok = true;
+      for (let i = -1; i <= p.buf.w && ok; i++) ok = free[(x + i + W) % W];
+      if (!ok) continue;
+      blit(mid, p.buf, x, base - p.buf.h + 1, { wrapX: true });
+      for (let i = -2; i <= p.buf.w + 1; i++) free[(x + i + W) % W] = false;
+      const color = GLOWING[p.id];
+      if (color) spots.push({ x: x + Math.floor(p.buf.w / 2) - 1, y: base - Math.ceil(p.buf.h / 2) - 1, w: 3, h: 2, kind: 'fire', color, radius: 7, power: 0.9 });
+      start = x + p.buf.w + gap;
+      break;
+    }
+  }
+  return spots;
+}
+
 /** Seed for a world's sky and lights, so each world's stars, clouds and lit windows stay put. */
 export function worldSeed(world: number): number {
   return world * 7919 + 13;
@@ -141,8 +201,10 @@ export function worldArt(world: number): WorldArt {
   const spots = lightsFor(set);
   const layers = {} as Record<LayerName, PixelBuf>;
   for (const name of LAYER_NAMES) {
-    const graded = set.graded ? gradeBuf(bufs[name], def.look) : bufs[name];
-    layers[name] = lightLayer(graded, { atmo, layer: name, lights: spots[name] ?? [], seed, top: set.layers[name].y });
+    const graded = set.graded ? gradeBuf(bufs[name], def.look) : clone(bufs[name]);
+    // A world's themed props stand in the mid layer's yards (in their own colors).
+    const extra = name === 'mid' && def.look.props ? placeProps(graded, def.look.props, seed) : [];
+    layers[name] = lightLayer(graded, { atmo, layer: name, lights: [...(spots[name] ?? []), ...extra], seed, top: set.layers[name].y });
   }
   const flicker = LAYER_NAMES.flatMap((layer) =>
     litSpots(atmo, spots[layer] ?? [], seed).filter((spot) => spot.flicker).map((spot) => ({ layer, spot })),
@@ -245,9 +307,9 @@ export function worldThumbUrl(world: number): string {
   const hit = thumbs.get(world);
   if (hit) return hit;
   // The band of the battle view with the houses (or the dungeon wall), trees and road.
-  const top = 12;
+  const top = 15;
   const full = composeWorld(world, { vignette: false, fg: false });
-  const cropped = crop(full, 5, top, 80, 48);
+  const cropped = crop(full, 6, top, 96, 58);
   const url = toCanvas(cropped, 4).toDataURL('image/png');
   thumbs.set(world, url);
   return url;

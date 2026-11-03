@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  applyAction, backupKey, deserialize, MemoryStorage, migrate, Rng, SAVE_KEY, SaveManager, serialize, tick,
-  type GameState,
-} from '../src/core';
+import { applyAction, backupKey, deserialize, MemoryStorage, migrate, Rng, SAVE_KEY, SaveManager, serialize, tick, type GameState, computeItemPower } from '../src/core';
 import { SAVE_VERSION } from '../src/core/state';
 import { freshState, T0 } from './helpers';
 
@@ -99,6 +96,21 @@ describe('save / load', () => {
     expect(loaded!.stage.mode).toBe('farm');
     expect(loaded!.equipped.hat?.tier).toBe(1);
     expect('neighborhoodsCleared' in loaded!).toBe(false);
+  });
+
+  it('migrates a version 6 save to power-is-rarity: every item\'s power comes from its odds, the bag sorted by it', () => {
+    const v6 = JSON.parse(serialize(played())) as Record<string, unknown>;
+    v6.saveVersion = 6;
+    const bag = v6.inventory as Array<Record<string, unknown>>;
+    for (const it of bag) it.power = 1;
+    const loaded = deserialize(JSON.stringify(v6));
+    expect(loaded).not.toBeNull();
+    expect(loaded!.saveVersion).toBe(SAVE_VERSION);
+    for (const it of [...loaded!.inventory, ...Object.values(loaded!.equipped)]) {
+      if (it) expect(it.power).toBe(computeItemPower(it));
+    }
+    const powers = loaded!.inventory.map((x) => x.power);
+    expect(powers).toEqual([...powers].sort((a, b) => b - a));
   });
 
   it('migrates a version 4 save to the hex upgrade map, keeping about the same total effect per line', () => {

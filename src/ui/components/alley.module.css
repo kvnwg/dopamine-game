@@ -363,6 +363,14 @@
 .gearPower {
   color: #ffc233;
 }
+/* The Equip best button in the gear box header: compact (beats the shared .btn.small size). */
+.gearBox .gearHead .equipBest {
+  height: 46px;
+  min-height: 0;
+  padding: 0 14px;
+  font-size: 22px;
+  border-width: 4px;
+}
 .record {
   display: flex;
   align-items: center;

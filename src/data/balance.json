@@ -142,7 +142,7 @@
   },
   "items": {
     "levelScalePerLevel": 0.06,
-    "substatLevelScale": 0.05,
+    "power": { "base": 30, "oddsExponent": 0.2 },
     "levelOffset": {
       "min": -2,
       "max": 1
@@ -482,7 +482,7 @@
       "max": 8,
       "cost": {
         "base": 15,
-        "growth": 10
+        "growth": 100
       },
       "path": "n*7"
     },
@@ -525,7 +525,7 @@
       "max": 8,
       "cost": {
         "base": 30,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "luck",
@@ -540,7 +540,7 @@
       "max": 6,
       "cost": {
         "base": 120,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "rollSpeed",
@@ -555,7 +555,7 @@
       "max": 5,
       "cost": {
         "base": 300,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "rollSpeed",
@@ -570,7 +570,7 @@
       "max": 4,
       "cost": {
         "base": 3000,
-        "growth": 10
+        "growth": 100
       },
       "requires": {
         "id": "luckyRoll",
@@ -601,7 +601,7 @@
       "max": 4,
       "cost": {
         "base": 200000,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "goldenWheel",
@@ -616,7 +616,7 @@
       "max": 4,
       "cost": {
         "base": 4000,
-        "growth": 10
+        "growth": 100
       },
       "requires": {
         "id": "rollSpeed",
@@ -631,7 +631,7 @@
       "max": 8,
       "cost": {
         "base": 200,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "luck",
@@ -646,7 +646,7 @@
       "max": 5,
       "cost": {
         "base": 3000,
-        "growth": 10
+        "growth": 100
       },
       "requires": {
         "id": "enchant",
@@ -661,7 +661,7 @@
       "max": 5,
       "cost": {
         "base": 20000,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "enchant",
@@ -692,7 +692,7 @@
       "max": 8,
       "cost": {
         "base": 20,
-        "growth": 10
+        "growth": 100
       },
       "requires": {
         "id": "luck",
@@ -707,7 +707,7 @@
       "max": 6,
       "cost": {
         "base": 300,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "gold",
@@ -722,7 +722,7 @@
       "max": 6,
       "cost": {
         "base": 500,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "gold",
@@ -737,7 +737,7 @@
       "max": 6,
       "cost": {
         "base": 2000,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "gold",
@@ -752,7 +752,7 @@
       "max": 5,
       "cost": {
         "base": 8000,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "potionTime",
@@ -783,7 +783,7 @@
       "max": 8,
       "cost": {
         "base": 40,
-        "growth": 8
+        "growth": 100
       },
       "requires": {
         "id": "luck",
@@ -814,7 +814,7 @@
       "max": 8,
       "cost": {
         "base": 20,
-        "growth": 10
+        "growth": 100
       },
       "requires": {
         "id": "luck",
@@ -829,7 +829,7 @@
       "max": 8,
       "cost": {
         "base": 150,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "strength",
@@ -844,7 +844,7 @@
       "max": 8,
       "cost": {
         "base": 1000,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "critChance",
@@ -859,7 +859,7 @@
       "max": 6,
       "cost": {
         "base": 5000,
-        "growth": 9
+        "growth": 100
       },
       "requires": {
         "id": "critDmg",
@@ -890,7 +890,7 @@
       "max": 8,
       "cost": {
         "base": 40,
-        "growth": 10
+        "growth": 100
       },
       "requires": {
         "id": "strength",
@@ -905,7 +905,7 @@
       "max": 5,
       "cost": {
         "base": 2000,
-        "growth": 9.5
+        "growth": 100
       },
       "requires": {
         "id": "toughness",

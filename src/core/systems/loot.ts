@@ -1,21 +1,24 @@
-/** Item generation, power score, recycling, and display names. */
+/**
+ * Item generation, power, recycling, and display names.
+ *
+ * Power is rarity: an item's power comes only from its "1 in X" odds (enchantments included), so a
+ * rarer item always has more power and sorting by power is sorting by rarity. Its stats are sized to
+ * that power. The raccoon's level and best world then grow every worn item alike (gearScale in stats.ts).
+ */
 import { BAL, DATA, RARITIES, type BaseItem, type Mod, type Rarity, type Slot } from '../../data';
 import type { Rng } from '../rng';
 import type { Item, ItemEnchant, Substat } from '../types';
-import { enchantPowerMult } from './enchants';
+import { enchantMods, enchantPowerMult } from './enchants';
+import { itemOddsOneIn } from './luck';
 import { rarityAtLeast, round2 } from '../util';
-import { itemMods, modsPower } from './stats';
+import { modsScore } from './stats';
 
-/** Main stat value = slotBase x (1 + 0.09 x (itemLevel - 1)) x rarityMultiplier */
-export function mainStatValue(slotBase: number, itemLevel: number, rarity: Rarity): number {
-  return slotBase * (1 + BAL.items.levelScalePerLevel * (itemLevel - 1)) * BAL.rarities[rarity].mult;
+/** Main stat value before the item is sized to its power: slotBase x rarity multiplier (it sets the mix). */
+export function mainStatValue(slotBase: number, rarity: Rarity): number {
+  return slotBase * BAL.rarities[rarity].mult;
 }
 
-export function substatScale(itemLevel: number): number {
-  return 1 + BAL.items.substatLevelScale * (itemLevel - 1);
-}
-
-export function rollSubstats(count: number, itemLevel: number, themeId: string, rng: Rng): Substat[] {
+export function rollSubstats(count: number, themeId: string, rng: Rng): Substat[] {
   const theme = DATA.themes.find((t) => t.id === themeId) ?? DATA.themes[0];
   const pool: Array<[string, number]> = DATA.affixes
     .map((a) => [a.id, theme.substatWeights[a.id] ?? 1] as [string, number])
@@ -25,14 +28,45 @@ export function rollSubstats(count: number, itemLevel: number, themeId: string, 
     const id = rng.weighted(pool);
     pool.splice(pool.findIndex(([k]) => k === id), 1); // no duplicate substats
     const a = DATA.affixesById.get(id)!;
-    out.push({ affixId: a.id, stat: a.stat, mode: a.mode, value: round2(rng.float(a.min, a.max) * substatScale(itemLevel)) });
+    out.push({ affixId: a.id, stat: a.stat, mode: a.mode, value: round2(rng.float(a.min, a.max)) });
   }
   return out;
 }
 
-/** Power = weighted stat sum x (1 + enchantment power bonus). */
-export function computeItemPower(item: Omit<Item, 'power'>): number {
-  return Math.round(modsPower(itemMods({ ...item, power: 0 })) * (1 + enchantPowerMult(item.enchants)));
+/** Power for "1 in X" odds: base x X^exponent. Strictly rises with rarity. */
+export function powerForOdds(oneIn: number): number {
+  const p = BAL.items.power;
+  return Math.max(1, Math.round(p.base * Math.pow(Math.max(1, oneIn), p.oddsExponent)));
+}
+
+/** An item's power: from its odds alone (rarity and enchantments). */
+export function computeItemPower(item: Pick<Item, 'rarity' | 'enchants'>): number {
+  return powerForOdds(itemOddsOneIn(item));
+}
+
+/**
+ * Sets an item's power from its odds and sizes its stats to match: main stats, substats and unique
+ * bonuses scale together so that their weighted score, plus the enchantments' and Mint perk's own
+ * modifiers, times the enchantment power bonus, comes to the item's power.
+ */
+export function fitToPower<T extends Omit<Item, 'power'>>(item: T): T & { power: number } {
+  const power = computeItemPower(item);
+  const own: Mod[] = [...item.main, ...item.subs.map((s) => ({ stat: s.stat, mode: s.mode, value: s.value })), ...item.bonus];
+  const extra: Mod[] = [...enchantMods(item.enchants ?? [])];
+  if (item.mintPerkId) {
+    const perk = DATA.mintPerksById.get(item.mintPerkId);
+    if (perk) extra.push(...perk.mods);
+  }
+  const ownScore = modsScore(own);
+  const want = power / (1 + enchantPowerMult(item.enchants)) - modsScore(extra);
+  const k = ownScore > 0 ? Math.max(0.05, want / ownScore) : 1;
+  return {
+    ...item,
+    main: item.main.map((m) => ({ ...m, value: round2(m.value * k) })),
+    subs: item.subs.map((s) => ({ ...s, value: round2(s.value * k) })),
+    bonus: item.bonus.map((m) => ({ ...m, value: round2(m.value * k) })),
+    power,
+  };
 }
 
 export function createItem(
@@ -41,12 +75,12 @@ export function createItem(
   const main: Mod[] = BAL.items.slots[base.slot].main.map((m) => ({
     stat: m.stat,
     mode: 'flat' as const,
-    value: round2(mainStatValue(m.base, level, rarity)),
+    value: round2(mainStatValue(m.base, rarity)),
   }));
-  const subs = rollSubstats(BAL.rarities[rarity].substats, level, themeId, rng);
+  const subs = rollSubstats(BAL.rarities[rarity].substats, themeId, rng);
   const mintPerkId = rarity === 'mint' ? rng.pick(DATA.mintPerks).id : null;
-  const partial = { uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false, tier };
-  return { ...partial, power: computeItemPower(partial) };
+  // `level` and `tier` record where the item was found (they set its scrap value); its stats come from its power.
+  return fitToPower({ uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false, tier });
 }
 
 /** Picks the base item for a slot from the active theme. Legendary+ can roll one of the theme's unique Legendaries. */

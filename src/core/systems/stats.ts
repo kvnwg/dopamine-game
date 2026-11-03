@@ -10,25 +10,52 @@ export function zeroStats(): Stats {
   return Object.fromEntries(STAT_IDS.map((s) => [s, 0])) as Stats;
 }
 
-/** Flat stats that grow with the world an item was rolled in (percent-style stats do not). */
+/** Flat stats that grow with the raccoon's best world (percent-style stats do not). */
 const TIERED: ReadonlySet<StatId> = new Set<StatId>(['HP', 'ATK', 'DEF', 'REGEN']);
 
-/** An item's world multiplier: worlds.itemGrowth^(tier - 1). */
+/** The world multiplier for world tier `tier`: worlds.itemGrowth^(tier - 1). */
 export function tierMult(tier: number): number {
   return Math.pow(BAL.worlds.itemGrowth, Math.max(0, tier - 1));
 }
 
-/** Every stat modifier an item grants (main stats, substats, unique bonus, Mint perk), scaled by its world tier. */
-export function itemMods(item: Item): Mod[] {
-  const mods: Mod[] = [...item.main, ...item.subs.map((s) => ({ stat: s.stat, mode: s.mode, value: s.value })), ...item.bonus];
+/**
+ * How much stronger worn gear is for this raccoon. An item's own stats only depend on how rare it is
+ * (so a rarer item always has more power); the raccoon's level grows every worn item's own stats,
+ * and the world past the best one beaten grows their flat HP, ATK, DEF and regen.
+ */
+export interface GearScale {
+  level: number;
+  tier: number;
+}
+
+export function gearScale(state: Partial<Pick<GameState, 'player' | 'stage'>>): GearScale {
+  const level = state.player?.level ?? 1;
+  const world = Math.max(1, Math.min(DATA.worlds.length, (state.stage?.highestCleared ?? 0) + 1));
+  return { level: 1 + BAL.items.levelScalePerLevel * (level - 1), tier: tierMult(world) };
+}
+
+/** One number for the gear scale, for power scores: what an item's power is worth on this raccoon. */
+export function gearPowerMult(state: Partial<Pick<GameState, 'player' | 'stage'>>): number {
+  const g = gearScale(state);
+  return g.level * g.tier;
+}
+
+const UNSCALED: GearScale = { level: 1, tier: 1 };
+
+/**
+ * Every stat modifier an item grants (main stats, substats, unique bonus, Mint perk, enchantments).
+ * With a gear scale, its own stats grow with the raccoon's level and flat HP / ATK / DEF / regen with its world.
+ */
+export function itemMods(item: Item, scale: GearScale = UNSCALED): Mod[] {
+  const own: Mod[] = [...item.main, ...item.subs.map((s) => ({ stat: s.stat, mode: s.mode, value: s.value })), ...item.bonus];
+  const mods = scale.level === 1 ? own : own.map((m) => ({ ...m, value: m.value * scale.level }));
   if (item.mintPerkId) {
     const perk = DATA.mintPerksById.get(item.mintPerkId);
     if (perk) mods.push(...perk.mods);
   }
   mods.push(...enchantMods(item.enchants ?? []));
-  const k = tierMult(item.tier ?? 1);
-  if (k === 1) return mods;
-  return mods.map((m) => (m.mode === 'flat' && TIERED.has(m.stat) ? { ...m, value: m.value * k } : m));
+  if (scale.tier === 1) return mods;
+  return mods.map((m) => (m.mode === 'flat' && TIERED.has(m.stat) ? { ...m, value: m.value * scale.tier } : m));
 }
 
 export interface StatBreakdown {
@@ -36,7 +63,7 @@ export interface StatBreakdown {
   pct: Stats;
 }
 
-type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades' | 'rebirths'>>;
+type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades' | 'rebirths' | 'stage'>>;
 
 export function statSources(state: StatState): StatBreakdown {
   const flat = zeroStats();
@@ -47,9 +74,10 @@ export function statSources(state: StatState): StatBreakdown {
     if (m.mode === 'flat') flat[m.stat] += m.value;
     else pct[m.stat] += m.value;
   };
+  const scale = gearScale(state);
   for (const slot of SLOTS) {
     const it = state.equipped[slot];
-    if (it) itemMods(it).forEach(apply);
+    if (it) itemMods(it, scale).forEach(apply);
   }
   codexBonusMods(state.codex.entries.length).forEach(apply);
   const up = upgradeEffects({ upgrades: state.upgrades ?? {} });
@@ -77,21 +105,34 @@ export function computeStats(state: StatState): Stats {
   return out;
 }
 
-/** Weighted power score of a list of modifiers (weights in balance.json). */
-export function modsPower(mods: Mod[]): number {
+/** Weighted stat score of a list of modifiers (weights in balance.json), unrounded. */
+export function modsScore(mods: Mod[]): number {
   let p = 0;
   for (const m of mods) p += (m.mode === 'flat' ? BAL.power.flat[m.stat] : BAL.power.pct[m.stat]) * m.value;
-  return Math.round(p);
+  return p;
 }
 
-export function totalGearPower(state: Pick<GameState, 'equipped'>): number {
+/** Weighted power score of a list of modifiers (weights in balance.json). */
+export function modsPower(mods: Mod[]): number {
+  return Math.round(modsScore(mods));
+}
+
+/** An item's power as worn by this raccoon (its rarity power times the gear scale); what item tiles show. */
+export function wornPower(state: Partial<Pick<GameState, 'player' | 'stage'>>, item: Pick<Item, 'power'>): number {
+  return Math.round(item.power * gearPowerMult(state));
+}
+
+export function totalGearPower(state: Pick<GameState, 'equipped'> & Partial<Pick<GameState, 'player' | 'stage'>>): number {
   let p = 0;
-  for (const slot of SLOTS) p += state.equipped[slot]?.power ?? 0;
+  for (const slot of SLOTS) {
+    const it = state.equipped[slot];
+    if (it) p += wornPower(state, it);
+  }
   return p;
 }
 
 /** Overall progress score used to decide when a farming raccoon should try to push again. */
-export function playerPower(state: Pick<GameState, 'equipped' | 'player'>): number {
+export function playerPower(state: Pick<GameState, 'equipped' | 'player'> & Partial<Pick<GameState, 'stage'>>): number {
   return totalGearPower(state) + state.player.level * BAL.power.perPlayerLevel;
 }
 

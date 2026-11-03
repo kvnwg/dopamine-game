@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, createItem, gemSpeedupCost, itemMods, mainStatValue, recycleRewards, rollItemLevel, rollSlot, Rng, upgradeCost,
-  upgradeSeconds, codexBonusMods, itemName, tick, type GameState,
+  applyAction, createItem, enchantPowerMult, gearScale, gemSpeedupCost, itemMods, itemOddsOneIn, mainStatValue, modsScore, powerForOdds,
+  recycleRewards, rollItemLevel, rollSlot, Rng, upgradeCost, upgradeSeconds, codexBonusMods, itemName, tick, type GameState,
 } from '../src/core';
 import { BAL, DATA, RARITIES, SLOTS } from '../src/data';
 import { freshState, histogram, T0 } from './helpers';
@@ -31,23 +31,62 @@ describe('item rolls', () => {
     expect(Math.min(...low.keys())).toBe(1);
   });
 
-  it('main stat = slotBase x (1 + levelScale x (level - 1)) x rarity multiplier', () => {
-    expect(mainStatValue(30, 1, 'junk')).toBeCloseTo(30);
-    expect(mainStatValue(30, 11, 'legendary')).toBeCloseTo(30 * (1 + BAL.items.levelScalePerLevel * 10) * BAL.rarities.legendary.mult);
+  it('main stat before sizing = slotBase x rarity multiplier (it only sets the stat mix)', () => {
+    expect(mainStatValue(30, 'junk')).toBeCloseTo(30);
+    expect(mainStatValue(30, 'legendary')).toBeCloseTo(30 * BAL.rarities.legendary.mult);
   });
 
-  it('an item\'s flat HP/ATK/DEF grow with the world it was rolled in; percent stats do not', () => {
-    const rng = new Rng(12);
+  it('power is rarity: an item\'s power comes from its odds alone, and a rarer item always has more (10,000 items)', () => {
+    const rng = new Rng(21);
+    const bases = DATA.items.filter((i) => !i.unique);
+    const items = Array.from({ length: N }, (_, i) => {
+      const r = RARITIES[Math.floor(rng.float(0, RARITIES.length))];
+      const enchants = rng.chance(0.4) ? [{ id: DATA.enchants[0].id, tier: 1 + Math.floor(rng.float(0, 3)) }] : [];
+      return createItem(rng.pick(bases), r, 1 + Math.floor(rng.float(0, 60)), 'curbside', rng, i, enchants, 1 + Math.floor(rng.float(0, 10)));
+    });
+    for (const it of items) expect(it.power).toBe(powerForOdds(itemOddsOneIn(it)));
+    const byOdds = [...items].sort((a, b) => itemOddsOneIn(a) - itemOddsOneIn(b));
+    for (let i = 1; i < byOdds.length; i++) expect(byOdds[i].power).toBeGreaterThanOrEqual(byOdds[i - 1].power);
+    // Item level and world don't change an item's power: the same rarity and enchantments give the same power.
+    const gnome = DATA.itemsById.get('hat_lawn_gnome')!;
+    expect(createItem(gnome, 'epic', 40, 'curbside', rng, 1, [], 7).power).toBe(createItem(gnome, 'epic', 1, 'curbside', rng, 2, [], 1).power);
+  });
+
+  it('an enchantment makes an item rarer and stronger (an enchanted Epic outranks a plain Legendary)', () => {
+    const rng = new Rng(22);
+    const gnome = DATA.itemsById.get('hat_lawn_gnome')!;
+    const plain = createItem(gnome, 'epic', 5, 'curbside', rng, 1);
+    const ench = createItem(gnome, 'epic', 5, 'curbside', rng, 2, [{ id: DATA.enchants[0].id, tier: 1 }]);
+    const legendary = createItem(gnome, 'legendary', 5, 'curbside', rng, 3);
+    expect(itemOddsOneIn(ench)).toBeGreaterThan(itemOddsOneIn(plain));
+    expect(ench.power).toBeGreaterThan(plain.power);
+    expect(itemOddsOneIn(ench)).toBeGreaterThan(itemOddsOneIn(legendary));
+    expect(ench.power).toBeGreaterThan(legendary.power);
+  });
+
+  it('stats are sized to the power: their weighted score (with enchantment bonus) is the item\'s power', () => {
+    const rng = new Rng(23);
+    for (const r of RARITIES) {
+      const it = createItem(rng.pick(DATA.items), r, 9, 'curbside', rng, 0, r === 'epic' ? [{ id: DATA.enchants[1].id, tier: 2 }] : []);
+      const score = modsScore(itemMods(it)) * (1 + enchantPowerMult(it.enchants));
+      expect(Math.abs(score - it.power) / it.power, `${r}`).toBeLessThan(0.03);
+    }
+  });
+
+  it('worn gear grows with the raccoon: level grows its own stats, the best world its flat HP / ATK / DEF', () => {
     const mask = DATA.items.find((i) => i.slot === 'mask' && !i.unique)!;
-    const t1 = createItem(mask, 'shiny', 5, 'curbside', new Rng(12), 1, [], 1);
-    const t4 = createItem(mask, 'shiny', 5, 'curbside', rng, 1, [], 4);
-    const k = BAL.worlds.itemGrowth ** 3;
-    const atk = (it: typeof t1) => itemMods(it).filter((m) => m.stat === 'ATK' && m.mode === 'flat').reduce((a, m) => a + m.value, 0);
-    const crit = (it: typeof t1) => itemMods(it).filter((m) => m.stat === 'CRIT' && m.mode === 'flat').reduce((a, m) => a + m.value, 0);
-    expect(atk(t4)).toBeCloseTo(atk(t1) * k);
-    expect(crit(t4)).toBeCloseTo(crit(t1));
-    expect(t4.power).toBeGreaterThan(t1.power);
-    expect(recycleRewards(t4).coins).toBeCloseTo(recycleRewards(t1).coins * BAL.worlds.goldGrowth ** 3, -1);
+    const it = createItem(mask, 'shiny', 5, 'curbside', new Rng(12), 1);
+    const sum = (mods: ReturnType<typeof itemMods>, stat: string) => mods.filter((m) => m.stat === stat && m.mode === 'flat').reduce((a, m) => a + m.value, 0);
+    const fresh = gearScale({ player: { level: 1 } as never, stage: { highestCleared: 0 } as never });
+    const later = gearScale({ player: { level: 11 } as never, stage: { highestCleared: 3 } as never });
+    expect(fresh).toEqual({ level: 1, tier: 1 });
+    expect(later.level).toBeCloseTo(1 + BAL.items.levelScalePerLevel * 10);
+    expect(later.tier).toBeCloseTo(BAL.worlds.itemGrowth ** 3);
+    expect(sum(itemMods(it, later), 'ATK')).toBeCloseTo(sum(itemMods(it), 'ATK') * later.level * later.tier);
+    expect(sum(itemMods(it, later), 'CRIT')).toBeCloseTo(sum(itemMods(it), 'CRIT') * later.level);
+    // Scrap gold still grows with the world the item came from.
+    const t4 = createItem(mask, 'shiny', 5, 'curbside', new Rng(12), 1, [], 4);
+    expect(recycleRewards(t4).coins).toBeCloseTo(recycleRewards(it).coins * BAL.worlds.goldGrowth ** 3, -1);
   });
 
   it('substat counts follow rarity, never duplicate, and are evenly spread (10,000 items)', () => {
@@ -65,18 +104,6 @@ describe('item rolls', () => {
       const it = createItem(base, r, 1, 'curbside', rng, 0);
       expect(it.subs).toHaveLength(BAL.rarities[r].substats);
       expect(it.mintPerkId !== null).toBe(r === 'mint');
-    }
-  });
-
-  it('substat values scale with item level', () => {
-    const rng = new Rng(11);
-    const base = DATA.itemsById.get('hat_lawn_gnome')!;
-    const it = createItem(base, 'mint', 21, 'curbside', rng, 0);
-    for (const s of it.subs) {
-      const a = DATA.affixesById.get(s.affixId)!;
-      const scale = 1 + BAL.items.substatLevelScale * 20;
-      expect(s.value).toBeGreaterThanOrEqual(a.min * scale - 0.01);
-      expect(s.value).toBeLessThanOrEqual(a.max * scale + 0.01);
     }
   });
 

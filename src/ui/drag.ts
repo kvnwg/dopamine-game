@@ -1,7 +1,9 @@
 /**
- * Drag-to-equip. Items are equipped only by dragging them onto the raccoon (the battle area) or
- * onto a gear panel (`data-drop="equip"`). Mouse: press and move. Touch: press and hold briefly to
- * pick the item up, so ordinary swipes still scroll the bag. A press without a drag is a tap.
+ * Drag-to-equip. An item is equipped when it is dragged up toward the top of the screen: dropped
+ * anywhere above the menus (the battle view or the stat strip), onto a gear panel
+ * (`data-drop="equip"`), or after a clear upward drag from wherever it started. Mouse: press and
+ * move. Touch: press and hold briefly to pick the item up, so ordinary swipes still scroll the bag.
+ * A press without a drag is a tap.
  */
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Item } from '../core';
@@ -13,6 +15,10 @@ import { useUi } from './uiStore';
 const STAGE_W = 1080;
 const HOLD_MS = 170;
 const MOVE_PX = 8;
+/** Stage rows above the menus: the battle view (820) and the stat strip (92). Dropping here equips. */
+const UPPER_Y = 912;
+/** An upward drag this long (stage px) equips wherever it ends. */
+const LIFT_PX = 180;
 
 /**
  * True while a touch drag is in progress. The blocking touchmove listener must exist before the
@@ -44,6 +50,13 @@ function overDropTarget(clientX: number, clientY: number): boolean {
   return !!el?.closest('[data-drop="equip"]');
 }
 
+/** Whether letting go here equips: above the menus, over a gear panel, or well up from the start. */
+function wouldEquip(startX: number, startY: number, clientX: number, clientY: number): boolean {
+  if (overDropTarget(clientX, clientY)) return true;
+  const p = stagePoint(clientX, clientY);
+  return p.y < UPPER_Y || stagePoint(startX, startY).y - p.y > LIFT_PX;
+}
+
 interface Press {
   pid: number;
   sx: number;
@@ -69,7 +82,7 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
       press.dragging = true;
       if (press.touch) touchDragging = true;
       const p = stagePoint(cx, cy);
-      useUi.setState({ drag: { item, x: p.x, y: p.y, over: overDropTarget(cx, cy) } });
+      useUi.setState({ drag: { item, x: p.x, y: p.y, over: wouldEquip(press.sx, press.sy, cx, cy) } });
       haptics.impact('light');
       audio.tap();
     };
@@ -95,7 +108,7 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
         return;
       }
       const p = stagePoint(ev.clientX, ev.clientY);
-      useUi.setState({ drag: { item, x: p.x, y: p.y, over: overDropTarget(ev.clientX, ev.clientY) } });
+      useUi.setState({ drag: { item, x: p.x, y: p.y, over: wouldEquip(press.sx, press.sy, ev.clientX, ev.clientY) } });
     };
     const up = (ev: PointerEvent) => {
       if (ev.pointerId !== press.pid) return;
@@ -103,7 +116,7 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
       const moved = press.moved;
       cleanup();
       if (dragged) {
-        const over = overDropTarget(ev.clientX, ev.clientY);
+        const over = wouldEquip(press.sx, press.sy, ev.clientX, ev.clientY);
         useUi.setState({ drag: null });
         if (over) {
           haptics.impact('medium');

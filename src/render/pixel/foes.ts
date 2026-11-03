@@ -2,13 +2,14 @@
  * How each enemy shape is drawn: a hand-drawn still from ENEMY_ART (recolored per world), or an
  * animated sheet. Sheets: Kevin's raccoon as the punk raccoon (fur in the world's colors plus a
  * mohawk in its accent), the Mucho Pixels human as Officer Dale (shirt in the world's color), and
- * the fantasy pack characters (their own colors). Pure buffers, so Node tests can check them.
+ * the fantasy pack characters and the farm animals (their own colors). Pure buffers, so Node tests can check them.
  */
 import { rampOf, setPx, type PixelBuf } from './buf';
 import { frameBuf, type AnimSheet } from './indexed';
 import { ENEMY_ART } from './enemies';
 import { frameOffsets } from './hero';
 import { BIG_DEMON, DOC, ORC, PUMPKIN, SOLDIER } from './packs/fantasy';
+import { BUNNY, COW, DUCK, HEN, PIG, RAM } from './packs/farm';
 import { OFFICER, OFFICER_SHIRT } from './packs/humans';
 import { RACCOON, RACCOON_FUR } from './packs/raccoon';
 
@@ -18,6 +19,8 @@ export interface SheetLook {
   tint?: 'fur' | 'shirt';
   /** Adds a mohawk in the accent color. */
   punk?: boolean;
+  /** A one-frame sheet that moves like the hand-drawn stills (it bobs, and is knocked out of the park). */
+  still?: boolean;
 }
 
 /** Enemy shapes drawn from animated sheets; every other shape is a still in ENEMY_ART. */
@@ -29,6 +32,12 @@ export const FOE_SHEETS: Readonly<Record<string, SheetLook>> = {
   pumpkin: { sheet: PUMPKIN },
   doc: { sheet: DOC },
   bigDemon: { sheet: BIG_DEMON },
+  hen: { sheet: HEN, still: true },
+  duck: { sheet: DUCK, still: true },
+  bunny: { sheet: BUNNY, still: true },
+  ram: { sheet: RAM, still: true },
+  pig: { sheet: PIG, still: true },
+  cow: { sheet: COW, still: true },
 };
 
 /** Every shape the enemy art knows. */

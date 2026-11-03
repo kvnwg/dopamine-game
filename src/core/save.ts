@@ -4,6 +4,8 @@
  */
 import { GameStateSchema, SAVE_VERSION, type GameState } from './state';
 import { sanitizeUpgrades } from './systems/upgrades';
+import { fitToPower } from './systems/loot';
+import type { Item } from './types';
 
 export interface KeyValueStorage {
   get(key: string): Promise<string | null>;
@@ -133,6 +135,18 @@ export const MIGRATIONS: Record<number, Migration> = {
   5: (s) => {
     const roll = (s.roll ?? {}) as Record<string, unknown>;
     return { ...s, saveVersion: 6, roll: { ...roll, timer: 0, current: null } };
+  },
+  /**
+   * v6 -> v7: power is rarity. Every item's power is set from its odds (enchantments included) and its
+   * stats are scaled to match; the raccoon's level and best world now grow worn gear instead.
+   */
+  6: (s) => {
+    const fix = (it: Item | null) => (it ? fitToPower(it) : null);
+    const equipped = Object.fromEntries(Object.entries((s.equipped ?? {}) as Record<string, Item | null>).map(([k, v]) => [k, fix(v)]));
+    const inventory = ((s.inventory ?? []) as Item[]).map((it) => fitToPower(it)).sort((a, b) => b.power - a.power);
+    // A spin in flight would land an item made the old way: start the next spin fresh.
+    const roll = (s.roll ?? {}) as Record<string, unknown>;
+    return { ...s, saveVersion: 7, equipped, inventory, roll: { ...roll, timer: 0, current: null } };
   },
 };
 

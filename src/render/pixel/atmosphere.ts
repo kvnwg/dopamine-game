@@ -582,6 +582,8 @@ export function lightLayer(src: PixelBuf, o: LightOptions): PixelBuf {
           continue;
         }
         if (m === 'f') setRGB(out, x, y, mixLab(L, [80, 36, 16], 0.6));
+        // Curtains glow through: their own color, warmed and lit from behind.
+        else if (m === 'u') setRGB(out, x, y, mixLab(getRGB(out, x, y), mixLab(L, [190, 70, 50], 0.35), 0.6));
         else if (s.kind === 'window') setRGB(out, x, y, yy === 0 ? mixLab(L, WHITE, 0.4) : yy === s.h - 1 && s.h > 2 ? mixLab(L, [255, 120, 48], 0.25) : L);
         else setRGB(out, x, y, mixLab(L, WHITE, xx === Math.floor(s.w / 2) && yy === Math.floor(s.h / 2) ? 0.7 : 0.35));
       }

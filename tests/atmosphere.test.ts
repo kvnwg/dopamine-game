@@ -6,7 +6,9 @@ import {
 import { SUBURBS, windowsOf } from '../src/render/pixel/scenery';
 import { DUNGEON } from '../src/render/pixel/packs/dungeon';
 import { VIEW } from '../src/render/pixel/sceneryTypes';
-import { composeWorld, worldSeed } from '../src/render/worldLook';
+import { composeWorld, placeProps, sceneryFor, worldSeed } from '../src/render/worldLook';
+import { PROPS } from '../src/render/pixel/packs/props';
+import { clone } from '../src/render/pixel/buf';
 
 const atmoOf = (id: string) => DATA.worlds.find((w) => w.id === id)!.look.atmo;
 const alphas = (px: Uint8ClampedArray) => {
@@ -84,6 +86,9 @@ describe('atmosphere', () => {
     expect(windowsOf(['xxxx', 'xcwx', 'xxxx'])).toEqual([{ x: 1, y: 1, w: 2, h: 1, mask: ['gf'] }]);
     // Glass that isn't closed in by frame (a wall, a roof edge) is not a window.
     expect(windowsOf(['.ccc.', 'xccxx'])).toEqual([]);
+    // Curtains inside the frame belong to the window; a frame around curtains alone is not one.
+    expect(windowsOf(['xxxxx', 'xPcMx', 'xxxxx'])).toEqual([{ x: 1, y: 1, w: 3, h: 1, mask: ['ugu'] }]);
+    expect(windowsOf(['xxx', 'xPx', 'xxx'])).toEqual([]);
 
     const night = atmoOf('neon_night');
     const day = atmoOf('sunny_suburbs');
@@ -134,5 +139,21 @@ describe('atmosphere', () => {
       expect(v.h).toBe(VIEW.h + 1);
       expect([...alphas(v.px)], `world ${w}`).toEqual([255]);
     }
+  });
+
+  it('themed props exist, stand in the yards, and glowing ones light up', () => {
+    for (const w of DATA.worlds) {
+      for (const id of w.look.props ?? []) expect(id in PROPS, `${w.id}: unknown prop ${id}`).toBe(true);
+    }
+    const haunted = DATA.worlds.findIndex((w) => w.id === 'haunted_hollow') + 1;
+    const def = DATA.worlds[haunted - 1];
+    const mid = clone(sceneryFor(def).bufs.mid);
+    const before = mid.px.slice();
+    const spots = placeProps(mid, def.look.props!, worldSeed(haunted));
+    let changed = 0;
+    for (let i = 0; i < before.length; i += 4) if (before[i] !== mid.px[i] || before[i + 1] !== mid.px[i + 1]) changed++;
+    expect(changed, 'props were drawn').toBeGreaterThan(40);
+    expect(spots.length, 'a jack-o\'-lantern glows').toBeGreaterThanOrEqual(1);
+    expect(placeProps(clone(mid), [], 1)).toEqual([]);
   });
 });

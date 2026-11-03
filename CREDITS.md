@@ -14,10 +14,13 @@ The in-game credits line is `settings.credits` in `src/data/strings.en.json` (sh
 | 0x72, *16x16 DungeonTileset II* v1.7 | Pumpkin Dude, Plague Doc, Dumpgor the Demon; the Dungeon Dumps backdrop | **No license text in the download** (its README only has tiling notes). The tileset's itch.io page lists it as CC0; confirm there before release. |
 | Will Tice / unTied Games, *Super Pixel Effects Gigapack* (Free) v3.2.0 | Battle effects (hit sparks, crit bursts and sprays, explosions, sparkles, lightning, the level-up firework) | Commercial use allowed with credit **"Pixel Art Assets - Will Tice / unTied Games"** (shown in Settings). No standalone redistribution. Not for AI training. |
 | *Modern pixel clothes* (FREE) | 21 clothing items (icons recolored to the game palette) | **No license or author in the download.** Check the terms on the pack's download page before release. |
+| Farm animals (four Aseprite files: sheep, pig, cow, chicken / duck / rabbit) | Funky Farmland's enemies: Angry Hen, Quacker, Mad Bunny, Hog Hooligan, Ram Rager and the boss Mega Moo | **No license or author in the download** (just the .aseprite files). Find the source and its terms before release. Generated 1:1 by `tools/packs/farm.py`. |
+| *MV Icons Complete Sheet* (Free) | Not used yet (candidates: themed world props) | License is a linked Google Doc (EULA) that could not be read here; **confirm the terms before using any icon.** |
 | Pixelify Sans | All UI and battle text | SIL Open Font License, via @fontsource/pixelify-sans. |
+| Dumpster Digits (`src/assets/fonts/`, made by `tools/fonts/digits.py`) | A clearer 2 and 5 in front of Pixelify Sans | Drawn for the game on Pixelify Sans's grid; distributed under the SIL Open Font License 1.1 like Pixelify Sans. |
 
-Everything else (items, UI icons, the suburban street, rats, pigeons and the two raccoon bosses)
-was drawn for the game in `src/render/pixel/`.
+Everything else (items, UI icons, the suburban street, the farm backdrop, rats, pigeons and the two
+raccoon bosses, the skies and lighting) was drawn for the game in `src/render/pixel/`.
 
 Before a public release: confirm the packs marked **No license** above, and whether a public
 source repository counts as redistribution under each pack's terms (keep this repository private

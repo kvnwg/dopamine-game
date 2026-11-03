@@ -1,7 +1,5 @@
 import { BAL } from '../../data';
-import {
-  adSpeedupsLeft, formatDuration, formatNumber, gemSpeedupCost, upgradeCost, upgradeSeconds,
-} from '../../core';
+import { adSpeedupsLeft, formatDuration, formatNumber, gemSpeedupCost, upgradeCost, upgradeSeconds, formatPct } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { dumpsterArt } from '../../render/icons';
 import { ads, haptics } from '../../services';
@@ -35,7 +33,7 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
         <CloverIcon size={56} />
         {maxed
           ? t('luck.dumpster', { level })
-          : t('dumpster.luckLine', { now: ((level - 1) * per).toFixed(2), next: (level * per).toFixed(2) })}
+          : t('dumpster.luckLine', { now: formatPct((level - 1) * per), next: formatPct(level * per) })}
       </div>
       {!maxed && level + 1 === pityLevel && <p className={s.note}>{t('dumpster.unlocksPity', { level: pityLevel })}</p>}
       {maxed ? (

@@ -14,8 +14,9 @@
  * puts a column behind the hero, plain wall where the blows land and the banners and water fountain
  * behind the enemies.
  */
-import { blank, blit, crop, fromRows, type PixelBuf, type Rows, type SheetEntry } from '../buf';
-import { fromIndexed, KEYS } from '../indexed';
+import { blank, blit, crop, downsample2, fromRows, type PixelBuf, type Rows, type SheetEntry } from '../buf';
+import { frameBuf, fromIndexed, KEYS } from '../indexed';
+import { PROPS } from './props';
 import { VIEW, type LightSpot, type ScenerySet } from '../sceneryTypes';
 import { DUNGEON_PAL, DUNGEON_TILES } from './dungeonTiles';
 
@@ -23,9 +24,9 @@ import { DUNGEON_PAL, DUNGEON_TILES } from './dungeonTiles';
 const T = 16;
 /** Width of every layer: 16 pack tiles. */
 const TILE_W = 16 * T;
-/** View row where the floor starts (the far layer ends here), 6 rows above FEET_ROW (58). */
-const FLOOR_Y = 52;
-/** The ground layer: one row of floor slabs down to the bottom of the view. */
+/** View row where the floor starts (the far layer ends here), 7 rows above FEET_ROW (67). */
+const FLOOR_Y = 60;
+/** The ground layer: floor slabs down to the bottom of the view (a second row peeks in at the bottom). */
 const GROUND_H = VIEW.h - FLOOR_Y;
 /** View row where the back wall's stone lip starts (it is 4 rows tall); bricks start below it. */
 const LIP_Y = 8;
@@ -122,6 +123,21 @@ function door(): PixelBuf {
   return b;
 }
 
+/** A sprite in dusty grays (its light and shade kept), for cobwebs. */
+function dusty(src: PixelBuf): PixelBuf {
+  const out = blank(src.w, src.h);
+  for (let i = 0; i < src.px.length; i += 4) {
+    if (!src.px[i + 3]) continue;
+    const l = 0.3 * src.px[i] + 0.59 * src.px[i + 1] + 0.11 * src.px[i + 2];
+    const v = 70 + l * 0.62;
+    out.px[i] = v + 6;
+    out.px[i + 1] = v + 2;
+    out.px[i + 2] = v - 4;
+    out.px[i + 3] = 255;
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ far: the back wall
 
 /** Per 16 px bay: how many rows its bricks are shifted (a multiple of a course) and whether mirrored. */
@@ -160,10 +176,10 @@ export const TORCH: Rows = [
 
 /** Torch positions on the back wall (top-left of TORCH, far-layer pixels): clear of banners, holes and the door. */
 export const TORCHES: ReadonlyArray<readonly [number, number]> = [
-  [20, 24],
-  [98, 24],
-  [147, 30],
-  [200, 40],
+  [20, 28],
+  [98, 28],
+  [147, 34],
+  [200, 44],
 ];
 
 /** Fountain columns (far-layer x of each gargoyle's 16 px bay). */
@@ -197,10 +213,14 @@ function farLayer(): PixelBuf {
   const torch = fromRows(TORCH);
   for (const [x, y] of TORCHES) put(b, torch, x, y);
   stand(b, door(), 10 * T - 4, FLOOR_Y - 1);
-  // Engaged columns, 52 rows tall: capital above the lip from row 0, foot on the floor line.
-  const col = column(3, 6);
+  // Engaged columns, 60 rows tall: capital above the lip from row 0, foot on the floor line.
+  const col = column(5, 4);
   stand(b, col, 0, FLOOR_Y - 1);
   stand(b, col, 8 * T, FLOOR_Y - 1);
+  // Cobwebs (from the icon pack) strung in two corners where a column meets the wall's lip.
+  const web = dusty(frameBuf(PROPS.spiderWeb, 0));
+  put(b, web, T - 3, WALL_Y - 2);
+  put(b, web, 8 * T + T - 3, WALL_Y - 2, true);
   return b;
 }
 
@@ -218,6 +238,10 @@ function midLayer(): PixelBuf {
   // A chest with a skull beside it.
   stand(b, chest, 88, base);
   stand(b, skull, 101, base);
+  // A few more skulls (the icon pack's, at a quarter size) left lying about.
+  const bone = downsample2(frameBuf(PROPS.skull, 0));
+  stand(b, bone, 120, base);
+  stand(b, bone, 214, base, true);
   // Crates stacked by the wall.
   stand(b, crate, 176, base);
   stand(b, crate, 176, base - crate.h, true);
@@ -235,7 +259,9 @@ const FLOORS: readonly (readonly [number, boolean])[] = [
 
 function groundLayer(): PixelBuf {
   const b = blank(TILE_W, GROUND_H);
+  // Two rows of slabs (the second offset by half a slab and cut off by the bottom of the view).
   FLOORS.forEach(([f, flip], i) => put(b, tile(`floor_${f}`), i * T, 0, flip));
+  FLOORS.forEach(([, flip], i) => put(b, tile(`floor_${FLOORS[(i + 5) % FLOORS.length][0]}`), i * T + T / 2, T, !flip));
   return b;
 }
 

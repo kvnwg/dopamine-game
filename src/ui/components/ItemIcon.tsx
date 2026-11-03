@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
 import { DATA, type Slot } from '../../data';
-import { formatNumber, itemOddsOneIn, rarityAtLeast, type Item } from '../../core';
+import { formatNumber, itemOddsOneIn, rarityAtLeast, type Item, gearPowerMult } from '../../core';
 import { emptyIconUrl, itemArtUrl } from '../../render/icons';
 import { rarityColor } from '../../render/art';
+import { useGame } from '../../app/store';
 import { useItemDrag } from '../drag';
 import { CheckIcon, LockIcon } from './Icons';
 import s from './ItemIcon.module.css';
@@ -38,6 +39,8 @@ export function ItemIcon({
   item, slot, size = 150, showPower = true, showOdds = true, equipped, upgrade, draggable, onTap, className, style,
 }: Props) {
   const drag = useItemDrag(draggable && item ? item : null, onTap);
+  // Power as worn by this raccoon (rarity power x its level and world scale), so tiles add up to its Power.
+  const gearMult = useGame(gearPowerMult);
   const theSlot = item?.slot ?? slot ?? 'hat';
   const vars = { ['--s' as string]: `${size}px`, ...style } as CSSProperties;
   if (!item) {
@@ -73,7 +76,7 @@ export function ItemIcon({
         )}
         {equipped && <CheckIcon className={s.corner} size={Math.round(size * 0.27)} />}
         {!equipped && item.locked && <LockIcon className={s.corner} size={Math.round(size * 0.25)} />}
-        {showPower && <span className={s.power}>{formatNumber(item.power)}</span>}
+        {showPower && <span className={s.power}>{formatNumber(Math.round(item.power * gearMult))}</span>}
       </div>
       {showOdds && (
         <span className={`${s.odds} ${rare ? s.oddsRare : ''} ${rarityAtLeast(r, 'legendary') ? s.oddsLegend : ''}`}>

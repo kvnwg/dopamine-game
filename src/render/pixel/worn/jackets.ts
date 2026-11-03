@@ -189,13 +189,13 @@ export const JACKETS: Readonly<Record<string, JacketArt>> = {
       return shade(['N', 't', 'T'], g);
     },
   },
-  // Duct tape jacket: silver strips, each one's top edge catching the light, a red tape cross on the chest.
+  // Duct tape jacket: silver strips, each one's top edge catching the light, a red tape X on the chest.
   jacket_duct_tape: {
     pal: { a: '2', b: '3', c: '4', d: '5', w: 'w', R: 'R' },
     cut: 'jacket',
     paint: (g) => {
       if (g.part === 'n') return 'c';
-      if (!sleeve(g) && !g.curled && ((g.u === 2 && g.v >= 1 && g.v <= 3) || (g.v === 2 && (g.u === 1 || g.u === 3)))) return 'R';
+      if (!sleeve(g) && !g.curled && (g.v === 2 ? g.u === 2 || g.u === 3 : (g.v === 1 || g.v === 3) && (g.u === 1 || g.u === 4))) return 'R';
       if (g.hem || g.cuff) return g.tone === 0 ? 'a' : 'b';
       if (odd(g.v)) return g.tone === 0 ? 'b' : g.tone === 2 ? 'w' : 'd';
       return g.tone === 0 ? 'a' : 'c';

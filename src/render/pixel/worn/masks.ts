@@ -1,7 +1,10 @@
 /**
  * Masks and glasses, drawn on frame 0's face: `at` is the pixel over his left eye (9,10 as drawn;
  * the right eye is 13,10, the nose 11,11, the muzzle 10 to 12 on rows 11 and 12, the chin row 13).
- * They are clipped to his head. A squashed face (eyes and nose on one row) uses `squash`.
+ * They are clipped to his head. A squashed face (eyes and nose on one row) uses `squash`; parts that hang
+ * off his head (a bandana's point, a monocle's chain, a gas mask's filter) are `free`. Masks over his whole
+ * face leave his head's outline (x 7 and 16) showing, so it frames them; walking, his eyes move a pixel
+ * toward the front of his 3/4 head and a sliver of his fur shows behind the mask.
  */
 import type { MaskArt } from './types';
 

@@ -1,8 +1,10 @@
 /**
  * Hats, drawn on frame 0's head (ear tips at rows 5 and 6, x 7 to 9 and 14 to 16; the crown's outline
  * on row 6, x 10 to 13; brows on row 7). Most sit down over the crown with his ears poking out through
- * them (`ears`), so the raccoon still reads; the paint bucket and the bike helmet cover them. A hat may reach
- * up to row 1: his head rises a row in the idle loop, and every pose must stay in the frame.
+ * them (`ears`), so the raccoon still reads: only 4 pixels of a hat show between his ears on rows 5 and 6,
+ * so a hat wider than that (a takeout box, a nest, a crown) widens above them. Helmets and anything pulled
+ * down over his head (the paint bucket, the bike helmet, the colander, the lampshade, the shower cap) cover
+ * them. A hat may reach up to row 1: his head rises a row in the idle loop, and every pose must stay in the frame.
  */
 import type { HatArt } from './types';
 

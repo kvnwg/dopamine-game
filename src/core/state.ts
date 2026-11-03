@@ -3,10 +3,14 @@
  * The zod schema validates loaded saves; the TS type is inferred from it.
  */
 import { z } from 'zod';
-import { BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, type Slot } from '../data';
+import {
+  BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, HeistNodeKindSchema, LocationIdSchema, LOCATION_IDS,
+  type LocationId, type Slot,
+} from '../data';
 import type { Item } from './types';
+import { dayKey } from './time';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export const SubstatSchema = z.object({
   affixId: z.string(),
@@ -57,6 +61,8 @@ export const SpinSchema = z.object({
   luck: z.number(),
   /** Paid for with a Trash Bag: spins faster. */
   turbo: z.boolean(),
+  /** A spin the tutorial scripts: the very first one, or beginner's luck (its first reel). */
+  scripted: z.enum(['first', 'beginner']).nullable().default(null),
   /** Until the last reel lands (luck tokens add stepSeconds each). */
   spinSeconds: z.number().positive(),
   /** A spin without tokens; each token adds stepSeconds to its reel. */
@@ -81,12 +87,15 @@ export const EnemyStateSchema = z.object({
   burnDps: z.number(),
   burnTime: z.number(),
   burnShown: z.number(),
+  /** Heists: seconds left stunned (it neither attacks nor uses its specials). */
+  stun: z.number().optional(),
 });
 
 export const BattleSchema = z.object({
   stage: z.number().int().positive(),
   wave: z.number().int().nonnegative(),
-  phase: z.enum(['walking', 'fighting', 'dead', 'choice']),
+  /** `idle`: a heist between stops (the hero stands, no enemies). */
+  phase: z.enum(['walking', 'fighting', 'dead', 'choice', 'idle']),
   phaseTime: z.number(),
   playerHp: z.number(),
   playerAtkProgress: z.number(),
@@ -109,6 +118,143 @@ export const PendingOfflineSchema = z.object({
   coins: z.number(),
   xp: z.number(),
   canDouble: z.boolean(),
+  /** Items the dumpster rolled while away (offline rolls). */
+  rolls: z.number().int().nonnegative().default(0),
+  /** The rare finds it put in the bag, best first (copies for the popup, at most offline.keepListMax). */
+  found: z.array(ItemSchema).default([]),
+  /** How many rare finds there were in all. */
+  foundCount: z.number().int().nonnegative().default(0),
+});
+
+// ---------------------------------------------------------------- heists
+
+export const HeistLogLineSchema = z.object({
+  /** A strings.en.json key (heist.log.*). */
+  key: z.string(),
+  params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+});
+
+export const ShopItemSchema = z.object({
+  /** A perk id for `perk`; otherwise the kind again. */
+  id: z.string(),
+  kind: z.enum(['heal', 'perk', 'removeCurse', 'reroll']),
+  price: z.number(),
+  sold: z.boolean(),
+});
+
+/** A decision the run waits on: Go is blocked until it is answered (heistChoose, or heistLeaveShop). */
+export const HeistPendingSchema = z.discriminatedUnion('kind', [
+  /** Pick one perk. An evolution is flagged; `source` is why it is offered (a level-up or a shrine). */
+  z.object({
+    kind: z.literal('perk'),
+    options: z.array(z.object({ id: z.string(), evolution: z.boolean().optional() })),
+    source: z.enum(['level', 'shrine', 'wheel']).optional(),
+  }),
+  /** A choice event (heistEvents.json): `options` is how many options it has. */
+  z.object({ kind: z.literal('choice'), eventId: z.string(), options: z.number().int().positive() }),
+  z.object({ kind: z.literal('shop'), stock: z.array(ShopItemSchema) }),
+  /** The Jackpot Wheel: heistChoose spins it. */
+  z.object({ kind: z.literal('wheel') }),
+  /** heistChoose 0 trades max HP for an Epic perk offer, 1 walks away. */
+  z.object({ kind: z.literal('shrine') }),
+]);
+
+/** The fight in progress (its enemies are battle.enemies once it has walked in). */
+export const HeistFightSchema = z.object({
+  kind: z.enum(['fight', 'elite', 'boss']),
+  /** Multiplies its run coins and XP (choices can raise it). */
+  rewardMult: z.number(),
+  /** Seconds since the enemies arrived. */
+  time: z.number(),
+  /** Lid Shield blocks left; Fortress of Junk's block charge and its timer. */
+  blocks: z.number().int().nonnegative(),
+  blockCharge: z.boolean(),
+  blockTimer: z.number(),
+  pigeonTimer: z.number(),
+  roccoTimer: z.number(),
+  /** Hits landed (Bullseye). */
+  hits: z.number().int().nonnegative(),
+  /** ATK multiplier from Double or Nothing's coin flip. */
+  atkMult: z.number(),
+  /** Earned in this fight (for its log line). */
+  coins: z.number(),
+  xp: z.number(),
+});
+
+export const HeistRewardsSchema = z.object({
+  bags: z.number(),
+  coins: z.number(),
+  gems: z.number(),
+  potion: z.boolean(),
+  /** The heist-exclusive ring's item id, when the win dropped it. */
+  ring: z.string().nullable(),
+});
+
+export const HeistRunSchema = z.object({
+  location: LocationIdSchema,
+  act: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  /** The stop in the act, 0 to 5 (6 is the boss in act 3): the one being played, or the next one when `ready`. */
+  index: z.number().int().nonnegative(),
+  /** Stop kinds per act, an act at a time as it is reached (act 3 ends with 'boss'). */
+  nodes: z.array(z.array(HeistNodeKindSchema)),
+  hp: z.number(),
+  maxHp: z.number(),
+  level: z.number().int().positive(),
+  xp: z.number().nonnegative(),
+  coins: z.number(),
+  perks: z.array(z.string()),
+  curses: z.array(z.string()),
+  pending: HeistPendingSchema.nullable(),
+  status: z.enum(['ready', 'fighting', 'won', 'lost', 'secondChance']),
+  log: z.array(HeistLogLineSchema),
+  /** Collected so far (a win adds the location's payout). A loss keeps lossKeepPct of it. */
+  rewards: HeistRewardsSchema,
+  rerollsUsed: z.number().int().nonnegative(),
+  revived: z.boolean(),
+  // ---- beyond the UI contract: run bookkeeping
+  /** Perks merged into an evolution: they still work but take no slot. */
+  absorbed: z.array(z.string()),
+  /** Level-up perk offers still to show (one fight can give several levels). */
+  offersOwed: z.number().int().nonnegative(),
+  /** The (fractional) world the run's enemies and gold scale from, set by the raccoon's power at the start (heistTier). */
+  tier: z.number().positive(),
+  /** Enemy HP and ATK multiplier for this run (location difficulty; the gentle first Pizza Place run). */
+  difficulty: z.number().positive(),
+  /** Max HP % from shrines and choices (negative: lost). */
+  maxHpPct: z.number(),
+  fight: HeistFightSchema.nullable(),
+  /** Effects choices left for later stops. */
+  flags: z.object({
+    skipNext: z.boolean(),
+    /** The next N fights are skipped. */
+    skipFights: z.number().int().nonnegative(),
+    /** No fights for the next N stops. */
+    truce: z.number().int().nonnegative(),
+    /** The act with no traps (0: none). */
+    noTrapsAct: z.number().int().nonnegative(),
+    /** A saved snack: heals `pct` once HP drops under `below` %. */
+    savedHeal: z.object({ pct: z.number(), below: z.number() }).nullable(),
+    nineLivesUsed: z.boolean(),
+  }),
+  /** Choice events already seen this run (no repeats). */
+  seen: z.array(z.string()),
+  /** The main battle exactly as it was when the run started; it comes back when the run ends. */
+  main: BattleSchema,
+  /** The offline earning rate when the run started (a run earns nothing toward offline time). */
+  mainRate: RateSchema,
+  startedAt: z.number(),
+});
+
+export const HeistStateSchema = z.object({
+  tickets: z.number().int().nonnegative(),
+  /** The local day the daily tickets last came in ('' right after the save migration: no grant on that day). */
+  ticketDay: z.string(),
+  /** The local day the ad ticket was last used. */
+  adTicketDay: z.string().nullable(),
+  wins: z.record(LocationIdSchema, z.number().int().nonnegative()),
+  run: HeistRunSchema.nullable(),
+  /** The best world ever beaten, across rebirths (locations open from it). */
+  bestWorld: z.number().int().nonnegative(),
 });
 
 export const GameStateSchema = z.object({
@@ -144,6 +290,13 @@ export const GameStateSchema = z.object({
     forcedRarity: RaritySchema.nullable(),
     /** Dev: the luck tokens the next reel lands on before its item. */
     forcedTokens: z.array(z.number()).nullable().default(null),
+    /**
+     * Beginner's luck (BAL.tutorial), new games only: 'pending' until its spin, 'rolled' (with the
+     * item's uid) until that item is put on, then 'done'. Saves from before it count as done.
+     */
+    beginner: z
+      .object({ state: z.enum(['pending', 'rolled', 'done']), uid: z.number().int().nullable() })
+      .default({ state: 'done', uid: null }),
     adSpeedupDay: z.string(),
     adSpeedupsUsed: z.number().int().nonnegative(),
   }),
@@ -153,6 +306,8 @@ export const GameStateSchema = z.object({
     current: SpinSchema.nullable(),
     count: z.number().int().nonnegative(),
     sinceLucky: z.number().int().nonnegative(),
+    /** Spins still owed by a heist's Golden Dumpster: each is a golden spin at heist.golden.luckMult luck. */
+    goldenLeft: z.number().int().nonnegative().default(0),
   }),
   upgrades: z.record(z.string(), z.number().int().nonnegative()),
   rebirths: z.number().int().nonnegative(),
@@ -180,13 +335,34 @@ export const GameStateSchema = z.object({
     reduceFlashing: z.boolean(),
     reduceMotion: z.boolean(),
   }),
+  heist: HeistStateSchema,
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
+export type HeistState = z.infer<typeof HeistStateSchema>;
+export type HeistRun = z.infer<typeof HeistRunSchema>;
+export type HeistPending = z.infer<typeof HeistPendingSchema>;
+export type HeistFight = z.infer<typeof HeistFightSchema>;
+export type HeistRewards = z.infer<typeof HeistRewardsSchema>;
+export type HeistLogLine = z.infer<typeof HeistLogLineSchema>;
+export type ShopItem = z.infer<typeof ShopItemSchema>;
+export type HeistStatus = HeistRun['status'];
 export type BattleState = z.infer<typeof BattleSchema>;
 export type EnemyState = z.infer<typeof EnemyStateSchema>;
 export type Rate = z.infer<typeof RateSchema>;
 export type PendingOffline = z.infer<typeof PendingOfflineSchema>;
+
+/** A fresh heist state: `tickets` tickets, counted as today's grant (`ticketDay` '' waits for the next refresh). */
+export function initialHeist(tickets: number, ticketDay: string, bestWorld = 0): HeistState {
+  return {
+    tickets,
+    ticketDay,
+    adTicketDay: null,
+    wins: Object.fromEntries(LOCATION_IDS.map((id) => [id, 0])) as Record<LocationId, number>,
+    run: null,
+    bestWorld,
+  };
+}
 
 export function emptyEquipment(): Record<Slot, Item | null> {
   return Object.fromEntries(SLOTS.map((s) => [s, null])) as Record<Slot, Item | null>;
@@ -225,10 +401,11 @@ export function createInitialState(now: number, seed: number): GameState {
       firstDiveDone: false,
       forcedRarity: null,
       forcedTokens: null,
+      beginner: { state: 'pending', uid: null },
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },
-    roll: { timer: 0, current: null, count: 0, sinceLucky: 0 },
+    roll: { timer: 0, current: null, count: 0, sinceLucky: 0, goldenLeft: 0 },
     upgrades: {},
     rebirths: 0,
     luckBoostEndsAt: null,
@@ -237,5 +414,6 @@ export function createInitialState(now: number, seed: number): GameState {
     offline: { buckets: [], trackingSince: null, pausedRate: null, paused: false, pending: null },
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, reduceFlashing: false, reduceMotion: false },
+    heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
   };
 }

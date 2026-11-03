@@ -5,7 +5,7 @@ import { emptyItemArt, itemArt, UI_PX, type ArtScale } from '../../render/icons'
 import { rarityColor } from '../../render/art';
 import { useGame } from '../../app/store';
 import { useItemDrag } from '../drag';
-import { ArrowUpIcon, CheckIcon, LockIcon } from './Icons';
+import { ArrowDownIcon, ArrowUpIcon, CheckIcon, LockIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import s from './ItemIcon.module.css';
 
@@ -40,6 +40,8 @@ interface Props {
   equipped?: boolean;
   /** Better than what is equipped in its slot: green arrow. */
   upgrade?: boolean;
+  /** Worse than what is equipped in its slot: red arrow. */
+  downgrade?: boolean;
   /** Can be dragged onto the raccoon to equip. */
   draggable?: boolean;
   onTap?: () => void;
@@ -58,7 +60,7 @@ export function oddsShort(x: number): string {
 
 /** An item tile: rarity card, art, power, enchant gems, a loud "1 in X" banner, and badges. */
 export function ItemIcon({
-  item, slot, size, scale = 1, showPower = true, showOdds = true, equipped, upgrade, draggable, onTap, className, style,
+  item, slot, size, scale = 1, showPower = true, showOdds = true, equipped, upgrade, downgrade, draggable, onTap, className, style,
 }: Props) {
   const drag = useItemDrag(draggable && item ? item : null, onTap);
   // Power as worn by this raccoon (rarity power x its level and world scale), so tiles add up to its Power.
@@ -89,6 +91,7 @@ export function ItemIcon({
       data-rarity={r}
       data-slot={theSlot}
       data-scale={scale}
+      data-uid={item.uid}
       {...handlers}
     >
       <div className={[s.tile, s[r] ?? '', rare ? s.shine : ''].join(' ')}>
@@ -111,6 +114,7 @@ export function ItemIcon({
         </span>
       )}
       {upgrade && !equipped && <ArrowUpIcon className={s.upgrade} />}
+      {downgrade && !upgrade && !equipped && <ArrowDownIcon className={s.downgrade} />}
     </div>
   );
 }

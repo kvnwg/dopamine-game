@@ -6,8 +6,9 @@ import { computeStats } from './stats';
 
 /** XP needed to go from `level` to `level + 1`: 60 x level^1.7. */
 export function xpToNext(level: number): number {
-  const { base, exponent } = BAL.player.xpCurve;
-  return Math.round(base * Math.pow(level, exponent));
+  const { base, exponent, early } = BAL.player.xpCurve;
+  // The first few levels come quickly (front-loaded), then the curve takes over.
+  return Math.max(1, Math.round(base * Math.pow(level, exponent) * (early[level - 1] ?? 1)));
 }
 
 /** Total XP needed to reach `level` from level 1. */
@@ -34,6 +35,7 @@ export function addXp(d: GameState, amount: number, ev: CoreEvent[]): void {
   if (d.player.level >= cap) d.player.xp = 0;
   if (leveled) {
     const gained = computeStats(d).HP - hpBefore;
-    if (gained > 0 && d.battle.phase !== 'dead') d.battle.playerHp += gained;
+    const b = d.heist?.run ? d.heist.run.main : d.battle;
+    if (gained > 0 && b.phase !== 'dead') b.playerHp += gained;
   }
 }

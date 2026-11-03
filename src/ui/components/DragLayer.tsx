@@ -10,7 +10,7 @@ export function DragLayer() {
   return (
     <div className={s.dragLayer}>
       {/* Whole stage px, upright and at its real size: the art stays on the pixel grid while it follows the finger (the tile just above it). */}
-      <div className={s.ghost} style={{ left: Math.round(drag.x) - 243, top: Math.round(drag.y) - 120 }}>
+      <div className={s.ghost} style={{ left: Math.round(drag.x) - 243, top: Math.round(drag.y) - 120 }} data-drag-ghost="">
         <ItemIcon item={drag.item} />
         <span className={`${s.dragHint} ${drag.over ? s.dragHintOn : ''}`}>{drag.over ? t('drag.release') : t('drag.dropOn')}</span>
       </div>

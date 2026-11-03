@@ -13,6 +13,7 @@ import { audio } from '../services/audio';
 import { useUi } from './uiStore';
 import { P } from '../render/pixel';
 import { FEET_ROW, VIEW } from '../render/pixel/sceneryTypes';
+import { noteEquipSource } from './equipSource';
 
 const STAGE_W = 1080;
 const HOLD_MS = 170;
@@ -126,6 +127,8 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
         useUi.setState({ drag: null });
         if (over) {
           haptics.impact('medium');
+          // The item leaps from under the finger (EquipFlight): note where the dragged copy is.
+          noteEquipSource(item.uid, document.querySelector('[data-drag-ghost]'));
           dispatch({ type: 'equipItem', uid: item.uid });
         }
       } else if (!moved) {

@@ -88,10 +88,12 @@ export function createItem(
  * Picks the base item for a slot from the active theme, among the items unlocked after `rebirths`
  * rebirths. Legendary+ can roll one of the theme's unique Legendaries.
  */
-export function pickBaseItem(slot: Slot, themeId: string, rarity: Rarity, rng: Rng, rebirths = Infinity): BaseItem {
-  const all = DATA.items.filter((i) => i.theme === themeId && i.slot === slot);
+export function pickBaseItem(slot: Slot, themeId: string, rarity: Rarity, rng: Rng, rebirths = Infinity, avoid?: string): BaseItem {
+  const all = DATA.items.filter((i) => i.theme === themeId && i.slot === slot && !i.heist);
   const open = all.filter((i) => isItemUnlocked(i, rebirths));
-  const inTheme = open.length > 0 ? open : all;
+  const found = open.length > 0 ? open : all;
+  // `avoid`: any other base item, if there is one (beginner's luck never hands out the tutorial item again).
+  const inTheme = avoid && found.some((i) => i.id !== avoid) ? found.filter((i) => i.id !== avoid) : found;
   const regular = inTheme.filter((i) => !i.unique);
   const uniques = inTheme.filter((i) => i.unique);
   if (uniques.length > 0 && rarityAtLeast(rarity, 'legendary') && rng.chance(BAL.dumpster.uniqueLegendaryChance)) {

@@ -231,6 +231,118 @@
         "accent": "#2C2830",
         "size": 240,
         "label": "MOO"
+      },
+      "pizza_rat": {
+        "shape": "rat",
+        "color": "#8A6E5E",
+        "accent": "#E8402A",
+        "size": 110,
+        "label": "PIZZA RAT"
+      },
+      "crust_pigeon": {
+        "shape": "pigeon",
+        "color": "#B49A7A",
+        "accent": "#F2C14E",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "dough_boy": {
+        "shape": "raccoon",
+        "color": "#D8D2C4",
+        "accent": "#E8822A",
+        "size": 150,
+        "label": "FLOUR PUNK"
+      },
+      "delivery_dave": {
+        "shape": "officer",
+        "color": "#C8323C",
+        "accent": "#F4EDE0",
+        "size": 260,
+        "label": "DELIVERY DAVE"
+      },
+      "chef_tony": {
+        "shape": "officer",
+        "color": "#F2EEE6",
+        "accent": "#D8402A",
+        "size": 320,
+        "label": "CHEF TONY"
+      },
+      "pretzel_rat": {
+        "shape": "rat",
+        "color": "#9C7A52",
+        "accent": "#F2D06E",
+        "size": 110,
+        "label": "PRETZEL RAT"
+      },
+      "skylight_pigeon": {
+        "shape": "pigeon",
+        "color": "#7E8CA8",
+        "accent": "#9EDCF7",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "mall_rat": {
+        "shape": "raccoon",
+        "color": "#7A7088",
+        "accent": "#2EE6FF",
+        "size": 150,
+        "label": "MALL RAT"
+      },
+      "kiosk_kyle": {
+        "shape": "officer",
+        "color": "#3E8A4A",
+        "accent": "#F2E6C9",
+        "size": 260,
+        "label": "KIOSK KYLE"
+      },
+      "mall_cop_doug": {
+        "shape": "officer",
+        "color": "#4A5A70",
+        "accent": "#F2C14E",
+        "size": 320,
+        "label": "MALL COP DOUG"
+      },
+      "room_service_rat": {
+        "shape": "rat",
+        "color": "#6E6476",
+        "accent": "#F4EFE1",
+        "size": 110,
+        "label": "ROOM SERVICE RAT"
+      },
+      "penthouse_pigeon": {
+        "shape": "pigeon",
+        "color": "#9A92B0",
+        "accent": "#E8C060",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "valet_raccoon": {
+        "shape": "raccoon",
+        "color": "#6E6878",
+        "accent": "#C8323C",
+        "size": 150,
+        "label": "VALET"
+      },
+      "bellhop": {
+        "shape": "officer",
+        "color": "#B02A3A",
+        "accent": "#F2C14E",
+        "size": 220,
+        "label": "BELLHOP"
+      },
+      "head_bellhop": {
+        "shape": "officer",
+        "color": "#7A1E3A",
+        "accent": "#FFD54F",
+        "size": 260,
+        "label": "HEAD BELLHOP"
+      },
+      "the_concierge": {
+        "shape": "officer",
+        "color": "#2A2238",
+        "accent": "#E8C060",
+        "size": 320,
+        "label": "THE CONCIERGE"
       }
     },
     "raccoon": {

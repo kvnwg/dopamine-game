@@ -103,6 +103,7 @@ export function InventoryPanel() {
               item={it}
               draggable
               upgrade={isUpgrade(g, it)}
+              downgrade={(g.equipped[it.slot]?.power ?? -1) > it.power}
               onTap={() => useUi.getState().openPopup('itemDetail', it.uid)}
             />
           ))}

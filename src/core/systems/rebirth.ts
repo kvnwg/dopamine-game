@@ -20,6 +20,7 @@ export function rebirthRequirement(rebirths: number): { world: number; gold: num
 }
 
 export function canRebirth(state: GameState): boolean {
+  if (state.heist?.run) return false;
   const req = rebirthRequirement(state.rebirths);
   return state.stage.highestCleared >= req.world && state.currencies.coins >= req.gold;
 }

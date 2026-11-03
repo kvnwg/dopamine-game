@@ -397,10 +397,110 @@
   opacity: 0.9;
 }
 
-/* Coins from a big haul land on the gold counter: it flashes and hops one pixel. */
-.moneyPulse {
-  animation: moneyPulse 320ms steps(2);
+/*
+ * Things landing on the HUD (TopHud, hudFlight.ts). Moves are whole art pixels and flashes are steps;
+ * TopHud zeroes --hop / --hop2 for Reduce Motion and --flash / --flash2 for Reduce Flashing.
+ */
+.hud {
+  --hop: calc(-1 * var(--px));
+  --hop2: calc(-2 * var(--px));
+  --flash: brightness(1.45);
+  --flash2: brightness(1.9);
 }
-@keyframes moneyPulse {
-  40% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.45); }
+@media (prefers-reduced-motion: reduce) {
+  .hud {
+    --hop: 0px;
+    --hop2: 0px;
+  }
+}
+/* A coin (or a haul's coins) lands on the gold counter: it hops a pixel, flashed, and drops back. Two
+   classes take turns so each landing restarts it; a stream of coins makes it chatter. */
+.hopA {
+  animation: hopA 120ms steps(1, end);
+}
+.hopB {
+  animation: hopB 120ms steps(1, end);
+}
+@keyframes hopA {
+  0% { transform: translateY(var(--hop)); filter: var(--flash); }
+  55% { transform: none; filter: none; }
+}
+@keyframes hopB {
+  0% { transform: translateY(var(--hop)); filter: var(--flash); }
+  55% { transform: none; filter: none; }
+}
+/* XP sparks reach the bar: its fill flashes. */
+.flashA {
+  animation: flashA 110ms steps(1, end);
+}
+.flashB {
+  animation: flashB 110ms steps(1, end);
+}
+@keyframes flashA {
+  0% { filter: var(--flash2); }
+  55% { filter: none; }
+}
+@keyframes flashB {
+  0% { filter: var(--flash2); }
+  55% { filter: none; }
+}
+/* Level up: the badge hops twice (two pixels, then one), flashing. */
+.lvUp {
+  animation: lvUp 900ms steps(1, end);
+}
+@keyframes lvUp {
+  0% { transform: translateY(var(--hop)); filter: var(--flash2); }
+  8% { transform: translateY(var(--hop2)); filter: none; }
+  22% { transform: translateY(var(--hop)); }
+  32% { transform: none; }
+  44% { transform: translateY(var(--hop)); filter: var(--flash2); }
+  52% { transform: none; filter: none; }
+  64% { filter: var(--flash); }
+  72% { filter: none; }
+}
+/* ...the bar shows full and flashes, then steps out to show the new level's (empty) bar. */
+.xpFull {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #c6ff9e 0 var(--px), #6fd83f var(--px) 100%);
+  pointer-events: none;
+  animation: xpFull 640ms steps(1, end) forwards;
+}
+@keyframes xpFull {
+  0% { filter: var(--flash2); }
+  14% { filter: none; }
+  28% { filter: var(--flash); }
+  40% { filter: none; opacity: 1; }
+  70% { opacity: 0.5; }
+  85%, 100% { opacity: 0; }
+}
+/* ...and sparkles blink around them: a white plus, a yellow plus, a yellow dot, gone. */
+.sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.spark {
+  position: absolute;
+  width: calc(3 * var(--px));
+  height: calc(3 * var(--px));
+  opacity: 0;
+  background:
+    linear-gradient(#fff, #fff) center / 100% var(--px) no-repeat,
+    linear-gradient(#fff, #fff) center / var(--px) 100% no-repeat;
+  animation: spark 480ms steps(1, end) forwards;
+}
+@keyframes spark {
+  0% { opacity: 1; }
+  30% {
+    opacity: 1;
+    background:
+      linear-gradient(#ffe14a, #ffe14a) center / 100% var(--px) no-repeat,
+      linear-gradient(#ffe14a, #ffe14a) center / var(--px) 100% no-repeat;
+  }
+  60% {
+    opacity: 1;
+    background: linear-gradient(#ffe14a, #ffe14a) center / var(--px) var(--px) no-repeat;
+  }
+  85%, 100% { opacity: 0; }
 }

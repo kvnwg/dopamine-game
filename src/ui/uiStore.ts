@@ -21,6 +21,8 @@ export interface RollView {
   drama: RollDrama | null;
   /** Luck tokens its reel landed on first, multiplied (1 without any). */
   mult: number;
+  /** The tutorial scripted it: the very first roll, or beginner's luck (shown as such). */
+  scripted?: 'first' | 'beginner';
 }
 
 /** An item being dragged toward the raccoon (stage coordinates). */

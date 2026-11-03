@@ -8,6 +8,7 @@ export function EquipBestButton({ className }: { className?: string }) {
   const n = useGame((g) => bestUpgrades(g).length);
   return (
     <button
+      data-equip-best=""
       className={`btn small ${n > 0 ? 'breathe' : ''} ${className ?? ''}`}
       disabled={n === 0}
       onClick={() => {

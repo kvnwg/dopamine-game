@@ -1,11 +1,16 @@
 /**
- * Reel strips, shared by the Roll tab's reels and the Watch tab. A strip is the column of cells a reel
- * rolls through in one spin: the last result at the bottom, fillers, then (for a reel that lands on
- * luck tokens) each token with more fillers after it, the result, and two cells on top.
+ * Reel strips for the Roll tab's reels. A strip is the column of cells a reel rolls through in one
+ * spin: the last result at the bottom, fillers, then (for a reel that lands on luck tokens) each token
+ * with more fillers after it, the result, and two cells on top.
  *
  * Fillers are a tease, not a sample: they lean much rarer than the real odds, with a near miss next to
  * most results (BAL.feel.reels), and now and then a token rolls past. They only show items the
- * raccoon has unlocked. Only the landed results come from the real odds, which the Luck popup lists.
+ * raccoon has unlocked (never heist-only items). Only the landed results come from the real odds,
+ * which the Luck popup lists.
+ *
+ * Motion (stripAt): each stretch kicks back a little, launches, cruises, brakes and clunks a little
+ * past the line before settling on it, always arriving exactly at its stop time. A stretch marked
+ * `slow` (a rare result's build-up, reelDrama.ts) brakes early into a long crawl toward the line.
  */
 import { BAL, DATA, RARITIES, type Rarity } from '../data';
 import { isItemUnlocked, rarityAtLeast, rarityChances, type Item } from '../core';
@@ -28,6 +33,8 @@ export interface StripStop {
   /** Milliseconds after the spin starts. */
   at: number;
   token: number | null;
+  /** 0 to 1: how much the approach to this stop slows into a crawl (a rare result's build-up). */
+  slow?: number;
 }
 
 export interface Strip {
@@ -74,12 +81,12 @@ const NEAR_MISS: Record<Rarity, number> = {
   junk: 0, decent: 0, shiny: 0, epic: 0, legendary: 50, mythic: 33, vintage: 30, limited: 26, prototype: 22, mint: 17, gemMint: 12, museum: 8, grail: 5,
 };
 
-/** The base items fillers may show: the ones unlocked at this many rebirths. */
+/** The base items fillers may show: the ones unlocked at this many rebirths (heist-only items never roll). */
 const pools = new Map<number, string[]>();
 function pool(rebirths: number): string[] {
   let p = pools.get(rebirths);
   if (!p) {
-    p = DATA.items.filter((i) => isItemUnlocked(i, rebirths)).map((i) => i.id);
+    p = DATA.items.filter((i) => isItemUnlocked(i, rebirths) && !i.heist).map((i) => i.id);
     pools.set(rebirths, p);
   }
   return p;
@@ -113,6 +120,8 @@ function tokenCell(x: number): StripCell {
 /**
  * Reel `i`'s strip for a spin: starts from `prev` (the cell it rested on), rolls through fillers to
  * each token and finally its item. `cellsPerSecond` sets how many cells pass per second of travel.
+ * `slow` (0 to 1) makes the last approach crawl (reelDrama.ts); that stretch gets fewer cells so its
+ * shorter cruise stays a readable speed.
  */
 export function buildStrip(
   spin: SpinTiming & { reels: ReadonlyArray<{ item: Item; odds: number; mults?: readonly number[] }> },
@@ -120,6 +129,7 @@ export function buildStrip(
   prev: StripCell | undefined,
   rebirths: number,
   cellsPerSecond = BAL.feel.reels.cellsPerSecond,
+  slow = 0,
 ): Strip {
   const f = BAL.feel.reels;
   const r = spin.reels[i];
@@ -133,27 +143,89 @@ export function buildStrip(
   timeline.forEach((st, j) => {
     const startAt = j === 0 ? 0 : Math.min(st.at, timeline[j - 1].at + tokenHoldMs());
     const secs = (st.at - startAt) / 1000;
-    const k = Math.max(j === 0 ? f.minCells : 4, Math.round(secs * cellsPerSecond));
     const last = j === timeline.length - 1;
+    const crawl = last ? slow : 0;
+    const k = Math.max(j === 0 ? f.minCells : 4, Math.round(secs * cellsPerSecond * (1 - 0.4 * crawl)));
     for (let c = 1; c < k; c++) cells.push(filler(seed + j * 977 + c * 31, last && tease && !above && c === k - 1, rebirths, !last || c < k - 2));
     cells.push(st.token === null ? resultCell(r.item, r.odds) : tokenCell(st.token));
     from += k;
-    stops.push({ idx: from, at: st.at, token: st.token });
+    stops.push({ idx: from, at: st.at, token: st.token, ...(crawl > 0 ? { slow: crawl } : {}) });
   });
   cells.push(filler(seed + 7001, tease && above, rebirths, false));
   cells.push(filler(seed + 7002, false, rebirths, false));
   return { cells, stops };
 }
 
-/** Cells travelled at `x` (0..1 of a stretch of `k` cells): fast, then easing in, with a small clunk past the line at the end. */
-function travel(k: number, x: number): number {
-  if (x >= 1) return k;
-  return k * (1 - Math.pow(1 - x, 4)) + 0.2 * Math.sin(Math.PI * Math.pow(x, 8));
+/** Samples per travel curve. */
+const SAMPLES = 240;
+const curves = new Map<string, Float32Array>();
+
+/** The wind-up before a stretch launches (ms, at most): the reel kicks back, then lets go. */
+function kickMs(ms: number): number {
+  return Math.min(150, ms * 0.12);
+}
+
+/**
+ * Where a reel is along a stretch of `k` cells lasting `ms`, sampled at SAMPLES + 1 evenly spaced
+ * moments: it waits out most of the wind-up, speeds up (about 0.18 s), cruises, then brakes onto the
+ * line, still moving a little when it gets there (the clunk takes over). `slow` brakes earlier and
+ * harder into a long crawl.
+ */
+function curve(k: number, ms: number, slow: number): Float32Array {
+  const key = `${k}|${Math.round(ms)}|${slow}`;
+  const hit = curves.get(key);
+  if (hit) return hit;
+  const hold = (0.55 * kickMs(ms)) / ms;
+  const ramp = Math.min(0.15, 180 / ms);
+  const brakeAt = 0.5 - 0.27 * slow;
+  const tail = 0.1 - 0.09 * slow;
+  const bend = 2 + 1.5 * slow;
+  const speed = (x: number) => {
+    if (x < hold) return 0;
+    if (x < hold + ramp) {
+      const u = (x - hold) / ramp;
+      return u * u * (3 - 2 * u);
+    }
+    if (x < brakeAt) return 1;
+    return tail + (1 - tail) * Math.pow(1 - (x - brakeAt) / (1 - brakeAt), bend);
+  };
+  const out = new Float32Array(SAMPLES + 1);
+  let acc = 0;
+  let v0 = speed(0);
+  for (let s = 1; s <= SAMPLES; s++) {
+    const v1 = speed(s / SAMPLES);
+    acc += (v0 + v1) / 2;
+    out[s] = acc;
+    v0 = v1;
+  }
+  for (let s = 0; s <= SAMPLES; s++) out[s] = (out[s] / acc) * k;
+  if (curves.size > 96) curves.clear();
+  curves.set(key, out);
+  return out;
+}
+
+/**
+ * Cells travelled `t` ms into a stretch of `k` cells lasting `ms`: a little kick back before the
+ * launch (the wind-up), the travel curve, and a clunk a little past the line that settles exactly
+ * on it at the stop time.
+ */
+function travel(k: number, t: number, ms: number, slow: number): number {
+  if (t >= ms) return k;
+  const c = curve(k, ms, slow);
+  const f = (t / ms) * SAMPLES;
+  const s = Math.floor(f);
+  let p = c[s] + (c[Math.min(SAMPLES, s + 1)] - c[s]) * (f - s);
+  const kick = kickMs(ms);
+  if (t < kick) p -= 0.16 * Math.sin((Math.PI * t) / kick) ** 2;
+  const clunk = Math.min(130, ms * 0.1);
+  if (t > ms - clunk) p += (0.17 - 0.07 * slow) * Math.sin((Math.PI * (t - (ms - clunk))) / clunk);
+  return p;
 }
 
 /**
  * Where a strip is `ms` into the spin: `p` in cells from the bottom (fractional while moving) and how
  * many stops it has reached. Between stops it holds on a token, then rolls on to the next stop.
+ * `calm` (Reduce motion): the strip doesn't move; each stop just shows.
  */
 export function stripAt(strip: Strip, ms: number, calm = false): { p: number; reached: number } {
   let prevIdx = 0;
@@ -163,12 +235,17 @@ export function stripAt(strip: Strip, ms: number, calm = false): { p: number; re
     const startAt = j === 0 ? 0 : Math.min(st.at, prevAt + tokenHoldMs());
     if (ms < st.at) {
       if (ms <= startAt) return { p: prevIdx, reached: j };
-      const x = Math.min(1, (ms - startAt) / Math.max(1, st.at - startAt));
       const k = st.idx - prevIdx;
-      return { p: prevIdx + (calm ? 0 : travel(k, x)), reached: j };
+      return { p: prevIdx + (calm ? 0 : travel(k, ms - startAt, Math.max(1, st.at - startAt), st.slow ?? 0)), reached: j };
     }
     prevIdx = st.idx;
     prevAt = st.at;
   }
   return { p: prevIdx, reached: strip.stops.length };
+}
+
+/** When the stretch leading to stop `j` starts (ms after the spin starts): 0, or right after the token hold before it. */
+export function stretchStart(strip: Strip, j: number): number {
+  if (j <= 0) return 0;
+  return Math.min(strip.stops[j].at, strip.stops[j - 1].at + tokenHoldMs());
 }

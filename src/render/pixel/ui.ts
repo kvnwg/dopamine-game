@@ -256,6 +256,46 @@ const ARROW_UP: Rows = [
   '................',
 ];
 
+/** The tutorial's pointing hand: a cartoon glove, index finger up (cuff at the bottom). */
+const HAND: Rows = [
+  '......kk........',
+  '.....kWWk.......',
+  '.....kWWk.......',
+  '.....kWWk.......',
+  '.....kWWkkk.....',
+  '.....kWWkWWkkk..',
+  '.kk..kWWkWWkWWk.',
+  'kWWk.kWWkWWkWWk.',
+  'kWWWkkWWWWWWWWk.',
+  '.kWWWWWWWWWWW5k.',
+  '..kWWWWWWWWWW5k.',
+  '...kWWWWWWWW55k.',
+  '....kWWWWWW55k..',
+  '....k4444444k...',
+  '....k3333333k...',
+  '....kkkkkkkkk...',
+];
+
+/** A worse item: the up arrow turned over, in reds (still lit from the top left). */
+const ARROW_DOWN: Rows = [
+  '................',
+  '....kkkkkkkk....',
+  '....kPPPPPRk....',
+  '....kPeeeeRk....',
+  '....kPeeeeRk....',
+  '....kPeeeeRk....',
+  '..kkkPeeeeRkkk..',
+  '.kPPPeeeeeePPRk.',
+  '..kPeeeeeeeeRk..',
+  '...kPeeeeeeRk...',
+  '....kPeeeeRk....',
+  '.....kPeeRk.....',
+  '......keRk......',
+  '.......kk.......',
+  '................',
+  '................',
+];
+
 const REBIRTH: Rows = [
   '................',
   '................',
@@ -782,7 +822,7 @@ const PIGEON: Rows = [
 
 export type UiIcon =
   | 'coin' | 'gem' | 'bag' | 'heart' | 'sword' | 'shield' | 'clover' | 'bolt' | 'power' | 'gear'
-  | 'lock' | 'trash' | 'arrowUp' | 'rebirth' | 'dumpster' | 'potion' | 'dice' | 'book' | 'chart' | 'cart'
+  | 'lock' | 'trash' | 'arrowUp' | 'arrowDown' | 'hand' | 'rebirth' | 'dumpster' | 'potion' | 'dice' | 'book' | 'chart' | 'cart'
   | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target' | 'tv'
   | 'arrowRight' | 'heist' | 'ticket' | 'choice' | 'treasure' | 'shop' | 'shrine' | 'trap' | 'wheel' | 'flame' | 'pigeon';
 
@@ -807,6 +847,8 @@ export const UI_SPRITES: Record<UiIcon, Rows> = {
   lock: LOCK,
   trash: TRASH,
   arrowUp: ARROW_UP,
+  arrowDown: ARROW_DOWN,
+  hand: HAND,
   rebirth: REBIRTH,
   dumpster: DUMPSTER,
   potion: POTION,
@@ -966,6 +1008,14 @@ export const UI_XS: Partial<Record<UiIcon, Rows>> = {
     '.kLk.',
     '.kGk.',
     '.kkk.',
+  ],
+  arrowDown: [
+    '.kkk.',
+    '.kPk.',
+    '.kek.',
+    'kPeRk',
+    '.kRk.',
+    '..k..',
   ],
   arrowRight: [
     '...k..',
@@ -1327,6 +1377,17 @@ export const UI_SM: Partial<Record<UiIcon, Rows>> = {
     '.k4433k',
     '..kkkk.',
     '..e.e..',
+  ],
+  heist: [
+    '..k.k..',
+    '.kTkNk.',
+    '..kyk..',
+    '.kTttk.',
+    'kTtGtNk',
+    'ktGGGNk',
+    'kttGtNk',
+    'kttNNNk',
+    '.kkkkk.',
   ],
 };
 
@@ -1697,6 +1758,19 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     '..k433322k',
     '...kkkkkk.',
     '....ke.ke.',
+  ],
+  heist: [
+    '..kk..kk..',
+    '..kTkkNk..',
+    '...kyOk...',
+    '..kTtGNk..',
+    '.kTtGGGNk.',
+    'kTttGtttNk',
+    'kTttGGGtNk',
+    'ktttttGtNk',
+    'ktttGGGtNk',
+    '.kttNGNNk.',
+    '..kkkkkk..',
   ],
 };
 

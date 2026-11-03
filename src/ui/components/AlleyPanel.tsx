@@ -1,33 +1,30 @@
 /**
  * The Roll tab: the reels roll on their own (Trash Bags make turbo spins). Shows luck (the only place
  * it shows, with a Luck Potion's time left), spin speed, the lucky-spin meter, the latest result with
- * its "1 in X", and the best roll ever. Equipped gear lives in the Bag tab; items are equipped by
- * dragging them up onto the raccoon.
+ * its power against what is worn and its "1 in X", and the best roll ever. Equipped gear lives in the
+ * Bag tab; items are equipped by dragging them up onto the raccoon.
  *
- * Layout (800 stage px below the battle): the machine card (reels and their info), the last roll
- * (its art in Scale2x) and the rarest-roll line, no scrolling. Up to 3 reels the info sits beside the
- * reels, which show three whole rows; with 4 or 5 the reels take the full width (two rows) and the
- * info moves to a row above and a row below them.
+ * Layout (800 stage px below the battle, no scrolling): the machine card (a row of info, the reel bank
+ * across the whole card, another row of info; Reel.tsx), the last roll and the rarest-roll line. The
+ * machine is the same size for one to five reels: the reels share its width.
  */
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, reelCount, spinCycle,
+  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, spinCycle, wornPower,
 } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
+import { sparkleArt, UI_PX } from '../../render/icons';
 import { haptics } from '../../services';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
-import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
+import { ArrowDownIcon, ArrowUpIcon, BookIcon, BoltIcon, CheckIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
 import { enchantColor, ItemIcon } from './ItemIcon';
-import { CELL, ReelBank } from './Reel';
+import { PixelArt } from './PixelArt';
+import { ReelBank } from './Reel';
 import s from './alley.module.css';
-
-/** Reel window heights (stage px): beside the info (up to 3 reels, three rows), and full width (4 or 5, two rows). */
-const WIN_SIDE = 3 * CELL;
-const WIN_WIDE = 2 * CELL;
 
 export function fmtLuck(v: number): string {
   return v >= 100 ? formatNumber(v) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
@@ -62,10 +59,34 @@ function LuckyMeter({ compact }: { compact?: boolean }) {
   );
 }
 
+/** Sparkles twinkling round a rare result's "1 in X" plate (positions in art pixels from its top left). */
+const PLATE_SPARKLES = [
+  [-4, -3],
+  [24, -4],
+  [27, 14],
+  [-3, 16],
+] as const;
+
+/**
+ * The latest result (the spin's best): it drops in as its reel lands, its power against what is worn
+ * in its slot (green up, red down: the number that matters most) and its "1 in X" pop in after it.
+ * Its tile is where a drag to equip starts (and the equip flight launches from).
+ */
 function LastRoll() {
   const last = useUi((u) => u.lastRoll);
   const inBag = useGame((g) => (last ? g.inventory.find((x) => x.uid === last.item.uid) ?? null : null));
   const upgrade = useGame((g) => (inBag ? isUpgrade(g, inBag) : false));
+  const calm = useGame((g) => g.settings.reduceMotion);
+  const noFlash = useGame((g) => g.settings.reduceFlashing);
+  // Its power as worn by this raccoon, against what it wears in that slot (nothing worn: all of it).
+  const wearing = useGame((g) => (last ? g.equipped[last.item.slot]?.uid === last.item.uid : false));
+  const delta = useGame((g) => {
+    if (!last) return 0;
+    const it = inBag ?? last.item;
+    const worn = g.equipped[it.slot];
+    return wornPower(g, it) - (worn ? wornPower(g, worn) : 0);
+  });
+  const sparkle = useMemo(() => sparkleArt(), []);
   if (!last) {
     return (
       <div className={`${s.last} card`}>
@@ -77,15 +98,19 @@ function LastRoll() {
   const color = rarityColor(it.rarity);
   const rare = rarityAtLeast(it.rarity, 'epic');
   const open = () => useUi.getState().openPopup('itemDetail', it.uid);
+  const dir = wearing ? 'worn' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'even';
   return (
-    <div key={last.id} className={`${s.last} card ${s.lastIn} ${rare ? s.lastRare : ''}`} style={{ ['--c' as string]: color } as CSSProperties}>
-      <ItemIcon item={it} scale={2} showOdds={false} draggable={!!inBag} upgrade={upgrade} onTap={open} />
+    <div
+      key={last.id}
+      className={`${s.last} card ${s.lastIn} ${rare ? s.lastRare : ''}`}
+      data-calm={calm || undefined}
+      data-noflash={noFlash || undefined}
+      style={{ ['--c' as string]: color } as CSSProperties}
+    >
+      <ItemIcon item={it} showOdds={false} draggable={!!inBag} upgrade={upgrade} downgrade={dir === 'down'} onTap={open} />
       <div className={s.lastBody} onClick={open}>
         <span className={s.lastName} style={{ color }}>
           {itemName(it)}
-        </span>
-        <span className={s.lastMeta}>
-          {t(`rarity.${it.rarity}`)} · {t(`slot.${it.slot}`)}
         </span>
         <div className={s.chips}>
           {upgrade ? (
@@ -93,6 +118,7 @@ function LastRoll() {
           ) : (
             <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
           )}
+          {last.scripted === 'beginner' && <span className={`${s.chip} ${s.chipBeginner}`}>{t('reveal.beginner')}</span>}
           {last.mult > 1 && <span className={`${s.chip} ${s.chipLucky}`}>{t('reel.token', { x: formatNumber(last.mult) })}</span>}
           {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('reel.golden')}</span>}
           {last.lucky && <span className={`${s.chip} ${s.chipLucky}`}>{t('roll.lucky')}</span>}
@@ -104,9 +130,33 @@ function LastRoll() {
           ))}
         </div>
       </div>
+      <div className={s.delta} data-dir={dir} onClick={open}>
+        {dir === 'worn' ? (
+          <span className={s.deltaWorn}>
+            <CheckIcon size="sm" />
+            {t('bag.equipped')}
+          </span>
+        ) : (
+          <>
+            <span className={s.deltaNum}>
+              {dir === 'up' && <ArrowUpIcon size="xs" />}
+              {dir === 'down' && <ArrowDownIcon size="xs" />}
+              {dir === 'up' ? '+' : dir === 'down' ? '−' : '±'}
+              {formatNumber(Math.abs(delta))}
+            </span>
+            <span className={s.deltaWord}>{t('equip.power')}</span>
+          </>
+        )}
+      </div>
       <div className={`${s.lastOdds} ${rare ? s.lastOddsRare : ''}`} data-rarity={it.rarity}>
+        <span className={s.oddsTier}>{t(`rarity.${it.rarity}`)}</span>
         <span className={s.oddsSmall}>1 in</span>
         <span className={s.oddsBig}>{fmtOdds(last.odds)}</span>
+        {rare &&
+          !calm &&
+          PLATE_SPARKLES.map(([x, y], k) => (
+            <PixelArt key={k} art={sparkle} className={s.plateSparkle} style={{ left: x * UI_PX, top: y * UI_PX, animationDelay: `${300 + k * 260}ms` }} />
+          ))}
       </div>
     </div>
   );
@@ -145,9 +195,6 @@ export function AlleyPanel() {
   const record = useGame((g) => g.records);
   const dry = useGame((g) => g.dumpster.dryStreak);
   const spell = useGame(drySpell);
-  // The reels showing: this spin's, else as many as the raccoon has.
-  const reels = useGame((g) => g.roll.current?.reels.length ?? reelCount(g));
-  const wide = reels >= 4;
   const bl = BAL.dumpster.badLuck;
   const pityOn = level >= bl.minDumpsterLevel;
   const maxed = level >= BAL.dumpster.maxLevel;
@@ -174,18 +221,6 @@ export function AlleyPanel() {
       )}
     </button>
   );
-  const autoLine = (
-    <div className={s.statLine}>
-      <span className={s.autoTag}>{t('roll.auto')}</span>
-      <span>{t('roll.every', { s: cycle.toFixed(1) })}</span>
-    </div>
-  );
-  const turboLine = (
-    <div className={s.statLine}>
-      {bags > 0 ? <BoltIcon /> : <BagIcon />}
-      <span className={bags > 0 ? s.bonusOn : s.bonusOff}>{bags > 0 ? t('roll.turbo', { n: formatNumber(bags) }) : t('roll.turboNone')}</span>
-    </div>
-  );
   const luckBadge = (
     <button className={`${s.luckBadge} ${boosted ? s.luckBoosted : ''}`} onClick={() => open('luck')}>
       <CloverIcon size="md" />
@@ -202,52 +237,31 @@ export function AlleyPanel() {
 
   return (
     <div className={s.panel}>
-      {wide ? (
-        <div className={`${s.top} ${s.topWide} card`}>
-          <div className={s.wideRow}>
-            {title}
-            {upgradeBtn}
-            <span className={s.grow} />
+      <div className={`${s.top} card`}>
+        <div className={s.wideRow}>
+          {title}
+          {upgradeBtn}
+          <span className={s.grow} />
+          <div className={s.statLine}>
+            <span className={s.autoTag}>{t('roll.auto')}</span>
+            <span>{t(bags > 0 ? 'roll.everyShort' : 'roll.every', { s: cycle.toFixed(1) })}</span>
+          </div>
+          {bags > 0 && (
             <div className={s.statLine}>
-              <span className={s.autoTag}>{t('roll.auto')}</span>
-              <span>{t('roll.everyShort', { s: cycle.toFixed(1) })}</span>
+              <BoltIcon />
+              <span className={s.bonusOn}>{t('roll.turbo', { n: formatNumber(bags) })}</span>
             </div>
-            {bags > 0 && (
-              <div className={s.statLine}>
-                <BoltIcon />
-                <span className={s.bonusOn}>{formatNumber(bags)}</span>
-              </div>
-            )}
-          </div>
-          <ReelBank win={WIN_WIDE} wide />
-          <div className={s.wideRow}>
-            {luckBadge}
-            {pity}
-            <span className={s.grow} />
-            <LuckyMeter compact />
-            {codex}
-          </div>
+          )}
         </div>
-      ) : (
-        <div className={`${s.top} card`}>
-          <ReelBank win={WIN_SIDE} />
-          <div className={s.info}>
-            <div className={s.infoHead}>
-              {title}
-              {upgradeBtn}
-            </div>
-            {autoLine}
-            {turboLine}
-            <LuckyMeter />
-            <div className={s.luckRow}>
-              {luckBadge}
-              {pity}
-              <span className={s.grow} />
-              {codex}
-            </div>
-          </div>
+        <ReelBank />
+        <div className={s.wideRow}>
+          {luckBadge}
+          {pity}
+          <span className={s.grow} />
+          <LuckyMeter compact={!!pity} />
+          {codex}
         </div>
-      )}
+      </div>
       <LastRoll />
       <div className={s.recordLine}>
         <StarIcon size="md" />

@@ -13,6 +13,8 @@ import { computeStats } from './stats';
 /** Sends the raccoon to `world`. Beaten worlds are farmed in place; unbeaten ones are pushed. */
 export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean {
   const w = Math.round(world);
+  // The raccoon is out on a heist: the Alley waits.
+  if (d.heist?.run) return false;
   if (w < 1 || w > worldCount() || w === d.battle.stage) return false;
   const s = d.stage;
   s.returnTo = w > d.battle.stage ? d.battle.stage : w;
@@ -23,9 +25,10 @@ export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean 
   return true;
 }
 
-/** The tier given to items rolled right now. */
-export function itemTierFor(state: Pick<GameState, 'battle' | 'stage'>): number {
-  return Math.max(1, Math.min(state.battle.stage, state.stage.highestCleared + 1, worldCount()));
+/** The tier given to items rolled right now (from the Alley's world, also while a heist is on). */
+export function itemTierFor(state: Pick<GameState, 'battle' | 'stage'> & Partial<Pick<GameState, 'heist'>>): number {
+  const world = state.heist?.run ? state.heist.run.main.stage : state.battle.stage;
+  return Math.max(1, Math.min(world, state.stage.highestCleared + 1, worldCount()));
 }
 
 export type ThreatLevel = 'easy' | 'tough' | 'deadly' | 'oneShot';

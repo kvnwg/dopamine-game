@@ -1,6 +1,6 @@
 import type { z } from 'zod';
-import type { ItemSchema, SubstatSchema, ItemEnchantSchema } from './state';
-import type { Rarity, Slot, StatId } from '../data';
+import type { ItemSchema, SubstatSchema, ItemEnchantSchema, HeistRewards } from './state';
+import type { HeistNodeKind, LocationId, Rarity, Slot, StatId } from '../data';
 
 export type Item = z.infer<typeof ItemSchema>;
 export type Substat = z.infer<typeof SubstatSchema>;
@@ -17,7 +17,7 @@ export type CoreEvent =
   | { type: 'playerHit'; enemyUid: number; amount: number; crit: boolean; targetUid: number; killed: boolean; echo: boolean }
   | { type: 'enemyHit'; enemyUid: number; amount: number; heavy: boolean }
   | { type: 'playerDodge'; enemyUid: number }
-  | { type: 'heal'; amount: number; source: 'lifesteal' | 'wave' }
+  | { type: 'heal'; amount: number; source: 'lifesteal' | 'wave' | 'heist' }
   | { type: 'kill'; enemyUid: number; enemyId: string; coins: number; xp: number; kind: 'regular' | 'miniboss' | 'boss' }
   | { type: 'burn'; enemyUid: number; amount: number }
   | { type: 'chain'; fromUid: number; toUid: number; amount: number }
@@ -51,6 +51,8 @@ export type CoreEvent =
       baseSpinSeconds: number;
       stepSeconds: number;
       restSeconds: number;
+      /** A spin the tutorial scripts (its first reel): the very first one, or beginner's luck. */
+      scripted?: 'first' | 'beginner';
     }
   /** One reel lands (a spin with several reels sends one of these per reel). */
   | {
@@ -69,8 +71,12 @@ export type CoreEvent =
       mult: number;
       placed: RollPlacement;
       newRecord: boolean;
+      /** The tutorial scripted this result: the very first roll, or beginner's luck. */
+      scripted?: 'first' | 'beginner';
     }
   | { type: 'equip'; item: Item; replaced: Item | null; auto: boolean }
+  /** The beginner's luck item was put on: the tutorial is over (`gems` given for finishing it). */
+  | { type: 'tutorialDone'; gems: number }
   | { type: 'scrap'; item: Item; xp: number; coins: number; auto: boolean }
   | { type: 'scrapAll'; count: number; xp: number; coins: number }
   | { type: 'luckBoost'; endsAt: number; seconds: number }
@@ -81,9 +87,28 @@ export type CoreEvent =
   | { type: 'codexBonus'; index: number; gems: number }
   | { type: 'dumpsterUpgradeStarted'; level: number; endsAt: number }
   | { type: 'dumpsterUpgraded'; level: number }
-  | { type: 'offlineReady'; awayMs: number }
+  /** Back from time away: the reward is waiting. `rolls` items were rolled offline, `kept` of them rare finds (the best one is `best`). */
+  | { type: 'offlineReady'; awayMs: number; rolls?: number; kept?: number; best?: Item | null }
   | { type: 'offlineCollected'; bags: number; coins: number; xp: number; doubled: boolean; minutes: number }
   | { type: 'clockWentBackward' }
+  // ---- heists (src/core/systems/heist.ts)
+  /** The ticket count changed (daily refill, the ad ticket, or a run started). */
+  | { type: 'heistTickets'; tickets: number }
+  /** Go: a stop starts (a fight's enemies walk in a moment later). */
+  | { type: 'heistNode'; kind: HeistNodeKind; act: number; index: number }
+  | { type: 'heistFightEnd'; won: boolean }
+  | { type: 'heistLevelUp'; level: number }
+  | { type: 'heistPerk'; id: string; evolution: boolean }
+  | { type: 'heistCurse'; id: string; removed: boolean }
+  /** The Jackpot Wheel landed on segment `index` of balance.heist.wheel. */
+  | { type: 'heistWheel'; index: number; kind: string; value: number }
+  /** A crew perk's helper hit an enemy (pigeon pecks, Rocco's bottle, the alley cat's finisher). */
+  | { type: 'heistHelper'; helper: 'pigeon' | 'rocco' | 'cat'; enemyUid: number; amount: number; killed: boolean }
+  /** A hit blocked by Lid Shield or Fortress of Junk. */
+  | { type: 'heistBlock'; enemyUid: number }
+  | { type: 'heistStun'; enemyUid: number; seconds: number }
+  /** The run is over and banked: what was paid (and the ring, when it dropped). The main battle is back. */
+  | { type: 'heistEnd'; won: boolean; rewards: HeistRewards; item: Item | null }
   | { type: 'error'; message: string };
 
 export type GameAction =
@@ -108,6 +133,25 @@ export type GameAction =
   | { type: 'boot' }
   | { type: 'collectOffline'; doubled: boolean }
   | { type: 'setSetting'; key: SettingKey; value: boolean }
+  // ---- heists: start a run with a ticket, then Go stop by stop
+  | { type: 'heistStart'; location: LocationId }
+  /** Resolves the next stop (blocked while a decision is pending or a fight is on). */
+  | { type: 'heistGo' }
+  /** Answers the pending decision: a perk pick, a choice option, a shop item, the wheel spin, the shrine (0 accept, 1 decline). */
+  | { type: 'heistChoose'; index: number }
+  | { type: 'heistLeaveShop' }
+  /** New perk options (the first reroll of a run is free, then balance.heist.rerolls.gems Gems). */
+  | { type: 'heistReroll' }
+  /** Second Chance after a knockout: back at 50% HP (the ad is free once per run). */
+  | { type: 'heistRevive'; via: 'ad' | 'gems' }
+  /** No Second Chance: the run is lost (keeps part of its rewards); heistClaim banks them. */
+  | { type: 'heistDecline' }
+  /** Banks the rewards of a won or lost run and ends it. */
+  | { type: 'heistClaim' }
+  /** Walks away now: a loss, banked at once. */
+  | { type: 'heistAbandon' }
+  /** +1 ticket from a rewarded ad (once a day). */
+  | { type: 'heistAdTicket' }
   | { type: 'cheat'; cheat: Cheat };
 
 export type SettingKey = 'haptics' | 'sound' | 'music' | 'reduceFlashing' | 'reduceMotion';
@@ -121,7 +165,9 @@ export type Cheat =
   | { kind: 'forceTokens'; mults: number[] | null }
   | { kind: 'luckBoost'; seconds: number }
   | { kind: 'setDumpsterLevel'; level: number }
-  | { kind: 'skipToLastWave' };
+  | { kind: 'skipToLastWave' }
+  /** Set the heist ticket count. */
+  | { kind: 'heistTickets'; tickets: number };
 
 export interface StepResult<S> {
   state: S;

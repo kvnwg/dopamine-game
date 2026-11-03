@@ -1,12 +1,12 @@
 /**
- * Fixed-tick battle simulation (10 ticks per second). Shared by the Alley and,
- * later, Heists / Junkyard. Emits events that the renderer turns into animation.
- * Enchantments add burn, chain lightning, echo strikes, explosions and thorns.
- * The battle runs in a world (battle.stage): 4 regular waves, then the world's boss.
+ * Fixed-tick battle simulation (10 ticks per second). Shared by the Alley and Heists (heist.ts runs
+ * its fights through fightStep with a RunCombat, which adds the run's perks). Emits events that the
+ * renderer turns into animation. Enchantments add burn, chain lightning, echo strikes, explosions and
+ * thorns. The Alley battle runs in a world (battle.stage): 4 regular waves, then the world's boss.
  */
-import { BAL, DATA } from '../../data';
+import { BAL, DATA, type BossSpecial, type EnemyDef, type PerkEffectKey } from '../../data';
 import type { Rng } from '../rng';
-import type { EnemyState, GameState } from '../state';
+import type { EnemyState, GameState, HeistFight } from '../state';
 import type { CoreEvent, Stats } from '../types';
 import { combatEffects, type CombatEffects } from './enchants';
 import { addXp } from './progression';
@@ -58,22 +58,77 @@ export function startStage(d: GameState, stage: number, ev: CoreEvent[], push: b
 
 /** The first unbeaten world, when the raccoon is somewhere else and could go try it. */
 export function nextWorldAvailable(state: GameState): number | null {
+  // (No travel while a heist is on.)
+  if (state.heist?.run) return null;
   const next = state.stage.highestCleared + 1;
   if (next > worldCount()) return null;
   return state.battle.stage === next ? null : next;
 }
 
-interface Ctx {
+/** Every special of an enemy (`special`, then `specials`). */
+export function enemySpecials(def: EnemyDef | undefined): BossSpecial[] {
+  if (!def) return [];
+  if (!def.specials) return def.special ? [def.special] : [];
+  return def.special ? [def.special, ...def.specials] : def.specials;
+}
+
+/** A heist fight's extra rules (built by heist.ts): the run's perks and its own rewards. */
+export interface RunCombat {
+  /** Sum of every perk and curse effect the run holds (0 for anything it doesn't). */
+  fx: Record<PerkEffectKey, number>;
+  fight: HeistFight;
+  /** Run XP and coins for a kill; returns them for the kill event. */
+  onKill: (e: EnemyState) => { coins: number; xp: number };
+  addCoins: (n: number) => void;
+  /** Nine Lives: the HP to get back up with after a knockout (once per run), or null. */
+  nineLives: () => number | null;
+  /** After every hit taken (a saved snack heals under its threshold). */
+  afterHurt: () => void;
+  /** A regular enemy at the run's scaling (bosses summon them). */
+  makeEnemy: (enemyId: string) => EnemyState;
+}
+
+export interface Ctx {
   d: GameState;
   rng: Rng;
   now: number;
   ev: CoreEvent[];
   stats: Stats;
   fx: CombatEffects;
+  /** The DEF constant of the damage formula for this fight. */
+  k: number;
+  /** Set in heist fights. */
+  run?: RunCombat;
+}
+
+/** Perk burns burn at this share of ATK per second when no perk sets it. */
+const PERK_BURN_ATK = 0.5;
+
+/** More damage to a burning enemy (Dumpster Fire); 1 outside heists. */
+function vsBurning(c: Ctx, e: EnemyState): number {
+  return c.run && e.burnTime > 0 && c.run.fx.burningBonusPct ? 1 + c.run.fx.burningBonusPct / 100 : 1;
+}
+
+/** Sets an enemy (or, with Five-Alarm Raccoon, every enemy) on fire from a perk. */
+function perkBurn(c: Ctx, target: EnemyState, seconds: number) {
+  const fx = c.run!.fx;
+  const dps = c.stats.ATK * (fx.burnAtk > 0 ? fx.burnAtk : PERK_BURN_ATK) * (1 + fx.burnBonusPct / 100);
+  for (const e of fx.burnSpread > 0 ? c.d.battle.enemies : [target]) {
+    e.burnDps = Math.max(e.burnDps, dps);
+    e.burnTime = Math.max(e.burnTime, seconds);
+  }
 }
 
 function onKill(c: Ctx, e: EnemyState) {
   const { d, ev, now } = c;
+  if (c.run) {
+    const r = c.run.onKill(e);
+    ev.push({ type: 'kill', enemyUid: e.uid, enemyId: e.enemyId, coins: r.coins, xp: r.xp, kind: e.kind });
+    // Grease Fire: the next enemy catches fire.
+    const next = d.battle.enemies[0];
+    if (next && c.run.fx.greaseFireSeconds > 0) perkBurn(c, next, c.run.fx.greaseFireSeconds);
+    return;
+  }
   const stage = d.battle.stage;
   const r = killRewards(stage, e.kind, c.stats.COIN_FIND);
   r.xp *= xpMult(d);
@@ -104,17 +159,54 @@ function damageEnemy(c: Ctx, index: number, amount: number, allowExplode = true)
   return true;
 }
 
-/** One swing at the front enemy, with every on-hit enchantment. */
+/** A heist hit: Double or Nothing's ATK, Bullseye's sure crits, Rabid's triple damage, Dumpster Fire. */
+function runRoll(c: Ctx, target: EnemyState): { amount: number; crit: boolean } {
+  const run = c.run!;
+  const fx = run.fx;
+  run.fight.hits += 1;
+  const sure = fx.critEvery > 0 && run.fight.hits % Math.max(1, Math.round(fx.critEvery)) === 0;
+  const crit = sure || c.rng.chance(c.stats.CRIT / 100);
+  let amount = computeDamage(c.stats.ATK * run.fight.atkMult, target.def, crit, c.stats.CRIT_DMG, rollVariance(c.rng), c.k);
+  if (fx.rabidChance > 0 && c.rng.chance(fx.rabidChance)) amount *= Math.max(1, fx.rabidMult);
+  return { amount: amount * vsBurning(c, target), crit };
+}
+
+/** A heist hit's riders: Jackpot Paws coins, the alley cat's finisher, Hot Sauce, Pocket Sand and Unhinged. */
+function runOnHit(c: Ctx, uid: number, crit: boolean, killed: boolean) {
+  const run = c.run!;
+  const fx = run.fx;
+  const b = c.d.battle;
+  if (crit && fx.critCoins > 0) run.addCoins(fx.critCoins);
+  if (killed) return;
+  const t = b.enemies[0];
+  if (!t || t.uid !== uid) return;
+  if (fx.executePct > 0 && (t.hp / t.maxHp) * 100 < fx.executePct) {
+    const amount = t.hp;
+    damageEnemy(c, 0, amount);
+    c.ev.push({ type: 'heistHelper', helper: 'cat', enemyUid: uid, amount, killed: true });
+    return;
+  }
+  if (fx.burnChance > 0 && c.rng.chance(Math.min(1, fx.burnChance))) perkBurn(c, t, Math.max(1, fx.burnSeconds));
+  const frenzy = fx.stunBelowHpPct > 0 && (b.playerHp / Math.max(1, c.stats.HP)) * 100 < fx.stunBelowHpPct;
+  if (frenzy || (fx.stunChance > 0 && c.rng.chance(Math.min(1, fx.stunChance)))) {
+    const seconds = Math.max(fx.stunSeconds, 1);
+    t.stun = Math.max(t.stun ?? 0, seconds);
+    c.ev.push({ type: 'heistStun', enemyUid: uid, seconds });
+  }
+}
+
+/** One swing at the front enemy, with every on-hit enchantment (and, in heists, every on-hit perk). */
 function playerAttack(c: Ctx, echo: boolean) {
   const b = c.d.battle;
   const target = b.enemies[0];
   if (!target) return;
-  const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, defConstant(b.stage));
+  const roll = c.run ? runRoll(c, target) : rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, c.k);
   const hpBefore = target.hp;
   const uid = target.uid;
   const killed = damageEnemy(c, 0, roll.amount);
   const dealt = Math.min(roll.amount, Math.max(0, hpBefore));
   c.ev.push({ type: 'playerHit', enemyUid: uid, targetUid: uid, amount: roll.amount, crit: roll.crit, killed, echo });
+  if (c.run) runOnHit(c, uid, roll.crit, killed);
   if (c.stats.LIFESTEAL > 0) {
     const heal = Math.min((dealt * c.stats.LIFESTEAL) / 100, c.stats.HP - b.playerHp);
     if (heal > 0) {
@@ -141,15 +233,48 @@ function playerAttack(c: Ctx, echo: boolean) {
   if (!echo && c.fx.echo > 0 && b.enemies.length > 0 && c.rng.chance(c.fx.echo)) playerAttack(c, true);
 }
 
-function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean) {
+/** A heist block: Lid Shield's blocks first, then Fortress of Junk's charge. */
+function runBlock(c: Ctx): boolean {
+  const f = c.run!.fight;
+  if (f.blocks > 0) {
+    f.blocks -= 1;
+    return true;
+  }
+  if (f.blockCharge) {
+    f.blockCharge = false;
+    f.blockTimer = 0;
+    return true;
+  }
+  return false;
+}
+
+/** `unavoidable`: a charge, which can't be dodged or blocked. */
+function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoidable = false) {
   const { d, stats, rng, ev } = c;
-  if (rng.chance(stats.DODGE / 100)) {
+  if (!unavoidable && rng.chance(stats.DODGE / 100)) {
     ev.push({ type: 'playerDodge', enemyUid: e.uid });
+    // Turbo Trash Panda: a dodge strikes back.
+    if (c.run && c.run.fx.dodgeAttack > 0) playerAttack(c, true);
     return;
   }
-  const amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng), defConstant(d.battle.stage));
+  if (c.run && !unavoidable && runBlock(c)) {
+    ev.push({ type: 'heistBlock', enemyUid: e.uid });
+    return;
+  }
+  let amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng), c.k);
+  if (c.run && c.run.fx.armorPct) amount *= Math.max(0.1, 1 - c.run.fx.armorPct / 100);
   d.battle.playerHp -= amount;
   ev.push({ type: 'enemyHit', enemyUid: e.uid, amount, heavy });
+  if (c.run) {
+    if (d.battle.playerHp <= 0) {
+      const back = c.run.nineLives();
+      if (back !== null) {
+        d.battle.playerHp = back;
+        ev.push({ type: 'heal', amount: back, source: 'heist' });
+      }
+    }
+    if (d.battle.playerHp > 0) c.run.afterHurt();
+  }
   if (c.fx.thorns > 0) {
     const idx = d.battle.enemies.findIndex((x) => x.uid === e.uid);
     const reflect = amount * c.fx.thorns;
@@ -160,10 +285,14 @@ function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean) {
 
 function tickBurns(c: Ctx, dt: number) {
   const b = c.d.battle;
-  for (let i = b.enemies.length - 1; i >= 0; i--) {
-    const e = b.enemies[i];
-    if (e.burnTime <= 0) continue;
-    const dmg = e.burnDps * dt;
+  // Burns can kill several enemies in one step (heist perks spread them; a death can explode into the
+  // front one), so walk a copy of the line and find each enemy's current place.
+  const line = [...b.enemies];
+  for (let j = line.length - 1; j >= 0; j--) {
+    const e = line[j];
+    const i = b.enemies.indexOf(e);
+    if (i < 0 || e.burnTime <= 0) continue;
+    const dmg = c.run ? e.burnDps * dt * vsBurning(c, e) : e.burnDps * dt;
     e.burnTime -= dt;
     e.burnShown += dmg;
     const uid = e.uid;
@@ -213,6 +342,7 @@ function onWorldCleared(c: Ctx) {
   const firstTime = world > s.highestCleared;
   if (firstTime) {
     s.highestCleared = world;
+    if (d.heist) d.heist.bestWorld = Math.max(d.heist.bestWorld, world);
     const gems = BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world;
     d.currencies.gems += gems;
     ev.push({ type: 'worldFirstClear', world, gems });
@@ -260,7 +390,8 @@ function onDeathResolved(d: GameState, ev: CoreEvent[]) {
   const s = d.stage;
   const world = d.battle.stage;
   s.mode = 'farm';
-  s.showToughHint = true;
+  // (Not during the first-run tutorial: it has its own guidance, and the raccoon is still dressing.)
+  s.showToughHint = d.dumpster.beginner.state === 'done';
   let back: number;
   if (world > s.highestCleared) {
     s.powerAtDeath = playerPower(d);
@@ -306,52 +437,128 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
     return;
   }
 
-  const c: Ctx = { d, rng, now, ev, stats, fx: combatEffects(d) };
+  const c: Ctx = { d, rng, now, ev, stats, fx: combatEffects(d), k: defConstant(b.stage) };
+  const result = fightStep(c, dt);
+  if (result === 'cleared') {
+    b.playerAtkProgress = 0;
+    onWaveCleared(c);
+  } else if (result === 'dead') {
+    b.playerHp = 0;
+    b.phase = 'dead';
+    b.phaseTime = BAL.combat.deathSeconds;
+    ev.push({ type: 'playerDeath', stage: b.stage });
+  }
+}
+
+/** A heist helper's blow at the front enemy: a share of ATK through its DEF, no crits. */
+function helperHit(c: Ctx, helper: 'pigeon' | 'rocco', share: number) {
+  const t = c.d.battle.enemies[0];
+  if (!t) return;
+  const amount = computeDamage(c.stats.ATK * share, t.def, false, 100, 1, c.k) * vsBurning(c, t);
+  const uid = t.uid;
+  const killed = damageEnemy(c, 0, amount);
+  c.ev.push({ type: 'heistHelper', helper, enemyUid: uid, amount, killed });
+}
+
+/** Heist timers at the top of a step: stuns wear off, Fortress of Junk recharges, the crew attacks. */
+function runTimers(c: Ctx, dt: number) {
+  const run = c.run!;
+  const { fx, fight: f } = run;
+  const b = c.d.battle;
+  f.time += dt;
+  for (const e of b.enemies) if (e.stun) e.stun = Math.max(0, e.stun - dt);
+  if (fx.blockEvery > 0 && !f.blockCharge) {
+    f.blockTimer += dt;
+    if (f.blockTimer >= fx.blockEvery) {
+      f.blockCharge = true;
+      f.blockTimer = 0;
+    }
+  }
+  if (fx.pigeons > 0 && fx.pigeonEvery > 0) {
+    f.pigeonTimer += dt;
+    while (f.pigeonTimer >= fx.pigeonEvery && b.enemies.length > 0) {
+      f.pigeonTimer -= fx.pigeonEvery;
+      for (let p = 0; p < Math.round(fx.pigeons) && b.enemies.length > 0; p++) helperHit(c, 'pigeon', fx.pigeonAtk);
+    }
+  }
+  if (fx.roccoAtk > 0 && fx.roccoEvery > 0) {
+    f.roccoTimer += dt;
+    while (f.roccoTimer >= fx.roccoEvery && b.enemies.length > 0) {
+      f.roccoTimer -= fx.roccoEvery;
+      helperHit(c, 'rocco', fx.roccoAtk);
+    }
+  }
+}
+
+/** The raccoon's attacks per second: Feral (missing HP) and Gas Station Espresso (the first seconds) in heists. */
+function attackSpeed(c: Ctx): number {
+  if (!c.run) return c.stats.ATK_SPD;
+  const { fx, fight } = c.run;
+  let spd = c.stats.ATK_SPD;
+  if (fx.feral > 0) spd *= 1 + (fx.feral * Math.max(0, 1 - c.d.battle.playerHp / Math.max(1, c.stats.HP)) * 100) / 100;
+  if (fx.rushPct > 0 && fight.time <= fx.rushSeconds) spd *= 1 + fx.rushPct / 100;
+  return Math.min(spd, BAL.player.caps.ATK_SPD * 2);
+}
+
+/** One enemy's specials this step: heavy hits, charges, enrage, summons. */
+function useSpecials(c: Ctx, e: EnemyState, dt: number) {
+  const b = c.d.battle;
+  for (const special of enemySpecials(DATA.enemiesById.get(e.enemyId))) {
+    if (special.type === 'heavyHit' || special.type === 'charge') {
+      e.specialTimer += dt;
+      if (e.specialTimer >= special.everySeconds) {
+        e.specialTimer -= special.everySeconds;
+        c.ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: special.name });
+        enemyAttack(c, e, special.damageMult, true, special.type === 'charge');
+      }
+    } else if (special.type === 'enrage' && !e.enraged && (e.hp / e.maxHp) * 100 < special.belowHpPct) {
+      e.enraged = true;
+      e.atk *= special.atkMult;
+      e.atkSpd *= special.atkSpdMult;
+      c.ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: special.name });
+    } else if (special.type === 'summon' && c.run) {
+      e.specialTimer += dt;
+      if (e.specialTimer >= special.everySeconds) {
+        e.specialTimer -= special.everySeconds;
+        const alive = b.enemies.filter((x) => x.enemyId === special.enemyId).length;
+        if (alive < special.max) {
+          // The new arrival steps in front of the one who called it.
+          b.enemies.unshift(c.run.makeEnemy(special.enemyId));
+          c.ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: special.name });
+        }
+      }
+    }
+  }
+}
+
+/**
+ * One step of a fight, shared by the Alley and Heists: burns, the raccoon's attacks, then the
+ * engaged enemies' specials and attacks. Returns 'cleared' when no enemy is left, 'dead' when the
+ * raccoon is down (the caller handles both), or null while it goes on.
+ */
+export function fightStep(c: Ctx, dt: number): 'cleared' | 'dead' | null {
+  const b = c.d.battle;
+  if (c.run) runTimers(c, dt);
   tickBurns(c, dt);
-  b.playerAtkProgress += stats.ATK_SPD * dt;
+  b.playerAtkProgress += attackSpeed(c) * dt;
   while (b.playerAtkProgress >= 1 && b.enemies.length > 0) {
     b.playerAtkProgress -= 1;
     playerAttack(c, false);
   }
-  if (b.enemies.length === 0) {
-    b.playerAtkProgress = 0;
-    onWaveCleared(c);
-    return;
-  }
+  if (b.enemies.length === 0) return 'cleared';
 
-  // Engaged enemies attack the raccoon.
+  // Engaged enemies attack the raccoon (stunned ones just stand there).
   const engaged = Math.min(BAL.combat.engagedEnemies, b.enemies.length);
   for (let i = 0; i < engaged && i < b.enemies.length; i++) {
     const e = b.enemies[i];
-    const special = DATA.enemiesById.get(e.enemyId)?.special;
-    if (special?.type === 'heavyHit') {
-      e.specialTimer += dt;
-      if (e.specialTimer >= special.everySeconds) {
-        e.specialTimer -= special.everySeconds;
-        ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: special.name });
-        enemyAttack(c, e, special.damageMult, true);
-      }
-    } else if (special?.type === 'enrage' && !e.enraged && (e.hp / e.maxHp) * 100 < special.belowHpPct) {
-      e.enraged = true;
-      e.atk *= special.atkMult;
-      e.atkSpd *= special.atkSpdMult;
-      ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: special.name });
-    }
+    if (e.stun) continue;
+    useSpecials(c, e, dt);
     e.atkProgress += e.atkSpd * dt;
     while (e.atkProgress >= 1 && b.playerHp > 0 && b.enemies.includes(e)) {
       e.atkProgress -= 1;
       enemyAttack(c, e, 1, false);
     }
-    if (b.playerHp <= 0) {
-      b.playerHp = 0;
-      b.phase = 'dead';
-      b.phaseTime = BAL.combat.deathSeconds;
-      ev.push({ type: 'playerDeath', stage: b.stage });
-      return;
-    }
+    if (b.playerHp <= 0) return 'dead';
   }
-  if (b.enemies.length === 0) {
-    b.playerAtkProgress = 0;
-    onWaveCleared(c);
-  }
+  return b.enemies.length === 0 ? 'cleared' : null;
 }

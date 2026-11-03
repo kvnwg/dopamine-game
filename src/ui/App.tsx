@@ -13,8 +13,11 @@ import { BottomNav } from './components/BottomNav';
 import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
 import { DragLayer } from './components/DragLayer';
+import { EquipFlight } from './components/EquipFlight';
+import { TutorialLayer } from './components/TutorialLayer';
 import { Toasts } from './components/Toasts';
 import { AdOverlay } from './components/AdOverlay';
+import { TitleScreen } from './components/TitleScreen';
 import { DevPanel } from '../dev/DevPanel';
 import { SHOW_DEV } from '../dev/flags';
 import { installRollController } from './rollController';
@@ -51,11 +54,14 @@ export function App() {
         <div className={styles.stage} data-stage style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
           <div className={styles.battle}><BattlePanel /></div>
           <div className={styles.lower}>
-            {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
-            {lowerTab === 'heist' && <HeistPanel />}
-            {lowerTab === 'bag' && <InventoryPanel />}
-            {lowerTab === 'rebirth' && <RebirthPanel />}
-            {lowerTab === 'worlds' && <WorldsPanel />}
+            {/* A new tab's panel slides up with a little bounce (keyed so it plays on every switch). */}
+            <div key={lowerTab === 'upgrades' ? 'alley' : lowerTab} className={styles.panelIn}>
+              {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
+              {lowerTab === 'heist' && <HeistPanel />}
+              {lowerTab === 'bag' && <InventoryPanel />}
+              {lowerTab === 'rebirth' && <RebirthPanel />}
+              {lowerTab === 'worlds' && <WorldsPanel />}
+            </div>
           </div>
           <div className={styles.nav}><BottomNav /></div>
           {tab === 'upgrades' && <UpgradeMap />}
@@ -63,9 +69,12 @@ export function App() {
           <SafeLayer name="reveal"><RevealLayer /></SafeLayer>
           <SafeLayer name="unlocks"><UnlockedFx /></SafeLayer>
           <SafeLayer name="popups"><PopupLayer /></SafeLayer>
+          <SafeLayer name="tutorial"><TutorialLayer /></SafeLayer>
+          <SafeLayer name="equip"><EquipFlight /></SafeLayer>
           <SafeLayer name="toasts"><Toasts /></SafeLayer>
           <AdOverlay />
           {SHOW_DEV && <DevPanel />}
+          <TitleScreen />
         </div>
       </div>
     </div>

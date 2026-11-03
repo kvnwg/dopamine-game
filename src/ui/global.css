@@ -209,6 +209,24 @@ button {
   animation: none;
 }
 
+/*
+ * A button let go of hops a pixel up with a flash and settles (src/ui/juice.ts adds .popped): a
+ * slight overshoot in whole pixels. Each keyframe holds until the next (steps(1, end)).
+ */
+@keyframes btnPop {
+  0% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.35); animation-timing-function: steps(1, end); }
+  45% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.12); animation-timing-function: steps(1, end); }
+  70%, 100% { transform: translateY(0); filter: none; }
+}
+.popped {
+  animation: btnPop 180ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .popped {
+    animation: none;
+  }
+}
+
 /* Cream card with a pixel border. */
 .card {
   background: var(--cream);

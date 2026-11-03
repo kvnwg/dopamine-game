@@ -1,0 +1,1221 @@
+/*
+ * The Heist tab. One pixel size like the rest of the game: var(--px) is one art pixel (6 stage px);
+ * pictures are drawn at exactly that size, borders, notches and drop shadows are whole pixels, and
+ * nothing that holds a picture rotates or scales (pops move in whole pixels and flash instead).
+ */
+
+/* ------------------------------------------------------------ the planning board (every view) */
+.panel {
+  position: absolute;
+  inset: 0;
+  padding: calc(2 * var(--px)) 24px calc(3 * var(--px));
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--px));
+  overflow: hidden;
+  /* Blueprint blue with a faint one-pixel grid every 10 art pixels: the heist's plans. */
+  background:
+    linear-gradient(90deg, rgba(126, 178, 255, 0.07) var(--px), transparent var(--px)) 0 0 / calc(10 * var(--px)) calc(10 * var(--px)),
+    linear-gradient(180deg, rgba(126, 178, 255, 0.07) var(--px), transparent var(--px)) 0 0 / calc(10 * var(--px)) calc(10 * var(--px)),
+    linear-gradient(180deg, #1d2645, #182038);
+}
+.grow {
+  flex: 1;
+}
+.title {
+  font-family: var(--font-display);
+  font-size: 50px;
+  color: #fff;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink);
+}
+.sub {
+  margin: calc(-1 * var(--px)) 0 0;
+  font-size: 23px;
+  line-height: 1.25;
+  color: #a9b6dc;
+}
+
+/* ------------------------------------------------------------ lobby */
+.lobbyHead {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  min-height: calc(11 * var(--px));
+}
+.tickets {
+  --tk: #ff8a80;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  height: calc(11 * var(--px));
+  padding: 0 calc(3 * var(--px)) 0 calc(2 * var(--px));
+  background: rgba(8, 10, 24, 0.55);
+  box-shadow: var(--pixel-edge);
+}
+.ticketNum {
+  font-family: var(--font-display);
+  font-size: 46px;
+  color: var(--tk);
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+}
+.ticketNum i {
+  font-style: normal;
+  font-size: 30px;
+  color: #c3c8e6;
+}
+.ticketRefill {
+  font-size: 22px;
+  color: #a9b6dc;
+  white-space: nowrap;
+}
+
+/* Three places side by side: 56 art pixels each, their previews 54 x 39 inside a one-pixel border. */
+.locs {
+  display: grid;
+  grid-template-columns: repeat(3, calc(56 * var(--px)));
+  justify-content: space-between;
+}
+.loc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: var(--px) solid var(--ink);
+  background: var(--cream);
+  box-shadow: 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  overflow: hidden;
+  text-align: left;
+  color: var(--ink);
+}
+.loc:active:not([data-locked]) {
+  transform: translateY(var(--px));
+}
+/* The picked place: a gold frame, a pixel higher. */
+.loc[data-selected] {
+  border-color: #ffd23f;
+  transform: translateY(calc(-1 * var(--px)));
+  box-shadow: 0 0 0 var(--px) var(--ink), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+}
+.loc[data-locked] {
+  background: #d9cdb2;
+  cursor: default;
+}
+.locThumb {
+  position: relative;
+  height: calc(39 * var(--px));
+  border-bottom: var(--px) solid var(--ink);
+  overflow: hidden;
+  background: #2a2d48;
+}
+/* The world preview is 81 x 39; its middle 54 columns show. */
+.locImg {
+  position: absolute;
+  left: calc(-13 * var(--px));
+  top: 0;
+  animation: fadeIn 220ms steps(2);
+}
+.loc[data-locked] .locImg {
+  filter: grayscale(0.8) brightness(0.45);
+}
+.locWait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2a2d48 0 50%, #3a3e60 50% 100%);
+}
+.locLock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: calc(-7 * var(--px)) 0 0 calc(-7 * var(--px));
+  width: calc(14 * var(--px));
+  height: calc(14 * var(--px));
+  display: grid;
+  place-items: center;
+  background: rgba(10, 8, 22, 0.7);
+  box-shadow: var(--pixel-edge);
+}
+.locWins {
+  position: absolute;
+  left: calc(2 * var(--px));
+  top: calc(2 * var(--px));
+  height: calc(9 * var(--px));
+  padding: 0 calc(2 * var(--px)) 0 var(--px);
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #fff6c2 0 var(--px), #ffd23f var(--px) 100%);
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--ink);
+}
+.locInfo {
+  flex: 1;
+  padding: calc(2 * var(--px)) calc(2 * var(--px)) calc(2 * var(--px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--px);
+}
+.locName {
+  font-family: var(--font-display);
+  font-size: 31px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+/* The boss, on a dark band along the preview's bottom edge. */
+.locBoss {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  background: rgba(16, 12, 30, 0.78);
+  font-size: 22px;
+  color: #ffd0c0;
+  white-space: nowrap;
+}
+.locLoot {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #6d5f57;
+}
+.locNeed {
+  display: flex;
+  align-items: center;
+  min-height: calc(7 * var(--px));
+  font-family: var(--font-display);
+  font-size: 23px;
+  line-height: 1.1;
+  color: #b52f35;
+}
+/* The picked place's one-liner. */
+.blurb {
+  margin: 0;
+  padding: 0 var(--px);
+  font-size: 24px;
+  line-height: 1.25;
+  color: #c3cbea;
+}
+.blurb b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: #ffd23f;
+}
+
+/* What a run is made of: the stops and their pictures. */
+.legend {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  justify-content: space-around;
+  gap: calc(2 * var(--px)) calc(4 * var(--px));
+  padding: calc(2 * var(--px)) calc(4 * var(--px));
+  background: rgba(8, 10, 24, 0.45);
+  box-shadow: var(--pixel-edge);
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-size: 22px;
+  color: #d5dbf5;
+  white-space: nowrap;
+}
+.lobbyActions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: calc(4 * var(--px));
+  padding: 0 var(--px) calc(2 * var(--px));
+}
+.adBtn {
+  flex: none;
+  white-space: nowrap;
+}
+.startBtn {
+  flex: 1;
+  min-height: calc(18 * var(--px));
+  font-size: 54px;
+}
+.cost,
+.price {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--px);
+  height: calc(9 * var(--px));
+  padding: 0 calc(2 * var(--px)) 0 var(--px);
+  background: rgba(26, 19, 38, 0.35);
+  font-size: 0.8em;
+}
+
+/* ------------------------------------------------------------ a run */
+.runPanel {
+  gap: calc(2 * var(--px));
+}
+.runHead {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px));
+  background: rgba(10, 12, 28, 0.82);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+}
+.runTop {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  height: calc(9 * var(--px));
+}
+.runPlace {
+  font-family: var(--font-display);
+  font-size: 38px;
+  color: #fff;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+}
+.actChip {
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #fff28c 0 var(--px), #f5c638 var(--px) calc(100% - var(--px)), #ef8a22 calc(100% - var(--px)) 100%);
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+}
+.stopCount {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #a9b6dc;
+  white-space: nowrap;
+}
+.runCoins {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-family: var(--font-display);
+  font-size: 38px;
+  color: #ffd23f;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+}
+.abandon {
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  margin-left: calc(2 * var(--px));
+  background: #3a3e60;
+  box-shadow: var(--pixel-edge);
+  font-size: 22px;
+  color: #c9cbe0;
+  white-space: nowrap;
+}
+.abandon:active {
+  transform: translateY(var(--px));
+}
+.abandon[data-armed] {
+  background: #b52f35;
+  color: #fff;
+}
+
+/* 19 pips: each act's six stops, then the boss. A pip shows its stop once it's reached. */
+.pips {
+  display: flex;
+  justify-content: center;
+  gap: calc(3 * var(--px));
+}
+.pipGroup {
+  position: relative;
+  display: flex;
+  gap: var(--px);
+  padding-bottom: calc(2 * var(--px));
+}
+/* Each act's underline: gold under the act the run is in. */
+.pipGroup::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--px);
+  background: #3a4268;
+}
+.pipGroup[data-on]::after {
+  background: #ffd23f;
+}
+.pip {
+  position: relative;
+  width: calc(7 * var(--px));
+  height: calc(7 * var(--px));
+  display: grid;
+  place-items: center;
+}
+.pipDot {
+  width: calc(2 * var(--px));
+  height: calc(2 * var(--px));
+  background: #3f4870;
+}
+.pip[data-state='now'] {
+  box-shadow: 0 0 0 var(--px) #ffd23f, 0 0 0 calc(2 * var(--px)) var(--ink);
+  background: #2b3256;
+  animation: pipBob 0.8s steps(2) infinite;
+}
+.pip[data-state='next'] {
+  box-shadow: 0 0 0 var(--px) #8fa0d8;
+  background: #232a4a;
+}
+.pip[data-state='next'] .pipDot {
+  background: #fff;
+  animation: blink 0.8s steps(1) infinite;
+}
+/* The boss waits at the end, dimmed until it's next. */
+.pip[data-state='ahead'][data-kind='boss'] img {
+  filter: grayscale(0.7) brightness(0.6);
+}
+@keyframes pipBob {
+  50% { transform: translateY(calc(-1 * var(--px))); }
+}
+@keyframes blink {
+  50% { opacity: 0.2; }
+}
+
+.runStats {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  height: calc(7 * var(--px));
+}
+.bar {
+  position: relative;
+  flex: 1;
+  height: calc(7 * var(--px));
+  border: var(--px) solid var(--ink);
+  background: #15172a;
+  overflow: hidden;
+}
+.bar[data-tone='xp'] {
+  flex: 0 0 calc(32 * var(--px));
+}
+.barFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  transition: width 320ms steps(5);
+}
+.bar[data-tone='hp'] .barFill {
+  background: linear-gradient(180deg, #b0ec6c 0 var(--px), #5dc14c var(--px) calc(100% - var(--px)), #2f8a45 calc(100% - var(--px)) 100%);
+}
+.bar[data-tone='hp'][data-low] .barFill {
+  background: linear-gradient(180deg, #ff9a8a 0 var(--px), #ef5350 var(--px) calc(100% - var(--px)), #b52f35 calc(100% - var(--px)) 100%);
+}
+.bar[data-tone='xp'] .barFill {
+  background: linear-gradient(180deg, #9edcf7 0 var(--px), #3fa1e3 var(--px) calc(100% - var(--px)), #2f56a6 calc(100% - var(--px)) 100%);
+}
+.barText {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.lv {
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #9edcf7 0 var(--px), #3fa1e3 var(--px) calc(100% - var(--px)), #2f56a6 calc(100% - var(--px)) 100%);
+  box-shadow: var(--pixel-edge);
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+  margin-left: var(--px);
+}
+
+/* Perks (tap for what they do) and curses. Chips are 9 art pixels: a 7 x 7 icon in a one-pixel frame. */
+.runPerks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--px) calc(2 * var(--px));
+  min-height: calc(9 * var(--px));
+}
+.perkChip,
+.curseChip {
+  --tc: #a7a5b8;
+  width: calc(9 * var(--px));
+  height: calc(9 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: color-mix(in srgb, var(--tc) 45%, #fff7e6);
+  box-shadow: 0 var(--px) 0 0 rgba(4, 4, 12, 0.6);
+}
+.perkChip:active,
+.curseChip:active {
+  transform: translateY(var(--px));
+  box-shadow: none;
+}
+.perkChip[data-evo] {
+  background: linear-gradient(180deg, #fff6c2 0 var(--px), #ffd23f var(--px) 100%);
+  animation: evoGlow 1.2s steps(1) infinite;
+}
+.perkChip[data-active],
+.curseChip[data-active] {
+  box-shadow: 0 0 0 var(--px) #fff, 0 var(--px) 0 var(--px) rgba(4, 4, 12, 0.6);
+}
+.curseChip {
+  background: #5a3a78;
+}
+.perkSep {
+  width: var(--px);
+  height: calc(7 * var(--px));
+  background: rgba(255, 255, 255, 0.16);
+}
+.noPerks {
+  font-size: 22px;
+  color: #6f7aa6;
+}
+@keyframes evoGlow {
+  50% { box-shadow: 0 0 0 var(--px) #fff28c, 0 var(--px) 0 var(--px) rgba(4, 4, 12, 0.6); }
+}
+
+/* What a perk or curse does: a cream note dropped under the header, over the log. */
+.detail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2 * var(--px));
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  gap: calc(3 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px)) calc(3 * var(--px));
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 calc(1 * var(--px)) rgba(10, 6, 20, 0.5);
+  animation: dropIn 180ms steps(3);
+}
+.detailIcon {
+  --tc: #a7a5b8;
+  flex: none;
+  width: calc(12 * var(--px));
+  height: calc(12 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: color-mix(in srgb, var(--tc) 35%, #fff);
+}
+.detailText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--px);
+}
+.detailName {
+  font-family: var(--font-display);
+  font-size: 36px;
+  line-height: 1.05;
+}
+.detailTags,
+.perkTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--px);
+}
+.tagChip {
+  --tc: #a7a5b8;
+  height: calc(6 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: inline-flex;
+  align-items: center;
+  border: var(--px) solid var(--ink);
+  background: var(--tc);
+  font-style: normal;
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+}
+.detailBody {
+  font-size: 25px;
+  line-height: 1.2;
+  color: #5d4f47;
+}
+
+/* The run's log: a cream case file, newest line at the bottom. */
+.log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--px);
+  padding: calc(2 * var(--px)) calc(3 * var(--px));
+  background: linear-gradient(90deg, #f4e7c8 0 calc(10 * var(--px)), #fbf3df calc(10 * var(--px)));
+  color: var(--ink);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+}
+.log::-webkit-scrollbar {
+  display: none;
+}
+.log > :first-child {
+  margin-top: auto;
+}
+.logLine {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(2 * var(--px));
+  font-size: 26px;
+  line-height: 42px;
+  color: #6d5f57;
+}
+.logLine[data-new] {
+  color: var(--ink);
+  animation: lineIn 240ms steps(3);
+}
+.logIcon {
+  margin-top: 0;
+}
+.goBtn {
+  flex: none;
+  min-height: calc(18 * var(--px));
+  font-size: 58px;
+  gap: calc(3 * var(--px));
+}
+.fightBob {
+  animation: pipBob 0.4s steps(2) infinite;
+}
+@keyframes lineIn {
+  from { transform: translateY(calc(2 * var(--px))); opacity: 0.3; }
+}
+
+/* ------------------------------------------------------------ decisions */
+.decide {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px)) calc(3 * var(--px));
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  animation: dropIn 220ms steps(3);
+}
+.decideHead {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  min-height: calc(12 * var(--px));
+}
+.decideTitle {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.05;
+}
+.decideSub {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #7a6a60;
+}
+.rerollBtn {
+  white-space: nowrap;
+}
+
+/* A perk pick: three cards framed by rarity; an evolution glows gold. */
+.perkCards {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: calc(3 * var(--px));
+}
+.perkCard {
+  --rc: #a7a5b8;
+  --tc: #a7a5b8;
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--px);
+  padding: 0 0 calc(2 * var(--px));
+  border: var(--px) solid var(--ink);
+  background: #fff;
+  box-shadow: inset 0 0 0 var(--px) var(--rc), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  color: var(--ink);
+  text-align: center;
+  animation: dealIn 300ms steps(3) both;
+}
+.perkCard[data-rarity='epic'],
+.perkCard[data-rarity='evolution'] {
+  box-shadow: inset 0 0 0 calc(2 * var(--px)) var(--rc), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+}
+.perkCard[data-rarity='evolution'] {
+  background: #fffbe8;
+  animation: dealIn 300ms steps(3) both, evoCard 1s steps(1) 300ms infinite;
+}
+.perkCard:active {
+  transform: translateY(var(--px));
+}
+@keyframes evoCard {
+  50% {
+    box-shadow: inset 0 0 0 calc(2 * var(--px)) #fff28c, 0 0 0 var(--px) #ffd23f, 0 0 0 calc(2 * var(--px)) var(--ink),
+      0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  }
+}
+.evoBadge {
+  position: absolute;
+  top: calc(-3 * var(--px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #fff28c 0 var(--px), #ffd23f var(--px) 100%);
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.perkArt {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  padding: calc(2 * var(--px)) 0;
+  background: color-mix(in srgb, var(--tc) 30%, #fff);
+  border-bottom: var(--px) solid var(--ink);
+}
+.perkName {
+  padding: 0 calc(2 * var(--px));
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.05;
+}
+.perkTags {
+  justify-content: center;
+}
+.perkText {
+  padding: 0 calc(2 * var(--px));
+  font-size: 22px;
+  line-height: 1.2;
+  color: #5d4f47;
+}
+@keyframes dealIn {
+  0% { transform: translateY(calc(6 * var(--px))); opacity: 0; }
+  60% { transform: translateY(calc(-1 * var(--px))); opacity: 1; }
+}
+
+/* A choice event: its text in a speech bubble's company, then the options. */
+.choiceText {
+  display: flex;
+  align-items: center;
+  gap: calc(4 * var(--px));
+  padding: var(--px) 0;
+}
+.choiceText p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 36px;
+  line-height: 1.25;
+}
+.choiceArt {
+  animation: pipBob 1.2s steps(2) infinite;
+}
+.choiceOptions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(3 * var(--px));
+}
+.optionBtn {
+  width: 100%;
+  min-height: calc(14 * var(--px));
+  flex-direction: column;
+  gap: 0;
+  padding: var(--px) calc(4 * var(--px)) calc(2 * var(--px));
+  font-size: 36px;
+  animation: dealIn 300ms steps(3) both;
+}
+.optionLabel {
+  line-height: 1.1;
+}
+/* What it can lead to, in small print under the label. */
+.optionHint {
+  font-size: 22px;
+  line-height: 1.15;
+  text-shadow: none;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+  color: #fff6d8;
+}
+.optionHint:empty {
+  display: none;
+}
+
+/* A shop: the stock as tiles, prices on the ink band, then Leave. */
+.stock {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: calc(3 * var(--px));
+}
+.stockItem {
+  --tc: #ffd23f;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--px);
+  padding: calc(2 * var(--px)) var(--px) calc(2 * var(--px));
+  border: var(--px) solid var(--ink);
+  background: #fff;
+  box-shadow: 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  color: var(--ink);
+  text-align: center;
+}
+.stockItem:active:not(:disabled) {
+  transform: translateY(var(--px));
+}
+.stockItem:disabled {
+  cursor: default;
+}
+.stockItem[data-sold] > :not(.soldStamp) {
+  filter: grayscale(1) brightness(1.1);
+  opacity: 0.55;
+}
+.stockArt {
+  width: calc(12 * var(--px));
+  height: calc(12 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: color-mix(in srgb, var(--tc) 30%, #fff);
+}
+.stockName {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.05;
+}
+.stockText {
+  flex: 1;
+  font-size: 21px;
+  line-height: 1.15;
+  color: #7a6a60;
+}
+.stockPrice {
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px)) 0 var(--px);
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  background: var(--ink);
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #ffd23f;
+}
+.stockItem[data-broke] .stockPrice {
+  color: #ff8a80;
+}
+.soldStamp {
+  position: absolute;
+  left: 50%;
+  top: calc(4 * var(--px));
+  transform: translateX(-50%);
+  height: calc(9 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: #ef5350;
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.leaveBtn {
+  margin-left: calc(2 * var(--px));
+}
+
+/* The Jackpot Wheel: a slot reel of prizes that spins up, eases out and lands on the payout. */
+.wheelBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(6 * var(--px));
+}
+.reelWindow {
+  position: relative;
+  flex: none;
+  width: calc(26 * var(--px));
+  height: calc(34 * var(--px));
+  overflow: hidden;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #d9c9a4 0 calc(6 * var(--px)), #fff7e6 calc(6 * var(--px)) calc(28 * var(--px)), #d9c9a4 calc(28 * var(--px)));
+  box-shadow: 0 0 0 var(--px) #f5c638, 0 0 0 calc(2 * var(--px)) var(--ink), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+}
+.reelWindow[data-landed] {
+  animation: landFlash 0.5s steps(1) 3;
+}
+@keyframes landFlash {
+  50% { box-shadow: 0 0 0 var(--px) #fff, 0 0 0 calc(2 * var(--px)) var(--ink), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.45); }
+}
+/* Cells are 22 art pixels; the strip starts 6 down so the cell it's on sits in the middle. */
+.reelStrip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(6 * var(--px));
+  will-change: transform;
+}
+.reelCell {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: calc(22 * var(--px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.reelCell b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 30px;
+  color: var(--ink);
+}
+/* The payline's arrows, at the middle of the window. */
+.reelArrowL,
+.reelArrowR {
+  position: absolute;
+  top: calc(14 * var(--px));
+}
+.reelArrowL {
+  left: 0;
+}
+.reelArrowR {
+  right: 0;
+}
+.wheelSide {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(3 * var(--px));
+  min-width: calc(66 * var(--px));
+}
+/* The segments and their odds; the one it landed on lights up. */
+.odds {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--px) calc(2 * var(--px));
+  border: var(--px) solid #d9c7a2;
+  background: #f6ead1;
+}
+.oddsRow {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  height: calc(7 * var(--px));
+  padding: 0 var(--px);
+  font-size: 24px;
+  color: #5d4f47;
+}
+.oddsLabel {
+  flex: 1;
+}
+.oddsRow i {
+  font-style: normal;
+  font-family: var(--font-display);
+  color: #9a8a7e;
+}
+.oddsRow[data-hit] {
+  background: #ffd23f;
+  color: var(--ink);
+  animation: blink 0.5s steps(1) 3;
+}
+.oddsRow[data-hit] i {
+  color: var(--ink);
+}
+.spinBtn {
+  min-width: calc(48 * var(--px));
+  min-height: calc(16 * var(--px));
+  font-size: 50px;
+}
+
+/* A shrine: what it asks, accept or walk away. */
+.shrineBody {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: calc(5 * var(--px));
+  padding: 0 calc(3 * var(--px));
+}
+.shrineArt {
+  animation: pipBob 1.4s steps(2) infinite;
+}
+.shrineText {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--px));
+}
+.shrineText p {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.25;
+  color: #4d3f47;
+}
+.shrineBtns {
+  display: flex;
+  justify-content: center;
+  gap: calc(4 * var(--px));
+}
+.shrineYes {
+  --b: #a463f2;
+  --bd: #6b2fb8;
+  --bl: #d6b8ff;
+}
+
+/* ------------------------------------------------------------ the end of a run */
+.end {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #120f22;
+}
+.endBack {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 38%, rgba(255, 196, 40, 0.42), rgba(12, 10, 24, 0.94) 66%);
+}
+.end[data-busted] .endBack {
+  background: radial-gradient(circle at 50% 30%, rgba(239, 83, 80, 0.38), rgba(12, 10, 24, 0.95) 64%);
+}
+/* Gold rays as pixel art (heistEnd.tsx): three frames, each a third of a ray further round, shown in turn. */
+.endRays {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.rayFrame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  animation: rayFrame 0.9s steps(1) infinite;
+}
+@keyframes rayFrame {
+  0% { opacity: 1; }
+  33.333% { opacity: 0; }
+}
+.endCenter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  padding: 0 32px;
+  text-align: center;
+}
+.endTitle {
+  animation: titleIn 420ms steps(4) both;
+}
+@keyframes titleIn {
+  0% { transform: translateY(calc(-8 * var(--px))); opacity: 0; }
+  50% { transform: translateY(var(--px)); opacity: 1; }
+}
+.endSub {
+  font-family: var(--font-display);
+  font-size: 36px;
+  line-height: 1.2;
+  color: #fff;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  animation: fadeIn 300ms steps(3) 200ms both;
+}
+.endNote {
+  font-size: 26px;
+  color: #c3c8e6;
+}
+.rewards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(3 * var(--px));
+  max-width: 980px;
+}
+.reward,
+.ringReward {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  min-height: calc(14 * var(--px));
+  padding: var(--px) calc(4 * var(--px)) var(--px) calc(2 * var(--px));
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  animation: rewardIn 360ms steps(4) both;
+}
+.ringReward {
+  padding-left: var(--px);
+  background: #fff6c2;
+}
+.ringArt {
+  width: calc(18 * var(--px));
+  height: calc(18 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #fff28c 0 var(--px), #ffc233 var(--px) calc(100% - var(--px)), #d48a12 calc(100% - var(--px)) 100%);
+}
+.rewardText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+  text-align: left;
+}
+.rewardText b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 38px;
+}
+.rewardText i {
+  font-style: normal;
+  font-size: 21px;
+  color: #7a6a60;
+}
+@keyframes rewardIn {
+  0% { transform: translateY(calc(4 * var(--px))); opacity: 0; }
+  60% { transform: translateY(calc(-1 * var(--px))); opacity: 1; }
+}
+.claimBtn {
+  min-width: calc(70 * var(--px));
+  min-height: calc(17 * var(--px));
+  font-size: 54px;
+  margin-top: calc(2 * var(--px));
+  animation: fadeIn 300ms steps(3) 900ms both;
+}
+.reviveBtns {
+  display: flex;
+  gap: calc(4 * var(--px));
+  margin-top: calc(2 * var(--px));
+}
+.reviveBtn {
+  min-height: calc(16 * var(--px));
+  font-size: 40px;
+}
+.keepNote {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(2 * var(--px));
+  font-size: 26px;
+  color: #d5dbf5;
+}
+.keepLoot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--px);
+  padding: 0 calc(2 * var(--px));
+  height: calc(8 * var(--px));
+  background: rgba(0, 0, 0, 0.35);
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #fff;
+}
+.giveUp {
+  margin-top: var(--px);
+}
+
+/* Confetti: 2 x 1 art-pixel bits that fall in whole pixels and tumble between 2 x 1 and 1 x 2. */
+.confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.confetti span {
+  position: absolute;
+  top: calc(-4 * var(--px));
+  width: calc(2 * var(--px));
+  height: var(--px);
+  animation-name: fall, tumble;
+  animation-timing-function: steps(60), steps(1);
+  animation-iteration-count: infinite, infinite;
+}
+.confetti span[data-tall] {
+  width: var(--px);
+  height: calc(2 * var(--px));
+}
+@keyframes fall {
+  to { transform: translateY(840px); }
+}
+@keyframes tumble {
+  50% { width: var(--px); height: calc(2 * var(--px)); }
+}
+
+/* ------------------------------------------------------------ shared */
+@keyframes fadeIn {
+  from { opacity: 0; }
+}
+@keyframes dropIn {
+  from { transform: translateY(calc(-3 * var(--px))); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pip[data-state='now'],
+  .pip[data-state='next'] .pipDot,
+  .perkChip[data-evo],
+  .perkCard,
+  .choiceArt,
+  .shrineArt,
+  .fightBob,
+  .endRays,
+  .confetti span {
+    animation: none;
+  }
+}

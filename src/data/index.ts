@@ -11,11 +11,13 @@ import worldsJson from './worlds.json';
 import stringsJson from './strings.en.json';
 import assetsJson from './assets.json';
 import enchantsJson from './enchants.json';
+import heistJson from './heist.json';
+import heistEventsJson from './heistEvents.json';
 import {
-  AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, ItemsSchema, WorldsSchema,
-  RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
-  type Affix, type Assets, type Balance, type BaseItem, type EnchantDef, type EnemyDef, type MintPerk, type WorldDef,
-  type Theme,
+  AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, HeistEventsSchema, HeistFileSchema, ItemsSchema,
+  WorldsSchema, LOCATION_IDS, RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
+  type Affix, type Assets, type Balance, type BaseItem, type CurseDef, type EnchantDef, type EnemyDef, type HeistEventDef,
+  type HeistLocationDef, type LocationId, type MintPerk, type PerkDef, type WorldDef, type Theme,
 } from './schemas';
 import type { z } from 'zod';
 import { layoutUpgradeMap, type HexNode } from './hexLayout';
@@ -42,6 +44,15 @@ export interface GameData {
   enchantsById: Map<string, EnchantDef>;
   /** Every tier of every upgrade line, placed on the hex map. */
   upgradeMap: HexNode[];
+  /** Heists: the three locations (in unlock order), perks (evolutions included), curses and choice events. */
+  heistLocations: HeistLocationDef[];
+  heistLocationsById: Map<LocationId, HeistLocationDef>;
+  heistPerks: PerkDef[];
+  heistPerksById: Map<string, PerkDef>;
+  heistCurses: CurseDef[];
+  heistCursesById: Map<string, CurseDef>;
+  heistEvents: HeistEventDef[];
+  heistEventsById: Map<string, HeistEventDef>;
 }
 
 function parse<T extends z.ZodTypeAny>(name: string, schema: T, raw: unknown): z.infer<T> {
@@ -60,6 +71,8 @@ function fail(msg: string): never {
 export function buildGameData(raw: {
   balance: unknown; items: unknown; affixes: unknown; themes: unknown; enemies: unknown;
   worlds: unknown; strings: unknown; assets: unknown; enchants: unknown;
+  /** Default: the bundled heist.json and heistEvents.json. */
+  heist?: unknown; heistEvents?: unknown;
 }): GameData {
   const balance = parse('balance.json', BalanceSchema, raw.balance);
   const items = parse('items.json', ItemsSchema, raw.items);
@@ -149,6 +162,10 @@ export function buildGameData(raw: {
     for (const foe of w.enemies) if (enemiesById.get(foe.id)!.kind !== 'regular') fail(`${foe.id} is not a regular enemy`);
   }
 
+  const heist = buildHeistData(raw.heist ?? heistJson, raw.heistEvents ?? heistEventsJson, {
+    balance, itemsById, enemiesById, worlds, assets,
+  });
+
   return {
     balance,
     items,
@@ -166,6 +183,105 @@ export function buildGameData(raw: {
     enchants,
     enchantsById,
     upgradeMap: upgradeMap.nodes,
+    ...heist,
+  };
+}
+
+type HeistData = Pick<
+  GameData,
+  'heistLocations' | 'heistLocationsById' | 'heistPerks' | 'heistPerksById' | 'heistCurses' | 'heistCursesById' | 'heistEvents' | 'heistEventsById'
+>;
+
+/** Validates heist.json and heistEvents.json, and every id they share with the rest of the data. */
+function buildHeistData(
+  rawHeist: unknown,
+  rawEvents: unknown,
+  ctx: { balance: Balance; itemsById: Map<string, BaseItem>; enemiesById: Map<string, EnemyDef>; worlds: WorldDef[]; assets: Assets },
+): HeistData {
+  const file = parse('heist.json', HeistFileSchema, rawHeist);
+  const events = parse('heistEvents.json', HeistEventsSchema, rawEvents);
+  const { balance, itemsById, enemiesById, worlds, assets } = ctx;
+
+  const heistLocationsById = new Map<LocationId, HeistLocationDef>();
+  for (const loc of file.locations) {
+    if (heistLocationsById.has(loc.id)) fail(`duplicate heist location ${loc.id}`);
+    heistLocationsById.set(loc.id, loc);
+    if (loc.world > worlds.length) fail(`heist location ${loc.id} borrows unknown world ${loc.world}`);
+    const roster: Array<[string, string]> = [
+      ...loc.enemies.map((id) => [id, 'regular'] as [string, string]),
+      ...loc.elites.map((id) => [id, 'miniboss'] as [string, string]),
+      [loc.boss, 'boss'],
+    ];
+    for (const [id, kind] of roster) {
+      const e = enemiesById.get(id);
+      if (!e) fail(`heist location ${loc.id} references unknown enemy ${id}`);
+      if (e.kind !== kind) fail(`heist enemy ${id} must be kind ${kind}`);
+      if (!assets.placeholders.enemies[id]) fail(`enemy ${id} has no placeholder art`);
+    }
+    const ring = itemsById.get(loc.ring);
+    if (!ring || ring.slot !== 'ring' || ring.heist !== loc.id) fail(`heist location ${loc.id} ring ${loc.ring} must be a ring with heist "${loc.id}"`);
+  }
+  for (const id of LOCATION_IDS) if (!heistLocationsById.has(id)) fail(`heist location ${id} missing`);
+  for (const it of itemsById.values()) {
+    if (it.heist && heistLocationsById.get(it.heist)?.ring !== it.id) fail(`item ${it.id} is a heist item no location drops`);
+  }
+  for (const e of enemiesById.values()) {
+    for (const sp of [e.special, ...(e.specials ?? [])]) {
+      if (sp?.type !== 'summon') continue;
+      const add = enemiesById.get(sp.enemyId);
+      if (!add || add.kind !== 'regular') fail(`enemy ${e.id} summons unknown regular enemy ${sp.enemyId}`);
+      if (!assets.placeholders.enemies[sp.enemyId]) fail(`enemy ${sp.enemyId} has no placeholder art`);
+    }
+  }
+
+  const heistPerksById = new Map<string, PerkDef>();
+  for (const p of file.perks) {
+    if (heistPerksById.has(p.id)) fail(`duplicate perk id ${p.id}`);
+    heistPerksById.set(p.id, p);
+    if ((p.rarity === 'evolution') !== !!p.recipe) fail(`perk ${p.id}: evolutions (and only they) have a recipe`);
+  }
+  for (const p of file.perks) {
+    for (const id of p.recipe?.perks ?? []) {
+      const ing = heistPerksById.get(id);
+      if (!ing || ing.recipe) fail(`evolution ${p.id} needs unknown perk ${id}`);
+    }
+  }
+  const heistCursesById = new Map<string, CurseDef>();
+  for (const c of file.curses) {
+    if (heistCursesById.has(c.id) || heistPerksById.has(c.id)) fail(`duplicate curse id ${c.id}`);
+    heistCursesById.set(c.id, c);
+  }
+
+  const heistEventsById = new Map<string, HeistEventDef>();
+  for (const ev of events) {
+    if (heistEventsById.has(ev.id)) fail(`duplicate heist event ${ev.id}`);
+    heistEventsById.set(ev.id, ev);
+    ev.options.forEach((opt, i) => {
+      let chance = 0;
+      for (const o of opt.outcomes) {
+        chance += o.chance ?? 0;
+        if (o.perkId && (!heistPerksById.has(o.perkId) || heistPerksById.get(o.perkId)!.recipe)) {
+          fail(`heist event ${ev.id} option ${i} gives unknown perk ${o.perkId}`);
+        }
+        if (o.curseId && !heistCursesById.has(o.curseId)) fail(`heist event ${ev.id} option ${i} gives unknown curse ${o.curseId}`);
+      }
+      if (chance > 1 + 1e-9) fail(`heist event ${ev.id} option ${i}: chances add up to more than 1`);
+    });
+  }
+
+  const h = balance.heist;
+  for (let i = 1; i < h.levels.length; i++) if (h.levels[i] <= h.levels[i - 1]) fail('heist.levels must rise');
+  if (h.ring.minRarity === 'junk') fail('heist.ring.minRarity must be above Junk');
+
+  return {
+    heistLocations: file.locations,
+    heistLocationsById,
+    heistPerks: file.perks,
+    heistPerksById,
+    heistCurses: file.curses,
+    heistCursesById,
+    heistEvents: events,
+    heistEventsById,
   };
 }
 

@@ -189,6 +189,13 @@
 @keyframes upBob {
   50% { transform: translateY(calc(-1 * var(--px))); }
 }
+/* Worse than what is worn: a red arrow on the same spot, still (only upgrades call for attention). */
+.downgrade {
+  position: absolute;
+  right: calc(-2 * var(--px));
+  bottom: calc(3 * var(--px));
+  z-index: 6;
+}
 
 /* Rarity flourishes. A band of light crosses rare tiles now and then. */
 .shine::after {

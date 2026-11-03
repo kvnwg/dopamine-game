@@ -39,6 +39,8 @@ export const GearIcon = (p: P) => <Pix name="gear" {...p} />;
 export const LockIcon = (p: P) => <Pix name="lock" {...p} />;
 export const TrashIcon = (p: P) => <Pix name="trash" {...p} />;
 export const ArrowUpIcon = (p: P) => <Pix name="arrowUp" {...p} />;
+export const ArrowDownIcon = (p: P) => <Pix name="arrowDown" {...p} />;
+export const HandIcon = (p: P) => <Pix name="hand" {...p} />;
 export const RebirthIcon = (p: P) => <Pix name="rebirth" {...p} />;
 export const DumpsterIcon = (p: P) => <Pix name="dumpster" {...p} />;
 export const PotionIcon = (p: P) => <Pix name="potion" {...p} />;

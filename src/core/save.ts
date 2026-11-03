@@ -2,7 +2,8 @@
  * Save/load with versioned migrations and rotating backups.
  * Storage is injected (localStorage on web, @capacitor/preferences on native, memory in tests).
  */
-import { GameStateSchema, SAVE_VERSION, type GameState } from './state';
+import { BAL } from '../data';
+import { GameStateSchema, initialHeist, SAVE_VERSION, type GameState } from './state';
 import { sanitizeUpgrades } from './systems/upgrades';
 import { fitToPower } from './systems/loot';
 import type { Item } from './types';
@@ -147,6 +148,16 @@ export const MIGRATIONS: Record<number, Migration> = {
     // A spin in flight would land an item made the old way: start the next spin fresh.
     const roll = (s.roll ?? {}) as Record<string, unknown>;
     return { ...s, saveVersion: 7, equipped, inventory, roll: { ...roll, timer: 0, current: null } };
+  },
+  /**
+   * v7 -> v8: Heists. A fresh heist state with the starting tickets, counted as today's grant (the next
+   * tickets come at the next local midnight); the best world beaten so far opens the locations.
+   */
+  7: (s) => {
+    const stage = (s.stage ?? {}) as Record<string, unknown>;
+    const roll = (s.roll ?? {}) as Record<string, unknown>;
+    const best = Math.max(0, Math.floor(Number(stage.highestCleared ?? 0)) || 0);
+    return { ...s, saveVersion: 8, heist: initialHeist(BAL.heist.tickets.start, '', best), roll: { ...roll, goldenLeft: 0 } };
   },
 };
 

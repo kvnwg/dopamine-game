@@ -228,12 +228,16 @@ class AudioEngine {
   }
 
   // ------------------------------------------------------------------ UI and dumpster
-  /** Button pop with a slightly random pitch so it never grates. */
-  tap(): void {
+  /**
+   * Button pop with a slightly random pitch so it never grates; `streak` (taps in quick succession,
+   * from 0) raises it a semitone each, up to an octave.
+   */
+  tap(streak = 0): void {
     const ctx = this.live;
     if (!ctx || !this.gate('tap', 40)) return;
     const at = ctx.currentTime;
-    this.tone(this.vary(560), at, 0.07, { gain: 0.09, freqEnd: this.vary(820) });
+    const up = Math.pow(2, Math.min(12, Math.max(0, streak)) / 12);
+    this.tone(this.vary(560) * up, at, 0.07, { gain: 0.09, freqEnd: this.vary(820) * up });
     this.noise(at, 0.02, { freq: 3000, q: 2, gain: 0.03 });
   }
 
@@ -254,6 +258,67 @@ class AudioEngine {
     const at = ctx.currentTime;
     this.tone(220, at, 0.09, { gain: 0.12, freqEnd: 140 });
     this.noise(at, 0.04, { freq: 2600, q: 3, gain: 0.06 });
+  }
+
+  /** The Roll tab's reels launch: a lever clack and a short whirr (quiet: it plays every spin). */
+  reelStart(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('reelStart', 250)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.035, { freq: 1800, q: 3, gain: 0.04 });
+    this.tone(150, at, 0.07, { type: 'square', gain: 0.025, filter: 900, freqEnd: 95 });
+    this.noise(at + 0.04, 0.22, { type: 'bandpass', freq: 500, freqEnd: 1500, q: 1.2, gain: 0.025, attack: 0.05 });
+  }
+
+  /**
+   * An item clicking past a reel's win line. `rise` (0 to 1) climbs as the reel slows, so a stop
+   * winds up in pitch; `loud` (0 to 1) for the ticks that matter (the last reel's).
+   */
+  reelTick(rise: number, loud = 0): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('reelTick', 30)) return;
+    const at = ctx.currentTime;
+    const r = Math.max(0, Math.min(1, rise));
+    this.tone(this.vary(1000 * Math.pow(2, r * 1.25), 0.02), at, 0.03, { type: 'square', gain: 0.018 + 0.03 * r * (0.5 + loud), filter: 3800 });
+    this.noise(at, 0.012, { freq: 3800, q: 4, gain: 0.015 + 0.02 * r });
+  }
+
+  /** A notch of a rare result's crawl toward the line: each one a step higher on the ladder (`step` from 0). */
+  reelCreep(step: number): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('reelCreep', 60)) return;
+    const at = ctx.currentTime;
+    const n = LADDER[Math.min(LADDER.length - 1, 3 + step)];
+    this.tone(midi(n), at, 0.06, { type: 'square', gain: 0.03 + Math.min(0.03, step * 0.004), filter: 3200 });
+    this.noise(at, 0.02, { freq: 2600, q: 5, gain: 0.04 });
+  }
+
+  /**
+   * A reel lands on its result: a thud whose weight and pitch rise with the rarity (`tier` 0 Junk to
+   * 12 Holy Grail); `last` for the spin's final stop. Shiny and up ring on top.
+   */
+  reelLand(tier: number, last: boolean): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('reelLand', 50)) return;
+    const at = ctx.currentTime;
+    const k = Math.max(0, Math.min(12, tier));
+    const w = last ? 1.25 : 1;
+    this.tone(150 + k * 8, at, 0.12 + k * 0.012, { gain: (0.13 + k * 0.018) * w, freqEnd: 60 + k * 3 });
+    this.noise(at, 0.045, { freq: 2200 + k * 220, q: 3, gain: 0.06 + k * 0.006 });
+    if (k >= 2) this.bell(midi(LADDER[Math.min(LADDER.length - 1, 2 + k)]), at + 0.01, 0.3 + k * 0.03, 0.03 + k * 0.004);
+    if (k >= 4) this.noise(at + 0.02, 0.35, { type: 'highpass', freq: 5500, gain: 0.04, attack: 0.01 });
+  }
+
+  /** The build-up glow climbs a tier: a quick upward flick, higher for rarer tiers (`tier` 1 to 12). */
+  glowUp(tier: number): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('glowUp', 60)) return;
+    const at = ctx.currentTime;
+    const n = LADDER[Math.min(LADDER.length - 2, 3 + tier)];
+    this.tone(midi(n - 5), at, 0.08, { type: 'triangle', gain: 0.04, freqEnd: midi(n) });
+    this.bell(midi(n), at + 0.05, 0.35, 0.045);
+    this.bell(midi(LADDER[Math.min(LADDER.length - 1, 4 + tier)]), at + 0.1, 0.3, 0.03);
+    this.noise(at, 0.12, { type: 'highpass', freq: 6000, gain: 0.025, attack: 0.02 });
   }
 
   /** The dumpster lid clunk on a manual dive. */
@@ -524,13 +589,18 @@ class AudioEngine {
   }
 
   // ------------------------------------------------------------------ combat
-  hit(crit: boolean): void {
+  /**
+   * A blow lands. `combo` (blows in a row, from 0) raises it a semitone a blow, up to an octave, so a
+   * flurry climbs (pitch stacking).
+   */
+  hit(crit: boolean, combo = 0): void {
     const ctx = this.live;
     if (!ctx || !this.gate('hit', 45)) return;
     const at = ctx.currentTime;
-    this.noise(at, 0.05, { freq: this.vary(1500, 0.15), q: 1.2, gain: crit ? 0.16 : 0.1 });
-    this.tone(this.vary(150), at, 0.09, { gain: crit ? 0.24 : 0.16, freqEnd: 70 });
-    if (crit) this.bell(this.vary(1900, 0.04), at + 0.01, 0.25, 0.05);
+    const up = Math.pow(2, Math.min(12, Math.max(0, combo)) / 12);
+    this.noise(at, 0.05, { freq: this.vary(1500, 0.15) * up, q: 1.2, gain: crit ? 0.16 : 0.1 });
+    this.tone(this.vary(150) * up, at, 0.09, { gain: crit ? 0.24 : 0.16, freqEnd: 70 * up });
+    if (crit) this.bell(this.vary(1900, 0.04) * up, at + 0.01, 0.25, 0.05);
   }
 
   hurt(heavy: boolean): void {
@@ -547,26 +617,42 @@ class AudioEngine {
     this.noise(ctx.currentTime, 0.16, { freq: 500, freqEnd: 3200, q: 1.5, gain: 0.07, attack: 0.03 });
   }
 
-  /** Cartoon pop when an enemy flies off, plus coin tinks that climb the scale. */
-  kill(big: boolean): void {
+  /**
+   * Cartoon pop when an enemy flies off, plus coin tinks that climb the scale. `streak` (kills so far
+   * in the wave, from 0) lifts the pop up the scale and rings a note one step higher each kill, so a
+   * wave's kills climb. `coins` false leaves the tinks out (the battle plays one per coin as it lands
+   * on the counter).
+   */
+  kill(big: boolean, streak = 0, coins = true): void {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
-    this.tone(this.vary(320), at, 0.09, { gain: 0.1, freqEnd: 950 });
-    this.noise(at, 0.06, { type: 'lowpass', freq: 1400, gain: 0.05 });
+    const s = Math.min(7, Math.max(0, streak));
+    // Several at once (a blast) pop once.
+    if (this.gate('kill', 40)) {
+      const up = Math.pow(2, (LADDER[Math.min(5, s)] - LADDER[0]) / 12);
+      this.tone(this.vary(320) * up, at, 0.09, { gain: 0.1, freqEnd: 950 * up });
+      this.noise(at, 0.06, { type: 'lowpass', freq: 1400, gain: 0.05 });
+      if (streak > 0) this.bell(midi(LADDER[3 + s]), at + 0.03, 0.3, 0.04);
+    }
     if (big) {
       this.tone(50, at, 0.8, { gain: 0.4, freqEnd: 32 });
       this.noise(at, 0.5, { type: 'lowpass', freq: 900, gain: 0.18 });
-      this.coinCascade(at + 0.15, 14);
-    } else {
+      if (coins) this.coinCascade(at + 0.15, 14);
+    } else if (coins) {
       this.coin();
     }
   }
 
-  /** Pitch stacking: each coin in a chain plays one step higher, then resets after a pause. */
-  coin(): void {
+  /**
+   * Pitch stacking: each coin in a chain plays one step higher, then resets after a pause. `kaching`
+   * adds one big ka-ching (the last coin of a big burst).
+   */
+  coin(kaching = false): void {
     const ctx = this.live;
-    if (!ctx || !this.gate('coin', 50)) return;
+    if (!ctx) return;
+    if (kaching) this.kaChing(ctx.currentTime + 0.07);
+    if (!this.gate('coin', 50)) return;
     const now = performance.now();
     if (now - this.lastCoinAt > 1400) this.coinStack = 0;
     this.lastCoinAt = now;
@@ -575,12 +661,22 @@ class AudioEngine {
     this.bell(midi(note) * 2, ctx.currentTime + 0.02, 0.18, 0.035);
   }
 
+  /** XP reaches the XP bar: a soft upward blip. */
+  xpTick(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('xp', 80)) return;
+    this.tone(midi(79), ctx.currentTime, 0.09, { type: 'triangle', gain: 0.035, freqEnd: midi(91) });
+  }
+
   private coinCascade(at: number, n: number) {
     for (let k = 0; k < n; k++) this.bell(midi(LADDER[Math.min(LADDER.length - 1, 4 + k)]) * 2, at + k * 0.045, 0.15, 0.03);
     // ...finished with one big ka-ching.
-    const end = at + n * 0.045 + 0.05;
-    this.bell(midi(84) * 2, end, 0.5, 0.06);
-    this.noise(end, 0.1, { type: 'highpass', freq: 5000, gain: 0.05 });
+    this.kaChing(at + n * 0.045 + 0.05);
+  }
+
+  private kaChing(at: number) {
+    this.bell(midi(84) * 2, at, 0.5, 0.06);
+    this.noise(at, 0.1, { type: 'highpass', freq: 5000, gain: 0.05 });
   }
 
   bag(): void {
@@ -654,6 +750,43 @@ class AudioEngine {
     this.bell(midi(88), at + 0.08, 0.8, 0.06);
   }
 
+  /**
+   * Gear leaps out of its tile to fly to the raccoon: a pop, then a rising whoosh and a glissando that
+   * climbs higher for rarer gear (`tier`: 0 Junk to 12 Holy Grail).
+   */
+  equipLift(tier: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.tone(520, at, 0.07, { type: 'square', gain: 0.06, freqEnd: 900, filter: 3000 });
+    this.noise(at + 0.03, 0.3, { type: 'bandpass', freq: 500, freqEnd: 2600 + tier * 200, q: 1.1, gain: 0.05 + tier * 0.004, attack: 0.12 });
+    this.tone(midi(60 + Math.min(12, tier)), at + 0.05, 0.32, { type: 'triangle', gain: 0.03, freqEnd: midi(72 + Math.min(12, tier)), attack: 0.06 });
+  }
+
+  /**
+   * The power count after an equip, one tick per step (`progress` 0 to 1 climbs the pitch; `up` false
+   * falls instead, for a worse item).
+   */
+  powerTick(progress: number, up: boolean): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('powerTick', 45)) return;
+    const n = up ? 67 + Math.round(progress * 24) : 72 - Math.round(progress * 12);
+    this.tone(midi(n), ctx.currentTime, 0.05, { type: 'square', gain: 0.03, filter: 3600 });
+  }
+
+  /** The power count lands: a bright rising arpeggio and a sparkle (up), or a short sag (down). */
+  powerLanded(up: boolean): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    if (!up) {
+      this.tone(330, at, 0.22, { type: 'triangle', gain: 0.06, freqEnd: 196 });
+      return;
+    }
+    [72, 76, 79, 84, 88].forEach((n, k) => this.bell(midi(n), at + k * 0.055, 0.5, 0.06));
+    this.noise(at + 0.1, 0.5, { type: 'highpass', freq: 6500, gain: 0.03, attack: 0.04 });
+  }
+
   /** Gear starts dropping onto the raccoon: a falling whoosh, longer and brighter for rarer gear. */
   equipDrop(tier: number): void {
     const ctx = this.live;
@@ -701,6 +834,218 @@ class AudioEngine {
   collect(): void {
     if (!this.live) return;
     this.coinCascade(this.ctx!.currentTime, 12);
+  }
+
+  // ------------------------------------------------------------------ title screen
+  /**
+   * PLAY on the title screen: a punchy press, a run up the chord with sparkles on top, and the music
+   * held back under it so it swells in as the game appears. The press is also the tap that unlocks
+   * audio, so this plays as soon as the audio it starts is running.
+   */
+  titleStart(): void {
+    this.whenRunning((ctx) => {
+      const at = ctx.currentTime;
+      this.duckMusic(0.2, 1.4);
+      this.tone(150, at, 0.16, { gain: 0.34, freqEnd: 58 });
+      this.noise(at, 0.035, { freq: 2800, q: 2, gain: 0.09 });
+      this.tone(midi(48), at + 0.03, 0.55, { type: 'triangle', gain: 0.09 });
+      [72, 76, 79, 84].forEach((n, k) => this.bell(midi(n), at + 0.04 + k * 0.055, 0.6, 0.075));
+      this.noise(at + 0.06, 0.5, { type: 'highpass', freq: 6500, gain: 0.045, attack: 0.02 });
+      [88, 91, 96].forEach((n, k) => this.bell(midi(n), at + 0.3 + k * 0.05, 0.35, 0.03));
+    });
+  }
+
+  /** The raccoon hops on the title screen: a cartoon boing. */
+  titleHop(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.tone(280, at, 0.18, { gain: 0.09, freqEnd: 760 });
+    this.tone(140, at, 0.16, { type: 'square', gain: 0.025, freqEnd: 380, filter: 1800 });
+  }
+
+  /** The title's iris closing on the raccoon (a whoosh down) or opening on the game (a lighter one up). */
+  titleIris(open: boolean): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    if (open) {
+      this.noise(at, 0.4, { type: 'bandpass', freq: 400, freqEnd: 2600, q: 0.9, gain: 0.05, attack: 0.06 });
+      return;
+    }
+    this.noise(at, 0.6, { type: 'bandpass', freq: 2600, freqEnd: 240, q: 0.9, gain: 0.08, attack: 0.1 });
+    this.tone(220, at + 0.1, 0.5, { type: 'triangle', gain: 0.04, freqEnd: 70 });
+  }
+
+  /** Runs `play` once audio is running: now, or when the context this same tap is starting comes up. */
+  private whenRunning(play: (ctx: AudioContext) => void): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (ctx.state === 'running') {
+      play(ctx);
+      return;
+    }
+    const asked = performance.now();
+    ctx.resume().then(
+      () => {
+        // Much later it would no longer go with what it was for.
+        if (ctx.state === 'running' && performance.now() - asked < 400) play(ctx);
+      },
+      () => {},
+    );
+  }
+
+  // ------------------------------------------------------------------ heists
+  /** A heist starts: four plucks creeping up on tiptoe, then a bright arpeggio (let's go). */
+  heistStart(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.duckMusic(0.35, 1.4);
+    [52, 53, 54, 55].forEach((n, k) => {
+      const t0 = at + k * 0.15 + (k % 2) * 0.03;
+      this.tone(midi(n), t0, 0.12, { type: 'triangle', gain: 0.13, filter: 900 });
+      this.noise(t0, 0.02, { type: 'highpass', freq: 5000, gain: 0.02 });
+    });
+    this.tone(midi(48), at + 0.68, 0.5, { type: 'sawtooth', gain: 0.04, filter: 1200 });
+    [72, 76, 79, 84].forEach((n, k) => this.bell(midi(n), at + 0.68 + k * 0.07, 0.6, 0.06));
+  }
+
+  /** A stop is revealed: a card flip, then a short motif for what it is. */
+  heistNode(kind: string): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('heistNode', 120)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.05, { type: 'bandpass', freq: 2400, freqEnd: 900, q: 1.2, gain: 0.06 });
+    const t1 = at + 0.06;
+    switch (kind) {
+      case 'fight':
+      case 'elite': {
+        // Two low stabs; an elite's second one is a half step up.
+        const low = kind === 'elite' ? 45 : 50;
+        this.tone(midi(low), t1, 0.16, { type: 'square', gain: 0.05, filter: 1100 });
+        this.tone(midi(low + (kind === 'elite' ? 1 : 0)), t1 + 0.13, 0.2, { type: 'square', gain: 0.05, filter: 1100 });
+        break;
+      }
+      case 'choice':
+        // "Hmm?"
+        this.tone(midi(67), t1, 0.14, { type: 'triangle', gain: 0.07 });
+        this.tone(midi(71), t1 + 0.12, 0.24, { type: 'triangle', gain: 0.07, freqEnd: midi(72) });
+        break;
+      case 'treasure':
+      case 'golden':
+        [76, 79, 84, 88].forEach((n, k) => this.bell(midi(n), t1 + k * 0.05, 0.4, kind === 'golden' ? 0.07 : 0.05));
+        if (kind === 'golden') this.coinCascade(t1 + 0.25, 8);
+        break;
+      case 'shop':
+        // Ka-ching.
+        this.noise(t1, 0.05, { type: 'highpass', freq: 3000, gain: 0.08 });
+        this.bell(midi(88), t1 + 0.04, 0.5, 0.06);
+        this.bell(midi(93), t1 + 0.1, 0.6, 0.05);
+        break;
+      case 'shrine':
+        // A hum with a shimmer on top.
+        this.tone(midi(60), t1, 0.9, { gain: 0.06, attack: 0.15, vibrato: 4 });
+        this.tone(midi(67), t1, 0.9, { gain: 0.04, attack: 0.2, vibrato: 3 });
+        this.noise(t1 + 0.1, 0.7, { type: 'highpass', freq: 6000, gain: 0.025, attack: 0.2 });
+        break;
+      case 'trap':
+        // Uh-oh.
+        this.tone(midi(64), t1, 0.14, { type: 'square', gain: 0.05, filter: 1400 });
+        this.tone(midi(58), t1 + 0.15, 0.3, { type: 'square', gain: 0.05, filter: 1400, freqEnd: midi(55) });
+        break;
+      case 'wheel':
+        // A ratchet, then a bell.
+        for (let k = 0; k < 6; k++) this.noise(t1 + k * 0.045, 0.02, { freq: 3200, q: 4, gain: 0.04 });
+        this.bell(midi(84), t1 + 0.3, 0.4, 0.05);
+        break;
+      case 'boss':
+        this.bossIntro();
+        break;
+    }
+  }
+
+  /** A perk picked: a sweep up into a chord; an evolution adds a shimmer and a run of bells. */
+  heistPerk(evolution: boolean): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.tone(midi(60), at, 0.25, { type: 'triangle', gain: 0.05, freqEnd: midi(84) });
+    for (const n of [72, 76, 79]) this.tone(midi(n), at + 0.12, 0.45, { type: 'sawtooth', gain: 0.025, filter: 2400, attack: 0.01 });
+    this.bell(midi(84), at + 0.14, 0.5, 0.06);
+    if (evolution) {
+      this.duckMusic(0.4, 1);
+      this.noise(at + 0.1, 1, { type: 'highpass', freq: 6000, gain: 0.04, attack: 0.1 });
+      [79, 84, 88, 91].forEach((n, k) => this.bell(midi(n), at + 0.3 + k * 0.08, 0.6, 0.05));
+    }
+  }
+
+  /** A curse lands (a low wobble) or washes off (a light ding). */
+  heistCurse(removed: boolean): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    if (removed) {
+      this.bell(midi(79), at, 0.4, 0.05);
+      this.bell(midi(84), at + 0.07, 0.5, 0.05);
+      return;
+    }
+    this.tone(midi(47), at, 0.6, { type: 'sawtooth', gain: 0.05, filter: 700, vibrato: 7, freqEnd: midi(44) });
+  }
+
+  /** A hit blocked by Lid Shield or Fortress of Junk: a trash-can-lid clang. */
+  heistBlock(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('heistBlock', 90)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.08, { freq: 3400, q: 6, gain: 0.09 });
+    this.tone(1180, at, 0.25, { type: 'square', gain: 0.025, filter: 4000, freqEnd: 1100 });
+    this.tone(1720, at, 0.2, { gain: 0.03 });
+  }
+
+  /** A crew helper's peck or bottle: a small tick. */
+  heistHelper(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('heistHelper', 70)) return;
+    const at = ctx.currentTime;
+    this.tone(this.vary(1500, 0.08), at, 0.04, { type: 'square', gain: 0.03, filter: 3000 });
+  }
+
+  /** A clean getaway: two pickup notes, the chord, bells and a coin shower. */
+  heistWin(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.duckMusic(0.3, 2);
+    this.tone(midi(67), at, 0.12, { type: 'square', gain: 0.05, filter: 2200 });
+    this.tone(midi(67), at + 0.13, 0.12, { type: 'square', gain: 0.05, filter: 2200 });
+    for (const n of [72, 76, 79, 84]) this.tone(midi(n), at + 0.28, 0.9, { type: 'sawtooth', gain: 0.03, filter: 2600, attack: 0.01 });
+    this.tone(midi(48), at + 0.28, 0.9, { type: 'triangle', gain: 0.1 });
+    [72, 76, 79, 84, 88].forEach((n, k) => this.bell(midi(n), at + 0.3 + k * 0.08, 0.6, 0.06));
+    this.coinCascade(at + 0.8, 12);
+  }
+
+  /** Busted: a sad trombone, four notes sliding down, the last one wobbling. */
+  heistLose(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.duckMusic(0.3, 2);
+    [55, 54, 53, 52].forEach((n, k) => {
+      const last = k === 3;
+      this.tone(midi(n), at + k * 0.32, last ? 0.9 : 0.3, {
+        type: 'sawtooth', gain: 0.06, filter: 900, attack: 0.03, vibrato: last ? 6 : undefined, freqEnd: last ? midi(n - 1) : undefined,
+      });
+    });
+  }
+
+  /** A heist ticket comes in: a paper tear and a ding. */
+  heistTicket(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('heistTicket', 200)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.09, { type: 'bandpass', freq: 3800, freqEnd: 1800, q: 0.8, gain: 0.06 });
+    this.bell(midi(84), at + 0.08, 0.4, 0.05);
   }
 
   // ------------------------------------------------------------------ music

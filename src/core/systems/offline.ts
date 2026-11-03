@@ -1,12 +1,25 @@
-/** Offline rewards: track a rewards-per-minute rate while active, pay it out on return. */
-import { BAL } from '../../data';
+/**
+ * Offline rewards: track a rewards-per-minute rate while active, pay it out on return. The dumpster
+ * also keeps rolling while the raccoon is away, much more slowly: rare finds go to the bag on return,
+ * the rest are scrapped into the reward.
+ */
+import { BAL, RARITIES, type Rarity } from '../../data';
+import type { Rng } from '../rng';
 import type { GameState, Rate } from '../state';
-import type { CoreEvent } from '../types';
+import type { CoreEvent, Item } from '../types';
 import { computeElapsed, MS_PER_HOUR, MS_PER_MINUTE } from '../time';
+import { rarityAtLeast } from '../util';
+import { registerCodex } from './codex';
+import { rollItemLevel, rollSlot } from './dumpster';
+import { rarityBump, rollEnchants } from './enchants';
+import { createItem, itemName, pickBaseItem } from './loot';
+import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity } from './luck';
 import { addXp } from './progression';
+import { addToBag, drySpell, enchantChance, reelCount, rollTokens, scrapValue, spinCycle, tokenMult } from './roller';
 import { killRewards } from './stages';
 import { upgradeEffects } from './upgrades';
 import { computeStats } from './stats';
+import { itemTierFor } from './worlds';
 
 export function offlineCapMs(_state: GameState): number {
   return BAL.offline.capHours * MS_PER_HOUR; // Monthly Card (+4h) arrives in Milestone 4.
@@ -34,7 +47,8 @@ export function fallbackRate(state: GameState): Rate {
   const stats = computeStats(state);
   const o = BAL.offline;
   const waves = BAL.stages.wavesPerStage;
-  const k = killRewards(state.battle.stage, 'regular', stats.COIN_FIND);
+  const world = state.heist?.run ? state.heist.run.main.stage : state.battle.stage;
+  const k = killRewards(world, 'regular', stats.COIN_FIND);
   const minutes = o.fallbackStageSeconds / 60;
   return {
     bags: (waves * (BAL.drops.bagsPerWave + stats.BAG_FIND / 100)) / minutes,
@@ -45,6 +59,8 @@ export function fallbackRate(state: GameState): Rate {
 
 /** Average rewards per minute over the last 10 minutes of active play (or the fallback estimate). */
 export function currentRate(state: GameState, now: number): Rate {
+  // During a heist the Alley is paused: the rate is the one from when the run started.
+  if (state.heist?.run) return { ...state.heist.run.mainRate };
   const o = state.offline;
   const windowMs = BAL.offline.rateWindowMinutes * MS_PER_MINUTE;
   if (o.trackingSince === null) return fallbackRate(state);
@@ -92,8 +108,107 @@ export function snapshotForSave(d: GameState, now: number): void {
   d.lastActiveAt = Math.max(d.lastActiveAt, now);
 }
 
-/** App returning (or booting from a save): compute the offline reward, guarding against clock tampering. */
-export function onResume(d: GameState, now: number, ev: CoreEvent[]): void {
+/**
+ * How many items the dumpster rolls in `elapsedMs` away: one spin (all its reels) per spin cycle x
+ * offline.rollSlowdown, times the offline efficiency and bonus, at most offline.maxRolls. None before
+ * the very first dive.
+ */
+export function offlineRollCount(state: GameState, elapsedMs: number): number {
+  if (!state.dumpster.firstDiveDone || !(elapsedMs > 0)) return 0;
+  const o = BAL.offline;
+  const spins = (elapsedMs / 1000 / (spinCycle(state) * o.rollSlowdown)) * o.efficiency * (1 + offlineBonusPct(state) / 100);
+  return Math.max(0, Math.min(o.maxRolls, Math.floor(spins) * reelCount(state)));
+}
+
+/** "1 in X" a find must reach to be kept: a plain item of offline.keepRarity. */
+export function offlineKeepOdds(): number {
+  return itemOddsOneIn({ rarity: BAL.offline.keepRarity, enchants: [] });
+}
+
+export interface OfflineRolls {
+  rolls: number;
+  /** The finds kept (best first); they are in the bag now, unless a full bag scrapped them. */
+  kept: Item[];
+  /** Scrap value of everything else. */
+  coins: number;
+  xp: number;
+}
+
+function bumpRarity(r: Rarity, by: number): Rarity {
+  return RARITIES[Math.min(RARITIES.length - 1, RARITIES.indexOf(r) + by)];
+}
+
+/**
+ * The dumpster's rolls while away: `count` items rolled like the reels' (the raccoon's luck, lucky
+ * spins every Nth spin, golden spins, luck tokens, enchantments, bad-luck protection), but instantly:
+ * no spins, no events per roll, never the tutorial's scripted rolls (and the reels' roll count, which
+ * times beginner's luck, doesn't move). A Golden Dumpster's spins wait for the reels. Finds at least as
+ * rare as a plain offline.keepRarity item go to the bag by the bag's rules, the Codex and the records;
+ * the rest are scrapped and their coins and XP returned.
+ */
+export function rollOffline(d: GameState, rng: Rng, now: number, count: number, ev: CoreEvent[]): OfflineRolls {
+  const out: OfflineRolls = { rolls: 0, kept: [], coins: 0, xp: 0 };
+  const dz = d.dumpster;
+  if (count <= 0 || !dz.firstDiveDone) return out;
+  const up = upgradeEffects(d);
+  const bl = BAL.dumpster.badLuck;
+  const reels = reelCount(d);
+  const baseLuck = currentLuck(d, now);
+  const keepOdds = offlineKeepOdds();
+  const tier = itemTierFor(d);
+  let dry = dz.dryStreak;
+  while (out.rolls < count) {
+    // One spin's luck, as startSpin rolls it (lucky every Nth spin, the golden chance from upgrades).
+    let luck = baseLuck;
+    d.roll.sinceLucky += 1;
+    if (d.roll.sinceLucky >= luckyEvery(d)) {
+      d.roll.sinceLucky = 0;
+      luck *= BAL.roll.luckyRollMult + up.luckyMult;
+    }
+    if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) luck *= BAL.roll.goldenLuckMult;
+    for (let r = 0; r < reels && out.rolls < count; r++) {
+      // As the reels roll an item (rollReelItem), minus the tutorial and the dev's forced rarity.
+      const itemLuck = luck * tokenMult(rollTokens(rng));
+      let rarity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d) ? rollRarity(itemLuck, rng, bl.minRarity) : rollRarity(itemLuck, rng);
+      const slot = rollSlot(rng);
+      const level = rollItemLevel(d.player.level, rng);
+      const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
+      rarity = bumpRarity(rarity, rarityBump(enchants));
+      const base = pickBaseItem(slot, dz.theme, rarity, rng, d.rebirths);
+      const item = createItem(base, rarity, level, dz.theme, rng, d.nextItemUid++, enchants, tier);
+      out.rolls += 1;
+      dz.totalDives += 1;
+      dry = rarityAtLeast(item.rarity, bl.minRarity) ? 0 : dry + 1;
+      if (itemOddsOneIn(item) >= keepOdds) {
+        out.kept.push(item);
+      } else {
+        const v = scrapValue(d, item);
+        out.coins += v.coins;
+        out.xp += v.xp;
+        d.lifetime.itemsRecycled += 1;
+      }
+    }
+  }
+  dz.dryStreak = dry;
+  out.kept.sort((a, b) => b.power - a.power);
+  for (const item of out.kept) {
+    const odds = itemOddsOneIn(item);
+    if (odds > d.records.bestOdds) {
+      d.records.bestOdds = odds;
+      d.records.bestItemName = itemName(item);
+      d.records.bestRarity = item.rarity;
+    }
+    registerCodex(d, item, ev);
+    addToBag(d, item, ev);
+  }
+  return out;
+}
+
+/**
+ * App returning (or booting from a save): compute the offline reward, guarding against clock tampering.
+ * With `rng`, the dumpster's offline rolls happen too (see rollOffline).
+ */
+export function onResume(d: GameState, now: number, ev: CoreEvent[], rng?: Rng): void {
   const rate = d.offline.pausedRate ?? fallbackRate(d);
   const { elapsedMs, clockWentBackward } = computeElapsed(d.lastActiveAt, now, offlineCapMs(d));
   d.offline.paused = false;
@@ -107,17 +222,33 @@ export function onResume(d: GameState, now: number, ev: CoreEvent[]): void {
   }
   if (elapsedMs < BAL.offline.minAwaySecondsForPopup * 1000) return;
   const reward = offlineReward(rate, elapsedMs, offlineBonusPct(d));
-  if (reward.bags <= 0 && reward.coins <= 0 && reward.xp <= 0) return;
+  const rolled = rng ? rollOffline(d, rng, now, offlineRollCount(d, elapsedMs), ev) : null;
+  const coins = reward.coins + (rolled?.coins ?? 0);
+  const xp = reward.xp + (rolled?.xp ?? 0);
+  if (reward.bags <= 0 && coins <= 0 && xp <= 0 && !rolled?.rolls) return;
   const prev = d.offline.pending;
   const canDouble = elapsedMs >= BAL.offline.adDoubleMinAwayMinutes * MS_PER_MINUTE;
+  const kept = rolled?.kept ?? [];
+  const found = [...(prev?.found ?? []), ...kept.map((it) => structuredClone(it))]
+    .sort((a, b) => b.power - a.power)
+    .slice(0, BAL.offline.keepListMax);
   d.offline.pending = {
     awayMs: (prev?.awayMs ?? 0) + elapsedMs,
     bags: (prev?.bags ?? 0) + reward.bags,
-    coins: (prev?.coins ?? 0) + reward.coins,
-    xp: (prev?.xp ?? 0) + reward.xp,
+    coins: (prev?.coins ?? 0) + coins,
+    xp: (prev?.xp ?? 0) + xp,
     canDouble: canDouble || (prev?.canDouble ?? false),
+    rolls: (prev?.rolls ?? 0) + (rolled?.rolls ?? 0),
+    found,
+    foundCount: (prev?.foundCount ?? 0) + kept.length,
   };
-  ev.push({ type: 'offlineReady', awayMs: d.offline.pending.awayMs });
+  ev.push({
+    type: 'offlineReady',
+    awayMs: d.offline.pending.awayMs,
+    rolls: rolled?.rolls ?? 0,
+    kept: kept.length,
+    best: kept.length > 0 ? structuredClone(kept[0]) : null,
+  });
 }
 
 export function collectOffline(d: GameState, doubled: boolean, ev: CoreEvent[]): boolean {

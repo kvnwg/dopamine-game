@@ -6,7 +6,7 @@ import { rarityColor } from '../../render/art';
 import { uiBitArt } from '../../render/icons';
 import { haptics } from '../../services';
 import { enchantLabel, fmtOdds } from '../components/AlleyPanel';
-import { CheckIcon, LockIcon, PowerIcon, TrashIcon } from '../components/Icons';
+import { ArrowDownIcon, ArrowUpIcon, CheckIcon, LockIcon, PowerIcon, TrashIcon } from '../components/Icons';
 import { enchantColor, ItemIcon } from '../components/ItemIcon';
 import { PixelArt } from '../components/PixelArt';
 import { enchantDesc } from '../components/RevealLayer';
@@ -63,6 +63,8 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
             {formatNumber(worn(item))}
             {diff !== null && (
               <span className={diff > 0 ? s.up : diff < 0 ? s.down : s.same}>
+                {diff > 0 && <ArrowUpIcon size="sm" />}
+                {diff < 0 && <ArrowDownIcon size="sm" />}
                 {diff > 0 ? t('item.better', { n: formatNumber(diff) }) : diff < 0 ? t('item.worse', { n: `-${formatNumber(-diff)}` }) : t('item.same')}
               </span>
             )}

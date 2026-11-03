@@ -14,17 +14,21 @@
  * grid, back on it.
  */
 import Phaser from 'phaser';
-import { BAL, DATA, SLOTS, type Rarity } from '../data';
-import { computeStats, enemyName, formatNumber, rarityAtLeast, rarityIndex, worldDef, type CoreEvent, type GameState, type Item } from '../core';
+import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
+import { battleMaxHp, battleStats, computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState, type Item } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
+import { totalXpForLevel, xpToNext } from '../core';
+import { haptics } from '../services';
+import { audio } from '../services/audio';
+import { hold, land, release, releaseAll, useHudFlight, type Held } from '../ui/hudFlight';
 import { rarityColor, rarityColorNum } from './art';
 import {
-  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, itemTex, luckTokenTex, releaseWorlds,
+  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, luckTokenTex, releaseWorlds,
   shadowTex, texOrigin, texSize, weaponTex, worldTextures, type FoeTex, type WorldKeys,
 } from './textures';
-import { SLAM, SLAM_FROM, SLAM_HEIGHT } from './equipSlam';
+import { SLAM_FROM, SLAM_HEIGHT, slamAnchor, slamBridge } from './equipSlam';
 import { reelStops } from '../ui/reelTiming';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
@@ -56,8 +60,21 @@ const ENGAGE_EDGE = 70 * P;
  * rate (24 art px a second), so a planted foot keeps its place on the ground.
  */
 const WALK_SPEED = HERO.walk.speed;
-/** Where coins fly when the HUD's gold counter ([data-gold-target]) can't be found. */
+/** Where coins fly when the HUD's gold counter ([data-gold-target]) can't be found, and XP sparks without its XP bar ([data-xp-target]). */
 const COIN_TARGET = { x: 694, y: 58 };
+const XP_TARGET = { x: 312, y: 60 };
+/**
+ * Hit-stop: while frozen the fight runs at STOP_SPEED (tweens, animations, particles, movement). One
+ * stop lasts at most STOP_MAX ms however many blows land in it. Small stops (crits, kills, heavy hits)
+ * spend a budget (ms) that refills at STOP_REFILL ms a second, so a fight with a crit or a kill on
+ * every swing doesn't stutter; boss kills and slams always stop.
+ */
+const STOP_SPEED = 0.04;
+const STOP_MAX = 140;
+const STOP_BUDGET = 200;
+const STOP_REFILL = 130;
+/** Hit-stops (ms): a kill, a heavy blow on the raccoon, a crit, a mini-boss's and a boss's last blow. */
+const STOP = { kill: 45, heavy: 55, crit: 70, miniboss: 90, boss: 120 } as const;
 /** Top of the boss HP bar: under the HUD row, with the boss's name (one or two lines) over it. */
 const BOSS_BAR_Y = 41 * P;
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
@@ -120,6 +137,8 @@ const BOSS_NAME: TextStyle = { face: 'big', fill: '#ffffff', maxW: TEXT_MAX_W };
 const BOSS_HP: TextStyle = { face: 'big', fill: '#ffffff' };
 /** The world's title card: "WORLD 1" over its name (font.ts TextStyle.lead). */
 const WORLD_CARD: TextStyle = { face: 'huge', lead: 'big', fill: litTop('#ffffff'), shadow: true, maxW: TEXT_MAX_W };
+/** A heist's corner badge: "HEIST" over "ACT 1 · 3/19". */
+const HEIST_BADGE: TextStyle = { face: 'big', lead: 'small', fill: litTop('#ffd23f'), shadow: true, align: 'left' };
 const GOLD: readonly [string, string] = ['#fff6a8', '#ffa21a'];
 
 /** The "too tough" notice: a cream plate like the toasts', ink text, its first sentence big and red. */
@@ -131,11 +150,23 @@ const SPARK: BitStyle = { speed: [27, 58], life: [200, 360], drag: 2, colors: [0
 const BIG_SPARK: BitStyle = {
   speed: [40, 96], life: [380, 680], drag: 2.5, colors: [0xffe14a, 0xffffff, 0xffb300], fade: [0xffb300], sizes: [2, 2, 1],
 };
+/** Glimmer boxes for pieces drawn into his body's texture (half sizes in art px around where the slot sits). */
+const GLIMMER_BOX: Partial<Record<Slot, { w: number; h: number }>> = {
+  jacket: { w: 4, h: 3 }, gloves: { w: 5, h: 2 }, sneakers: { w: 4, h: 1 }, bling: { w: 3, h: 2 }, ring: { w: 4, h: 2 },
+};
 const DUST: BitStyle = { speed: [4.5, 17], angle: [180, 360], life: [360, 560], colors: [0xe8e0d0], sizes: [2, 1], alpha: [0.85, 0.55, 0.3] };
 const FLAME: BitStyle = { speedX: [-4.5, 4.5], speedY: [-24, -13], life: [300, 520], colors: [0xffe14a, 0xffb300], fade: [0xff7043, 0xc8323a], sizes: [2, 1] };
 const CONFETTI_COLORS = [0xff5a7a, 0xffd54f, 0x5bd23a, 0x4fc3f7] as const;
 /** Confetti fills the view (its spread follows the view, not the fighters). */
 const CONFETTI: BitStyle = { speed: [53, 127], angle: [200, 340], gravity: 150, drag: 1.2, life: [900, 1500], colors: CONFETTI_COLORS, tumble: 90 };
+/** A foe pops when it goes down: a ring of bits, more and faster for bigger foes (see die). */
+const KILL_POP: BitStyle = { speed: [30, 64], life: [200, 380], drag: 2.6, colors: [0xffffff, 0xfff6c8], fade: [0xffe14a, 0xffb300], sizes: [2, 1] };
+/** XP sparks on their way to the XP bar: they twinkle between these and leave a short trail. */
+const XP_SPARK = [0xd8ffd0, 0x7ef08f] as const;
+const XP_TRAIL: BitStyle = { speed: [0, 2], life: [140, 220], colors: [0x7ef08f], fade: [0x2fb150], alpha: [0.8, 0.45] };
+/** "+N" gold and "+N XP" pop-ups. */
+const GOLD_GAIN = bands(GOLD, 'big');
+const XP_GAIN = bands(['#e6ffd8', '#46d36b'], 'big');
 
 /** The damage trail behind an HP bar. */
 interface Trail {
@@ -243,6 +274,28 @@ function headline(text: string): { head: string | null; rest: string } {
 function titleLines(label: string): string {
   const m = /^(.+?)\s+·\s+(.+)$/.exec(label);
   return m ? `${m[1]}\n${m[2]}` : label;
+}
+
+/**
+ * Core reports a blow's kill (and a blast the kill sets off) before the blow itself. The battle takes
+ * each kill's blow first, so the kill, the blast and their deaths wait for the swing to land (and its
+ * hit-stop, sound and buzz with them) instead of playing before it connects.
+ */
+function blowsFirst(events: readonly CoreEvent[]): CoreEvent[] {
+  const out: CoreEvent[] = [];
+  const moved = new Set<number>();
+  events.forEach((e, i) => {
+    if (moved.has(i)) return;
+    if (e.type === 'kill') {
+      const j = events.findIndex((x, k) => k > i && !moved.has(k) && x.type === 'playerHit' && x.targetUid === e.enemyUid);
+      if (j >= 0) {
+        moved.add(j);
+        out.push(events[j]);
+      }
+    }
+    out.push(e);
+  });
+  return out;
 }
 
 /**
@@ -356,12 +409,39 @@ export class BattleScene extends Phaser.Scene {
   private notice: Phaser.GameObjects.Image | null = null;
   private noticeN = 0;
   private hintWas = false;
-  /** Screen shake: seconds left, reach in art pixels, seconds to the next jolt. */
+  /** Screen shake: seconds left and its length, its peak reach (art px), seconds to the next jolt, which way the last one went. */
   private shakeT = 0;
+  private shakeLen = 0;
   private shakeAmp = 0;
   private shakeNext = 0;
+  private shakeSide = 1;
+  private shakeFlat = false;
+  /** Hit-stop: when it ends and when it began (performance.now() ms), its timer, and the small stops' budget (ms). */
+  private stopUntil = 0;
+  private stopFrom = 0;
+  private stopTimer: ReturnType<typeof setTimeout> | null = null;
+  private stopBudget = STOP_BUDGET;
+  /** The camera post-pass is on (squash and stretch rely on it to land on the grid). */
+  private snapped = false;
+  /** Running squash-and-stretch tweens, by the object they squash. */
+  private squashes = new Map<object, Phaser.Tweens.Tween>();
+  /** Blows in a row on one foe (the hit sound climbs with them) and kills in this wave (so do kills). */
+  private combo = { uid: -1, n: 0, at: 0 };
+  private streak = { n: 0, at: 0 };
+  /** When the last light buzz went off (they're kept at least 120 ms apart). */
+  private buzzAt = 0;
+  /** Gold, level and XP as of the last batch of events or frame (what a batch adds is what its kills hold back). */
+  private seen = { coins: 0, level: 1, xp: 0 };
+  /** The "+N" under each HUD counter, and when it went up (more landing soon after adds to it). */
+  private notes: Record<'gold' | 'xp', { tx: PixelText; sum: number; at: number } | null> = { gold: null, xp: null };
   private foes = new Map<number, Foe>();
-  private kills = new Map<number, { kind: Kind; coins: number }>();
+  /**
+   * Kills by foe, until the blow that caused them lands: what kind of foe and its gold, the gold and XP
+   * held off the HUD until its coins and sparks get there, the XP it gave the raccoon (none in a heist
+   * or at the level cap; given but not held when it levels him up), and whether the phone already
+   * buzzed for it (a boss win does).
+   */
+  private kills = new Map<number, { kind: Kind; coins: number; gold: Held; xp: Held; xpGain: number; buzzed: boolean }>();
   private swingQueue: Swing[] = [];
   private swinging = false;
   private heroX = HERO_WALK_X;
@@ -373,8 +453,13 @@ export class BattleScene extends Phaser.Scene {
   /** Seconds left in a short hero pose (hurt, cheer). */
   private poseT = 0;
   private gearSig = '';
-  /** Scene time until which the worn gear keeps its old look (an equipped item is still falling). */
-  private gearHold = 0;
+  /**
+   * Slots whose new gear is still flying to him (src/ui/components/EquipFlight.tsx): until it hits,
+   * he keeps wearing what was there before (the item it replaced, or nothing).
+   */
+  private pendingGear = new Map<Slot, Item | null>();
+  /** The worn pieces drawn as their own images (hat, mask, shield, backpack), by slot. */
+  private gearImgs = new Map<Slot, Phaser.GameObjects.Image>();
   /** Scene time until which he stays squashed a pixel under an equip slam. */
   private squashUntil = 0;
   private hpCache: { key: unknown; hp: number } = { key: null, hp: 1 };
@@ -409,7 +494,8 @@ export class BattleScene extends Phaser.Scene {
     // The camera's origin at its top-left corner: with the default (its middle), an odd view height puts
     // everything half a pixel off, and rounding then moves it a whole screen pixel off the grid.
     this.cameras.main.setOrigin(0, 0);
-    snapCameraToGrid(this);
+    this.snapped = snapCameraToGrid(this);
+    this.look(gameStore.getState().game);
     // Tweened things land on whole art pixels.
     this.events.on(Phaser.Scenes.Events.PRE_RENDER, () => {
       for (const o of this.locked) {
@@ -418,12 +504,28 @@ export class BattleScene extends Phaser.Scene {
       }
     });
     this.unsub = bus.on((events) => this.onEvents(events));
+    // The equip flight (in the DOM) calls in when an item starts its dive and when it hits.
+    const dive = (item: Item, tier: number, ms: number) => this.slamDive(item, tier, ms);
+    const impact = (item: Item, tier: number) => this.slamImpact(item, tier);
+    slamBridge.dive = dive;
+    slamBridge.impact = impact;
     const done = () => {
       this.unsub?.();
       this.texts.destroy();
+      if (slamBridge.dive === dive) slamBridge.dive = undefined;
+      if (slamBridge.impact === impact) slamBridge.impact = undefined;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, done);
     this.events.once(Phaser.Scenes.Events.DESTROY, done);
+    // Once the battle is gone nothing stays frozen or held off the HUD.
+    const settle = () => {
+      if (this.stopTimer) clearTimeout(this.stopTimer);
+      this.stopTimer = null;
+      releaseAll('gold');
+      releaseAll('xp');
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, settle);
+    this.events.once(Phaser.Scenes.Events.DESTROY, settle);
     this.showWorldCard(this.worldShown);
   }
 
@@ -625,11 +727,13 @@ export class BattleScene extends Phaser.Scene {
     this.heroSpr.play('hero:idle');
   }
 
-  private drawGear(g: GameState) {
-    const id = (s: (typeof SLOTS)[number]) => g.equipped[s]?.baseId ?? null;
+  /** Dresses him in `eq` (what he shows as worn: see shownEquipped). */
+  private drawGear(eq: GameState['equipped']) {
+    const id = (s: (typeof SLOTS)[number]) => eq[s]?.baseId ?? null;
     heroTex(this, { jacket: id('jacket'), gloves: id('gloves'), sneakers: id('sneakers'), bling: id('bling') });
     this.gearBack.removeAll(true);
     this.gearFront.removeAll(true);
+    this.gearImgs.clear();
     this.heroTop = HERO.top;
     // Front order, back to front: shield, mask, hat.
     for (const slot of ['backpack', 'shield', 'mask', 'hat'] as const) {
@@ -637,7 +741,9 @@ export class BattleScene extends Phaser.Scene {
       if (!base || !(SPRITE_SLOTS as readonly string[]).includes(slot)) continue;
       const i = gearTex(this, slot, base);
       if (!i) continue;
-      (i.behind ? this.gearBack : this.gearFront).add(this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy));
+      const img = this.add.image(0, 0, i.key).setOrigin(i.ox, i.oy);
+      (i.behind ? this.gearBack : this.gearFront).add(img);
+      this.gearImgs.set(slot, img);
       // A tall hat lifts his HP bar.
       this.heroTop = Math.max(this.heroTop, i.top);
     }
@@ -648,7 +754,7 @@ export class BattleScene extends Phaser.Scene {
     // A pixel glow for Legendary-or-better gear.
     let best: Rarity | null = null;
     for (const s of SLOTS) {
-      const it = g.equipped[s];
+      const it = eq[s];
       if (it && rarityAtLeast(it.rarity, 'legendary') && (!best || rarityAtLeast(it.rarity, best))) best = it.rarity;
     }
     this.auraColor = best ? rarityColor(best) : null;
@@ -720,12 +826,15 @@ export class BattleScene extends Phaser.Scene {
       const u = easeInQuad((k - a) / (b - a));
       return { angle: lerp(WIND, STRIKE, u), dx: lerp(-2 * P, 7 * P, u), frame: FRAME.dash };
     }
-    const u = easeOutBack((k - b) / (1 - b));
-    return { angle: lerp(STRIKE, REST, u), dx: lerp(7 * P, 0, u), frame: u < 0.5 ? FRAME.dash : FRAME.stand };
+    const x = (k - b) / (1 - b);
+    const u = easeOutBack(x);
+    // Back from the dash he lands crouched (his squash frame) as the return overshoots, then stands.
+    return { angle: lerp(STRIKE, REST, u), dx: lerp(7 * P, 0, u), frame: u < 0.5 ? FRAME.dash : x > 0.32 && x < 0.68 ? FRAME.squash : FRAME.stand };
   }
 
   private swingMs(): number {
-    const spd = Math.max(0.2, computeStats(gameStore.getState().game).ATK_SPD);
+    // (During a heist, the run's attack speed at the fight speed.)
+    const spd = Math.max(0.2, battleStats(gameStore.getState().game).ATK_SPD);
     return Phaser.Math.Clamp((1000 / spd) * 0.85, 170, 360);
   }
 
@@ -815,34 +924,48 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * Pop-up number: flashes white for its first frames, floats up by whole art pixels (fast, then
-   * slowing) and steps out. It starts centered on (x, y), but its bottom edge no lower than a pixel
-   * over `floor` (the top of the HP bar under it, so the bar stays readable).
+   * Pop-up number: pops in flashing white (up past its spot and back, a pixel at a time: an overshoot
+   * in whole pixels), floats up by whole art pixels (fast, then slowing) and steps out. Big ones (crits)
+   * pop higher and shake a pixel side to side as they start up. It starts centered on (x, y), but its
+   * bottom edge no lower than a pixel over `floor` (the top of the HP bar under it, so the bar stays
+   * readable). `rise`: how far it floats (art px); `exact`: right at x (otherwise a pixel or two aside).
    */
   private number(
-    x: number, y0: number, text: string, opts: { big?: boolean; fill?: string | readonly string[]; life?: number; floor?: number } = {},
-  ) {
+    x: number, y0: number, text: string,
+    opts: { big?: boolean; fill?: string | readonly string[]; life?: number; floor?: number; rise?: number; exact?: boolean } = {},
+  ): PixelText {
     const life = opts.life ?? 800;
+    const rise = opts.rise ?? 14;
     const tx = this.texts.add(text, { face: opts.big ? BIG_NUMBER : NUMBER, fill: opts.fill ?? '#ffffff' }).setDepth(45);
-    const cx = this.clampX(x + Phaser.Math.Between(-2, 2) * P, tx.artW * P);
+    // (A little to one side or the other, so numbers in a row don't stack exactly, unless `exact`.)
+    const cx = this.clampX(x + (opts.exact ? 0 : Phaser.Math.Between(-2, 2)) * P, tx.artW * P);
     const y = opts.floor === undefined ? y0 : Math.min(y0, opts.floor - P - (tx.artH * P) / 2);
-    tx.place(cx, y);
+    // The pop (art px from its spot, 40 ms a step), and a crit's shake; with Reduce Motion it just appears.
+    const still = this.reduceMotion;
+    const pop = still ? [] : opts.big ? [2, -3, -1] : [1, -2, -1];
+    const jitter = still || !opts.big ? [] : [1, -1, 1, -1, 0];
+    const popMs = pop.length * 40;
+    tx.place(cx, y + (pop[0] ?? 0) * P);
     if (!this.reduceFlashing) {
       tx.setFlash(true);
       this.time.delayedCall(60, () => tx.active && tx.setFlash(false));
     }
     this.tweens.addCounter({
       from: 0,
-      to: 1,
+      to: life,
       duration: life,
       onUpdate: (tw) => {
         if (!tx.active) return;
-        const k = tw.getValue() ?? 0;
-        tx.place(cx, y - Math.round(easeOutCubic(k) * 14) * P);
+        const ms = tw.getValue() ?? 0;
+        const dy = ms < popMs ? pop[Math.floor(ms / 40)] : -Math.round(easeOutCubic((ms - popMs) / (life - popMs)) * rise);
+        const dx = jitter[Math.floor(ms / 45)] ?? 0;
+        tx.place(cx + dx * P, y + dy * P);
+        const k = ms / life;
         tx.setAlpha(k < 0.55 ? 1 : stepsDown((k - 0.55) / 0.45));
       },
       onComplete: () => tx.destroy(),
     });
+    return tx;
   }
 
   /**
@@ -925,38 +1048,123 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** Shakes the view by whole art pixels for `duration` ms (intensity as a share of the view's width, like Phaser's). */
-  private shake(duration: number, intensity: number) {
+  /**
+   * Shakes the view for `duration` ms (intensity as a share of the view's width, like Phaser's) by whole
+   * art pixels, dying away as it goes: its reach drops a pixel at a time (at least one while it lasts).
+   * Jolts go side to side in turn and down. A weaker shake doesn't cut a stronger one short. `side` (1
+   * right, -1 left) throws the first jolt the way a blow goes.
+   */
+  private shake(duration: number, intensity: number, side = 0) {
     if (this.reduceMotion) return;
-    this.shakeT = Math.max(this.shakeT, duration / 1000);
-    this.shakeAmp = Math.max(this.shakeAmp, Phaser.Math.Clamp(Math.round((intensity * BATTLE_W) / P), 1, VIEW_MARGIN));
+    const amp = Phaser.Math.Clamp((intensity * BATTLE_W) / P, 1, VIEW_MARGIN);
+    if (amp < this.shakeLevel()) return;
+    this.shakeAmp = amp;
+    this.shakeLen = this.shakeT = duration / 1000;
+    this.shakeNext = 0;
+    // A kick goes straight sideways; a shake also goes down.
+    this.shakeFlat = side !== 0;
+    if (side) this.shakeSide = -side;
   }
 
+  /** How far the shake reaches now (art px, unrounded): its peak, fading to nothing. */
+  private shakeLevel(): number {
+    return this.shakeT > 0 && this.shakeLen > 0 ? this.shakeAmp * (this.shakeT / this.shakeLen) : 0;
+  }
+
+  /** Runs on the wall clock (`dt` unfrozen): a hit-stop's shake plays through the freeze. */
   private updateShake(dt: number) {
     const cam = this.cameras.main;
     if (this.shakeT <= 0) {
-      this.shakeAmp = 0;
       if (cam.scrollX !== 0 || cam.scrollY !== 0) cam.setScroll(0, 0);
       return;
     }
-    this.shakeT -= dt;
     this.shakeNext -= dt;
-    if (this.shakeNext > 0) return;
-    this.shakeNext = 0.03;
-    const a = this.shakeAmp;
-    // Sideways both ways, but only down (the art reaches past the top and sides, not the bottom).
-    cam.setScroll(Phaser.Math.Between(-a, a) * P, -Phaser.Math.Between(0, a) * P);
+    if (this.shakeNext <= 0) {
+      this.shakeNext = 0.03;
+      const a = Math.max(1, Math.round(this.shakeLevel()));
+      this.shakeSide = -this.shakeSide;
+      // Side to side, but only down (the art reaches past the top and sides, not the bottom).
+      cam.setScroll(-this.shakeSide * a * P, this.shakeFlat ? 0 : -Phaser.Math.Between(0, a) * P);
+    }
+    this.shakeT -= dt;
   }
 
-  private hitStop(ms: number) {
-    if (this.reduceMotion) return;
-    this.tweens.timeScale = 0.04;
-    this.anims.globalTimeScale = 0.04;
-    setTimeout(() => {
+  /**
+   * Freezes the fight for `ms` (wall clock), then lets it go: tweens, animations, particles, movement
+   * and scrolling run at STOP_SPEED meanwhile (the shake doesn't). Stops that overlap merge, STOP_MAX
+   * ms at most; `minor` ones get what the budget allows. None with Reduce Motion.
+   */
+  private hitStop(ms: number, minor = false) {
+    if (this.reduceMotion || ms <= 0) return;
+    if (minor) {
+      ms = Math.min(ms, this.stopBudget);
+      if (ms < 20) return;
+      this.stopBudget -= ms;
+    }
+    const now = performance.now();
+    if (now >= this.stopUntil) this.stopFrom = now;
+    const until = Math.min(Math.max(this.stopUntil, now + ms), this.stopFrom + STOP_MAX);
+    if (until <= this.stopUntil) return;
+    this.stopUntil = until;
+    this.tweens.timeScale = STOP_SPEED;
+    this.anims.globalTimeScale = STOP_SPEED;
+    if (this.stopTimer) clearTimeout(this.stopTimer);
+    this.stopTimer = setTimeout(() => {
+      this.stopTimer = null;
       if (!this.sys.isActive()) return;
       this.tweens.timeScale = 1;
       this.anims.globalTimeScale = 1;
-    }, ms);
+    }, until - now);
+  }
+
+  /** Whether a hit-stop is on right now. */
+  private get frozen(): boolean {
+    return performance.now() < this.stopUntil;
+  }
+
+  /**
+   * Squash and stretch by whole art pixels: `obj` (anchored at its feet or center; `base` its usual
+   * scale, `w` x `h` its art size in art px) goes `rows` rows shorter and as many columns wider (negative:
+   * taller and narrower) for each step's ms, then back. Whole-pixel changes keep its pixels whole; the
+   * camera post-pass (gridSnap.ts) puts them on the grid. Off with Reduce Motion or without the post-pass.
+   */
+  private squash(
+    obj: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform, base: number, w: number, h: number,
+    steps: ReadonlyArray<readonly [rows: number, ms: number]>,
+  ) {
+    if (this.reduceMotion || !this.snapped || w < 2 || h < 2) return;
+    this.squashes.get(obj)?.remove();
+    const set = (rows: number) => obj.active && obj.setScale((base * (w + rows)) / w, (base * (h - rows)) / h);
+    const total = steps.reduce((sum, [, ms]) => sum + ms, 0);
+    set(steps[0]?.[0] ?? 0);
+    const tw = this.tweens.addCounter({
+      from: 0,
+      to: total,
+      duration: total,
+      onUpdate: (t) => {
+        let at = t.getValue() ?? 0;
+        for (const [rows, ms] of steps) {
+          if (at < ms) {
+            set(rows);
+            return;
+          }
+          at -= ms;
+        }
+      },
+      onComplete: () => {
+        set(0);
+        if (this.squashes.get(obj) === tw) this.squashes.delete(obj);
+      },
+    });
+    this.squashes.set(obj, tw);
+  }
+
+  /** A buzz on the phone. Light ones come at most every 120 ms, so a fast fight doesn't turn into a hum. */
+  private buzz(strength: 'light' | 'heavy') {
+    const now = performance.now();
+    if (strength === 'light' && now - this.buzzAt < 120) return;
+    this.buzzAt = now;
+    haptics.impact(strength);
   }
 
   private flash(img: Phaser.GameObjects.Sprite, color: number, ms: number) {
@@ -979,7 +1187,11 @@ export class BattleScene extends Phaser.Scene {
     return FEET_Y - snap(this.heroTop) - (BAR_GAP + BAR_TALL + 1) * P;
   }
 
-  /** The blow lands: pack hit effect, sparks, number, knockback, maybe a kill. */
+  /**
+   * The blow lands: pack hit effect, sparks, number, knockback, a squash, its sound (climbing with
+   * each blow in a row), a one-pixel kick of the view, maybe a kill. Crits add a bigger number, a
+   * stamp, a hit-stop, a bigger shake and a buzz.
+   */
   private impact(s: Swing) {
     const f = this.foes.get(s.targetUid);
     if (!f) {
@@ -996,35 +1208,81 @@ export class BattleScene extends Phaser.Scene {
     this.flash(f.spr, 0xffffff, 60);
     f.knockV += (s.crit ? 100 : 62) * P;
     this.foeAct(f, 'hurt');
+    this.squashFoe(f, s.crit ? 1 : 0);
     f.shownHp = Math.max(0, f.shownHp - s.amount);
+    this.hitSound(f, s.crit);
     if (s.crit) {
       this.bits.burst(12, p.x, p.y, BIG_SPARK);
       this.number(p.x, p.y - 8 * P, formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950, floor: this.barTop(f) });
       this.stamp(p.x + P, p.y - 18 * P, t('battle.crit'), '#FFD54F');
-      this.shake(110, 0.006);
-      this.hitStop(70);
+      this.shake(170, 0.011);
+      this.hitStop(STOP.crit, true);
+      this.buzz('light');
     } else {
       this.bits.burst(6, p.x, p.y, SPARK);
       this.number(p.x, p.y - 7 * P, formatNumber(s.amount), { fill: s.echo ? '#e2ccff' : '#ffffff', floor: this.barTop(f) });
+      // A one-pixel kick the way the blow goes.
+      if (!s.echo) this.shake(30, 0, 1);
     }
     for (const r of s.riders) r();
     if (s.killed || this.kills.has(f.uid)) this.die(f);
   }
 
+  /** A foe takes a blow: it squashes (`extra` rows more for a crit), springs up a pixel taller, and settles. */
+  private squashFoe(f: Foe, extra: number) {
+    const w = Math.round((f.tex.artR - f.tex.artL) / P);
+    const h = Math.round(f.tex.reach / P);
+    const rows = Phaser.Math.Clamp(Math.round(h / 12), 1, 3) + extra;
+    this.squash(f.rig, 1, w, h, [[rows, 70], [-1, 60]]);
+  }
+
+  /** The blow's sound: a semitone higher with each blow in a row on the same foe (a new foe or a pause starts over). */
+  private hitSound(f: Foe, crit: boolean) {
+    const now = performance.now();
+    const c = this.combo;
+    this.combo = c.uid === f.uid && now - c.at < 1500 ? { uid: f.uid, n: c.n + 1, at: now } : { uid: f.uid, n: 0, at: now };
+    audio.hit(crit, this.combo.n);
+  }
+
+  /**
+   * A foe goes down: it pops (bits, more and faster the bigger it is) in a puff of dust, the fight
+   * freezes a beat, its sound climbs with each kill in the wave, its coins fly to the gold counter and
+   * XP sparks to the XP bar (each puts its "+N" under its counter), then it plays its death or tumbles
+   * away. A boss or mini-boss adds a boom, confetti, a longer freeze, a bigger shake and a heavy buzz.
+   */
   private die(f: Foe) {
     if (f.dying) return;
     f.dying = true;
     f.bar.setVisible(false);
     const info = this.kills.get(f.uid);
     this.kills.delete(f.uid);
+    const kind: Kind = info?.kind ?? 'regular';
+    const big = kind !== 'regular';
     const p = this.foeHitPoint(f);
-    this.dust.burst(info && info.kind !== 'regular' ? 10 : 5, p.x, FEET_Y - P, DUST);
-    const coins = info ? (info.kind === 'boss' ? 16 : info.kind === 'miniboss' ? 9 : 3) : 2;
-    this.coinBurst(p.x, p.y, coins);
-    if (info && info.kind !== 'regular') {
-      this.shake(320, 0.014);
+    // About 11 for a rat, 24 for a knight, 33 for a big boss.
+    const size = Math.sqrt(Math.max(1, ((f.tex.artR - f.tex.artL) / P) * (f.tex.reach / P)));
+    const k = Phaser.Math.Clamp(size / 14, 0.8, 1.8);
+    const pop = KILL_POP.speed ?? [30, 64];
+    this.bits.burst(Math.round(Phaser.Math.Clamp(size * 0.7, 6, 22)), p.x, p.y, { ...KILL_POP, speed: [pop[0] * k, pop[1] * k] });
+    this.dust.burst(big ? 10 : 5, p.x, FEET_Y - P, DUST);
+    const coins = info ? (kind === 'boss' ? 16 : kind === 'miniboss' ? 9 : 3) : 2;
+    // (A heist's coins pay the run, not the gold counter: they fly but don't land on it.)
+    this.coinBurst(p.x, p.y, coins, info && info.gold.left > 0 ? info.gold : null);
+    if (info) this.xpSparks(p.x, p.y, kind === 'boss' ? 5 : big ? 4 : 2, info.xp, info.xpGain);
+    const now = performance.now();
+    if (now - this.streak.at > 5000) this.streak.n = 0;
+    audio.kill(big, this.streak.n++, false);
+    this.streak.at = now;
+    if (big) {
+      this.shake(kind === 'boss' ? 400 : 320, kind === 'boss' ? 0.017 : 0.012);
       this.confetti.burst(40, p.x, p.y, CONFETTI);
       this.fx('boom', p.x, p.y, { depth: 35 });
+      this.hitStop(kind === 'boss' ? STOP.boss : STOP.miniboss);
+      if (!info?.buzzed) this.buzz('heavy');
+    } else {
+      this.shake(120, 0.008);
+      this.hitStop(STOP.kill, true);
+      this.buzz('light');
     }
     this.flash(f.spr, 0xffffff, 90);
     const remove = () => {
@@ -1055,48 +1313,184 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** Coins pop out, bounce once, then fly up to the gold counter, turning (frame by frame) all the way. */
-  private coinBurst(x: number, y: number, n: number) {
+  /**
+   * Coins pop out of a downed foe, land with a squash, hop and land again, then lift off one after
+   * another (stretching as they go) and arc up into the gold counter, turning frame by frame all the
+   * way. Each one that gets there lets its share of `held` into the counter (the number ticks up and
+   * the counter hops) with a tink a step higher than the last; the first puts "+N" under the counter,
+   * the last of a big burst rings a ka-ching.
+   */
+  private coinBurst(x: number, y: number, n: number, held: Held | null) {
     const coin = coinTex(this);
-    const target = this.coinTarget();
-    for (let i = 0; i < n && this.coinsFlying < 50; i++) {
+    const cw = coin.w / P;
+    const ch = coin.h / P;
+    const target = this.hudPoint('[data-gold-target]', 0.2) ?? COIN_TARGET;
+    const count = Math.max(0, Math.min(n, 50 - this.coinsFlying));
+    if (held && !count) release(held);
+    const total = held?.left ?? 0;
+    const share = total / Math.max(1, count);
+    const ground = FEET_Y - P;
+    for (let i = 0; i < count; i++) {
       this.coinsFlying++;
-      const c = this.gridLock(
-        this.add.sprite(x, y, coin.key, String(i % 4)).setOrigin(coin.cx / (coin.w / P), coin.cy / (coin.h / P)).setScale(P).setDepth(36),
-      );
+      const c = this.gridLock(this.add.sprite(x, y, coin.key, String(i % 4)).setOrigin(coin.cx / cw, coin.cy / ch).setScale(P).setDepth(36));
       c.play({ key: `${coin.key}:spin`, startFrame: i % 4 });
-      const vx = Phaser.Math.Between(-29, 29) * P;
-      const landX = x + vx * 0.45;
+      const landX = x + Phaser.Math.Between(-13, 13) * P;
       const peak = y - Phaser.Math.Between(12, 26) * P;
-      this.tweens.chain({
-        targets: c,
-        tweens: [
-          { x: landX, duration: 420, ease: 'Linear' },
-          { x: target.x, y: target.y, duration: 420 + i * 35, ease: 'Cubic.easeIn' },
-        ],
+      const hop = Phaser.Math.Between(2, 4) * P;
+      const last = i === count - 1;
+      // Up and out, down (squash), a little hop, down (squash): one counter, so a hit-stop holds it.
+      let touched = false;
+      this.tweens.addCounter({
+        from: 0,
+        to: 430,
+        duration: 430,
+        onUpdate: (tw) => {
+          const t = tw.getValue() ?? 0;
+          c.x = lerp(x, landX, t / 430);
+          if (t < 170) c.y = lerp(y, peak, easeOutQuad(t / 170));
+          else if (t < 310) c.y = lerp(peak, ground, easeInQuad((t - 170) / 140));
+          else if (t < 370) c.y = lerp(ground, ground - hop, easeOutQuad((t - 310) / 60));
+          else c.y = lerp(ground - hop, ground, easeInQuad((t - 370) / 60));
+          if (!touched && t >= 310) {
+            touched = true;
+            this.squash(c, P, cw, ch, [[1, 60]]);
+          }
+        },
+        onComplete: () => {
+          c.setPosition(landX, ground);
+          this.squash(c, P, cw, ch, [[1, 45]]);
+        },
+      });
+      // Then up to the counter, one after another (a quadratic curve that leans to one side). The first
+      // to get there puts up "+N" under the counter.
+      let from = { x: landX, y: ground };
+      let bend = { x: 0, y: 0 };
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        delay: 460 + i * 60,
+        duration: 400,
+        ease: 'Quad.easeIn',
+        onStart: () => {
+          from = { x: c.x, y: c.y };
+          const side = Phaser.Math.Between(0, 1) ? 1 : -1;
+          bend = { x: lerp(from.x, target.x, 0.2) + side * Phaser.Math.Between(4, 16) * P, y: lerp(from.y, target.y, 0.8) };
+          this.squash(c, P, cw, ch, [[-1, 90]]);
+        },
+        onUpdate: (tw) => {
+          const u = tw.getValue() ?? 0;
+          c.x = (1 - u) * (1 - u) * from.x + 2 * (1 - u) * u * bend.x + u * u * target.x;
+          c.y = (1 - u) * (1 - u) * from.y + 2 * (1 - u) * u * bend.y + u * u * target.y;
+        },
         onComplete: () => {
           c.destroy();
           this.coinsFlying--;
+          if (held) land(held, last ? Infinity : share);
+          if (i === 0 && total > 0) this.counterNote('gold', total);
+          audio.coin(last && count >= 9);
         },
       });
-      this.tweens.add({ targets: c, y: peak, duration: 200, ease: 'Quad.easeOut' });
-      this.tweens.add({ targets: c, y: FEET_Y - P, delay: 200, duration: 220, ease: 'Bounce.easeOut' });
     }
   }
 
   /**
-   * The HUD's gold counter in canvas pixels (the canvas fills the top of the stage, so stage px), from
-   * the page: the coins land on its coin. COIN_TARGET when it isn't there.
+   * XP sparks burst out of a downed foe, hang a beat, then arc up into the HUD's XP bar where its fill
+   * ends, twinkling and trailing. Each lets its share of `held` into the bar; the last puts up "+N XP"
+   * under it with a blip. None when the raccoon got no XP (`gain` 0: a heist's kill, the level cap).
    */
-  private coinTarget(): { x: number; y: number } {
-    const el = typeof document !== 'undefined' ? document.querySelector('[data-gold-target]') : null;
+  private xpSparks(x: number, y: number, n: number, held: Held, gain: number) {
+    if (gain <= 0) return;
+    const share = held.left / n;
+    const OUT = 160;
+    const FLY = 560;
+    for (let i = 0; i < n; i++) {
+      const s = this.gridLock(this.add.image(snap(x), snap(y), 'bit2').setOrigin(0.5, 0.5).setDepth(37).setTint(XP_SPARK[0]));
+      const out = { x: x + Phaser.Math.Between(-12, 12) * P, y: y - Phaser.Math.Between(5, 14) * P };
+      const hang = 60 + i * 60;
+      const last = i === n - 1;
+      let aim: { from: { x: number; y: number }; bend: { x: number; y: number }; to: { x: number; y: number } } | null = null;
+      let trailAt = 0;
+      this.tweens.addCounter({
+        from: 0,
+        to: OUT + hang + FLY,
+        duration: OUT + hang + FLY,
+        onUpdate: (tw) => {
+          if (!s.active) return;
+          const t = tw.getValue() ?? 0;
+          s.setTint(XP_SPARK[Math.floor(t / 60) % 2]);
+          if (t < OUT) {
+            const k = easeOutQuad(t / OUT);
+            s.setPosition(lerp(x, out.x, k), lerp(y, out.y, k));
+            return;
+          }
+          if (t < OUT + hang) return;
+          if (!aim) {
+            const to = this.xpTarget();
+            aim = { from: { x: s.x, y: s.y }, to, bend: { x: lerp(s.x, to.x, 0.3) + Phaser.Math.Between(-10, 10) * P, y: lerp(s.y, to.y, 0.85) } };
+          }
+          const u = easeInQuad((t - OUT - hang) / FLY);
+          const { from, bend, to } = aim;
+          s.setPosition(
+            (1 - u) * (1 - u) * from.x + 2 * (1 - u) * u * bend.x + u * u * to.x,
+            (1 - u) * (1 - u) * from.y + 2 * (1 - u) * u * bend.y + u * u * to.y,
+          );
+          if (t - trailAt >= 45) {
+            trailAt = t;
+            this.bits.burst(1, s.x, s.y, XP_TRAIL);
+          }
+        },
+        onComplete: () => {
+          s.destroy();
+          land(held, last ? Infinity : share);
+          if (!last) return;
+          this.counterNote('xp', gain);
+          audio.xpTick();
+        },
+      });
+    }
+  }
+
+  /** Where the XP bar's fill ends (canvas px): XP sparks fly there. */
+  private xpTarget(): { x: number; y: number } {
+    const g = gameStore.getState().game;
+    const need = xpToNext(g.player.level);
+    const shown = Math.max(0, g.player.xp - useHudFlight.getState().held.xp);
+    return this.hudPoint('[data-xp-target]', need > 0 ? Phaser.Math.Clamp(shown / need, 0.04, 1) : 1) ?? XP_TARGET;
+  }
+
+  /**
+   * A gain pops up just under its HUD counter as it gets there: "+N" in gold under the gold, "+N XP" in
+   * green under the XP bar (the fight below stays clear). More landing right after adds to it.
+   */
+  private counterNote(counter: 'gold' | 'xp', amount: number) {
+    const gold = counter === 'gold';
+    const at = this.hudPoint(gold ? '[data-gold-target]' : '[data-xp-target]', 0.5) ?? (gold ? COIN_TARGET : XP_TARGET);
+    const now = performance.now();
+    let sum = amount;
+    const prev = this.notes[counter];
+    if (prev?.tx.active && now - prev.at < 400) {
+      sum += prev.sum;
+      prev.tx.destroy();
+    }
+    const text = gold ? `+${formatNumber(sum)}` : t('battle.xpGain', { n: formatNumber(sum) });
+    const tx = this.number(at.x, at.y + 13 * P, text, { fill: gold ? GOLD_GAIN : XP_GAIN, life: 750, rise: 2, exact: true });
+    this.notes[counter] = { tx, sum, at: now };
+  }
+
+  /**
+   * Point `ax` of the way across a HUD element ([selector], 0 its left edge, 1 its right) and halfway
+   * down it, in canvas pixels (the canvas fills the top of the stage, so stage px), from the page; null
+   * when it isn't there.
+   */
+  private hudPoint(selector: string, ax: number): { x: number; y: number } | null {
+    const el = typeof document !== 'undefined' ? document.querySelector(selector) : null;
     const canvas = this.sys.game.canvas;
-    if (!el || !canvas) return COIN_TARGET;
+    if (!el || !canvas) return null;
     const r = el.getBoundingClientRect();
     const c = canvas.getBoundingClientRect();
-    if (!c.width || !r.width) return COIN_TARGET;
+    if (!c.width || !r.height) return null;
     const k = BATTLE_W / c.width;
-    return { x: (r.left + r.width * 0.2 - c.left) * k, y: (r.top + r.height / 2 - c.top) * k };
+    return { x: (r.left + r.width * ax - c.left) * k, y: (r.top + r.height / 2 - c.top) * k };
   }
 
   private bagBurst(count: number) {
@@ -1138,7 +1532,9 @@ export class BattleScene extends Phaser.Scene {
     this.shake(140, 0.008);
   }
 
+  /** A foe's blow lands on the raccoon (its sound plays here, as it connects); heavy ones freeze a beat. */
   private heroHurt(amount: number, heavy: boolean) {
+    audio.hurt(heavy);
     this.flashHero(0xff8a8a, 110);
     if (!this.dead && this.mode !== 'swing') {
       this.mode = 'hurt';
@@ -1148,7 +1544,10 @@ export class BattleScene extends Phaser.Scene {
       // Way out of its league: make it obvious.
       this.stamp(this.hero.x + 3 * P, FEET_Y - 32 * P, t('battle.oneShot'), '#FF5A5A');
       this.shake(320, 0.02);
+      this.hitStop(100);
       this.fx('hit', this.hero.x + 2 * P, FEET_Y - 8 * P, { depth: 34, flipX: true });
+    } else if (heavy) {
+      this.hitStop(STOP.heavy, true);
     }
     this.heroKnock = this.reduceMotion ? 0 : heavy ? -4 * P : -2 * P;
     const p = { x: this.hero.x + P, y: FEET_Y - 9 * P };
@@ -1307,60 +1706,49 @@ export class BattleScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ equip slam (equipSlam.ts)
 
-  /** Equipped gear drops out of the sky and slams onto him; the rarer, the bigger (see SLAM_FROM). */
-  private slamGear(item: Item, index: number) {
-    const tier = rarityIndex(item.rarity);
-    const delay = index * SLAM.stagger;
-    const drop = this.reduceMotion ? 0 : SLAM.drop;
-    this.gearHold = Math.max(this.gearHold, this.time.now + delay + drop);
-    this.time.delayedCall(delay, () => this.dropItem(item, tier, drop));
-  }
-
-  private dropItem(item: Item, tier: number, drop: number) {
-    if (!this.sys.isActive()) return;
-    const color = rarityColor(item.rarity);
-    const c = rarityColorNum(item.rarity);
-    const x = this.hero.x + HERO.midX;
-    const y = FEET_Y - (SLAM_HEIGHT[item.slot] ?? 8) * P;
-    const tex = itemTex(this, item.baseId);
-    const impact = () => this.slamImpact(item, tier, x, y, color, c);
-    if (!tex || drop <= 0) {
-      impact();
-      return;
-    }
-    const fall = 30 + tier * 2;
-    const spr = this.add.image(snap(x), snap(y - fall * P), tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(36);
-    // Rare gear rides down a pillar of light.
-    if (tier >= SLAM_FROM.pillar) this.pillar(x, y, c, drop, tier);
-    // Afterimages trail it as it falls.
-    const trail: Phaser.GameObjects.Image[] = [];
-    this.tweens.addCounter({
-      from: 0,
-      to: 1,
-      duration: drop,
-      ease: 'Quad.easeIn',
-      onUpdate: (tw) => {
-        if (!spr.active) return;
-        const k = tw.getValue() ?? 0;
-        spr.y = snap(y - fall * P * (1 - k));
-        if (k > 0.25 && trail.length < 3 && k * 4 > trail.length + 1) {
-          const ghost = this.add.image(spr.x, spr.y, tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(35).setAlpha(0.45).setTintFill(c);
-          trail.push(ghost);
-          this.tweens.add({ targets: ghost, alpha: 0, duration: 180, ease: 'Stepped', easeParams: [3], onComplete: () => ghost.destroy() });
-        }
-      },
-      onComplete: () => {
-        spr.destroy();
-        impact();
-      },
+  /**
+   * An item was equipped: until it hits (EquipFlight flies it in and calls slamImpact), he keeps his
+   * old look in that slot. Should no flight ever call (no UI running), it shows after a few seconds.
+   */
+  private holdGear(item: Item, replaced: Item | null) {
+    if (!this.pendingGear.has(item.slot)) this.pendingGear.set(item.slot, replaced);
+    this.time.delayedCall(6000, () => {
+      if (gameStore.getState().game.equipped[item.slot]?.uid === item.uid) this.pendingGear.delete(item.slot);
     });
   }
 
-  /** The hit: he takes the blow (a white flash and a one-pixel squash), then sparks, rings, light. */
-  private slamImpact(item: Item, tier: number, x: number, y: number, color: string, c: number) {
+  /** What he shows as worn: what he wears, except slots whose new gear is still flying in. */
+  private shownEquipped(g: GameState): GameState['equipped'] {
+    if (this.pendingGear.size === 0) return g.equipped;
+    const eq = { ...g.equipped };
+    for (const [slot, was] of this.pendingGear) eq[slot] = was;
+    return eq;
+  }
+
+  /** Where `slot`'s gear sits on him (screen px). */
+  private slotPoint(slot: Slot): { x: number; y: number } {
+    return { x: this.hero.x + HERO.midX, y: FEET_Y - (SLAM_HEIGHT[slot] ?? 8) * P };
+  }
+
+  /** The item starts its dive onto him (EquipFlight): rare gear rides down a pillar of light. */
+  private slamDive(item: Item, tier: number, ms: number) {
+    if (!this.sys.isActive() || tier < SLAM_FROM.pillar || this.reduceMotion) return;
+    const p = this.slotPoint(item.slot);
+    this.pillar(p.x, p.y, rarityColorNum(item.rarity), ms, tier);
+  }
+
+  /**
+   * The hit (EquipFlight calls it as the item lands): the new look shows, he takes the blow (a white
+   * flash and a one-pixel squash), sparks, rings and light fly, and the piece glimmers.
+   */
+  private slamImpact(item: Item, tier: number) {
     if (!this.sys.isActive()) return;
+    const color = rarityColor(item.rarity);
+    const c = rarityColorNum(item.rarity);
+    const { x, y } = this.slotPoint(item.slot);
     // The new look shows now.
-    this.gearHold = 0;
+    this.pendingGear.delete(item.slot);
+    this.glimmer(item, tier, c);
     this.flash(this.heroSpr, 0xffffff, 70 + tier * 6);
     // A one-pixel squash under the blow (applied after animateHero, which sets his pose every frame).
     if (!this.reduceMotion) this.squashUntil = this.time.now + 90 + tier * 4;
@@ -1385,6 +1773,52 @@ export class BattleScene extends Phaser.Scene {
     if (tier >= SLAM_FROM.confetti) this.confetti.burst(20 + tier * 6, x, y - 10 * P, CONFETTI);
     if (tier >= SLAM_FROM.flash && !this.reduceFlashing) this.whiteout(0.16 + (tier - SLAM_FROM.flash) * 0.025);
     this.shake(90 + tier * 30, 0.0015 + tier * 0.0011);
+  }
+
+  /**
+   * After the slam the piece he now wears glimmers for a second, so you can see what changed:
+   * sparkles twinkle where it sits, and a piece drawn on its own (hat, mask, shield, backpack, weapon)
+   * blinks white twice. The rarer, the more twinkles.
+   */
+  private glimmer(item: Item, tier: number, c: number) {
+    const n = 5 + Math.min(7, Math.floor(tier * 0.75));
+    for (let k = 0; k < n; k++) {
+      this.time.delayedCall(90 + k * 120, () => {
+        if (!this.sys.isActive()) return;
+        const b = this.partBox(item.slot);
+        const x = b.x + Phaser.Math.Between(0, b.w);
+        const y = b.y + Phaser.Math.Between(0, b.h);
+        // Every other twinkle is the big four-point sparkle; the rest small glints that drift up.
+        if (k % 2 === 0 && !this.reduceMotion) this.fx('sparkle', x, y, { depth: 38, tint: k % 4 === 0 ? undefined : c });
+        else this.glints.burst(1, x, y, { speedX: [-0.6, 0.6], speedY: [-4, -1.5], life: [420, 640], colors: [0xffffff], fade: [c, c], alpha: [1, 1, 0.6] });
+      });
+    }
+    if (this.reduceFlashing) return;
+    for (const ms of [160, 420]) {
+      this.time.delayedCall(ms, () => {
+        const part = this.wornPart(item.slot);
+        if (!part?.active) return;
+        part.setTintFill(0xffffff);
+        this.time.delayedCall(70, () => part.active && part.clearTint());
+      });
+    }
+  }
+
+  /** The image of a piece he wears that is drawn on its own (not part of his body's texture). */
+  private wornPart(slot: Slot): Phaser.GameObjects.Image | null {
+    return slot === 'weapon' ? this.weapon : this.gearImgs.get(slot) ?? null;
+  }
+
+  /** Where a worn piece is on screen (px): its image's bounds, or a box around where that slot sits on him. */
+  private partBox(slot: Slot): { x: number; y: number; w: number; h: number } {
+    const part = this.wornPart(slot);
+    if (part?.active && part.visible) {
+      const r = part.getBounds();
+      if (r.width > 0) return { x: r.x + P, y: r.y + P, w: Math.max(P, r.width - 2 * P), h: Math.max(P, r.height - 2 * P) };
+    }
+    const p = this.slotPoint(slot);
+    const half = GLIMMER_BOX[slot] ?? { w: 3, h: 2 };
+    return { x: p.x - half.w * P, y: p.y - half.h * P, w: 2 * half.w * P, h: 2 * half.h * P };
   }
 
   /** A white flash over the whole view that steps out (the rarest slams). */
@@ -1454,13 +1888,55 @@ export class BattleScene extends Phaser.Scene {
     this.poseT = seconds;
   }
 
+  /** Notes the raccoon's gold, level and XP (what the next batch of events adds is measured from here). */
+  private look(g: GameState) {
+    const s = this.seen;
+    if (s.coins !== g.currencies.coins || s.level !== g.player.level || s.xp !== g.player.xp) {
+      this.seen = { coins: g.currencies.coins, level: g.player.level, xp: g.player.xp };
+    }
+  }
+
+  /**
+   * Remembers a batch's kills until their blows land. What they really paid the raccoon (what his gold
+   * and XP went up by: nothing for a heist's kills, which pay the run) is held off the HUD's counters
+   * until their coins and sparks get there. XP isn't held when the batch levels him up: the bar shows the
+   * new level with the jingle and the fanfare.
+   */
+  private noteKills(events: CoreEvent[]) {
+    const g = gameStore.getState().game;
+    const was = this.seen;
+    this.look(g);
+    if (!events.some((e) => e.type === 'kill')) return;
+    let gold = Math.max(0, g.currencies.coins - was.coins);
+    const lv = g.player.level;
+    let xp = Math.max(0, lv === was.level ? g.player.xp - was.xp : totalXpForLevel(lv) + g.player.xp - totalXpForLevel(was.level) - was.xp);
+    const leveled = events.some((e) => e.type === 'levelUp');
+    // A boss win buzzes the phone already (rollController).
+    const bossWin = events.some((e) => e.type === 'bossWin');
+    for (const e of events) {
+      if (e.type !== 'kill') continue;
+      const paid = Math.min(e.coins, gold);
+      const gain = Math.min(e.xp, xp);
+      gold -= paid;
+      xp -= gain;
+      const old = this.kills.get(e.enemyUid);
+      if (old) {
+        release(old.gold);
+        release(old.xp);
+      }
+      this.kills.set(e.enemyUid, {
+        kind: e.kind, coins: e.coins, gold: hold('gold', paid), xp: hold('xp', leveled ? 0 : gain), xpGain: gain, buzzed: bossWin,
+      });
+    }
+  }
+
   private onEvents(events: CoreEvent[]) {
     if (!this.sys.isActive()) return;
     // Kills arrive with the blow that caused them; remember them so the death plays when the blow lands.
-    for (const e of events) if (e.type === 'kill') this.kills.set(e.enemyUid, { kind: e.kind, coins: e.coins });
+    this.noteKills(events);
+    this.heistEvents(events);
     let lastSwing: Swing | null = null;
-    let slamIndex = 0;
-    for (const e of events) {
+    for (const e of blowsFirst(events)) {
       if (e.type === 'spinStart') this.showLuckChains(e);
       switch (e.type) {
         case 'playerHit': {
@@ -1534,6 +2010,7 @@ export class BattleScene extends Phaser.Scene {
         case 'playerDodge': {
           const f = this.foes.get(e.enemyUid);
           const dodge = () => {
+            audio.dodge();
             this.heroKnock = this.reduceMotion ? 0 : -5 * P;
             this.number(this.hero.x, FEET_Y - 26 * P, t('battle.dodge'), { fill: '#7fe9ff', floor: this.heroBarTop() });
           };
@@ -1563,6 +2040,8 @@ export class BattleScene extends Phaser.Scene {
           this.time.delayedCall(250, () => this.bagBurst(e.count));
           break;
         case 'waveStart': {
+          // A new wave's kills climb from the bottom again.
+          this.streak.n = 0;
           const g = gameStore.getState().game;
           const boss = g.battle.enemies.some((x) => x.kind !== 'regular');
           if (boss) this.time.delayedCall(700, () => this.banner(t('battle.bossIncoming'), ['#ffd0c0', '#ff4d3d']));
@@ -1579,6 +2058,8 @@ export class BattleScene extends Phaser.Scene {
           this.cheer(1.2);
           break;
         case 'levelUp': {
+          // The XP bar shows the new level now (with the jingle and the HUD's fanfare), not when sparks land.
+          releaseAll('xp');
           // One burst for a batch: a big haul can grant many levels at once.
           if (events.some((x, j) => j > events.indexOf(e) && x.type === 'levelUp')) break;
           if (!this.fx('levelUp', this.hero.x, FEET_Y - 8 * P, { depth: 33 })) {
@@ -1590,8 +2071,9 @@ export class BattleScene extends Phaser.Scene {
           break;
         }
         case 'equip':
-          // Several at once (Equip best) slam one after another.
-          this.slamGear(e.item, slamIndex++);
+          // The item flies in from wherever it was (EquipFlight) and slams onto him: until then he
+          // keeps his old look in that slot.
+          this.holdGear(e.item, e.replaced);
           break;
         case 'luckBoost':
           this.bits.burst(20, this.hero.x, FEET_Y - 12 * P, { ...FLAME, colors: [0xd8ffd0, 0x8dff8a], fade: [0x46d36b, 0x2fb150] });
@@ -1601,6 +2083,7 @@ export class BattleScene extends Phaser.Scene {
           });
           break;
         case 'playerDeath':
+          this.buzz('heavy');
           this.dead = true;
           this.mode = 'ko';
           this.swingQueue = [];
@@ -1625,6 +2108,123 @@ export class BattleScene extends Phaser.Scene {
           break;
       }
     }
+  }
+
+  // ------------------------------------------------------------------ heists
+
+  /** "HEIST" over "ACT 1 · 3/19" in the top-left corner, under the HUD, while a run is on. */
+  private heistBadge: PixelText | null = null;
+  /** The location of the run on screen (a new run shows its title card), or null. */
+  private heistAt: string | null = null;
+
+  /**
+   * A heist in the battle (core's heist events): "ACT 2" as each act begins, "BOSS: CHEF TONY" when the
+   * boss's stop comes up, the getaway or the bust when the last fight ends, and the run's own hits:
+   * blocks, stuns and the crew's pecks.
+   */
+  private heistEvents(events: CoreEvent[]) {
+    const run = gameStore.getState().game.heist.run;
+    for (const e of events) {
+      switch (e.type) {
+        case 'heistNode':
+          if (e.kind === 'boss') {
+            const loc = run ? DATA.heistLocationsById.get(run.location) : undefined;
+            const name = loc ? DATA.enemiesById.get(loc.boss)?.name ?? '' : '';
+            this.banner(t('heistUi.battle.boss', { name }), ['#ffd0c0', '#ff4d3d']);
+          } else if (e.index === 0) {
+            this.banner(t('heistUi.battle.act', { n: e.act }), GOLD);
+          }
+          break;
+        case 'heistFightEnd':
+          if (e.won && run?.status === 'won') {
+            this.time.delayedCall(450, () => {
+              this.banner(t('heistUi.battle.won'), GOLD, FEET_Y - 50 * P);
+              this.confetti.burst(72, BATTLE_W / 2, FEET_Y - 50 * P, CONFETTI);
+              this.cheer(1.6);
+            });
+          } else if (!e.won) {
+            this.time.delayedCall(700, () => this.banner(t('heistUi.battle.busted'), ['#ffd0c0', '#ff4d3d'], FEET_Y - 50 * P));
+          }
+          break;
+        case 'heistBlock':
+          this.stamp(this.hero.x + 2 * P, FEET_Y - 30 * P, t('heistUi.battle.block'), '#9edcf7');
+          this.bits.burst(8, this.hero.x + 8 * P, FEET_Y - 14 * P, SPARK);
+          break;
+        case 'heistStun': {
+          const f = this.foes.get(e.enemyUid);
+          if (!f) break;
+          const p = this.foeHitPoint(f);
+          this.number(p.x, p.y - 8 * P, t('heistUi.battle.stun'), { fill: '#fff28c', life: 700, floor: this.barTop(f) });
+          break;
+        }
+        case 'heistHelper': {
+          const f = this.foes.get(e.enemyUid);
+          if (!f) break;
+          const p = this.foeHitPoint(f);
+          this.bits.burst(5, p.x, p.y, { ...SPARK, colors: [0xcfcedb, 0xffffff], fade: [0x7f7c94] });
+          this.flash(f.spr, 0xffffff, 60);
+          this.number(p.x + 4 * P, p.y - 4 * P, formatNumber(e.amount), { fill: '#cfe8ff', life: 600, floor: this.barTop(f) });
+          break;
+        }
+      }
+    }
+  }
+
+  /** The heist's badge, and a new run's title card in place of the one for the world it borrows. */
+  private updateHeist(g: GameState) {
+    const run = g.heist.run;
+    const at = run?.location ?? null;
+    if (at !== this.heistAt) {
+      this.heistAt = at;
+      if (run) this.showHeistCard(DATA.heistLocationsById.get(run.location)?.name ?? '');
+    }
+    if (!run) {
+      this.heistBadge?.setVisible(false);
+      return;
+    }
+    const per = BAL.heist.nodesPerAct;
+    const total = BAL.heist.actMult.length * per + 1;
+    const n = Math.min(total, (run.act - 1) * per + run.index + 1);
+    const text = `${t('heistUi.battle.kicker')}\n${t('heistUi.battle.badge', { act: run.act, n, total })}`;
+    if (!this.heistBadge?.active) this.heistBadge = this.texts.add(text, HEIST_BADGE).setDepth(47);
+    // Out of the way while a title card shows.
+    this.heistBadge.setText(text).place(3 * P, 19 * P, 0, 0).setVisible(!this.worldCard);
+  }
+
+  /** A run's title card, "HEIST" over the place's name, timed like a world's (showWorldCard). */
+  private showHeistCard(name: string) {
+    this.worldCard?.destroy();
+    const card = this.texts.add(`${t('heistUi.battle.kicker')}\n${name}`, WORLD_CARD).setDepth(48);
+    this.worldCard = card;
+    const y = 21 * P;
+    const still = this.reduceMotion;
+    card.place(BATTLE_W / 2, y, 0.5, 0).setAlpha(0);
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 2800,
+      onUpdate: (tw) => {
+        if (!card.active) return;
+        const k = tw.getValue() ?? 0;
+        let dy = 0;
+        let alpha = 1;
+        if (still) alpha = k < 0.85 ? 1 : stepsDown((k - 0.85) / 0.15);
+        else if (k < 0.12) {
+          const u = k / 0.12;
+          dy = u < 0.5 ? 2 : u < 0.85 ? 1 : 0;
+          alpha = u < 0.5 ? 0.5 : 1;
+        } else if (k >= 0.78) {
+          const u = (k - 0.78) / 0.22;
+          dy = u < 0.5 ? 0 : -1;
+          alpha = stepsDown(u);
+        }
+        card.place(BATTLE_W / 2, y + dy * P, 0.5, 0).setAlpha(alpha);
+      },
+      onComplete: () => {
+        card.destroy();
+        if (this.worldCard === card) this.worldCard = null;
+      },
+    });
   }
 
   // ------------------------------------------------------------------ enemies
@@ -1744,11 +2344,18 @@ export class BattleScene extends Phaser.Scene {
       f.bar.destroy();
     }
     this.foes.clear();
+    // Their coins and sparks won't fly now: the counters get what they held back at once.
+    for (const k of this.kills.values()) {
+      release(k.gold);
+      release(k.xp);
+    }
     this.kills.clear();
     this.swingQueue = [];
   }
 
   private maxHp(g: GameState): number {
+    // A heist's bar shows the run's HP.
+    if (g.heist.run) return battleMaxHp(g);
     if (this.hpCache.key !== g.equipped || this.hpCache.hp <= 0) this.hpCache = { key: g.equipped, hp: computeStats(g).HP };
     return this.hpCache.hp;
   }
@@ -1810,8 +2417,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(time: number, deltaMs: number) {
-    const dt = Math.min(0.05, deltaMs / 1000);
+    const real = Math.min(0.05, deltaMs / 1000);
+    // A hit-stop slows the whole world (particles, movement, scrolling), not just tweens and animations.
+    const dt = this.frozen ? real * STOP_SPEED : real;
+    this.stopBudget = Math.min(STOP_BUDGET, this.stopBudget + real * STOP_REFILL);
     const g = gameStore.getState().game;
+    this.look(g);
     const b = g.battle;
     const walking = b.phase === 'walking' && !this.dead;
 
@@ -1831,11 +2442,12 @@ export class BattleScene extends Phaser.Scene {
       reduceFlashing: this.reduceFlashing,
     });
 
-    const sig = SLOTS.map((s) => `${g.equipped[s]?.uid ?? 0}`).join(',');
-    // New gear shows the moment its item slams onto him (slamGear), not while it's still falling.
-    if (sig !== this.gearSig && this.time.now >= this.gearHold) {
+    // New gear shows the moment its item slams onto him (slamImpact), not while it's still flying in.
+    const shown = this.shownEquipped(g);
+    const sig = SLOTS.map((s) => `${shown[s]?.uid ?? 0}`).join(',');
+    if (sig !== this.gearSig) {
       this.gearSig = sig;
-      this.drawGear(g);
+      this.drawGear(shown);
     }
 
     // Hero: hops along, closes in to fight, and stays put (idling) while the player picks a world after a boss.
@@ -1843,6 +2455,9 @@ export class BattleScene extends Phaser.Scene {
     this.heroX += (targetX - this.heroX) * (1 - Math.pow(0.001, dt));
     this.heroKnock += (0 - this.heroKnock) * (1 - Math.pow(0.0005, dt));
     this.hero.x = snap(this.heroX + this.heroDx + this.heroKnock);
+    // Where an equipped item flies to (EquipFlight, in stage px: the view is drawn 1:1 at the stage's top).
+    slamAnchor.x = this.hero.x + HERO.midX;
+    slamAnchor.feetY = FEET_Y;
     this.animateHero(walking, dt);
     if (this.time.now < this.squashUntil) this.rig.y += P;
     this.followBody();
@@ -1866,9 +2481,10 @@ export class BattleScene extends Phaser.Scene {
     this.hintWas = hint;
 
     for (const bits of [this.bits, this.dust, this.confetti, this.glints]) bits.update(dt);
-    this.updateShake(dt);
+    this.updateShake(real);
     this.updateHeroBar(g, dt);
     this.updateBossBar(g, dt);
+    this.updateHeist(g);
   }
 
   /**

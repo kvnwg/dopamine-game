@@ -182,5 +182,195 @@
       "everySeconds": 7,
       "damageMult": 2.0
     }
+  },
+  {
+    "id": "pizza_rat",
+    "name": "Pizza Rat",
+    "kind": "regular",
+    "hp": 28.8,
+    "atk": 11.05,
+    "def": 0,
+    "atkSpd": 1
+  },
+  {
+    "id": "crust_pigeon",
+    "name": "Crust Pigeon",
+    "kind": "regular",
+    "hp": 21.6,
+    "atk": 9.35,
+    "def": 0,
+    "atkSpd": 1.4
+  },
+  {
+    "id": "dough_boy",
+    "name": "Flour Punk",
+    "kind": "regular",
+    "hp": 38.4,
+    "atk": 14.45,
+    "def": 1,
+    "atkSpd": 0.9
+  },
+  {
+    "id": "delivery_dave",
+    "name": "Delivery Dave",
+    "kind": "miniboss",
+    "hp": 100,
+    "atk": 16,
+    "def": 2,
+    "atkSpd": 0.9,
+    "special": {
+      "type": "heavyHit",
+      "name": "Thirty Minutes or Less",
+      "everySeconds": 5,
+      "damageMult": 1.8
+    }
+  },
+  {
+    "id": "chef_tony",
+    "name": "Chef Tony",
+    "kind": "boss",
+    "hp": 320,
+    "atk": 16,
+    "def": 2,
+    "atkSpd": 0.85,
+    "special": {
+      "type": "heavyHit",
+      "name": "Pizza Toss",
+      "everySeconds": 5,
+      "damageMult": 1.8
+    },
+    "specials": [
+      {
+        "type": "enrage",
+        "name": "Kitchen Nightmare",
+        "belowHpPct": 50,
+        "atkMult": 1.25,
+        "atkSpdMult": 1.4
+      }
+    ]
+  },
+  {
+    "id": "pretzel_rat",
+    "name": "Pretzel Rat",
+    "kind": "regular",
+    "hp": 28.8,
+    "atk": 11.05,
+    "def": 0,
+    "atkSpd": 1
+  },
+  {
+    "id": "skylight_pigeon",
+    "name": "Skylight Pigeon",
+    "kind": "regular",
+    "hp": 21.6,
+    "atk": 9.35,
+    "def": 0,
+    "atkSpd": 1.4
+  },
+  {
+    "id": "mall_rat",
+    "name": "Mall Rat",
+    "kind": "regular",
+    "hp": 38.4,
+    "atk": 14.45,
+    "def": 1,
+    "atkSpd": 0.9
+  },
+  {
+    "id": "kiosk_kyle",
+    "name": "Kiosk Kyle",
+    "kind": "miniboss",
+    "hp": 100,
+    "atk": 16,
+    "def": 2,
+    "atkSpd": 0.9,
+    "special": {
+      "type": "heavyHit",
+      "name": "Free Sample",
+      "everySeconds": 5,
+      "damageMult": 1.8
+    }
+  },
+  {
+    "id": "mall_cop_doug",
+    "name": "Mall Cop Doug",
+    "kind": "boss",
+    "hp": 340,
+    "atk": 16,
+    "def": 3,
+    "atkSpd": 0.8,
+    "special": {
+      "type": "charge",
+      "name": "Segway Charge",
+      "everySeconds": 6,
+      "damageMult": 2.2
+    }
+  },
+  {
+    "id": "room_service_rat",
+    "name": "Room Service Rat",
+    "kind": "regular",
+    "hp": 28.8,
+    "atk": 11.05,
+    "def": 0,
+    "atkSpd": 1
+  },
+  {
+    "id": "penthouse_pigeon",
+    "name": "Penthouse Pigeon",
+    "kind": "regular",
+    "hp": 21.6,
+    "atk": 9.35,
+    "def": 0,
+    "atkSpd": 1.4
+  },
+  {
+    "id": "valet_raccoon",
+    "name": "Valet Raccoon",
+    "kind": "regular",
+    "hp": 38.4,
+    "atk": 14.45,
+    "def": 1,
+    "atkSpd": 0.9
+  },
+  {
+    "id": "bellhop",
+    "name": "Bellhop",
+    "kind": "regular",
+    "hp": 24,
+    "atk": 9,
+    "def": 0,
+    "atkSpd": 1.2
+  },
+  {
+    "id": "head_bellhop",
+    "name": "Head Bellhop",
+    "kind": "miniboss",
+    "hp": 100,
+    "atk": 16,
+    "def": 2,
+    "atkSpd": 0.9,
+    "special": {
+      "type": "heavyHit",
+      "name": "Luggage Cart",
+      "everySeconds": 5,
+      "damageMult": 1.8
+    }
+  },
+  {
+    "id": "the_concierge",
+    "name": "The Concierge",
+    "kind": "boss",
+    "hp": 300,
+    "atk": 15,
+    "def": 3,
+    "atkSpd": 0.8,
+    "special": {
+      "type": "summon",
+      "name": "Ring for Service",
+      "everySeconds": 7,
+      "enemyId": "bellhop",
+      "max": 2
+    }
   }
 ]

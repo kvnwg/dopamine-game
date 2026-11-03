@@ -165,6 +165,8 @@ describe('world progression', () => {
   it('every world is open, but a fresh raccoon in World 10 is one-shot and sent home', () => {
     const rng = new Rng(4);
     let st = freshState();
+    // (Past the first-run tutorial, which keeps "too tough" quiet: see the next test.)
+    st.dumpster.beginner = { state: 'done', uid: null };
     expect(worldThreat(st, 10).level).toBe('oneShot');
     expect(worldThreat(st, 1).level).not.toBe('oneShot');
     st = applyAction(st, { type: 'travel', world: 10 }, rng, T0).state;
@@ -180,6 +182,16 @@ describe('world progression', () => {
     expect(state.stage.mode).toBe('farm');
     expect(state.stage.showToughHint).toBe(true);
     expect(state.stage.powerAtDeath).not.toBeNull();
+  });
+
+  it('a raccoon still in the first-run tutorial is sent home without the "too tough" hint', () => {
+    const rng = new Rng(4);
+    let st = freshState();
+    expect(st.dumpster.beginner.state).toBe('pending');
+    st = applyAction(st, { type: 'travel', world: 10 }, rng, T0).state;
+    const { state, events } = run(structuredClone(st) as GameState, 15, rng);
+    expect(events.some((e) => e.type === 'playerDeath')).toBe(true);
+    expect(state.stage.showToughHint).toBe(false);
   });
 
   it('travelling to a beaten world farms it; travelling past the frontier pushes', () => {

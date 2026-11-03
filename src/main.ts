@@ -20,11 +20,25 @@ interface HotHook {
 }
 const hot = (window as unknown as { claude?: { hot?: HotHook } }).claude?.hot;
 
+/**
+ * The title screen shows on every start and holds the game until PLAY. `?notitle` skips it (tests and
+ * headless checks); so does a hot update in place, which hands over a game already being played.
+ */
+function showTitle(hotSave: boolean): boolean {
+  if (hotSave) return false;
+  try {
+    return !new URLSearchParams(location.search).has('notitle');
+  } catch {
+    return true;
+  }
+}
+
 async function main(data?: unknown) {
   void DATA;
   applyPaletteToCss();
   const save = (data as { save?: unknown } | undefined)?.save;
-  await boot(typeof save === 'string' ? save : undefined);
+  const handedOver = typeof save === 'string';
+  await boot(handedOver ? save : undefined, { hold: showTitle(handedOver) });
   hot?.snapshot?.(() => ({ save: serialize(getGame()) }));
   createRoot(document.getElementById('root')!).render(createElement(App));
   // Test hook for browser automation in dev builds only.

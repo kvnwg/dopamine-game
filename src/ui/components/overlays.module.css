@@ -306,9 +306,28 @@
 }
 
 .rareTitle {
+  position: relative;
   min-height: 130px;
   display: flex;
   align-items: flex-end;
+}
+/* A tutorial roll's banner ("BEGINNER'S LUCK!", "YOUR FIRST FIND!") over the tier title; it takes no room, so nothing moves. */
+.scriptedBanner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 2 * var(--px));
+  display: flex;
+  justify-content: center;
+  animation: bannerIn 360ms steps(4) both;
+}
+@keyframes bannerIn {
+  0% { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
+  50% { transform: translateY(var(--px)); opacity: 1; }
+  75% { transform: none; }
+}
+.rare[data-calm] .scriptedBanner {
+  animation: none;
 }
 /*
  * The item rises out of the dark as a silhouette in front of its rarity's light, one art pixel at a

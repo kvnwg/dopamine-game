@@ -1,0 +1,104 @@
+{
+  "locations": [
+    {
+      "id": "pizza",
+      "name": "The Pizza Place",
+      "blurb": "The dumpster out back is legendary. So is the chef.",
+      "world": 2,
+      "unlockWorld": 0,
+      "enemies": ["pizza_rat", "crust_pigeon", "dough_boy"],
+      "elites": ["delivery_dave"],
+      "boss": "chef_tony",
+      "ring": "ring_pizza_cutter"
+    },
+    {
+      "id": "mall",
+      "name": "Mall Food Court",
+      "blurb": "Twelve restaurants. One security guard. Zero chill.",
+      "world": 3,
+      "unlockWorld": 5,
+      "enemies": ["pretzel_rat", "skylight_pigeon", "mall_rat"],
+      "elites": ["kiosk_kyle"],
+      "boss": "mall_cop_doug",
+      "ring": "ring_mall_pass"
+    },
+    {
+      "id": "hotel",
+      "name": "Five-Star Hotel",
+      "blurb": "Room service leaves the good stuff in the hallway.",
+      "world": 6,
+      "unlockWorld": 10,
+      "enemies": ["room_service_rat", "penthouse_pigeon", "valet_raccoon"],
+      "elites": ["head_bellhop"],
+      "boss": "the_concierge",
+      "ring": "ring_hotel_key"
+    }
+  ],
+  "perks": [
+    { "id": "garbage_day", "name": "Garbage Day", "tag": "loot", "rarity": "common", "text": "+50% Trash Bags from this run.", "effect": { "bagPct": 50 } },
+    { "id": "bin_diver", "name": "Bin Diver", "tag": "loot", "rarity": "common", "text": "+1 Treasure stop per act.", "effect": { "extraTreasures": 1 } },
+    { "id": "sticky_fingers", "name": "Sticky Fingers", "tag": "loot", "rarity": "common", "text": "+50% run coins from fights.", "effect": { "coinPct": 50 } },
+    { "id": "hot_sauce", "name": "Hot Sauce", "tag": "fire", "rarity": "common", "text": "20% chance on hit to burn for 3 seconds.", "effect": { "burnChance": 0.2, "burnSeconds": 3, "burnAtk": 0.5 } },
+    { "id": "dumpster_fire", "name": "Dumpster Fire", "tag": "fire", "rarity": "rare", "text": "Burning enemies take +25% damage.", "effect": { "burningBonusPct": 25 } },
+    { "id": "grease_fire", "name": "Grease Fire", "tag": "fire", "rarity": "rare", "text": "Every kill sets the next enemy on fire for 3 seconds.", "effect": { "greaseFireSeconds": 3 } },
+    { "id": "sugar_high", "name": "Sugar High", "tag": "speed", "rarity": "common", "text": "+25% attack speed.", "effect": { "atkSpdPct": 25 } },
+    { "id": "zoomies", "name": "Zoomies", "tag": "speed", "rarity": "common", "text": "+15% dodge.", "effect": { "dodge": 15 } },
+    { "id": "gas_station_espresso", "name": "Gas Station Espresso", "tag": "speed", "rarity": "rare", "text": "+60% attack speed for the first 5 seconds of each fight.", "effect": { "rushPct": 60, "rushSeconds": 5 } },
+    { "id": "lucky_penny", "name": "Lucky Penny", "tag": "crit", "rarity": "common", "text": "+10 crit chance.", "effect": { "crit": 10 } },
+    { "id": "sharp_fork", "name": "Sharp Fork", "tag": "crit", "rarity": "common", "text": "+40% crit damage.", "effect": { "critDmg": 40 } },
+    { "id": "bullseye", "name": "Bullseye", "tag": "crit", "rarity": "epic", "text": "Every 4th hit is a guaranteed crit.", "effect": { "critEvery": 4 } },
+    { "id": "thick_fur", "name": "Thick Fur", "tag": "tank", "rarity": "common", "text": "+25% max HP.", "effect": { "hpPct": 25 } },
+    { "id": "lid_shield", "name": "Lid Shield", "tag": "tank", "rarity": "common", "text": "Block the first hit of each fight.", "effect": { "blockFirst": 1 } },
+    { "id": "snack_break", "name": "Snack Break", "tag": "tank", "rarity": "common", "text": "Heal 15% after each fight.", "effect": { "healAfterFightPct": 15 } },
+    { "id": "pizza_box_armor", "name": "Pizza Box Armor", "tag": "tank", "rarity": "rare", "text": "Take 15% less damage. Smells amazing.", "effect": { "armorPct": 15 } },
+    { "id": "nine_lives", "name": "Nine Lives", "tag": "tank", "rarity": "epic", "text": "Once per run, survive a knockout with 30% HP. Borrowed from a cat.", "effect": { "nineLivesPct": 30 } },
+    { "id": "pigeon_pal", "name": "Pigeon Pal", "tag": "crew", "rarity": "rare", "text": "A pigeon pecks for 20% of ATK every 2 seconds.", "effect": { "pigeons": 1, "pigeonAtk": 0.2, "pigeonEvery": 2 } },
+    { "id": "cousin_rocco", "name": "Cousin Rocco", "tag": "crew", "rarity": "epic", "text": "Rocco swings a bottle for 40% of ATK every 1.5 seconds.", "effect": { "roccoAtk": 0.4, "roccoEvery": 1.5 } },
+    { "id": "alley_cat", "name": "Alley Cat", "tag": "crew", "rarity": "rare", "text": "A stray cat finishes off enemies under 15% HP.", "effect": { "executePct": 15 } },
+    { "id": "feral", "name": "Feral", "tag": "chaos", "rarity": "rare", "text": "+1% attack speed per 1% missing HP.", "effect": { "feral": 1 } },
+    { "id": "pocket_sand", "name": "Pocket Sand", "tag": "chaos", "rarity": "rare", "text": "15% chance on hit to stun for 1 second.", "effect": { "stunChance": 0.15, "stunSeconds": 1 } },
+    { "id": "rabid", "name": "Rabid", "tag": "chaos", "rarity": "epic", "text": "10% chance on hit to deal triple damage. Foaming optional.", "effect": { "rabidChance": 0.1, "rabidMult": 3 } },
+    { "id": "double_or_nothing", "name": "Double or Nothing", "tag": "chaos", "rarity": "common", "text": "Each fight starts with a coin flip: +50% ATK or -25% ATK.", "effect": { "flipUpPct": 50, "flipDownPct": 25 } },
+    {
+      "id": "five_alarm_raccoon", "name": "Five-Alarm Raccoon", "tag": "fire", "rarity": "evolution",
+      "text": "Burns spread to all enemies and deal double damage.",
+      "recipe": { "perks": ["hot_sauce", "dumpster_fire"] },
+      "effect": { "burnSpread": 1, "burnBonusPct": 100 }
+    },
+    {
+      "id": "turbo_trash_panda", "name": "Turbo Trash Panda", "tag": "speed", "rarity": "evolution",
+      "text": "Every dodge triggers a free attack.",
+      "recipe": { "perks": ["sugar_high", "zoomies"] },
+      "effect": { "dodgeAttack": 1 }
+    },
+    {
+      "id": "jackpot_paws", "name": "Jackpot Paws", "tag": "crit", "rarity": "evolution",
+      "text": "+100% crit damage; crits drop run coins.",
+      "recipe": { "perks": ["lucky_penny", "sharp_fork"] },
+      "effect": { "critDmg": 100, "critCoins": 1 }
+    },
+    {
+      "id": "fortress_of_junk", "name": "Fortress of Junk", "tag": "tank", "rarity": "evolution",
+      "text": "Block one hit every 5 seconds.",
+      "recipe": { "perks": ["thick_fur", "lid_shield"] },
+      "effect": { "blockEvery": 5 }
+    },
+    {
+      "id": "pigeon_air_force", "name": "Pigeon Air Force", "tag": "crew", "rarity": "evolution",
+      "text": "Three pigeons instead of one.",
+      "recipe": { "perks": ["pigeon_pal"], "anyTag": "crew" },
+      "effect": { "pigeons": 2 }
+    },
+    {
+      "id": "unhinged", "name": "Unhinged", "tag": "chaos", "rarity": "evolution",
+      "text": "Below 30% HP, every hit stuns.",
+      "recipe": { "perks": ["feral", "pocket_sand"] },
+      "effect": { "stunBelowHpPct": 30 }
+    }
+  ],
+  "curses": [
+    { "id": "paper_cuts", "name": "Paper Cuts", "text": "Lose 1% HP at every stop.", "effect": { "paperCutsPct": 1 } },
+    { "id": "sticky_paws", "name": "Sticky Paws", "text": "-15% attack speed.", "effect": { "atkSpdPct": -15 } },
+    { "id": "smelly", "name": "Smelly", "text": "+1 fight per act. They can smell you coming.", "effect": { "extraFights": 1 } }
+  ]
+}

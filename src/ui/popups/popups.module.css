@@ -22,14 +22,19 @@
   background: var(--cream);
   box-shadow: 0 calc(2 * var(--px)) 0 0 var(--ink), 0 30px 80px rgba(0, 0, 0, 0.5);
   color: var(--ink);
-  animation: pop 240ms steps(3);
+  animation: pop 260ms both;
 }
 .wide {
   width: 1000px;
 }
 /* Slides up into place (no growing: everything in it stays on the pixel grid). */
+/* A popup drops in from above, overshoots a pixel and settles (whole pixels, held per keyframe). */
 @keyframes pop {
-  from { transform: translateY(calc(4 * var(--px))); opacity: 0; }
+  0% { transform: translateY(calc(-8 * var(--px))); opacity: 0; animation-timing-function: steps(1, end); }
+  25% { transform: translateY(calc(-3 * var(--px))); opacity: 1; animation-timing-function: steps(1, end); }
+  50% { transform: translateY(var(--px)); animation-timing-function: steps(1, end); }
+  75% { transform: translateY(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  100% { transform: translateY(0); }
 }
 .ribbon {
   --rb: #42a5f5;
@@ -143,6 +148,9 @@
 .up,
 .down,
 .same {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--px);
   height: calc(7 * var(--px));
   padding: 0 calc(2 * var(--px));
   font-size: 26px;

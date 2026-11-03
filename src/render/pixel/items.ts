@@ -1698,6 +1698,68 @@ const RING_PLASTIC_DIAMOND: Rows = [
   '................',
 ];
 
+// ------------------------------------------------------------------ Heist rings (a win's rare drop; never in the dumpster)
+
+/** A steel band crowned with a pizza cutter: its wheel and a red handle. */
+const RING_PIZZA_CUTTER: Rows = [
+  '................',
+  '......kkkk......',
+  '.....k5544k.....',
+  '....k554433kkkk.',
+  '....k541132eeRk.',
+  '....k441122RRrk.',
+  '.....k3322kkkkk.',
+  '......kkkk......',
+  '...kk455553kk...',
+  '..k45kkkkkk43k..',
+  '.k45k......k33k.',
+  '.k43k......k32k.',
+  '..k33kkkkkk32k..',
+  '...kk333322kk...',
+  '.....kkkkkk.....',
+  '................',
+];
+
+/** A teal plastic band with a laminated mall pass clipped on: photo, barcode, blue stripe. */
+const RING_MALL_PASS: Rows = [
+  '................',
+  '...kkkkkkkkkk...',
+  '...kWWWWWWW5k...',
+  '...kUUUUUUUuk...',
+  '...kWxxW1W15k...',
+  '...kWxxW1W15k...',
+  '...k55555444k...',
+  '...kkkkkkkkkk...',
+  '...kkaAAAAgkk...',
+  '..kaAkkkkkkagk..',
+  '.kaAk......kggk.',
+  '.kagk......kggk.',
+  '..kggkkkkkkggk..',
+  '...kkggggggkk...',
+  '.....kkkkkk.....',
+  '................',
+];
+
+/** A gold band with an old hotel key fob: a red diamond with its room number. */
+const RING_HOTEL_KEY: Rows = [
+  '.......kk.......',
+  '......keRk......',
+  '.....keRRRk.....',
+  '....keRYYRrk....',
+  '...keRRRYRRrk...',
+  '....kRRRYRrk....',
+  '.....kRRrrk.....',
+  '......krrk......',
+  '...kkyYYYYOkk...',
+  '..kyYkkkkkkyOk..',
+  '.kyYk......kOOk.',
+  '.kyOk......kOok.',
+  '..kOOkkkkkkOok..',
+  '...kkOOOOookk...',
+  '.....kkkkkk.....',
+  '................',
+];
+
 /** Every item icon by item id, in items.json order (sheet() relies on this order). */
 export const ITEM_SPRITES: Record<string, Rows> = {
   hat_traffic_cone: REF_CONE,
@@ -1784,6 +1846,9 @@ export const ITEM_SPRITES: Record<string, Rows> = {
   ring_mood: RING_MOOD,
   ring_gold_band: RING_GOLD_BAND,
   ring_plastic_diamond: RING_PLASTIC_DIAMOND,
+  ring_pizza_cutter: RING_PIZZA_CUTTER,
+  ring_mall_pass: RING_MALL_PASS,
+  ring_hotel_key: RING_HOTEL_KEY,
 };
 
 /** The pixel of each weapon icon where the paw holds it (the weapon is rotated about this point). */

@@ -12,7 +12,7 @@
  * - new items go to the bag; the player equips by dragging them onto the raccoon;
  * - the bag has limited space and always keeps the highest-power items (the rest are scrapped).
  */
-import { BAL, DATA, RARITIES, type Rarity } from '../../data';
+import { BAL, DATA, RARITIES, type Rarity, type Slot } from '../../data';
 import type { Rng } from '../rng';
 import type { GameState } from '../state';
 import type { CoreEvent, Item, RollPlacement } from '../types';
@@ -97,6 +97,8 @@ export function scrapValue(state: GameState, item: Item): { coins: number; xp: n
 }
 
 export function scrapItem(d: GameState, item: Item, ev: CoreEvent[], auto: boolean): void {
+  // Scrapping the beginner's luck item instead of wearing it ends the tutorial too (without its gems).
+  if (d.dumpster.beginner.uid === item.uid) d.dumpster.beginner = { state: 'done', uid: null };
   const { coins, xp } = scrapValue(d, item);
   d.currencies.coins += coins;
   d.lifetime.itemsRecycled += 1;
@@ -128,8 +130,17 @@ export function equip(d: GameState, item: Item, ev: CoreEvent[], auto: boolean):
   d.equipped[item.slot] = item;
   d.lifetime.itemsEquipped += 1;
   ev.push({ type: 'equip', item: snap(item), replaced, auto });
+  // Wearing the beginner's luck item ends the tutorial.
+  const lucky = d.dumpster.beginner;
+  if (lucky.state === 'rolled' && lucky.uid === item.uid) {
+    d.dumpster.beginner = { state: 'done', uid: null };
+    d.currencies.gems += BAL.tutorial.rewardGems;
+    ev.push({ type: 'tutorialDone', gems: BAL.tutorial.rewardGems });
+  }
   const gained = computeStats(d).HP - hpBefore;
-  if (gained > 0 && d.battle.phase !== 'dead') d.battle.playerHp += gained;
+  // (During a heist this is the Alley's waiting battle; the run follows the raccoon's stats itself.)
+  const b = d.heist?.run ? d.heist.run.main : d.battle;
+  if (gained > 0 && b.phase !== 'dead') b.playerHp += gained;
   if (replaced) addToBag(d, replaced, ev);
 }
 
@@ -157,7 +168,12 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
       d.roll.sinceLucky = 0;
       luck *= BAL.roll.luckyRollMult + up.luckyMult;
     }
-    if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) {
+    if (d.roll.goldenLeft > 0) {
+      // A heist's Golden Dumpster: its spins are golden at much higher luck.
+      d.roll.goldenLeft -= 1;
+      golden = true;
+      luck *= BAL.heist.golden.luckMult;
+    } else if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) {
       golden = true;
       luck *= BAL.roll.goldenLuckMult;
     }
@@ -169,7 +185,7 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
  * Rolls one reel's item at `luck`. `dry` is the bad-luck streak as of this reel (earlier reels in
  * the same spin count), so protection triggers at most once per streak.
  */
-function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number): Item {
+function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number, slotOverride?: Slot, avoidBase?: string): Item {
   const dz = d.dumpster;
   const theme = dz.theme;
   if (!dz.firstDiveDone) {
@@ -188,11 +204,11 @@ function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number): Item {
   } else {
     rarity = rollRarity(luck, rng);
   }
-  const slot = rollSlot(rng);
+  const slot = slotOverride ?? rollSlot(rng);
   const level = rollItemLevel(d.player.level, rng);
   const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
   rarity = bumpRarity(rarity, rarityBump(enchants));
-  const base = pickBaseItem(slot, theme, rarity, rng, d.rebirths);
+  const base = pickBaseItem(slot, theme, rarity, rng, d.rebirths, avoidBase);
   return createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
 }
 
@@ -232,6 +248,9 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
   const reels: { item: Item; odds: number; mults: number[]; landAt: number; landed: boolean }[] = [];
   let dry = d.dumpster.dryStreak;
+  // The tutorial scripts two spins: the very first (rollReelItem gives the tutorial item) and, a little
+  // later, beginner's luck: its first reel chains BAL.tutorial's tokens into a rare item.
+  const scripted = !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
   for (let i = 0, n = reelCount(d); i < n; i++) {
     // No tokens on the tutorial spin or a forced (debug) roll; dev cheats can force a chain.
     let mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng) : [];
@@ -239,18 +258,39 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
       mults = d.dumpster.forcedTokens;
       d.dumpster.forcedTokens = null;
     }
-    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry);
+    const beginner = scripted === 'beginner' && i === 0;
+    if (beginner) {
+      mults = [...BAL.tutorial.beginnerTokens];
+      d.dumpster.forcedRarity = BAL.tutorial.beginnerRarity;
+    }
+    // Beginner's luck lands in the tutorial item's slot: it upgrades what the raccoon got first.
+    const tut = BAL.dumpster.tutorialItem.baseId;
+    const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
+    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined);
+    if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     reels.push({ item, odds: itemOddsOneIn(item), mults, landAt: baseSpinSeconds + mults.length * stepSeconds, landed: false });
   }
   const spinSeconds = Math.max(...reels.map((r) => r.landAt));
-  d.roll.current = { reels, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false };
+  d.roll.current = { reels, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false, scripted };
   d.roll.timer = 0;
   ev.push({
     type: 'spinStart',
     reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt })),
     lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds,
+    ...(scripted ? { scripted } : {}),
   });
+}
+
+/**
+ * Whether this spin is beginner's luck (BAL.tutorial): new games only, before the first rebirth, once
+ * the raccoon has dressed up (the tutorial's Equip best) and a few items have rolled, or a few more
+ * regardless.
+ */
+export function beginnerLuckDue(d: GameState): boolean {
+  const t = BAL.tutorial;
+  if (d.dumpster.beginner.state !== 'pending' || d.rebirths > 0) return false;
+  return d.roll.count >= t.beginnerAtRolls || (d.roll.count >= t.beginnerAfterRolls && d.lifetime.itemsEquipped >= t.beginnerAfterEquips);
 }
 
 /**
@@ -278,7 +318,7 @@ function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
     const placed = decidePlacement(d, item);
     ev.push({
       type: 'roll', item, reel, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: r.odds,
-      luck: spin.luck * mult, mult, placed, newRecord,
+      luck: spin.luck * mult, mult, placed, newRecord, ...(spin.scripted && reel === 0 ? { scripted: spin.scripted } : {}),
     });
     registerCodex(d, item, ev);
     if (placed === 'bag') addToBag(d, item, ev);
@@ -384,6 +424,8 @@ export function scrapAllFromBag(d: GameState, ev: CoreEvent[]): number {
     coins += v.coins;
     xp += v.xp;
     count++;
+    // Scrapping the beginner's luck item ends the tutorial (without its gems).
+    if (d.dumpster.beginner.uid === it.uid) d.dumpster.beginner = { state: 'done', uid: null };
   }
   if (count === 0) return 0;
   d.inventory = keep;

@@ -29,8 +29,8 @@ export const LAYERS = {
 
 /** dark, mid, light */
 type Ramp = readonly [string, string, string];
-/** center x, center y, radius */
-type Clump = readonly [number, number, number];
+/** center x, center y, radius (x), and an optional y radius for tall crowns */
+type Clump = readonly [number, number, number, number?];
 /** dark, mid, light, and an optional sparkle for the lit rim */
 type LeafTones = readonly [string, string, string, string | null];
 
@@ -130,25 +130,19 @@ function tidy(b: PixelBuf): void {
  */
 function foliage(plot: (x: number, y: number, c: string) => void, clumps: readonly Clump[], tones: LeafTones): void {
   const [dark, mid, light, shine] = tones;
-  for (const [cx, cy, r] of clumps) {
-    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
-      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-        const dx = x + 0.5 - cx;
-        const dy = y + 0.5 - cy;
-        if (dx * dx + dy * dy > r * r) continue;
+  for (const [cx, cy, rx, ryIn] of clumps) {
+    const ry = ryIn ?? rx;
+    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        // unit-circle coordinates, so tall crowns shade like round ones
+        const u = (x + 0.5 - cx) / rx;
+        const v = (y + 0.5 - cy) / ry;
+        if (u * u + v * v > 1) continue;
         let c = mid;
-        const sx = dx + r * 0.38;
-        const sy = dy + r * 0.5;
-        if (sx * sx + sy * sy > r * r) c = dark;
-        else {
-          const lx = dx - r * 0.3;
-          const ly = dy - r * 0.4;
-          if (lx * lx + ly * ly > r * r) {
-            c = light;
-            const hx = dx - r * 0.52;
-            const hy = dy - r * 0.7;
-            if (shine && hx * hx + hy * hy > r * r * 1.18) c = shine;
-          }
+        if ((u + 0.38) ** 2 + (v + 0.5) ** 2 > 1) c = dark;
+        else if ((u - 0.3) ** 2 + (v - 0.4) ** 2 > 1) {
+          c = light;
+          if (shine && rx > 7 && (u - 0.55) ** 2 + (v - 0.75) ** 2 > 1.3) c = shine;
         }
         plot(x, y, c);
       }
@@ -231,8 +225,13 @@ export function farLayer(): PixelBuf {
     for (let y = t; y < H; y++) setPx(b, x, y, F.back);
     setPx(b, x, t, F.backRim);
   }
-  // a water tower on the back hills
+  // a water tower and a few tiny groves on the back hills
   stamp(b, WATER_TOWER, 236, back(240) - 9, { wrapX: true, recolor: hazeMap('w543', 0.5) });
+  const groves: Clump[] = [];
+  for (const [gx, n] of [[58, 2], [148, 3], [318, 2]] as const) {
+    for (let k = 0; k < n; k++) groves.push([gx + k * 4, back(gx + k * 4) + 3, 2.6]);
+  }
+  foliage((px, py, c) => dot(b, px, py, c), groves, [hz('g', 0.62), hz('G', 0.56), hz('l', 0.54), null]);
 
   // nearer hills
   for (let x = 0; x < TILE_W; x++) {
@@ -241,13 +240,18 @@ export function farLayer(): PixelBuf {
     setPx(b, x, t, F.hillRim);
   }
 
-  // tree line: clusters of round crowns of mixed sizes along the meadow edge
+  // tree line: clusters of round crowns of mixed sizes along the meadow edge, the odd tall poplar
   const crowns: Clump[] = [];
   let x = 0;
   for (let i = 0; x < TILE_W - 6; i++) {
     const size = hash01(i * 7 + 11);
-    const r = size < 0.22 ? 5.6 : size < 0.62 ? 4.4 : 3.4;
     const lift = Math.floor(hash01(i * 7 + 12) * 3);
+    if (size > 0.88) {
+      crowns.push([x + 2.6, field + 2 - 7.5 - lift, 2.6, 7.5]);
+      x += 5;
+      continue;
+    }
+    const r = size < 0.22 ? 5.6 : size < 0.62 ? 4.4 : 3.4;
     crowns.push([x + r, field + 2 - r - lift, r]);
     x += Math.round(r * 1.35) + (hash01(i * 7 + 14) < 0.14 ? 9 : 0);
   }
@@ -519,16 +523,15 @@ function tree(s: TreeSpec): PixelBuf {
   return ink(b);
 }
 
+/** A clipped hedge: a row of leafy bumps on top of a flat front face. */
 function hedge(w: number, h: number): PixelBuf {
   const b = blank(w, h);
-  const top: Clump[] = [];
-  const low: Clump[] = [];
+  const bumps: Clump[] = [];
   const n = Math.max(2, Math.round((w - 4) / 5) + 1);
-  for (let i = 0; i < n; i++) top.push([3 + (i * (w - 6)) / (n - 1), 3.6, 3.6]);
-  for (let i = 0; i < n - 1; i++) low.push([3 + ((i + 0.5) * (w - 6)) / (n - 1), h - 4, 3.6]);
-  fill(b, 0, 4, w, h - 4, 'G');
-  foliage((x, y, c) => setPx(b, x, y, c), top, LEAVES);
-  foliage((x, y, c) => setPx(b, x, y, c), low, LEAVES);
+  for (let i = 0; i < n; i++) bumps.push([3 + (i * (w - 6)) / (n - 1), 3.6, 3.6]);
+  foliage((x, y, c) => setPx(b, x, y, c), bumps, LEAVES);
+  fill(b, 0, 5, w, h - 6, 'G');
+  fill(b, 0, 5, 1, h - 6, 'l');
   fill(b, 0, h - 1, w, 1, 'g');
   tidy(b);
   despeckle(b);
@@ -601,16 +604,17 @@ const MAILBOX: Rows = [
 ];
 
 const HYDRANT: Rows = [
-  '...eR...',
-  '..eRRr..',
-  '.ewRRRr.',
-  'eRRRRRrr',
-  '.eRRRrr.',
-  'eeRRRRrr',
-  'eeRRRRrr',
-  '.eRRRrr.',
-  '.eRRRrr.',
-  'eRRRRRrr',
+  '...eRr...',
+  '..ewRRr..',
+  '..eRRRr..',
+  '.eRRRRrr.',
+  '..eRRrr..',
+  'eeeRRrrrr',
+  'RReRRrrrr',
+  '..eRRrr..',
+  '..eRRrr..',
+  '.eRRRRrr.',
+  '.rrrrrrr.',
 ];
 
 const CAN: Rows = [
@@ -730,7 +734,7 @@ export function midLayer(): PixelBuf {
   plant(b, can, 225);
   plant(b, can, 236, GROUND, true);
   plant(b, picketFence(10), 299);
-  plant(b, hydrant, 290);
+  plant(b, hydrant, 313);
   plant(b, shrub(9), 22);
   plant(b, shrub(9), 47);
   plant(b, hedge(14, 8), 2);
@@ -745,8 +749,8 @@ const CRACKS: readonly Rows[] = [
 ];
 
 const PEBBLES: readonly Rows[] = [
+  ['.w4.', 'w443', '.33.'],
   ['w4.', '433'],
-  ['44', '43'],
 ];
 
 export function groundLayer(): PixelBuf {
@@ -766,13 +770,6 @@ export function groundLayer(): PixelBuf {
   fill(b, 0, walk1 + 1, TILE_W, 1, '3');
   fill(b, 0, walk1 + 2, TILE_W, 1, 'G');
   fill(b, 0, walk1 + 3, TILE_W, H - walk1 - 3, 'l');
-  // grass blades flopping over the curb
-  for (let i = 0; i < 22; i++) {
-    const x = Math.floor(((i + hash01(i + 900) * 0.6) / 22) * TILE_W);
-    dot(b, x, 3, 'G');
-    dot(b, x + 1, 3, 'G');
-    if (hash01(i + 950) < 0.5) dot(b, x + 1, 4, 'G');
-  }
   // slab joints: slanted grooves with a lit lip
   for (let x0 = 12; x0 < TILE_W; x0 += 38) {
     for (let y = walk0; y < walk1; y++) {
@@ -794,22 +791,35 @@ export function groundLayer(): PixelBuf {
 
 // ------------------------------------------------------------------ foreground
 
-/** A grass tuft from blades given as [base x, tip x, tip y], with its base on the bottom row. */
-function tuft(w: number, h: number, blades: ReadonlyArray<readonly [number, number, number]>): PixelBuf {
+/**
+ * A solid grass clump whose top is a zigzag of blade tips, given as [x, tip row]. Each blade's
+ * left flank catches the light; the clump darkens toward its roots on the bottom row.
+ */
+function tuft(w: number, h: number, tips: ReadonlyArray<readonly [number, number]>): PixelBuf {
   const b = blank(w, h);
-  for (const [bx, tx, ty] of blades) {
-    for (let y = h - 1; y >= ty; y--) {
-      const t = (h - 1 - y) / Math.max(1, h - 1 - ty);
-      const x = Math.round(bx + (tx - bx) * t);
-      const c = y === ty ? 'L' : y >= h - 2 ? 'G' : 'l';
+  for (let x = 0; x < w; x++) {
+    let top = h;
+    let tip = tips[0];
+    for (const t of tips) {
+      const y = t[1] + Math.abs(x - t[0]) * 2;
+      if (y < top) {
+        top = y;
+        tip = t;
+      }
+    }
+    for (let y = top; y < h; y++) {
+      let c = 'G';
+      if (y === top && x === tip[0]) c = 'L';
+      else if (x <= tip[0] && y < top + 3) c = 'l';
+      if (y === h - 1) c = 'g';
       setPx(b, x, y, c);
-      if (y >= h - 3) setPx(b, x + 1, y, y >= h - 2 ? 'g' : 'G');
     }
   }
   return ink(b);
 }
 
-const DAISY: Rows = [
+/** A little flower: white petals, gold heart (recolor w / y for other kinds). */
+const FLOWER: Rows = [
   '.w.',
   'wyw',
   '.w.',
@@ -818,33 +828,27 @@ const DAISY: Rows = [
   '.G.',
 ];
 
-const TULIP: Rows = [
-  'R.R',
-  'eRR',
-  'rRr',
-  '.G.',
-  'lG.',
-  '.G.',
-];
-
 export function fgLayer(): PixelBuf {
   const H = LAYERS.fg.h;
   const b = blank(TILE_W, H);
   const tufts = [
-    tuft(10, 7, [[2, 0, 1], [4, 4, 0], [5, 8, 2], [3, 2, 3]]),
-    tuft(8, 6, [[2, 1, 0], [3, 5, 1], [4, 7, 3]]),
-    tuft(12, 8, [[2, 0, 2], [4, 3, 0], [6, 7, 1], [7, 10, 3], [5, 5, 4]]),
+    tuft(11, 7, [[2, 2], [5, 0], [8, 1]]),
+    tuft(8, 6, [[2, 1], [5, 0]]),
+    tuft(14, 8, [[2, 3], [5, 0], [8, 1], [11, 3]]),
   ];
-  const daisy = ink(fromRows(DAISY));
-  const tulip = ink(fromRows(TULIP));
+  const flowers = [
+    ink(fromRows(FLOWER)),
+    ink(fromRows(FLOWER, { w: 'P', y: 'y' })),
+    ink(fromRows(FLOWER, { w: 'y', y: 'O' })),
+  ];
   const n = 7;
   for (let i = 0; i < n; i++) {
     const x = Math.floor(((i + hash01(i + 700) * 0.5) / n) * TILE_W);
     const t = tufts[i % tufts.length];
     put(b, t, x, H - t.h + 1, hash01(i + 800) < 0.5);
     if (i % 3 !== 1) {
-      const f = i % 3 === 0 ? daisy : tulip;
-      put(b, f, x + t.w - 2, H - f.h + 2);
+      const f = flowers[i % flowers.length];
+      put(b, f, x + t.w - 1, H - f.h + 2);
     }
   }
   return b;
@@ -916,7 +920,7 @@ export function sheet(): SheetEntry[] {
     ['far_house_gable', FAR_HOUSE_GABLE], ['far_house_hip', FAR_HOUSE_HIP], ['water_tower', WATER_TOWER],
     ['window', WINDOW], ['picture_window', PICTURE_WINDOW], ['round_window', ROUND_WINDOW], ['door', DOOR],
     ['shutter', SHUTTER], ['mailbox', MAILBOX], ['hydrant', HYDRANT], ['can', CAN], ['paw', PAW],
-    ['daisy', DAISY], ['tulip', TULIP],
+    ['flower', FLOWER],
     ...CRACKS.map((r, i): [string, Rows] => [`crack${i}`, r]),
     ...PEBBLES.map((r, i): [string, Rows] => [`pebble${i}`, r]),
     ...CLOUDS.map((r, i): [string, Rows] => [`cloud${i}`, r]),

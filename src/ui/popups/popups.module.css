@@ -339,6 +339,49 @@
   font-family: var(--font-display);
   font-size: 44px;
 }
+/* Offline rolls: the count, then the rare finds that went into the bag (best first, glowing). */
+.offlineRolls {
+  margin-top: calc(4 * var(--px));
+  text-align: center;
+}
+.rolledLine {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+}
+.findsTitle,
+.noFinds {
+  margin: calc(2 * var(--px)) 0 0;
+  font-size: 26px;
+  opacity: 0.8;
+}
+.finds {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  margin-top: calc(3 * var(--px));
+}
+.find {
+  flex: none;
+}
+.findBest {
+  box-shadow: 0 0 0 var(--px) var(--c);
+  animation: findGlow 1.2s steps(2) infinite;
+}
+@keyframes findGlow {
+  50% {
+    box-shadow: 0 0 0 var(--px) var(--c), 0 0 calc(3 * var(--px)) var(--c);
+    filter: brightness(1.15);
+  }
+}
+.findMore {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 34px;
+  padding: 0 calc(2 * var(--px));
+}
 
 /* ------------------------------------------------------------ codex */
 .codexSlot {

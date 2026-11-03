@@ -31,7 +31,7 @@
 
 .bank {
   --glow: #ffc21a;
-  --win: #ffc21a;
+  --prize: #ffc21a;
   --pay: #ffc21a;
   --frame-c: #2b2140;
   --on: #fff3b0;
@@ -192,8 +192,8 @@
 }
 /* After an Epic-or-better result: every bulb blinks in its color until the next spin. */
 .bank[data-bulbs='win'] {
-  --on: var(--win);
-  --off: var(--win);
+  --on: var(--prize);
+  --off: var(--prize);
 }
 .bank[data-bulbs='win'] .bulbs i {
   animation: bulbBlink 0.36s steps(1) infinite;
@@ -331,6 +331,10 @@
   background: color-mix(in srgb, var(--rc, #9e9e9e) 35%, transparent);
   animation: cellReveal 0.42s steps(3) both;
 }
+/* Shown before this spin began (the last result rolling away, a reel seen again): no flash. */
+.cell[data-settled] {
+  animation: none;
+}
 /* Behind rays the result's row is only tinted, so the light shows through. */
 .reel[data-rays] .cell[data-revealed] {
   background: color-mix(in srgb, var(--rc, #9e9e9e) 16%, transparent);
@@ -423,6 +427,9 @@
 .bank[data-side] .cell[data-revealed] .tier {
   display: flex;
   animation: tierIn 0.3s steps(3) both;
+}
+.bank[data-side] .cell[data-settled] .tier {
+  animation: none;
 }
 @keyframes tierIn {
   from { transform: translateY(calc(-2 * var(--px))); opacity: 0; }

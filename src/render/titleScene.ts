@@ -1,7 +1,11 @@
 /**
  * The title screen's picture (src/ui/components/TitleScreen.tsx): World 1's street scrolling in
- * parallax with the bare raccoon walking in place, the logo and the PLAY button, and the PLAY
- * sequence (button flash and sparks, the raccoon's hop, then an iris onto the game).
+ * parallax with the bare raccoon walking in place, the logo (bobbing a pixel, a shine and twinkles now
+ * and then), the PLAY button (breathing a pixel, a glint now and then), dust motes and a passing flock
+ * of birds; and the PLAY sequence: the button sinks and flashes, throws sparks, stars and a ring, the
+ * raccoon crouches, hops and cheers, an iris closes on him, the game starts under it, and the iris
+ * opens on him in the battle. Reduce motion keeps the scene still (he idles) and fades in four steps
+ * instead of the hop and the iris; reduce flashing leaves out the button's flash.
  *
  * One pixel grid: everything is drawn on a canvas of art pixels (TITLE.w x TITLE.h, one canvas pixel
  * per art pixel) that the page shows at exactly P stage px per canvas pixel (1080 x 1920), never
@@ -157,7 +161,7 @@ export interface TitleArt {
   clouds: Array<{ buf: PixelBuf; y: number; speed: number; scroll0: number; parallax: number }>;
   /** Scenery layers (tiling), their top rows and opening scroll. */
   layers: Record<LayerName, { buf: PixelBuf; y: number; scroll0: number }>;
-  /** Every hero sheet frame, mirrored to face right like the battle shows him; no gear. */
+  /** The hero sheet's frames the title shows (others empty), mirrored to face right like the battle shows him; no gear. */
   hero: PixelBuf[];
   /** The logo, one buffer per line. */
   logo: PixelBuf[];
@@ -166,12 +170,11 @@ export interface TitleArt {
   bird: string;
 }
 
-let cached: { key: string; art: TitleArt } | null = null;
-
-/** The title's art for a game name ("Dumpster Legend": a line per word) and PLAY label. Built once. */
+/**
+ * The title's art for a game name ("Dumpster Legend": a line per word) and PLAY label. Not kept: the
+ * title shows once per start, and its buffers can go once it closes.
+ */
 export function titleArt(name: string, label: string): TitleArt {
-  const key = `${name}|${label}`;
-  if (cached?.key === key) return cached.art;
   const world = worldArt(1);
   const { set } = world;
   const seed = worldSeed(1);
@@ -197,19 +200,18 @@ export function titleArt(name: string, label: string): TitleArt {
   const words = name.trim().split(/\s+/);
   const lines = words.length > 1 ? [words[0], words.slice(1).join(' ')] : words;
   const [r, g, b] = rgb(atmo.sky[0]);
-  const art: TitleArt = {
+  const shown = new Set<number>([...HERO_SHEET.anims.idle.frames, ...HERO_WALK.frames, FRAME.up, FRAME.squash, ...FRAME.cheer]);
+  return {
     sky: paintSky(atmo, TITLE.w, TITLE.h, seed, world.scale),
     vignette: paintVignette(TITLE.w, TITLE.h, atmo.vignette, seed),
     glow: glowOverlay(atmo, seed),
     clouds,
     layers,
-    hero: HERO_SHEET.frames.map((_, f) => flipX(frameBuf(HERO_SHEET, f))),
+    hero: HERO_SHEET.frames.map((_, f) => (shown.has(f) ? flipX(frameBuf(HERO_SHEET, f)) : blank(HERO_SHEET.w, HERO_SHEET.h))),
     logo: lines.map((l, i) => logoLine(l, i === 0 ? LOGO_GOLD : LOGO_ICE, i === 0 ? LOGO_DEPTH.gold : LOGO_DEPTH.ice)),
     play: playLabel(label),
     bird: `rgb(${Math.round(r * 0.55)}, ${Math.round(g * 0.55)}, ${Math.round(b * 0.55)})`,
   };
-  cached = { key, art };
-  return art;
 }
 
 // ------------------------------------------------------------------ the renderer
@@ -243,16 +245,20 @@ const SEQ = {
   shut: 1040,
   covered: 1150,
   /** The cover holds at least this long after the game starts, so the battle has drawn under it. */
-  hold: 150,
+  hold: 120,
   open: 420,
 } as const;
 const FADE = { start: 120, step: 90, steps: 4 } as const;
-/** The shine across the logo: seconds before the first, between them, and to cross it. */
-const LOGO_SHINE = { delay: 1.3, period: 5.2, sweep: 0.7 } as const;
+/**
+ * Glints across the button and shines across the logo: seconds before the first, between them, and
+ * to cross. A shine always comes 1.2 s after a glint, so the two never run at once.
+ */
+const GLINT = { delay: 1, period: 2.6, sweep: 0.45 } as const;
+const LOGO_SHINE = { delay: 2.2, period: 5.2, sweep: 0.7 } as const;
 /** The hop: height (art px) every 30 ms. */
 const HOP = [2, 4, 6, 7, 8, 8, 7, 6, 4, 2] as const;
 /** The iris holds around him at this radius (art px) before it shuts. */
-const SPOT_R = 15;
+const SPOT_R = 17;
 
 interface Bit {
   x: number;
@@ -884,9 +890,8 @@ export class TitleRenderer {
     ctx.fillRect(fx, fy + fh - 2, fw, 2);
     ctx.drawImage(this.img.play, fx + PAD.x, fy + PAD.y);
     // Now and then a glint sweeps across the face.
-    if (!this.seq && !this.opts.reduceMotion) {
-      const period = 2.6;
-      const k = (this.t % period) / 0.45;
+    if (!this.seq && !this.opts.reduceMotion && this.t >= GLINT.delay) {
+      const k = ((this.t - GLINT.delay) % GLINT.period) / GLINT.sweep;
       if (k < 1) {
         const head = Math.round(-fh + k * (fw + fh + 6));
         ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
@@ -904,13 +909,14 @@ export class TitleRenderer {
     if (this.seq && !this.opts.reduceMotion && ms < 280) {
       const k = Math.floor(ms / 70);
       const g = 2 + k * 3;
-      ctx.globalAlpha = [0.9, 0.7, 0.45, 0.25][k];
+      const base = ctx.globalAlpha;
+      ctx.globalAlpha = base * [0.9, 0.7, 0.45, 0.25][k];
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(x - g + 1, y - g, b.w + 2 * g - 2, 1);
       ctx.fillRect(x - g + 1, y + b.h - 1 + g, b.w + 2 * g - 2, 1);
       ctx.fillRect(x - g, y - g + 1, 1, b.h + 2 * g - 2);
       ctx.fillRect(x + b.w - 1 + g, y - g + 1, 1, b.h + 2 * g - 2);
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = base;
     }
   }
 

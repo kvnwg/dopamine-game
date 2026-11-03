@@ -102,8 +102,9 @@ interface Run {
   strips: Strip[];
   layout: ReelLayout;
   t0: number;
-  /** Stops each reel has reached (its tokens, then its item). */
+  /** Stops each reel has reached (its tokens, then its item); and how many it had when the run was built. */
   reached: number[];
+  before: number[];
   plan: Tease | null;
   /** The reel that stops last. */
   lastReel: number;
@@ -148,6 +149,7 @@ function buildRun(spin: NonNullable<GameState['roll']['current']>, prev: (StripC
     layout: reelLayout(n),
     t0: performance.now() - elapsed,
     reached,
+    before: reached.slice(),
     plan,
     lastReel,
     notch: strips.map(() => 0),
@@ -195,13 +197,15 @@ let fxId = 1;
  * stay put; a landed stop's cell is revealed straight on the DOM (data-revealed).
  */
 const Cells = memo(function Cells({
-  strip, runKey, reel, layout, reached, idle, cellRefs,
+  strip, runKey, reel, layout, reached, before, idle, cellRefs,
 }: {
   strip: Strip;
   runKey: string;
   reel: number;
   layout: ReelLayout;
   reached: number;
+  /** Stops reached before this run was built (shown without the landing flash). */
+  before: number;
   idle: boolean;
   cellRefs: Map<string, HTMLDivElement>;
 }) {
@@ -212,6 +216,7 @@ const Cells = memo(function Cells({
         const stopAt = strip.stops.findIndex((p) => p.idx === j);
         // Real cells show in color: the last result at the bottom always, stops once reached.
         const revealed = c.real && (stopAt < 0 || reached > stopAt || (idle && j === res));
+        const settled = revealed && (stopAt < 0 || before > stopAt || idle);
         return (
           <div
             key={j}
@@ -219,6 +224,7 @@ const Cells = memo(function Cells({
             data-rarity={c.rarity}
             data-token={c.token !== null || undefined}
             data-revealed={revealed ? '' : undefined}
+            data-settled={settled ? '' : undefined}
             ref={
               stopAt >= 0
                 ? (el) => {
@@ -526,7 +532,7 @@ export function ReelBank() {
             }
             if (tier > r.best) {
               r.best = tier;
-              bank.style.setProperty('--win', tierLight(tier));
+              bank.style.setProperty('--prize', tierLight(tier));
             }
             addFx({ kind: 'land', reel: i, tier }, landFx(tier).confetti ? 2400 : landFx(tier).stamp ? 1900 : 900);
             if (landFx(tier).rays && !calm) setRays((m) => ({ ...m, [i]: tier }));
@@ -663,7 +669,7 @@ export function ReelBank() {
                     if (el && !el.style.transform) el.style.transform = `translate3d(0, ${WIN / 2}px, 0)`;
                   }}
                 >
-                  <Cells strip={st} runKey={shown.key} reel={i} layout={L} reached={shown.reached[i]} idle={!run} cellRefs={cellRefs.current} />
+                  <Cells strip={st} runKey={shown.key} reel={i} layout={L} reached={shown.reached[i]} before={shown.before[i]} idle={!run} cellRefs={cellRefs.current} />
                 </div>
                 <div className={s.curve} />
                 {x > 1 && (
@@ -709,6 +715,7 @@ function buildRunShell(strips: Strip[]): Run {
     layout: reelLayout(strips.length),
     t0: 0,
     reached: strips.map(() => 0),
+    before: strips.map(() => 0),
     plan: null,
     lastReel: 0,
     notch: strips.map(() => 0),

@@ -213,6 +213,11 @@ function PowerPop({ show, onDone }: { show: PowerShow; onDone: () => void }) {
   const up = show.to > show.from;
   const [shown, setShown] = useState(show.from);
   const [landed, setLanded] = useState(false);
+  // Others (the tutorial's bubble) step aside while it counts.
+  useEffect(() => {
+    useUi.setState({ powerShow: true });
+    return () => useUi.setState({ powerShow: false });
+  }, []);
   useEffect(() => {
     let raf = 0;
     let last = show.from;

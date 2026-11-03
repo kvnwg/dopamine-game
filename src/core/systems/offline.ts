@@ -127,8 +127,10 @@ export function offlineKeepOdds(): number {
 
 export interface OfflineRolls {
   rolls: number;
-  /** The finds kept (best first); they are in the bag now, unless a full bag scrapped them. */
+  /** The rare finds that went into the bag, best first. */
   kept: Item[];
+  /** Rare finds a full bag had no room for (scrapped by the bag's rules: it keeps the best). */
+  overflow: number;
   /** Scrap value of everything else. */
   coins: number;
   xp: number;
@@ -147,7 +149,8 @@ function bumpRarity(r: Rarity, by: number): Rarity {
  * the rest are scrapped and their coins and XP returned.
  */
 export function rollOffline(d: GameState, rng: Rng, now: number, count: number, ev: CoreEvent[]): OfflineRolls {
-  const out: OfflineRolls = { rolls: 0, kept: [], coins: 0, xp: 0 };
+  const out: OfflineRolls = { rolls: 0, kept: [], overflow: 0, coins: 0, xp: 0 };
+  const finds: Item[] = [];
   const dz = d.dumpster;
   if (count <= 0 || !dz.firstDiveDone) return out;
   const up = upgradeEffects(d);
@@ -180,7 +183,7 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
       dz.totalDives += 1;
       dry = rarityAtLeast(item.rarity, bl.minRarity) ? 0 : dry + 1;
       if (itemOddsOneIn(item) >= keepOdds) {
-        out.kept.push(item);
+        finds.push(item);
       } else {
         const v = scrapValue(d, item);
         out.coins += v.coins;
@@ -190,8 +193,9 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
     }
   }
   dz.dryStreak = dry;
-  out.kept.sort((a, b) => b.power - a.power);
-  for (const item of out.kept) {
+  // Best first, so a full bag keeps the best finds (and what it already holds that is better).
+  finds.sort((a, b) => b.power - a.power);
+  for (const item of finds) {
     const odds = itemOddsOneIn(item);
     if (odds > d.records.bestOdds) {
       d.records.bestOdds = odds;
@@ -199,7 +203,8 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
       d.records.bestRarity = item.rarity;
     }
     registerCodex(d, item, ev);
-    addToBag(d, item, ev);
+    if (addToBag(d, item, ev)) out.kept.push(item);
+    else out.overflow += 1;
   }
   return out;
 }

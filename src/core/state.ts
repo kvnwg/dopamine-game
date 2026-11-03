@@ -216,8 +216,8 @@ export const HeistRunSchema = z.object({
   absorbed: z.array(z.string()),
   /** Level-up perk offers still to show (one fight can give several levels). */
   offersOwed: z.number().int().nonnegative(),
-  /** The (fractional) world the run's enemies and gold scale from, set by the raccoon's power at the start (heistTier). */
-  tier: z.number().positive(),
+  /** The (fractional) world the run's enemies and gold scale from, set by the raccoon's power at the start (heistTier; below 1 for a green raccoon). */
+  tier: z.number(),
   /** Enemy HP and ATK multiplier for this run (location difficulty; the gentle first Pizza Place run). */
   difficulty: z.number().positive(),
   /** Max HP % from shrines and choices (negative: lost). */

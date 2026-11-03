@@ -216,7 +216,7 @@ export function TutorialLayer() {
   const step = useGame((g) => stepOf(g).step);
   const uid = useGame((g) => stepOf(g).uid);
   const baseId = useGame((g) => (uid !== null ? g.inventory.find((x) => x.uid === uid)?.baseId ?? null : null));
-  const busy = useUi((u) => u.celebrate !== null || u.popup !== null || u.drag !== null || u.tab === 'upgrades');
+  const busy = useUi((u) => u.celebrate !== null || u.popup !== null || u.drag !== null || u.tab === 'upgrades' || u.powerShow);
   const [finale, setFinale] = useState<number | null>(null);
   /** The "keep rolling" bubble after the first equip shows for a few seconds only. */
   const [fightUntil, setFightUntil] = useState(0);

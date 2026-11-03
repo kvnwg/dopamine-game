@@ -49,6 +49,8 @@ interface UiState {
   lastRoll: RollView | null;
   /** Big reveal overlay for rare rolls. */
   celebrate: RollView | null;
+  /** His power is counting up in the middle of the screen after an equip (EquipFlight). */
+  powerShow: boolean;
   /** Building up to a big reveal (dumpster shakes and glows). */
   charging: RollView | null;
   rebirthFx: number | null;
@@ -86,6 +88,7 @@ export const useUi = create<UiState>((set) => ({
   detailUid: null,
   lastRoll: null,
   celebrate: null,
+  powerShow: false,
   charging: null,
   rebirthFx: null,
   toasts: [],

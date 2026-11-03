@@ -75,7 +75,7 @@ export const BLING: Readonly<Record<string, BlingArt>> = {
     pal: { e: 'e', R: 'R', r: 'r', Y: 'Y', y: 'y', O: 'O' },
     art: piece([2, 0], ['.eRr.', '..y..', '.YyO.', '.y#O.']),
   },
-  // "HELLO my name is" sticker on his chest: red band, the name in blue pen.
+  // "HELLO my name is" sticker on his chest: a red band over white, the name scribbled in dark pen.
   bling_name_tag: {
     pal: { e: 'e', R: 'R', r: 'r', w: 'w', x: 'x' },
     art: piece([2, -2], ['eRRr', 'wxww']),
@@ -90,10 +90,10 @@ export const BLING: Readonly<Record<string, BlingArt>> = {
     pal: { g: '2', w: '5', d: '4', s: '3', C: 'C', m: 'm' },
     art: piece([2, 0], ['.g.g.', '..g..', '#wCd#', '#d#s#', '.#m#.']),
   },
-  // Red headphones round his neck, the cups on his chest.
+  // Red headphones round his neck, the cups resting under his jaw (on his head's outline there, hence 'h').
   bling_headphones: {
     pal: { g: '2', R: 'R', e: 'e', r: 'r' },
-    art: piece([3, 0], ['eRgggeR', 'rr...rr']),
+    art: piece([3, 0], ['eRgggeR', 'Rr...Rr', '##...##']),
     on: ['n', 'b', 'h'],
   },
   // Plastic lei of pink, yellow and purple flowers round his neck.

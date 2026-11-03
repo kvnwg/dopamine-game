@@ -187,7 +187,7 @@ export const BACKPACKS: Readonly<Record<string, PackArt>> = {
     ]),
     straps: STRAPS('1'),
   },
-  // Pink piggy bank, a gold coin in its slot.
+  // Pink piggy bank: a gold coin in its slot, an ear up, its snout turned out at the far end.
   backpack_piggy_bank: {
     pal: { P: 'P', q: 'q', w: 'w', y: 'y', O: 'O', x: 'r' },
     back: bag([
@@ -233,7 +233,7 @@ export const BACKPACKS: Readonly<Record<string, PackArt>> = {
     ]),
     straps: STRAPS('U'),
   },
-  // The soda jetpack: two green bottles taped together, flames out of the caps.
+  // The soda jetpack: two green bottles with red labels, flames out of their caps, silver straps.
   backpack_unique_soda_jetpack: {
     pal: { L: 'L', G: 'G', g: 'g', 5: '5', 4: '4', e: 'e', R: 'R', Y: 'Y', O: 'O' },
     back: bag([

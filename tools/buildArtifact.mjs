@@ -23,7 +23,8 @@ if (jsFiles.length !== 1) throw new Error(`Expected one JS bundle, found: ${jsFi
 const js = readFileSync(join(dir, jsRef[1]), 'utf8').replace(/<\/script/gi, '<\\/script');
 const css = readFileSync(join(dir, cssRef[1]), 'utf8');
 if (/<\/style/i.test(css)) throw new Error('Stylesheet contains </style>');
-if (/url\((?!["']?data:)/.test(css)) throw new Error('Stylesheet still references external files');
+// Inlined data: URLs and in-page references (url(#gradient) for SVG fills) are fine; anything else is a file.
+if (/url\((?!["']?(data:|#))/.test(css)) throw new Error('Stylesheet still references external files');
 
 const page = `<meta charset="utf-8">
 <title>Dumpster Legend</title>

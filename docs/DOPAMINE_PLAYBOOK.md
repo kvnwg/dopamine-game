@@ -269,6 +269,7 @@ What the build already does from this playbook (the rest is scheduled in `DECISI
 - Legendary and better: while the wheel spins, it glows in the rarity's color with rising rattle beats, a riser and a silence drop; when it lands, a full-screen reveal (rays, confetti, giant "1 in X" odds, NEW BEST FIND!). Big rolls never get lost; they queue.
 - Every item wears its "1 in X" odds on a big banner (pulsing for Epic, gold for Legendary, rainbow for Mythic), so the bag itself shows how lucky you got.
 - Equipping is hands-on: you drag the item onto the raccoon, and it puts it on right there in the fight.
+- The upgrade map only shows one step past what you can buy, as "?" hexes, so every purchase reveals something new; affordable hexes glow with a red "!".
 - Reveal intensity scales by tier (pop → sting + burst for Epic → full reveal for Legendary, Mythic and Mint).
 - Haptics per tier using Capacitor presets (custom patterns need the native plugin in M5).
 - Bad-luck protection with a visible "Epic+ guaranteed in N" readout.

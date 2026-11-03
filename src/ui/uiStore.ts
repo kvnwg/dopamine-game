@@ -60,8 +60,12 @@ interface UiState {
   newCodexKeys: string[];
   drag: DragState | null;
   bagSort: BagSort;
-  /** Selected node in the upgrade tree. */
+  /** Selected hex on the upgrade map (`${line id}:${tier}`). */
   upgradeSel: string;
+  /** The tab to go back to when the full-screen upgrade map closes. */
+  prevTab: Tab;
+  /** Where the upgrade map was panned and zoomed to (kept while the app runs). */
+  mapView: { x: number; y: number; k: number } | null;
   setBagSort: (s: BagSort) => void;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
@@ -85,7 +89,9 @@ export const useUi = create<UiState>((set) => ({
   newCodexKeys: [],
   drag: null,
   bagSort: loadSort(),
-  upgradeSel: 'luck',
+  upgradeSel: 'luck:1',
+  prevTab: 'alley',
+  mapView: null,
   setBagSort: (bagSort) => {
     set({ bagSort });
     try {
@@ -94,7 +100,7 @@ export const useUi = create<UiState>((set) => ({
       /* private mode */
     }
   },
-  setTab: (tab) => set({ tab }),
+  setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),
   toast: (text, tone = 'info') => {
     const id = toastId++;

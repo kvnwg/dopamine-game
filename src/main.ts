@@ -8,6 +8,7 @@ import { boot } from './app/session';
 import { dispatch, getGame } from './app/store';
 import { serialize } from './core';
 import { App } from './ui/App';
+import { useUi } from './ui/uiStore';
 import { applyPaletteToCss } from './ui/palette';
 
 /** The claude.ai artifact viewer's hot-update hook (absent everywhere else). */
@@ -26,7 +27,7 @@ async function main(data?: unknown) {
   hot?.snapshot?.(() => ({ save: serialize(getGame()) }));
   createRoot(document.getElementById('root')!).render(createElement(App));
   // Test hook for browser automation in dev builds only.
-  if (import.meta.env.DEV) (window as unknown as { __dl: unknown }).__dl = { getGame, dispatch };
+  if (import.meta.env.DEV) (window as unknown as { __dl: unknown }).__dl = { getGame, dispatch, ui: useUi };
 }
 
 const start = (data?: unknown) =>

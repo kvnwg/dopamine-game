@@ -100,4 +100,18 @@ describe('save / load', () => {
     expect(loaded!.equipped.hat?.tier).toBe(1);
     expect('neighborhoodsCleared' in loaded!).toBe(false);
   });
+
+  it('migrates a version 4 save to the hex upgrade map, keeping about the same total effect per line', () => {
+    const v4 = JSON.parse(serialize(played())) as Record<string, unknown>;
+    v4.saveVersion = 4;
+    // Old levels: Luck 6 x 0.05, Gold 5 x 10%, Golden Spin 5 x 1%, Spin Speed 30 (past the new max), Bag Space 3 x 2.
+    v4.upgrades = { luck: 6, gold: 5, goldenSpin: 5, rollSpeed: 30, bagSpace: 3, retired: 2 };
+    const loaded = deserialize(JSON.stringify(v4));
+    expect(loaded).not.toBeNull();
+    expect(loaded!.saveVersion).toBe(SAVE_VERSION);
+    // 0.3 luck = 2 tiers of 0.15; 50% gold = 2 tiers of 25%; 3 x 2 slots = 6, rounds to 1 tier of 5;
+    // Spin Speed is capped at its max. Golden Spin's 5% becomes the Golden Wheel and 2 tiers, but its
+    // chain (Spin Speed III > Lucky Spins > Lucky Streak II) is not owned, so the cleanup drops it.
+    expect(loaded!.upgrades).toEqual({ luck: 2, gold: 2, rollSpeed: 8, bagSpace: 1 });
+  });
 });

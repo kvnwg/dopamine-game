@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, type Slot } from '../data';
 import type { Item } from './types';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export const SubstatSchema = z.object({
   affixId: z.string(),

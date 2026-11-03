@@ -179,8 +179,16 @@ export const BalanceSchema = z.object({
         perLevel: positive,
         max: z.number().int().positive(),
         cost: z.object({ base: positive, growth: positive }),
-        /** The upgrade tree: this node unlocks once its parent reaches `level`. */
+        /** The upgrade map: this line's first tier hangs off tier `level` of line `id`. */
         requires: z.object({ id: z.string().min(1), level: z.number().int().positive() }).optional(),
+        /** A one-off gold node with a big effect. */
+        special: z.boolean().optional(),
+        /**
+         * Hex-map layout: space-separated steps (n, ne, se, s, sw, nw, optionally `dir*count`) from the
+         * parent tier to tier I, then on to each next tier. The root line starts at the center, so its
+         * path has one step fewer. Checked at boot: no two tiers may share a hex.
+         */
+        path: z.string().regex(/^((n|ne|se|s|sw|nw)(\*\d+)?( (n|ne|se|s|sw|nw)(\*\d+)?)*)?$/),
       }),
     )
     .min(1),

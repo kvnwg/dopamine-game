@@ -3,7 +3,7 @@ import {
   applyAction, canRebirth, combatEffects, createItem, currentLuck, enchantPowerMult, goldMult, inventoryCapacity,
   computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng,
   spinCycle, spinShare, tick,
-  upgradeCostAt, upgradeDef, upgradeEffects, type CoreEvent, type GameState, type Item,
+  sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
 import { freshState, histogram, T0 } from './helpers';
@@ -128,10 +128,13 @@ describe('the wheel', () => {
   it('Spin Speed upgrades shorten the cycle, down to a floor', () => {
     const st = rollingState();
     const base = spinCycle(st);
+    const per = upgradeDef('rollSpeed')!.perLevel;
     st.upgrades.rollSpeed = 3;
-    expect(spinCycle(st)).toBeCloseTo(base * (1 - BAL.roll.speedPerLevel) ** 3);
-    st.upgrades.rollSpeed = 999;
-    expect(spinCycle(st)).toBe(BAL.roll.minCycleSeconds);
+    expect(spinCycle(st)).toBeCloseTo(base * (1 - BAL.roll.speedPerLevel) ** (3 * per));
+    st.upgrades.rollSpeed = upgradeDef('rollSpeed')!.max;
+    const fastest = spinCycle(st);
+    expect(fastest).toBeGreaterThanOrEqual(BAL.roll.minCycleSeconds);
+    expect(fastest).toBeLessThan(1);
   });
 
   it('a Trash Bag pays for a faster turbo spin', () => {
@@ -229,26 +232,57 @@ describe('"1 in X" item odds', () => {
   });
 });
 
-describe('upgrade grid', () => {
-  it('costs grow geometrically and buying applies the effect', () => {
+describe('upgrade map', () => {
+  it('costs grow geometrically per tier and buying applies the effect', () => {
     const rng = new Rng(8);
     const def = upgradeDef('rollSpeed')!;
     expect(upgradeCostAt(def, 0)).toBe(def.cost.base);
     expect(upgradeCostAt(def, 3)).toBe(Math.round(def.cost.base * def.cost.growth ** 3));
     let st = rollingState();
-    st.currencies.coins = 1e6;
+    st.currencies.coins = 1e7;
     const before = spinCycle(st);
-    // The tree: Spin Speed is locked until Luck is bought.
+    // Spin Speed hangs off Luck I, so it is locked until Luck I is owned.
+    expect(upgradeNodeState(st, 'rollSpeed', 1)).toBe('locked');
     expect(act(st, { type: 'buyUpgrade', id: 'rollSpeed' }, rng).state.upgrades.rollSpeed).toBeUndefined();
+    expect(upgradeNodeState(st, 'luck', 1)).toBe('open');
     st = act(st, { type: 'buyUpgrade', id: 'luck' }, rng).state;
+    expect(upgradeNodeState(st, 'luck', 1)).toBe('owned');
+    expect(upgradeNodeState(st, 'luck', 2)).toBe('open');
+    expect(upgradeNodeState(st, 'luck', 3)).toBe('locked');
+    expect(upgradeNodeState(st, 'rollSpeed', 1)).toBe('open');
     for (let i = 0; i < 3; i++) st = act(st, { type: 'buyUpgrade', id: 'rollSpeed' }, rng).state;
     expect(st.upgrades.rollSpeed).toBe(3);
-    expect(spinCycle(st)).toBeCloseTo(before * (1 - BAL.roll.speedPerLevel) ** 3);
+    expect(spinCycle(st)).toBeCloseTo(before * (1 - BAL.roll.speedPerLevel) ** (3 * def.perLevel));
     st = act(st, { type: 'buyUpgrade', id: 'gold' }, rng).state;
     expect(goldMult(st)).toBeCloseTo(1 + upgradeDef('gold')!.perLevel / 100);
-    st = act(st, { type: 'buyUpgrade', id: 'gold' }, rng).state;
     st = act(st, { type: 'buyUpgrade', id: 'bagSpace' }, rng).state;
     expect(inventoryCapacity(st)).toBe(BAL.inventory.baseCapacity + upgradeDef('bagSpace')!.perLevel);
+  });
+
+  it('special gold hexes are one big tier that adds to the same effect', () => {
+    const rng = new Rng(12);
+    let st = rollingState();
+    st.currencies.coins = 1e12;
+    const luck = upgradeDef('luck')!;
+    st.upgrades.luck = luck.max;
+    const clover = upgradeDef('clover')!;
+    expect(clover.special).toBe(true);
+    expect(clover.max).toBe(1);
+    st = act(st, { type: 'buyUpgrade', id: 'clover' }, rng).state;
+    expect(st.upgrades.clover).toBe(1);
+    expect(upgradeEffects(st).luck).toBeCloseTo(luck.perLevel * luck.max + clover.perLevel);
+    expect(act(st, { type: 'buyUpgrade', id: 'clover' }, rng).state.upgrades.clover).toBe(1);
+  });
+
+  it('cleans up saved upgrades: unknown lines, tiers past max, and lines whose parent tier is not owned', () => {
+    const st = rollingState();
+    st.upgrades = { luck: 99, rollSpeed: 2, bagFind: 3, nope: 4, enchant: 1 };
+    sanitizeUpgrades(st);
+    // bagFind hangs off Spin Speed II (owned), enchant off Luck III (owned once luck is clamped to max).
+    expect(st.upgrades).toEqual({ luck: upgradeDef('luck')!.max, rollSpeed: 2, bagFind: 3, enchant: 1 });
+    st.upgrades = { rollSpeed: 1, bagFind: 2 };
+    sanitizeUpgrades(st);
+    expect(st.upgrades).toEqual({});
   });
 
   it('cannot buy without gold or past max level', () => {

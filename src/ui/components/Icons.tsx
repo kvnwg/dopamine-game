@@ -270,3 +270,29 @@ export const WheelIcon = (p: P & { gold?: boolean }) => (
     <path d="M26 2h12l-6 10z" fill="#ef5350" strokeWidth={3.5} />
   </Svg>
 );
+
+export const BackpackIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M23 15c0-6 4-9 9-9s9 3 9 9" />
+    <rect x="12" y="14" width="40" height="44" rx="13" fill="#e0863f" />
+    <path d="M12 31c9 5 31 5 40 0" />
+    <rect x="21" y="38" width="22" height="13" rx="5" fill="#ffc233" />
+    <path d="M18 22c2-3 5-4 9-4" stroke="#ffd2a6" strokeWidth={4} />
+  </Svg>
+);
+
+export const DropIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M32 5C24 19 13 29 13 40a19 19 0 0 0 38 0C51 29 40 19 32 5z" fill="#ef5350" />
+    <path d="M22 40c0 6 3 10 9 11" stroke="#ffb4b4" strokeWidth={4} />
+  </Svg>
+);
+
+export const TargetIcon = (p: P) => (
+  <Svg {...p}>
+    <circle cx="32" cy="32" r="26" fill="#ffffff" />
+    <circle cx="32" cy="32" r="17" fill="#ef5350" />
+    <circle cx="32" cy="32" r="8" fill="#ffffff" />
+    <path d="M17 19c2-3 5-5 9-6" stroke="#ffd0d0" strokeWidth={4} />
+  </Svg>
+);

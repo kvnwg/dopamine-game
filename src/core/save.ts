@@ -3,6 +3,7 @@
  * Storage is injected (localStorage on web, @capacitor/preferences on native, memory in tests).
  */
 import { GameStateSchema, SAVE_VERSION, type GameState } from './state';
+import { sanitizeUpgrades } from './systems/upgrades';
 
 export interface KeyValueStorage {
   get(key: string): Promise<string | null>;
@@ -82,6 +83,52 @@ export const MIGRATIONS: Record<number, Migration> = {
       roll: { timer: 0, current: null, count: Number(roll.count ?? 0), sinceLucky: Number(roll.sinceLucky ?? 0) },
     };
   },
+  /**
+   * v4 -> v5: the hex upgrade map. Lines now have a few big tiers instead of many small levels, so
+   * each line keeps (rounded) the same total effect. Tiers whose parent is no longer owned are
+   * dropped when the save loads (sanitizeUpgrades).
+   */
+  4: (s) => {
+    // [old per-level effect, then (new line, per-tier effect, tiers) to fill in order]
+    const table: Record<string, [number, ...[string, number, number][]]> = {
+      luck: [0.05, ['luck', 0.15, 8]],
+      rollSpeed: [1, ['rollSpeed', 2.5, 8]],
+      bagFind: [5, ['bagFind', 15, 6]],
+      turboPower: [0.25, ['turboPower', 0.5, 4]],
+      luckyRoll: [1, ['luckyRoll', 1, 5]],
+      luckyMult: [0.25, ['luckyMult', 0.5, 4]],
+      goldenSpin: [0.01, ['goldenWheel', 0.02, 1], ['goldenSpin', 0.02, 4]],
+      enchant: [0.015, ['enchant', 0.03, 8]],
+      enchantTier: [1, ['enchantTier', 1, 5]],
+      pity: [4, ['pity', 4, 5]],
+      gold: [10, ['gold', 25, 8]],
+      bagSpace: [2, ['bagSpace', 5, 8]],
+      scrapPct: [15, ['scrapPct', 50, 6]],
+      xpPct: [10, ['xpPct', 30, 6]],
+      potionTime: [10, ['potionTime', 20, 6]],
+      offlinePct: [10, ['offlinePct', 40, 5]],
+      strength: [5, ['strength', 15, 8]],
+      toughness: [5, ['toughness', 15, 8]],
+      lifesteal: [0.5, ['lifesteal', 2, 5]],
+      critChance: [1, ['critChance', 3, 8]],
+      critDmg: [10, ['critDmg', 30, 8]],
+      bossDmg: [5, ['bossDmg', 15, 6]],
+    };
+    const old = (s.upgrades ?? {}) as Record<string, number>;
+    const upgrades: Record<string, number> = {};
+    for (const [id, level] of Object.entries(old)) {
+      const row = table[id];
+      if (!row || !(level > 0)) continue;
+      const [per, ...targets] = row;
+      let total = level * per;
+      for (const [line, tierFx, max] of targets) {
+        const tiers = Math.min(max, Math.round(total / tierFx));
+        if (tiers > 0) upgrades[line] = tiers;
+        total = Math.max(0, total - tiers * tierFx);
+      }
+    }
+    return { ...s, saveVersion: 5, upgrades };
+  },
 };
 
 export function migrate(
@@ -114,7 +161,9 @@ export function deserialize(text: string | null, migrations: Record<number, Migr
     const raw = JSON.parse(text) as Record<string, unknown>;
     const migrated = migrate(raw, migrations);
     const parsed = GameStateSchema.safeParse(migrated);
-    return parsed.success ? parsed.data : null;
+    if (!parsed.success) return null;
+    sanitizeUpgrades(parsed.data);
+    return parsed.data;
   } catch {
     return null;
   }

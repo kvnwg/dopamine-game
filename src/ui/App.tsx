@@ -4,7 +4,7 @@ import { BattlePanel } from './components/BattlePanel';
 import { StatStrip } from './components/StatStrip';
 import { AlleyPanel } from './components/AlleyPanel';
 import { InventoryPanel } from './components/InventoryPanel';
-import { UpgradesPanel } from './components/UpgradesPanel';
+import { UpgradeMap } from './components/UpgradeMap';
 import { RebirthPanel } from './components/RebirthPanel';
 import { WorldsPanel } from './components/WorldsPanel';
 import { BottomNav } from './components/BottomNav';
@@ -26,6 +26,9 @@ export function App() {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
   const tab = useUi((u) => u.tab);
+  // The upgrade map covers the whole screen; underneath, keep showing the tab it was opened from.
+  const prevTab = useUi((u) => u.prevTab);
+  const lowerTab = tab === 'upgrades' ? prevTab : tab;
 
   useLayoutEffect(() => {
     const el = frameRef.current;
@@ -47,13 +50,13 @@ export function App() {
           <div className={styles.battle}><BattlePanel /></div>
           <div className={styles.strip}><StatStrip /></div>
           <div className={styles.lower}>
-            {tab === 'alley' && <AlleyPanel />}
-            {tab === 'bag' && <InventoryPanel />}
-            {tab === 'upgrades' && <UpgradesPanel />}
-            {tab === 'rebirth' && <RebirthPanel />}
-            {tab === 'worlds' && <WorldsPanel />}
+            {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
+            {lowerTab === 'bag' && <InventoryPanel />}
+            {lowerTab === 'rebirth' && <RebirthPanel />}
+            {lowerTab === 'worlds' && <WorldsPanel />}
           </div>
           <div className={styles.nav}><BottomNav /></div>
+          {tab === 'upgrades' && <UpgradeMap />}
           <DragLayer />
           <RevealLayer />
           <PopupLayer />

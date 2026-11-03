@@ -2,14 +2,14 @@
 
 Idle RPG roguelite for iOS and Android: a raccoon auto-battles its way through the city's alleys while its dumpster rolls for junk gear on its own, RNG-game style. Every item has a power number and a "1 in X" rarity, and the raccoon visibly wears whatever it equips.
 
-**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked into a Roblox-style rolling game: a prize wheel that spins on its own, luck from several sources, a bag of power-rated items you equip by dragging them onto the raccoon, a branching upgrade tree, rebirths, enchantments, and 20 worlds of rising difficulty, all open from the start. The look is a bright, clean cel-shaded cartoon. The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16, W1 to W11 and V1 to V9). Next up is Milestone 2 (Heists).
+**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked into a Roblox-style rolling game: a prize wheel that spins on its own, luck from several sources, a bag of power-rated items you equip by dragging them onto the raccoon, a honeycomb upgrade map, rebirths, enchantments, and 20 worlds of rising difficulty, all open from the start. The look is a bright, clean cel-shaded cartoon. The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16, W1 to W11, V1 to V9 and H1 to H6). Next up is Milestone 2 (Heists).
 
 ### How it plays
 
 - **Roll tab:** the dumpster's prize wheel spins on its own, one item per spin: 2.6 seconds per spin at first, faster with the Spin Speed upgrade. Trash Bags won in fights become turbo spins. Every 10th spin is a Lucky Spin. The tab shows your luck (tap it for the exact odds), the latest roll with its "1 in X" odds, recent rolls and your gear. Legendary and better rolls build up while the wheel spins and get a full-screen reveal when it lands.
 - **Equipping:** nothing equips itself. Drag an item onto the raccoon (or onto the gear row) to put it on; on a phone, hold it for a moment, then drag. Items that beat what you wear get a green ▲.
 - **Bag tab:** the bag holds your rolls and keeps the best when it fills up. Sort it by Power or Rarity, tap an item to lock or scrap it, or Scrap All (locked items are safe).
-- **Upgrades tab:** a branching tree that grows out of Luck: spin speed, turbo spins, lucky and golden spins, enchanting, gold, bag space, XP, potions, offline earnings, strength, crits and more. The first levels are cheap, then prices climb exponentially. Hold a buy button to keep buying.
+- **Upgrades tab:** opens a full-screen honeycomb map that grows out of Luck I. Every tier is its own hex (Luck I, Luck II, ...): bought hexes are bright, the next ones show their price, and the ones past those are "?" until you get closer. Gold hexes are big one-off specials. Drag to explore, pinch or scroll to zoom, tap a hex for details, and hold Buy to keep buying up a line. The first tiers are cheap, then each one costs about 10 times the last.
 - **Rebirth tab:** beat the required world and hold enough gold to start over from scratch in World 1 (items, level, gold and upgrades are wiped) with permanently more luck, gold, ATK and HP, and cheaper upgrades.
 - **Worlds tab:** all 20 worlds, each with its own look, enemies and boss, and every one open from the start. Each card shows how a world matches up against you right now (Easy, Tough, Deadly, or ONE-SHOT) and how much more it pays. Harder worlds pay proportionally more gold, and gear rolled there is stronger. Wander too far up and you get one-shot and sent back; roll something lucky and you can jump several worlds ahead.
 
@@ -49,13 +49,13 @@ The red **DEV** tab (right edge of the battle, dev builds only) can add coins, G
 npm test
 ```
 
-91 Vitest tests: damage and stat formulas; 10,000-roll distribution checks for every random system (rarity odds at luck 1, 3 and 25 within 1% of the exact chances, slots, item levels, substats, enchantment counts and tiers, crits, enemy counts, bag find); bad luck protection; the wheel (first spin, spin and rest timing, Spin Speed, turbo spins, Lucky Spins, keep-the-best bag, no auto-equip, drag-to-equip, scrapping, Scrap All, locks, "1 in X" odds); the upgrade tree (unlock order, exponential costs), rebirth (what it wipes and keeps, its multipliers and upgrade discount), enchantment effects (burn, chain, explode, thorns) and luck boosts; worlds (scaling, proportional pay, boss waves, travel, one-shots and falling back, item tiers); Dumpster upgrades and speedups; the Codex; offline math and the clock-backward guard; save/load with backups and migrations (v1 through v4); data validation; and one headless balance run.
+96 Vitest tests: damage and stat formulas; 10,000-roll distribution checks for every random system (rarity odds at luck 1, 3 and 25 within 1% of the exact chances, slots, item levels, substats, enchantment counts and tiers, crits, enemy counts, bag find); bad luck protection; the wheel (first spin, spin and rest timing, Spin Speed, turbo spins, Lucky Spins, keep-the-best bag, no auto-equip, drag-to-equip, scrapping, Scrap All, locks, "1 in X" odds); the upgrade map (layout with no overlaps, tier unlock order, exponential costs, specials, save cleanup), rebirth (what it wipes and keeps, its multipliers and upgrade discount), enchantment effects (burn, chain, explode, thorns) and luck boosts; worlds (scaling, proportional pay, boss waves, travel, one-shots and falling back, item tiers); Dumpster upgrades and speedups; the Codex; offline math and the clock-backward guard; save/load with backups and migrations (v1 through v5); data validation; and one headless balance run.
 
 ```bash
 npm run sim -- --minutes 120 --seeds 4
 ```
 
-The balance simulator plays the real game logic with a bot and prints a timeline, the minute each world was first beaten, rebirth times and rarity counts. Current result: World 3 at 4 to 9 minutes, World 5 at 17 to 21, a rebirth about every 20 minutes, best world 12 or 13 after 2 hours, and 100 to 148 Legendaries in about 7,000 spins. Run it after every balance change.
+The balance simulator plays the real game logic with a bot and prints a timeline, the minute each world was first beaten, rebirth times and rarity counts. Current result: World 3 at 4 to 7 minutes, World 5 at 14 to 16, the first rebirth at about 15 minutes and one every 15 to 30 minutes after that, best world 12 or 13 after 2 hours, and about 150 Legendaries in about 7,500 spins. Run it after every balance change.
 
 ```bash
 npm run typecheck
@@ -107,7 +107,7 @@ src/
   data/        JSON tuning and content (balance, items, affixes, enemies, neighborhoods, strings, assets) + zod schemas
   services/    ads, IAP, analytics, haptics, notifications, storage (mocks for now, real SDKs drop in later)
   render/      Phaser battle scene; render/cel/ draws all placeholder art in code (cel-shaded)
-  ui/          React screens (Roll wheel, Bag, upgrade tree, Rebirth, Worlds), drag-to-equip, popups and the big-roll reveal
+  ui/          React screens (Roll wheel, Bag, upgrade map, Rebirth, Worlds), drag-to-equip, popups and the big-roll reveal
   app/         Zustand store, game loop, pause/resume, autosave
   dev/         cheat panel
 tests/         Vitest

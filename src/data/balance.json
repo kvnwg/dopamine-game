@@ -461,54 +461,59 @@
     {
       "id": "luck",
       "effect": "luck",
-      "perLevel": 0.05,
-      "max": 30,
+      "perLevel": 0.15,
+      "max": 8,
       "cost": {
-        "base": 30,
-        "growth": 1.9
-      }
+        "base": 15,
+        "growth": 10
+      },
+      "path": "n*7"
+    },
+    {
+      "id": "clover",
+      "effect": "luck",
+      "perLevel": 0.3,
+      "max": 1,
+      "cost": {
+        "base": 400000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "luck",
+        "level": 8
+      },
+      "special": true,
+      "path": "n"
     },
     {
       "id": "rollSpeed",
       "effect": "rollSpeed",
-      "perLevel": 1,
-      "max": 20,
+      "perLevel": 2.5,
+      "max": 8,
       "cost": {
-        "base": 60,
-        "growth": 2.0
+        "base": 30,
+        "growth": 9
       },
       "requires": {
         "id": "luck",
         "level": 1
-      }
+      },
+      "path": "ne*8"
     },
     {
       "id": "bagFind",
       "effect": "bagFind",
-      "perLevel": 5,
-      "max": 20,
+      "perLevel": 15,
+      "max": 6,
       "cost": {
-        "base": 150,
-        "growth": 1.95
+        "base": 120,
+        "growth": 9
       },
       "requires": {
         "id": "rollSpeed",
         "level": 2
-      }
-    },
-    {
-      "id": "turboPower",
-      "effect": "turboPower",
-      "perLevel": 0.25,
-      "max": 8,
-      "cost": {
-        "base": 1500,
-        "growth": 2.4
       },
-      "requires": {
-        "id": "bagFind",
-        "level": 3
-      }
+      "path": "se ne se ne se ne"
     },
     {
       "id": "luckyRoll",
@@ -516,55 +521,90 @@
       "perLevel": 1,
       "max": 5,
       "cost": {
-        "base": 500,
-        "growth": 3.0
+        "base": 300,
+        "growth": 9
       },
       "requires": {
         "id": "rollSpeed",
         "level": 3
-      }
+      },
+      "path": "n*5"
     },
     {
       "id": "luckyMult",
       "effect": "luckyMult",
-      "perLevel": 0.25,
-      "max": 8,
+      "perLevel": 0.5,
+      "max": 4,
       "cost": {
-        "base": 4000,
-        "growth": 2.5
+        "base": 3000,
+        "growth": 10
       },
       "requires": {
         "id": "luckyRoll",
         "level": 2
-      }
+      },
+      "path": "ne*4"
     },
     {
-      "id": "goldenSpin",
+      "id": "goldenWheel",
       "effect": "goldenSpin",
-      "perLevel": 0.01,
-      "max": 10,
+      "perLevel": 0.02,
+      "max": 1,
       "cost": {
-        "base": 30000,
-        "growth": 2.6
+        "base": 100000,
+        "growth": 1
       },
       "requires": {
         "id": "luckyMult",
         "level": 2
-      }
+      },
+      "special": true,
+      "path": "n"
+    },
+    {
+      "id": "goldenSpin",
+      "effect": "goldenSpin",
+      "perLevel": 0.02,
+      "max": 4,
+      "cost": {
+        "base": 200000,
+        "growth": 9
+      },
+      "requires": {
+        "id": "goldenWheel",
+        "level": 1
+      },
+      "path": "n n ne ne"
+    },
+    {
+      "id": "turboPower",
+      "effect": "turboPower",
+      "perLevel": 0.5,
+      "max": 4,
+      "cost": {
+        "base": 4000,
+        "growth": 10
+      },
+      "requires": {
+        "id": "rollSpeed",
+        "level": 6
+      },
+      "path": "se*4"
     },
     {
       "id": "enchant",
       "effect": "enchantChance",
-      "perLevel": 0.015,
-      "max": 20,
+      "perLevel": 0.03,
+      "max": 8,
       "cost": {
-        "base": 300,
-        "growth": 2.0
+        "base": 200,
+        "growth": 9
       },
       "requires": {
         "id": "luck",
         "level": 3
-      }
+      },
+      "path": "nw*8"
     },
     {
       "id": "enchantTier",
@@ -572,13 +612,14 @@
       "perLevel": 1,
       "max": 5,
       "cost": {
-        "base": 5000,
-        "growth": 3.0
+        "base": 3000,
+        "growth": 10
       },
       "requires": {
         "id": "enchant",
         "level": 3
-      }
+      },
+      "path": "n*5"
     },
     {
       "id": "pity",
@@ -586,181 +627,274 @@
       "perLevel": 4,
       "max": 5,
       "cost": {
-        "base": 2500,
-        "growth": 2.6
+        "base": 20000,
+        "growth": 9
       },
       "requires": {
         "id": "enchant",
-        "level": 2
-      }
+        "level": 6
+      },
+      "path": "n*5"
+    },
+    {
+      "id": "arcaneAltar",
+      "effect": "enchantChance",
+      "perLevel": 0.06,
+      "max": 1,
+      "cost": {
+        "base": 2000000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "enchant",
+        "level": 8
+      },
+      "special": true,
+      "path": "nw"
     },
     {
       "id": "gold",
       "effect": "goldPct",
-      "perLevel": 10,
-      "max": 30,
+      "perLevel": 25,
+      "max": 8,
       "cost": {
-        "base": 40,
-        "growth": 1.85
+        "base": 20,
+        "growth": 10
       },
       "requires": {
         "id": "luck",
         "level": 1
-      }
-    },
-    {
-      "id": "bagSpace",
-      "effect": "capacity",
-      "perLevel": 2,
-      "max": 25,
-      "cost": {
-        "base": 100,
-        "growth": 1.75
       },
-      "requires": {
-        "id": "gold",
-        "level": 2
-      }
+      "path": "se*8"
     },
     {
       "id": "scrapPct",
       "effect": "scrapPct",
-      "perLevel": 15,
-      "max": 20,
+      "perLevel": 50,
+      "max": 6,
       "cost": {
-        "base": 400,
-        "growth": 1.9
+        "base": 300,
+        "growth": 9
       },
       "requires": {
-        "id": "bagSpace",
-        "level": 2
-      }
+        "id": "gold",
+        "level": 3
+      },
+      "path": "s*6"
     },
     {
       "id": "xpPct",
       "effect": "xpPct",
-      "perLevel": 10,
-      "max": 20,
+      "perLevel": 30,
+      "max": 6,
       "cost": {
-        "base": 250,
-        "growth": 1.9
-      },
-      "requires": {
-        "id": "gold",
-        "level": 3
-      }
-    },
-    {
-      "id": "potionTime",
-      "effect": "potionTime",
-      "perLevel": 10,
-      "max": 12,
-      "cost": {
-        "base": 1200,
-        "growth": 2.2
+        "base": 500,
+        "growth": 9
       },
       "requires": {
         "id": "gold",
         "level": 4
-      }
+      },
+      "path": "ne se ne se ne se"
+    },
+    {
+      "id": "potionTime",
+      "effect": "potionTime",
+      "perLevel": 20,
+      "max": 6,
+      "cost": {
+        "base": 2000,
+        "growth": 9
+      },
+      "requires": {
+        "id": "gold",
+        "level": 5
+      },
+      "path": "s*6"
     },
     {
       "id": "offlinePct",
       "effect": "offlinePct",
-      "perLevel": 10,
-      "max": 20,
+      "perLevel": 40,
+      "max": 5,
       "cost": {
-        "base": 3000,
-        "growth": 2.0
+        "base": 8000,
+        "growth": 9
       },
       "requires": {
         "id": "potionTime",
         "level": 2
-      }
+      },
+      "path": "se*5"
     },
     {
-      "id": "strength",
-      "effect": "atkPct",
+      "id": "coinVault",
+      "effect": "goldPct",
+      "perLevel": 100,
+      "max": 1,
+      "cost": {
+        "base": 500000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "gold",
+        "level": 8
+      },
+      "special": true,
+      "path": "se"
+    },
+    {
+      "id": "bagSpace",
+      "effect": "capacity",
       "perLevel": 5,
-      "max": 30,
+      "max": 8,
       "cost": {
         "base": 40,
-        "growth": 1.8
+        "growth": 8
       },
       "requires": {
         "id": "luck",
         "level": 1
-      }
+      },
+      "path": "s*8"
     },
     {
-      "id": "toughness",
-      "effect": "hpPct",
-      "perLevel": 5,
-      "max": 30,
+      "id": "megaBackpack",
+      "effect": "capacity",
+      "perLevel": 10,
+      "max": 1,
       "cost": {
-        "base": 60,
-        "growth": 1.8
+        "base": 200000000,
+        "growth": 1
       },
       "requires": {
-        "id": "strength",
-        "level": 2
-      }
+        "id": "bagSpace",
+        "level": 8
+      },
+      "special": true,
+      "path": "s"
     },
     {
-      "id": "lifesteal",
-      "effect": "lifesteal",
-      "perLevel": 0.5,
-      "max": 20,
+      "id": "strength",
+      "effect": "atkPct",
+      "perLevel": 15,
+      "max": 8,
       "cost": {
-        "base": 800,
-        "growth": 2.0
+        "base": 20,
+        "growth": 10
       },
       "requires": {
-        "id": "toughness",
-        "level": 3
-      }
+        "id": "luck",
+        "level": 1
+      },
+      "path": "sw*8"
     },
     {
       "id": "critChance",
       "effect": "critChance",
-      "perLevel": 1,
-      "max": 25,
+      "perLevel": 3,
+      "max": 8,
       "cost": {
-        "base": 250,
-        "growth": 1.9
+        "base": 150,
+        "growth": 9
       },
       "requires": {
         "id": "strength",
-        "level": 3
-      }
+        "level": 1
+      },
+      "path": "nw sw nw sw nw sw nw sw"
     },
     {
       "id": "critDmg",
       "effect": "critDmg",
-      "perLevel": 10,
-      "max": 25,
+      "perLevel": 30,
+      "max": 8,
       "cost": {
-        "base": 800,
-        "growth": 1.95
+        "base": 1000,
+        "growth": 9
       },
       "requires": {
         "id": "critChance",
         "level": 3
-      }
+      },
+      "path": "nw*8"
     },
     {
       "id": "bossDmg",
       "effect": "bossDmg",
-      "perLevel": 5,
-      "max": 20,
+      "perLevel": 15,
+      "max": 6,
       "cost": {
-        "base": 2500,
-        "growth": 2.1
+        "base": 5000,
+        "growth": 9
       },
       "requires": {
         "id": "critDmg",
+        "level": 4
+      },
+      "path": "sw*6"
+    },
+    {
+      "id": "champion",
+      "effect": "atkPct",
+      "perLevel": 30,
+      "max": 1,
+      "cost": {
+        "base": 500000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "strength",
+        "level": 8
+      },
+      "special": true,
+      "path": "sw"
+    },
+    {
+      "id": "toughness",
+      "effect": "hpPct",
+      "perLevel": 15,
+      "max": 8,
+      "cost": {
+        "base": 40,
+        "growth": 10
+      },
+      "requires": {
+        "id": "strength",
         "level": 2
-      }
+      },
+      "path": "s*8"
+    },
+    {
+      "id": "lifesteal",
+      "effect": "lifesteal",
+      "perLevel": 2,
+      "max": 5,
+      "cost": {
+        "base": 2000,
+        "growth": 9.5
+      },
+      "requires": {
+        "id": "toughness",
+        "level": 3
+      },
+      "path": "sw*5"
+    },
+    {
+      "id": "titan",
+      "effect": "hpPct",
+      "perLevel": 30,
+      "max": 1,
+      "cost": {
+        "base": 1000000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "toughness",
+        "level": 8
+      },
+      "special": true,
+      "path": "s"
     }
   ],
   "enchant": {

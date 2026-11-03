@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGameData, DATA, SLOTS } from '../src/data';
+import { buildGameData, DATA, HEX_STEPS, SLOTS } from '../src/data';
 import balance from '../src/data/balance.json';
 import items from '../src/data/items.json';
 import affixes from '../src/data/affixes.json';
@@ -44,6 +44,34 @@ describe('game data', () => {
       expect(w.enemies.length).toBeGreaterThan(0);
       expect(DATA.enemiesById.get(w.boss.id)?.kind).toBe('boss');
     }
+  });
+
+  it('lays the upgrade map out as a honeycomb: every tier on its own hex, next to the hex it hangs off', () => {
+    const tiers = DATA.balance.upgrades.reduce((n, u) => n + u.max, 0);
+    expect(DATA.upgradeMap).toHaveLength(tiers);
+    const cells = new Set(DATA.upgradeMap.map((n) => `${n.col},${n.row}`));
+    expect(cells.size).toBe(tiers);
+    const root = DATA.upgradeMap.filter((n) => n.prev === null);
+    expect(root.map((n) => n.key)).toEqual(['luck:1']);
+    expect([root[0].col, root[0].row]).toEqual([0, 0]);
+    const byKey = new Map(DATA.upgradeMap.map((n) => [n.key, n]));
+    const steps = Object.values(HEX_STEPS).map(([c, r]) => `${c},${r}`);
+    for (const n of DATA.upgradeMap) {
+      if (!n.prev) continue;
+      const p = byKey.get(n.prev)!;
+      expect(steps, `${n.key} must touch ${n.prev}`).toContain(`${n.col - p.col},${n.row - p.row}`);
+    }
+    for (const u of DATA.balance.upgrades) {
+      expect(DATA.strings[`upgrade.${u.id}`], u.id).toBeTruthy();
+      expect(DATA.strings[`upgradeDesc.${u.id}`], u.id).toBeTruthy();
+    }
+  });
+
+  it('rejects an upgrade map where two tiers land on the same hex', () => {
+    const ups = balance.upgrades.map((u) => (u.id === 'bagSpace' ? { ...u, path: 'n*8' } : u));
+    expect(() => buildGameData({ ...raw, balance: { ...balance, upgrades: ups } })).toThrow(/overlaps/);
+    const short = balance.upgrades.map((u) => (u.id === 'gold' ? { ...u, path: 'se*3' } : u));
+    expect(() => buildGameData({ ...raw, balance: { ...balance, upgrades: short } })).toThrow(/path has 3 steps/);
   });
 
   it('every string value is non-empty', () => {

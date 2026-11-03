@@ -82,6 +82,14 @@ export function heistMaxLevel(): number {
 
 // ------------------------------------------------------------------ access and tickets
 
+/**
+ * Heists open with the first rebirth (`unlockRebirths`), so a new game has less going on at once.
+ * Tickets keep coming meanwhile; only starting a run and the ad ticket wait for it.
+ */
+export function heistsOpen(state: Pick<GameState, 'rebirths'>): boolean {
+  return state.rebirths >= H.unlockRebirths;
+}
+
 /** The best world ever beaten, across rebirths (a rebirth proves its required world was beaten). */
 export function bestWorldEver(state: Pick<GameState, 'heist' | 'stage' | 'rebirths'>): number {
   const floor = state.rebirths > 0 ? rebirthRequirement(state.rebirths - 1).world : 0;

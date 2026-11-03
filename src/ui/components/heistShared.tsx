@@ -5,7 +5,7 @@
  * Everything is pixel art at 6 stage px per art pixel (PixelArt).
  */
 import type { CSSProperties } from 'react';
-import { heistBossName, heistLevelXp, locationUnlocked, type GameAction, type GameState, type HeistLogLine, type HeistRun, type HeistState } from '../../core';
+import { heistBossName, heistLevelXp, heistsOpen, locationUnlocked, type GameAction, type GameState, type HeistLogLine, type HeistRun, type HeistState } from '../../core';
 import { dispatch } from '../../app/store';
 import { uiIcon, type IconTier } from '../../render/icons';
 import type { UiIcon } from '../../render/pixel/ui';
@@ -39,7 +39,7 @@ export function runOf(g: GameState): HeistRun | null {
 export function heistNeedsYou(g: GameState): boolean {
   const h = g.heist;
   if (h.run) return h.run.status !== 'fighting';
-  return h.tickets > 0 && LOCATIONS.some((id) => locationOpen(g, id));
+  return heistsOpen(g) && h.tickets > 0 && LOCATIONS.some((id) => locationOpen(g, id));
 }
 
 // ------------------------------------------------------------------ balance
@@ -84,9 +84,9 @@ export function locationInfo(id: LocationId): LocationInfo {
   };
 }
 
-/** Open once its world is beaten (in any rebirth). */
+/** Open once heists are (the first rebirth) and its world is beaten (in any rebirth). */
 export function locationOpen(g: GameState, id: LocationId): boolean {
-  return locationUnlocked(g, id);
+  return heistsOpen(g) && locationUnlocked(g, id);
 }
 
 export interface PerkInfo {

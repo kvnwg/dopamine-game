@@ -4,11 +4,12 @@
  * pixel size (PixelArt).
  */
 import { useEffect } from 'react';
-import { DATA } from '../../data';
+import { BAL, DATA } from '../../data';
 import { finalUnlock, unlocksAt } from '../../core';
 import { useGame } from '../../app/store';
 import { audio } from '../../services/audio';
 import { itemArt } from '../../render/icons';
+import { HeistNavIcon } from './heistShared';
 import { PixelArt } from './PixelArt';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
@@ -32,9 +33,14 @@ export function UnlockPreview() {
   const next = rebirths + 1;
   if (rebirths >= finalUnlock()) return <div className={s.preview}><span className={s.title}>{t('rebirth.allUnlocked')}</span></div>;
   const ids = unlocksAt(next).map((i) => i.id);
+  // The first rebirth also opens Heists (BAL.heist.unlockRebirths).
+  const heists = next === BAL.heist.unlockRebirths;
   return (
     <div className={s.preview}>
-      <span className={s.title}>{t('rebirth.unlocksNext', { n: ids.length })}</span>
+      <span className={s.title}>
+        {t('rebirth.unlocksNext', { n: ids.length })}
+        {heists && ` ${t('rebirth.opensHeists')}`}
+      </span>
       <Strip ids={ids} />
     </div>
   );
@@ -58,6 +64,12 @@ export function UnlockedFx() {
         <span className={s.big}>{t('rebirth.unlockedTitle')}</span>
         <span className={s.sub}>{t('toast.unlocked', { n: unlocked.ids.length })}</span>
         <Strip ids={unlocked.ids} />
+        {unlocked.count === BAL.heist.unlockRebirths && (
+          <span className={s.heistsOpen}>
+            <HeistNavIcon size="md" />
+            {t('rebirth.heistsOpen')}
+          </span>
+        )}
       </div>
     </div>
   );

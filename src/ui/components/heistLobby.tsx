@@ -4,7 +4,7 @@
  * run is made of, and a big Start button that spends a ticket. A rewarded ad gives +1 ticket once a day.
  */
 import { useState, type CSSProperties } from 'react';
-import { canStartHeist, formatNumber, heistAdTicketAvailable } from '../../core';
+import { canStartHeist, formatNumber, heistAdTicketAvailable, heistsOpen } from '../../core';
 import { useGame } from '../../app/store';
 import { ads, haptics } from '../../services';
 import { useNow } from '../hooks';
@@ -30,6 +30,7 @@ function LocThumb({ world }: { world: number }) {
 function LocationCard({ id, selected, onPick }: { id: HeistLocationId; selected: boolean; onPick: () => void }) {
   const info = locationInfo(id);
   const open = useGame((g) => locationOpen(g, id));
+  const heistsLocked = useGame((g) => !heistsOpen(g));
   const wins = useGame((g) => heistOf(g).wins[id] ?? 0);
   return (
     <button
@@ -68,14 +69,53 @@ function LocationCard({ id, selected, onPick }: { id: HeistLocationId; selected:
             <BagIcon size="sm" />×{formatNumber(info.bags)}
           </span>
         ) : (
-          <span className={s.locNeed}>{t('heistUi.unlockWorld', { n: info.unlockWorld })}</span>
+          <span className={s.locNeed}>{heistsLocked ? t('heistUi.unlockRebirth') : t('heistUi.unlockWorld', { n: info.unlockWorld })}</span>
         )}
       </div>
     </button>
   );
 }
 
+/**
+ * Before the first rebirth (BAL.heist.unlockRebirths): what Heists are and when they open, with the
+ * three places shown locked. Tickets keep coming meanwhile.
+ */
+function HeistLocked() {
+  const tickets = useGame((g) => heistOf(g).tickets);
+  return (
+    <div className={s.panel}>
+      <div className={s.lobbyHead}>
+        <span className={s.title}>{t('heistUi.title')}</span>
+      </div>
+      <div className={s.lockedBox}>
+        <LockIcon size="lg" />
+        <div className={s.lockedWords}>
+          <span className={s.lockedTitle}>{t('heistUi.lockedTitle')}</span>
+          <span className={s.lockedText}>{t('heistUi.lockedText')}</span>
+        </div>
+      </div>
+      <div className={s.locs}>
+        {LOCATIONS.map((id) => (
+          <LocationCard key={id} id={id} selected={false} onPick={() => {}} />
+        ))}
+      </div>
+      {tickets > 0 && (
+        <p className={s.lockedTickets}>
+          <Ico name="ticket" size="sm" />
+          {t('heistUi.lockedTickets', { n: tickets })}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function HeistLobby() {
+  // (Two components, so the hooks below never change in number when Heists open mid-view.)
+  const locked = useGame((g) => !heistsOpen(g));
+  return locked ? <HeistLocked /> : <HeistLobbyOpen />;
+}
+
+function HeistLobbyOpen() {
   const now = useNow(1000);
   const tickets = useGame((g) => heistOf(g).tickets);
   const adOk = useGame((g) => heistAdTicketAvailable(g, now));

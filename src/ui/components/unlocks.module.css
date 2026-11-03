@@ -80,6 +80,23 @@
   color: #c9c5ee;
   text-align: center;
 }
+/* The first rebirth's card: Heists are open now. */
+.heistsOpen {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--u));
+  font-size: 34px;
+  color: #ffd75a;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  animation: heistsPop 0.5s 0.4s steps(3) both;
+}
+@keyframes heistsPop {
+  from {
+    transform: translateY(calc(3 * var(--u)));
+    opacity: 0;
+  }
+}
 @keyframes fadeIn {
   from {
     opacity: 0;

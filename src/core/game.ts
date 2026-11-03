@@ -14,7 +14,7 @@ import { combatTick, resolveAfterBoss, startStage } from './systems/combat';
 import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './systems/dumpster';
 import {
   heistAbandon, heistAdTicket, heistBoot, heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistReroll, heistRevive,
-  heistTick, refreshTickets, startHeist,
+  heistsOpen, heistTick, refreshTickets, startHeist,
 } from './systems/heist';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { addXp } from './systems/progression';
@@ -119,7 +119,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         d.settings[action.key] = action.value;
         break;
       case 'heistStart':
-        startHeist(d, action.location, rng, now, ev);
+        if (heistsOpen(d)) startHeist(d, action.location, rng, now, ev);
         break;
       case 'heistGo':
         heistGo(d, rng, ev);
@@ -146,7 +146,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         heistAbandon(d, rng, now, ev);
         break;
       case 'heistAdTicket':
-        heistAdTicket(d, now, ev);
+        if (heistsOpen(d)) heistAdTicket(d, now, ev);
         break;
       case 'cheat':
         applyCheat(d, action.cheat, ev, now);

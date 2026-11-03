@@ -3,7 +3,7 @@
  * every button, maps core events to sounds, follows the Sound/Music settings, and goes quiet
  * while the app is in the background.
  */
-import { isBossWave, type CoreEvent } from '../core';
+import { heistsOpen, isBossWave, type CoreEvent } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore, getGame } from '../app/store';
 import { haptics } from '../services';
@@ -117,7 +117,8 @@ export function installSound(): () => void {
           audio.heistHelper();
           break;
         case 'heistTickets':
-          if (e.tickets > tickets) audio.heistTicket();
+          // (Tickets keep coming before Heists open, quietly.)
+          if (e.tickets > tickets && heistsOpen(getGame())) audio.heistTicket();
           tickets = e.tickets;
           break;
         case 'heistEnd':

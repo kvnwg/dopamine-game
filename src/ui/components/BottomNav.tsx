@@ -1,10 +1,10 @@
 import { DATA } from '../../data';
-import { affordableUpgrades, canRebirth, inventoryCapacity, isUpgrade, worldThreat } from '../../core';
+import { affordableUpgrades, canRebirth, heistsOpen, inventoryCapacity, isUpgrade, worldThreat } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { useUi, type Tab } from '../uiStore';
-import { ArrowUpIcon, BagIcon, GlobeIcon, RebirthIcon, ReelIcon } from './Icons';
+import { ArrowUpIcon, BagIcon, GlobeIcon, LockIcon, RebirthIcon, ReelIcon } from './Icons';
 import { HeistNavIcon, heistNeedsYou } from './heistShared';
 import s from './nav.module.css';
 
@@ -32,18 +32,20 @@ export function BottomNav() {
     const next = g.stage.highestCleared + 1;
     return next <= DATA.worlds.length && g.battle.stage !== next && worldThreat(g, next).level === 'easy';
   });
-  // A ticket to spend, or a heist waiting on the player.
+  // A ticket to spend, or a heist waiting on the player (none before Heists open, with the first rebirth).
   const heist = useGame(heistNeedsYou);
+  const heistLocked = useGame((g) => !heistsOpen(g) && !g.heist.run);
   const badge: Partial<Record<TabDef['id'], boolean>> = { upgrades: affordable, rebirth, bag: bagBadge, worlds: easyNext, heist };
   return (
     <nav className={s.nav}>
       {TABS.map((d) => {
         const active = d.id === tab;
+        const locked = d.id === 'heist' && heistLocked;
         return (
           <button
             key={d.id}
             aria-label={t(`tab.${d.id}`)}
-            className={[s.tab, active ? s.active : ''].join(' ')}
+            className={[s.tab, active ? s.active : '', locked ? s.locked : ''].join(' ')}
             onClick={() => {
               haptics.impact('light');
               useUi.getState().setTab(d.id);
@@ -51,6 +53,7 @@ export function BottomNav() {
           >
             <span className={`${s.icon} ${d.id === 'alley' ? s.spinIcon : ''}`}>
               <d.icon size="nav" />
+              {locked && <LockIcon size="sm" className={s.navLock} />}
             </span>
             <span className={s.label}>{t(`tab.${d.id}`)}</span>
             {badge[d.id] && <span className={s.badge}>!</span>}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, canRebirth, dayKey, deserialize, gainCurse, gainPerk, generateAct, GameStateSchema, heistAbandon, heistBoot,
+  applyAction, canRebirth, dayKey, deserialize, gainCurse, gainPerk, generateAct, GameStateSchema, heistAbandon, heistBoot, heistsOpen,
   heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistOptionAvailable, heistRevive, heistTick, itemTierFor, makeOffer,
   optionPreview, performSpin, refreshTickets, rollActNodes, runEffects, runStats, Rng, serialize, startHeist, tick,
   TICK_SECONDS, travelTo, type CoreEvent, type GameState, type HeistRun,
@@ -74,7 +74,8 @@ describe('heist tickets', () => {
 
   it('a run costs a ticket; no ticket, no run; one ad ticket a day, never past the cap', () => {
     const rng = new Rng(1);
-    let st = freshState();
+    let st = clone(freshState());
+    st.rebirths = H.unlockRebirths;
     let r = applyAction(st, { type: 'heistStart', location: 'pizza' }, rng, T0);
     expect(r.state.heist.tickets).toBe(2);
     expect(r.events).toContainEqual({ type: 'heistTickets', tickets: 2 });
@@ -92,6 +93,25 @@ describe('heist tickets', () => {
     full.heist.tickets = H.tickets.max;
     full.heist.adTicketDay = null;
     expect(applyAction(full, { type: 'heistAdTicket' }, rng, T0).state.heist.tickets).toBe(H.tickets.max);
+  });
+
+  it('open with the first rebirth: before it a run or an ad ticket does nothing (tickets still come in), after it both work', () => {
+    const rng = new Rng(5);
+    const st = clone(freshState());
+    expect(heistsOpen(st)).toBe(false);
+    let r = applyAction(st, { type: 'heistStart', location: 'pizza' }, rng, T0);
+    expect(r.state.heist.run).toBeNull();
+    expect(r.state.heist.tickets).toBe(H.tickets.start);
+    r = applyAction(st, { type: 'heistAdTicket' }, rng, T0);
+    expect(r.state.heist.tickets).toBe(H.tickets.start);
+    // The daily tickets keep coming meanwhile.
+    const tomorrow = new Date(2026, 0, 6, 9, 0, 0).getTime();
+    const waited = tick(st, { ticks: 1 }, rng, tomorrow).state;
+    expect(waited.heist.tickets).toBe(Math.min(H.tickets.max, H.tickets.start + H.tickets.perDay));
+    const reborn = clone(waited);
+    reborn.rebirths = H.unlockRebirths;
+    expect(heistsOpen(reborn)).toBe(true);
+    expect(applyAction(reborn, { type: 'heistStart', location: 'pizza' }, rng, tomorrow).state.heist.run?.location).toBe('pizza');
   });
 
   it('locations open with the best world beaten: the Mall after World 5 (or any rebirth), the Hotel after World 10', () => {
@@ -209,7 +229,9 @@ describe('heist fights', () => {
 
   it('run at twice the speed, through the public tick', () => {
     const rng = new Rng(8);
-    let st = applyAction(freshState(8), { type: 'heistStart', location: 'pizza' }, rng, T0).state;
+    const open = clone(freshState(8));
+    open.rebirths = H.unlockRebirths;
+    let st = applyAction(open, { type: 'heistStart', location: 'pizza' }, rng, T0).state;
     st = applyAction(st, { type: 'heistGo' }, rng, T0).state;
     const walk = BAL.combat.walkSeconds;
     // The walk-in takes half as long as it says.

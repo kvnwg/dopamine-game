@@ -1,6 +1,6 @@
 /**
  * The Roll tab: the reels roll on their own (Trash Bags make turbo spins). Shows luck, spin speed,
- * the lucky-spin meter, the latest result with its "1 in X", recent results, and equipped gear.
+ * the lucky-spin meter, the latest result with its "1 in X", and equipped gear.
  * Items are equipped by dragging them onto the raccoon.
  */
 import type { CSSProperties } from 'react';
@@ -96,33 +96,6 @@ function LastRoll() {
   );
 }
 
-function Recent() {
-  const recent = useUi((u) => u.recent);
-  const bag = useGame((g) => g.inventory);
-  const equipped = useGame((g) => g.equipped);
-  return (
-    <div className={s.recent}>
-      <span className={s.recentLabel}>{t('roll.recent')}</span>
-      <div className={s.recentRow}>
-        {recent.slice(0, 8).map((r, i) => {
-          const inBag = bag.find((x) => x.uid === r.item.uid);
-          return (
-            <ItemIcon
-              key={r.id}
-              item={inBag ?? r.item}
-              size={96}
-              draggable={!!inBag}
-              upgrade={inBag ? isUpgrade({ equipped }, inBag) : false}
-              className={`${i === 0 ? s.slideIn : ''} ${!inBag ? s.scrapped : ''}`}
-              onTap={inBag ? () => useUi.getState().openPopup('itemDetail', r.item.uid) : undefined}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 /** The equipped gear, also a drop target: drop an item here (or on the raccoon) to put it on. */
 export function GearRow({ size = 86 }: { size?: number }) {
   const equipped = useGame((g) => g.equipped);
@@ -210,7 +183,6 @@ export function AlleyPanel() {
         </div>
       </div>
       <LastRoll />
-      <Recent />
       <div className={s.gearBox}>
         <div className={s.gearHead}>
           <span>{t('roll.gear')}</span>

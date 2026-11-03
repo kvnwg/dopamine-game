@@ -120,7 +120,6 @@
   "roll.best": "Best: {name}",
   "roll.bestNone": "Best find: nothing yet",
   "roll.waiting": "Rolling...",
-  "roll.recent": "RECENT",
   "roll.gear": "EQUIPPED",
   "roll.upgrade": "Upgrade",
   "roll.upgrading": "{time}",

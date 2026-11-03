@@ -39,7 +39,6 @@ interface UiState {
   /** Item uid (bag or equipped) for the detail popup, or the world number for the world popup. */
   detailUid: number | null;
   lastRoll: RollView | null;
-  recent: RollView[];
   /** Big reveal overlay for rare rolls. */
   celebrate: RollView | null;
   /** Building up to a big reveal (dumpster shakes and glows). */
@@ -70,7 +69,6 @@ export const useUi = create<UiState>((set) => ({
   popup: null,
   detailUid: null,
   lastRoll: null,
-  recent: [],
   celebrate: null,
   charging: null,
   rebirthFx: null,

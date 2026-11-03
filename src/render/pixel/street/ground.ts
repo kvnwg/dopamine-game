@@ -25,7 +25,7 @@ const CURB = 59;
 /** The sidewalk: fighters stand on row 67 (FEET_ROW), mid-slab, five rows of slab above and below. */
 const WALK0 = 62;
 const WALK1 = 72;
-/** HP bars sit on these rows, under the feet: nothing but plain slab there. */
+/** HP bars sit on rows 68 to 70, under the feet: from the feet row down to them, nothing but plain slab. */
 const CALM0 = 68;
 const CALM1 = 70;
 /** The grass verge, down to the bottom of the view. */
@@ -394,9 +394,9 @@ function verge(b: PixelBuf): void {
 
 /** Blades over the verge (and over the slabs' edge), clover, a few tiny flowers. */
 function vergeDetails(b: PixelBuf): void {
+  // blades over the slabs' front edge, where the slab above them is plain (and clear of the joints)
+  const tip = (xx: number) => h2(xx, VERGE, 7) < 0.2;
   for (let x = 0; x < TILE_W; x++) {
-    // blades over the slabs' front edge, where the slab above them is plain
-    const tip = (xx: number) => h2(xx, VERGE, 7) < 0.2;
     const { u } = slabAt(x, WALK1);
     if (u < 4 || u > SLAB_W - 4) continue;
     if (tip(x) && !tip(x - 1) && !tip(x - 2) && rgbAt(b, x, gy(WALK1 - 1)) !== hexInt(K.slabDim)) {

@@ -1,19 +1,19 @@
 /**
- * The street's mid layer (view rows 20 to 59): three houses set back behind their front yards, with
- * wide side yards between them for trees, a bird bath and the alley where the green dumpster lives.
+ * The street's mid layer (view rows 20 to 59): three houses set back behind front yards, with wide
+ * side yards between them for trees, a bird bath and the alley where the green dumpster lives.
  *
- * The lawn's far edge is view row 50 (the far layer's tree line shows above it) and the lawn runs on
- * under the ground layer's lawn edge (row 58). The houses' walls meet the lawn at row 52 (their ink
- * line), so each front yard is five rows deep: a walk or stepping stones from the door, a mailbox at
- * the front, shrubs and a flower bed along the foundation. Light comes from the top left: shadows fall
- * on the grass to the right.
+ * The houses' walls meet the lawn on view row 52 (their ink line), which is also the lawn's far edge
+ * between them, with the far layer's tree line showing above it. The lawn runs on under the ground
+ * layer's lawn edge (row 58), so each front yard is five rows deep (53 to 57): a walk or stepping
+ * stones from the door, a mailbox at the front, shrubs and a flower bed along the foundation. Light
+ * comes from the top left: shadows fall on the grass to the right.
  *
  * Houses are sketched on a grid of palette keys (roof shingles, siding and brick are laid in code,
  * windows and doors stamped from small authored rows), so the grid doubles as Rows: windowsOf finds
  * the windows (glass c / C, muntins w, curtains M / P, frames x) and they light up at dusk and night.
  * Each house recolors the keys with its own paint (window frames 'x' are painted white, like the
- * trim). Porch lights by the doors are lamps. Colors are hue-shifted: shadows lean blue-violet,
- * lights lean warm.
+ * trim). Porch lights by the doors are lamps. Trees and shrubs are shaded in code from round clumps.
+ * Colors are hue-shifted: shadows lean blue-violet, lights lean warm.
  */
 import { blank, hash01, mix, setPx, type PixelBuf, type Rows } from '../buf';
 import type { LightSpot } from '../sceneryTypes';
@@ -58,8 +58,10 @@ const LAWN = {
   core: mix(GRASS.shade, GRASS.deep, 0.25),
 };
 
-/** Paving: walks, stepping stones and the driveway (light stone, shade leaning violet). */
+/** Paving: walks and the driveway (pale concrete, shade leaning violet). */
 const STONE = { lit: '#e6dfd6', mid: '#c9bfc4', dark: '#a097ac', joint: '#b3a9ba' };
+/** Stepping stones: warmer natural flagstone. */
+const FLAG = { lit: '#e4d7bf', mid: '#bdae9a', dark: '#8c8090' };
 
 /** Paint shared by every house: white trim, window glass, curtains, metal, stone, the porch lamp. */
 const SHARED: Record<string, string> = {
@@ -92,9 +94,6 @@ class Sketch {
   private readonly cells: string[][];
   constructor(readonly w: number, readonly h: number) {
     this.cells = Array.from({ length: h }, () => new Array<string>(w).fill('.'));
-  }
-  at(x: number, y: number): string {
-    return this.cells[y]?.[x] ?? '.';
   }
   set(x: number, y: number, c: string): void {
     if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.cells[y][x] = c;
@@ -821,8 +820,8 @@ function steppingStones(b: PixelBuf, x: number): void {
   const stones: ReadonlyArray<readonly [number, number, number]> = [[x, BASE + 1, 3], [x + 2, BASE + 3, 4], [x, BASE + 5, 5]];
   for (const [sx, sy, w] of stones) {
     for (let i = 0; i < w; i++) {
-      dot(b, sx + i, sy, i === 0 || i === w - 1 ? STONE.mid : STONE.lit);
-      dot(b, sx + i, sy + 1, i === 0 ? STONE.mid : STONE.dark);
+      dot(b, sx + i, sy, i === 0 || i === w - 1 ? FLAG.mid : FLAG.lit);
+      dot(b, sx + i, sy + 1, i === 0 ? FLAG.mid : FLAG.dark);
       if (i > 0) dot(b, sx + i, sy + 2, LAWN.core);
     }
     dot(b, sx + w, sy + 1, LAWN.core);
@@ -859,6 +858,9 @@ export function midLights(): LightSpot[] {
   });
 }
 
+/** The alley's dumpster (left edge before inking). */
+const DUMPSTER_X = 211;
+
 /** Side-yard trees: [sprite, left edge, base row]. */
 const TREES: ReadonlyArray<readonly [PixelBuf, number, number]> = [
   [MAPLE, 51, BASE + 4],
@@ -877,7 +879,7 @@ export function midLayer(): PixelBuf {
     houseShadow(b, x + s.w - 1, 8);
   }
   for (const [t, x, base] of TREES) lawnShadow(b, x + t.w / 2 + 6, base - 0.5, t.w * 0.38, 1.7);
-  lawnShadow(b, 226, BASE + 2, 9, 1.4);
+  lawnShadow(b, DUMPSTER_X + 15, BASE + 2, 9, 1.4);
 
   // paths: walks and stones from the doors, the driveway
   for (const [, x, h] of houses) {
@@ -892,7 +894,7 @@ export function midLayer(): PixelBuf {
   for (const [s, x] of houses) plant(b, s, x, BASE);
   for (const [t, x, base] of TREES) plant(b, t, x, base);
 
-  // foundation plantings and the cottage's flower bed
+  // foundation plantings and the ranch's flower bed
   plant(b, HYDRANGEA, ax + 2, BASE + 1);
   plant(b, BOX_SHRUB, ax + 26, BASE + 1);
   plant(b, ROSE_BUSH, bx - 7, BASE + 1);
@@ -901,16 +903,16 @@ export function midLayer(): PixelBuf {
 
   // the alley: a can by the garage, the dumpster, a box and two bags
   plant(b, inked(CAN), 205, BASE + 3);
-  plant(b, inked(DUMPSTER), 211, BASE + 3);
+  plant(b, inked(DUMPSTER), DUMPSTER_X, BASE + 3);
   plant(b, inked(BAG, { '1': '#2b4639', '2': '#3c634e', '3': '#588866' }), 231, BASE + 3, true);
   plant(b, inked(BOX), 224, BASE + 3);
   plant(b, inked(BAG, { '1': '#34344a', '2': '#4b4b66', '3': '#6c6c8c' }), 230, BASE + 4);
 
   // the front of the yards: mailboxes by the walks, a gnome, a bird bath under the maple
   plant(b, inked(MAILBOX), ax + 22, FRONT);
-  plant(b, inked(MAILBOX, { '5': '#4c4a62', W: '#6e6c88', '4': '#3c3a50', '3': '#2e2c40', R: 'R', e: 'e' }), cx + 23, FRONT);
-  plant(b, inked(GNOME, { s: 's', P: 'P' }), bx + 29, BASE + 3);
-  plant(b, inked(BIRD_BATH, { '5': STONE.lit, '4': STONE.mid, '3': STONE.dark, C: '#a2d2ed', c: '#5c93c8' }), 74, BASE + 4);
+  plant(b, inked(MAILBOX, { '5': '#4c4a62', W: '#6e6c88', '4': '#3c3a50', '3': '#2e2c40' }), cx + 23, FRONT);
+  plant(b, inked(GNOME), bx + 29, BASE + 3);
+  plant(b, inked(BIRD_BATH, { '5': STONE.lit, '4': STONE.mid, '3': STONE.dark, C: '#a2d2ed', c: '#5c93c8' }), 52, BASE + 4);
   return b;
 }
 
@@ -922,4 +924,3 @@ export const MID_SPRITES: Array<[string, Rows]> = [
   ['mailbox', MAILBOX], ['gnome', GNOME], ['bird_bath', BIRD_BATH],
   ['dumpster', DUMPSTER], ['can', CAN], ['bag', BAG], ['box', BOX],
 ];
-export const __TEMP = { crown, tree, shrub, LEAF, BLOSSOM, BOX_LEAF }; // TEMP scratch export

@@ -1,9 +1,9 @@
 /**
- * The street's far layer (view rows 24 to 58): the countryside beyond the street, in depth bands that
+ * The street's far layer (view rows 26 to 58): the countryside beyond the street, in depth bands that
  * get hazier with distance. Nothing here is inked, so it reads as far away:
  *  - a pale far range peeking over a distant ridge, sunlit flanks warmer, shaded flanks cooler;
  *  - back hills of fields and hedgerows, with a small town on one of them (roofs, a church steeple,
- *    a water tower) whose windows come on at night;
+ *    a water tower, a main street) whose windows and street lights come on at night;
  *  - near hills with a plowed field, a wheat field, an orchard and a farm (red barn, silo, farmhouse);
  *  - a loose tree line of round crowns, pines and poplars, in groups with open fields between.
  * Below row 48 (the meadow) it is only filler: the street's lawn covers it.
@@ -15,7 +15,7 @@ import type { LightSpot } from '../sceneryTypes';
 import { TILE_W, despeckle, dot, foliage, hz, rgbAt, wrap } from './common';
 
 /** Where the far layer sits in the view: top row and height. */
-export const FAR_SPOT = { y: 24, h: 35 } as const;
+export const FAR_SPOT = { y: 26, h: 33 } as const;
 
 /** A view row as a far-layer row. */
 const fy = (row: number): number => row - FAR_SPOT.y;
@@ -116,8 +116,16 @@ const NEAR = skyline(fy(47), [
 /** The meadow's top edge (the street's lawn covers it); the tree line stands on it. */
 const MEADOW = fy(48);
 
+/** The layer, built once (farLights reads it too). */
 let built: PixelBuf | null = null;
+/** While the layer is built: which pixels are drawn details (buildings, trees, hedgerows), not texture. */
+let detail = new Uint8Array(0);
 
+export function farLayer(): PixelBuf {
+  return clone(build());
+}
+
+/** Back to front: the distant bands, back fields, the town, near fields, the farm, the tree line. */
 function build(): PixelBuf {
   if (built) return built;
   const b = blank(TILE_W, FAR_SPOT.h);
@@ -137,9 +145,6 @@ function build(): PixelBuf {
   built = b;
   return b;
 }
-
-/** While the layer is built: which pixels are drawn details (buildings, trees, hedgerows), not texture. */
-let detail = new Uint8Array(0);
 
 /** Pastes a band (texture) or a set of details over the layer, keeping track of which is which. */
 function layer(b: PixelBuf, src: PixelBuf, isDetail: boolean): void {
@@ -163,10 +168,6 @@ function tidy(b: PixelBuf): void {
       dot(b, x, y, '#' + best.toString(16).padStart(6, '0'));
     }
   }
-}
-
-export function farLayer(): PixelBuf {
-  return clone(build());
 }
 
 /** A plain distant band: flanks lit and shaded, a warm rim on sunlit crests, mist pooling at its foot. */
@@ -526,8 +527,13 @@ function buildingMap(roof: number, walls: number, haze: number): Record<string, 
   };
 }
 
+/** The town's main street (view row) along the foot of its houses, and its street lights (x). */
+const STREET = { row: 43, x0: 79, x1: 126 } as const;
+const STREET_LIGHTS = [81, 89, 97, 105, 113, 121] as const;
+
 function drawTown(b: PixelBuf): void {
   const d = blank(TILE_W, b.h);
+  for (let x = STREET.x0; x <= STREET.x1; x++) dot(d, x, fy(STREET.row), hz(mix('T', '5', 0.5), HAZE.town));
   for (const [rows, x, base, roof, walls] of TOWN) {
     stamp(d, rows, x, fy(base) - rows.length + 1, { wrapX: true, recolor: buildingMap(roof, walls, HAZE.town) });
   }
@@ -569,12 +575,17 @@ function windowPixels(): Array<{ x: number; y: number; haze: number }> {
   return out;
 }
 
-/** The far windows still in sight (nothing nearer drawn over them); a share light up at dusk and night. */
+/**
+ * The far windows still in sight (nothing nearer drawn over them), a share of which light up at dusk
+ * and night, and the town's street lights (on whenever a world turns its lamps on).
+ */
 export function farLights(): LightSpot[] {
   const b = build();
-  return windowPixels()
+  const windows = windowPixels()
     .filter(({ x, y, haze }) => rgbAt(b, x, y) === parseInt(windowColor(haze).slice(1), 16))
     .map(({ x, y }): LightSpot => ({ x, y, w: 1, h: 1, kind: 'window' }));
+  const lamps = STREET_LIGHTS.map((x): LightSpot => ({ x, y: fy(STREET.row), w: 1, h: 1, kind: 'lamp', radius: 2.2, power: 0.45 }));
+  return [...windows, ...lamps];
 }
 
 /** Authored sprites, for the preview sheet. */

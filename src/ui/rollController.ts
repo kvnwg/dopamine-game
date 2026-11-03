@@ -112,7 +112,7 @@ export function installRollController(): () => void {
           // The big "last roll" card shows the best result of the spin; every result goes in Recent.
           if (e.reel === 0 || !spinBest || e.odds > spinBest.odds) spinBest = view;
           const shown = spinBest;
-          useUi.setState((st) => ({ lastRoll: shown, recent: [view, ...st.recent].slice(0, 8) }));
+          useUi.setState({ lastRoll: shown });
           const tier = rarityIndex(e.item.rarity);
           if (tier >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
             if (!revealBusy()) celebrate(view);

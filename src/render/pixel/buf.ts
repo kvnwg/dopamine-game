@@ -340,6 +340,59 @@ export function scale2x(b: PixelBuf): PixelBuf {
   return out;
 }
 
+/**
+ * Scale3x (AdvMAME3x): three times the resolution, the Scale2x idea on a 3 x 3 block. Each pixel takes
+ * a neighbor's color at its corners and edges where neighbors agree along a diagonal, so slopes come
+ * out as finer steps and no new colors appear. Outside the edge counts as transparent.
+ */
+export function scale3x(b: PixelBuf): PixelBuf {
+  const out = blank(b.w * 3, b.h * 3);
+  const at = (x: number, y: number): number => {
+    if (x < 0 || y < 0 || x >= b.w || y >= b.h) return -1;
+    const i = (y * b.w + x) * 4;
+    return b.px[i + 3] === 0 ? -1 : (b.px[i] << 16) | (b.px[i + 1] << 8) | b.px[i + 2];
+  };
+  const put = (x: number, y: number, v: number) => {
+    if (v < 0) return;
+    const i = (y * out.w + x) * 4;
+    out.px[i] = (v >> 16) & 255;
+    out.px[i + 1] = (v >> 8) & 255;
+    out.px[i + 2] = v & 255;
+    out.px[i + 3] = 255;
+  };
+  for (let y = 0; y < b.h; y++) {
+    for (let x = 0; x < b.w; x++) {
+      // A B C / D E F / G H I around E.
+      const a = at(x - 1, y - 1);
+      const bb = at(x, y - 1);
+      const c = at(x + 1, y - 1);
+      const d = at(x - 1, y);
+      const e = at(x, y);
+      const f = at(x + 1, y);
+      const g = at(x - 1, y + 1);
+      const h = at(x, y + 1);
+      const i = at(x + 1, y + 1);
+      const db = d === bb && bb !== f && d !== h;
+      const bf = bb === f && bb !== d && f !== h;
+      const dh = d === h && d !== f && h !== bb;
+      const hf = h === f && d !== f && bb !== h;
+      const cells = [
+        db ? d : e,
+        (db && e !== c) || (bf && e !== a) ? bb : e,
+        bf ? f : e,
+        (db && e !== g) || (dh && e !== a) ? d : e,
+        e,
+        (bf && e !== i) || (hf && e !== c) ? f : e,
+        dh ? d : e,
+        (dh && e !== i) || (hf && e !== g) ? h : e,
+        hf ? f : e,
+      ];
+      for (let k = 0; k < 9; k++) put(3 * x + (k % 3), 3 * y + Math.floor(k / 3), cells[k]);
+    }
+  }
+  return out;
+}
+
 /** Grows a buffer by `n` pixels on every side, repeating its edge pixels outward (for full-view art). */
 export function padEdges(b: PixelBuf, n: number): PixelBuf {
   const out = blank(b.w + 2 * n, b.h + 2 * n);

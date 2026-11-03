@@ -29,9 +29,9 @@ import { linePixels, mix } from './pixel/buf';
 import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type TextStyle } from './pixel/font';
 import { SPRITE_SLOTS } from './pixel/hero';
 import { CHARACTER_OUTLINE, PAL } from './pixel/palette';
-import { FEET_ROW, VIEW, VIEW_MARGIN, type LayerName } from './pixel/sceneryTypes';
+import { FEET_ROW, VIEW, VIEW_MARGIN, frameTop, type LayerName } from './pixel/sceneryTypes';
 import type { FxName } from './pixel/packs/fx';
-import { layerY, scenerySet, scroll0, worldArt, worldSeed } from './worldLook';
+import { CLOUD_SCROLL0, layerY, scenerySet, scroll0, worldArt, worldSeed } from './worldLook';
 import { Ambience } from './ambience';
 import { PixelBits, type BitStyle } from './pixelBits';
 import { PixelTexts, type PixelText } from './pixelText';
@@ -428,7 +428,7 @@ export class BattleScene extends Phaser.Scene {
     // fighters, the foreground (30), particles in front (31), the vignette (32), effects and UI.
     // Full-view pictures reach MARGIN past every edge (the screen shake never shows an edge).
     this.sky = this.add.image(-MARGIN, -MARGIN, k.sky).setOrigin(0, 0).setScale(P).setDepth(0);
-    for (let i = 0; i < 2; i++) this.clouds.push({ strip: new Strip(this, 1 + i * 0.1), speed: 0, scroll: 37 * P + i * 61 * P });
+    for (let i = 0; i < 2; i++) this.clouds.push({ strip: new Strip(this, 1 + i * 0.1), speed: 0, scroll: CLOUD_SCROLL0[i] * P });
     this.glow = this.add.image(0, 0, '__DEFAULT').setOrigin(0, 0).setScale(P).setDepth(1.5).setVisible(false);
     this.layers = { far: new Strip(this, 2), mid: new Strip(this, 3), ground: new Strip(this, 4), fg: new Strip(this, 30) };
     this.vignette = this.add.image(-MARGIN, -MARGIN, k.vignette).setOrigin(0, 0).setScale(P).setDepth(32);
@@ -466,7 +466,9 @@ export class BattleScene extends Phaser.Scene {
     else this.glow.setTexture('__DEFAULT').setVisible(false);
     this.vignette.setTexture(keys.vignette);
     const art = worldArt(world);
-    this.ambience.setWorld({ atmo: art.atmo, seed: worldSeed(world), sky: set.sky, flicker: art.flicker, layerY: y, tileW: set.tileW });
+    this.ambience.setWorld({
+      atmo: art.atmo, seed: worldSeed(world), top: frameTop(set), scale: art.scale, sky: set.sky, flicker: art.flicker, layerY: y, tileW: set.tileW,
+    });
   }
 
   /** Texture keys of the foes on screen. */

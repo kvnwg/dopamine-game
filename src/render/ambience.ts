@@ -7,13 +7,17 @@
  *
  * Purely visual: it uses its own seeded generator, not the game's Rng. Reduce motion hides drifting
  * particles and shooting stars; reduce flashing turns lightning off.
+ *
+ * Particle bands, sizes and speeds are written for the legacy 82-row scene frame (like a world's
+ * atmosphere) and mapped into the shown set's frame: rows by its top and scale, distances and speeds
+ * by its scale, so particles keep their place in the scenery and their speed on screen.
  */
 import Phaser from 'phaser';
 import type { Atmo, ParticleKind } from '../data';
 import { P, toCanvas } from './pixel';
 import { blank, fromRows, setPx, type PixelBuf } from './pixel/buf';
 import { twinkleSpots } from './pixel/atmosphere';
-import { SCENE_Y, VIEW, VIEW_MARGIN, type LayerName, type LightSpot } from './pixel/sceneryTypes';
+import { VIEW, VIEW_MARGIN, type LayerName, type LightSpot } from './pixel/sceneryTypes';
 
 /** Seeded 0..1 generator (mulberry32). */
 function rng(seed: number): () => number {
@@ -89,11 +93,15 @@ interface KindDef {
   add?: boolean;
   /** Where particles appear: anywhere in the band, at the top edge (falling) or the bottom (rising). */
   spawn: 'band' | 'top' | 'bottom';
-  /** View rows the particles live in (scene rows plus S; falling kinds start at the top of the view). */
-  rows: readonly [number, number];
+  /**
+   * Rows of the legacy scene frame the particles live in (negative: above it), mapped into the set's
+   * frame; 'top' is the top of the view (falling kinds start there).
+   */
+  rows: readonly [number | 'top', number];
+  /** Speeds in legacy frame pixels per second (times the set's scale on the view's grid). */
   vx: readonly [number, number];
   vy: readonly [number, number];
-  /** Side-to-side sway (art pixels) and its speed (radians per second). */
+  /** Side-to-side sway (legacy frame pixels) and its speed (radians per second). */
   sway?: readonly [number, number];
   /** Wandering: velocity drifts randomly (fireflies, wisps, spores). */
   wander?: number;
@@ -110,55 +118,70 @@ interface KindDef {
   parallax: number;
 }
 
-/** The scene frame's top row in the view (sceneryTypes.ts): bands below are scene rows shifted by it. */
-const S = SCENE_Y;
-
 const KINDS: Record<ParticleKind, KindDef> = {
   fireflies: {
-    count: 10, tex: ['amb_glow'], colors: ['#E8FF7A', '#FFE66A'], add: true, spawn: 'band', rows: [S + 30, S + 62],
+    count: 10, tex: ['amb_glow'], colors: ['#E8FF7A', '#FFE66A'], add: true, spawn: 'band', rows: [30, 62],
     vx: [-2, 2], vy: [-1.5, 1.5], wander: 3, pulse: [1.6, 3.2], alpha: [0.9, 1], front: 0.3, parallax: 0.6,
   },
   snow: {
-    count: 52, tex: ['amb_flake'], colors: ['#FFFFFF', '#EAF4FF'], spawn: 'top', rows: [0, S + 69],
+    count: 52, tex: ['amb_flake'], colors: ['#FFFFFF', '#EAF4FF'], spawn: 'top', rows: ['top', 69],
     vx: [-3, -1], vy: [5, 10], sway: [1.2, 1.6], alpha: [0.75, 1], front: 0.35, parallax: 0.7,
   },
   rain: {
-    count: 80, tex: ['amb_drop'], colors: ['#BFD4F0', '#9FB6D8'], spawn: 'top', rows: [0, S + 69],
+    count: 80, tex: ['amb_drop'], colors: ['#BFD4F0', '#9FB6D8'], spawn: 'top', rows: ['top', 69],
     vx: [-16, -12], vy: [80, 100], alpha: [0.45, 0.7], front: 0.4, parallax: 0.6,
   },
   leaves: {
     count: 10, tex: ['amb_leaf0', 'amb_leaf1', 'amb_leaf2', 'amb_leaf1'], colors: ['#E8742A', '#C8402A', '#F2B03A', '#B85A1E'],
-    spawn: 'top', rows: [0, S + 66], vx: [-9, -4], vy: [7, 12], sway: [2, 2.2], tumble: 0.22, alpha: [1, 1], front: 0.4, parallax: 0.8,
+    spawn: 'top', rows: ['top', 66], vx: [-9, -4], vy: [7, 12], sway: [2, 2.2], tumble: 0.22, alpha: [1, 1], front: 0.4, parallax: 0.8,
   },
   petals: {
-    count: 12, tex: ['amb_petal', 'amb_flake'], colors: ['#FFD0E0', '#FFFFFF', '#FFB0C8'], spawn: 'top', rows: [0, S + 66],
+    count: 12, tex: ['amb_petal', 'amb_flake'], colors: ['#FFD0E0', '#FFFFFF', '#FFB0C8'], spawn: 'top', rows: ['top', 66],
     vx: [-9, -5], vy: [4, 8], sway: [1.6, 2], tumble: 0.3, alpha: [0.9, 1], front: 0.4, parallax: 0.8,
   },
   embers: {
-    count: 16, tex: ['amb_px'], colors: ['#FFB04A', '#FF6A2A', '#FFE08A'], add: true, spawn: 'bottom', rows: [S + 20, S + 68],
+    count: 16, tex: ['amb_px'], colors: ['#FFB04A', '#FF6A2A', '#FFE08A'], add: true, spawn: 'bottom', rows: [20, 68],
     vx: [-2, 2], vy: [-14, -7], sway: [1, 2.6], pulse: [0.5, 1.2], alpha: [0.8, 1], front: 0.35, parallax: 0.7,
   },
   spores: {
-    count: 14, tex: ['amb_glow', 'amb_px'], colors: ['#7AFFE0', '#FF9AE8'], add: true, spawn: 'bottom', rows: [S + 24, S + 66],
+    count: 14, tex: ['amb_glow', 'amb_px'], colors: ['#7AFFE0', '#FF9AE8'], add: true, spawn: 'bottom', rows: [24, 66],
     vx: [-1.5, 1.5], vy: [-4, -2], wander: 1.5, pulse: [2, 4], alpha: [0.8, 1], front: 0.3, parallax: 0.6,
   },
   sparkles: {
-    count: 11, tex: ['amb_px', 'amb_star'], colors: ['#FFFFFF'], add: true, spawn: 'band', rows: [14, S + 62],
+    count: 11, tex: ['amb_px', 'amb_star'], colors: ['#FFFFFF'], add: true, spawn: 'band', rows: [-11, 62],
     vx: [0, 0], vy: [0, 0], glint: true, alpha: [1, 1], front: 0.3, parallax: 0.5,
   },
   wisps: {
-    count: 5, tex: ['amb_glow'], colors: ['#9AF0D0', '#B8C8FF'], add: true, spawn: 'band', rows: [S + 32, S + 60],
+    count: 5, tex: ['amb_glow'], colors: ['#9AF0D0', '#B8C8FF'], add: true, spawn: 'band', rows: [32, 60],
     vx: [-3, 3], vy: [-1, 1], wander: 2, sway: [1.5, 0.8], pulse: [2.5, 4], alpha: [0.7, 0.9], front: 0.2, parallax: 0.5,
   },
   motes: {
-    count: 12, tex: ['amb_px'], colors: ['#FFF8D8'], spawn: 'band', rows: [S + 18, S + 60],
+    count: 12, tex: ['amb_px'], colors: ['#FFF8D8'], spawn: 'band', rows: [18, 60],
     vx: [0.5, 2.5], vy: [-1, 0.6], wander: 0.8, pulse: [3, 6], alpha: [0.35, 0.6], front: 0.3, parallax: 0.6,
   },
 };
 
+/** A particle kind on the view's grid for a set's frame (top row and scale): view rows, view-pixel speeds. */
+interface Kind extends Omit<KindDef, 'rows'> {
+  rows: readonly [number, number];
+}
+
+function inFrame(def: KindDef, top: number, k: number): Kind {
+  const row = (r: number | 'top') => (r === 'top' ? 0 : Math.round(top + r * k));
+  const times = (a: readonly [number, number] | undefined) => a && ([a[0] * k, a[1] * k] as const);
+  return {
+    ...def,
+    rows: [row(def.rows[0]), row(def.rows[1])],
+    vx: times(def.vx)!,
+    vy: times(def.vy)!,
+    sway: def.sway && [def.sway[0] * k, def.sway[1]],
+    wander: def.wander && def.wander * k,
+  };
+}
+
 interface Mote {
   img: Phaser.GameObjects.Image;
-  def: KindDef;
+  def: Kind;
   /** Position in art pixels (fractional; drawn snapped). */
   x: number;
   y: number;
@@ -183,8 +206,12 @@ interface Flicker {
 }
 
 export interface AmbienceWorld {
+  /** The atmosphere in view rows (worldLook.ts viewAtmo). */
   atmo: Atmo;
   seed: number;
+  /** The set's frame top in the view and its scale (sceneryTypes.ts frameTop, frameScale). */
+  top: number;
+  scale: number;
   /** Whether the world has a sky (no stars or lightning in the dungeon). */
   sky: boolean;
   /** Torches and other flickering lights, per layer. */
@@ -213,6 +240,8 @@ export class Ambience {
   private twinkles: Array<{ img: Phaser.GameObjects.Image; x: number; y: number; t: number }> = [];
   private shooting: Array<{ img: Phaser.GameObjects.Image; k: number }> = [];
   private shoot = { active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, wait: 6 };
+  /** The shown world's scale (sceneryTypes.ts frameScale): sky distances and speeds are times this. */
+  private k = 1;
   private flickers: Flicker[] = [];
   /** A small flock crossing a day sky now and then. */
   private birds: Array<{ img: Phaser.GameObjects.Image; dx: number; dy: number; phase: number }> = [];
@@ -226,7 +255,7 @@ export class Ambience {
   constructor(private scene: Phaser.Scene, private depth: AmbienceDepths) {
     ensureTextures(scene);
     const m = VIEW_MARGIN;
-    this.flash = scene.add.image(-m * P, -m * P, 'amb_flash').setOrigin(0, 0).setDisplaySize((VIEW.w + 2 * m) * P, (VIEW.h + 1 + 2 * m) * P)
+    this.flash = scene.add.image(-m * P, -m * P, 'amb_flash').setOrigin(0, 0).setDisplaySize((VIEW.w + 2 * m) * P, (VIEW.h + 2 * m) * P)
       .setDepth(depth.flash).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0).setVisible(false);
     this.bolt = scene.add.graphics().setDepth(depth.bolt).setVisible(false);
     for (let k = 0; k < 6; k++) {
@@ -234,7 +263,7 @@ export class Ambience {
     }
     for (let k = 0; k < 5; k++) {
       const img = scene.add.image(0, 0, 'amb_bird0').setOrigin(0, 0).setDepth(depth.stars + 0.6).setVisible(false);
-      // A V: the leader, then pairs trailing behind it, one above and one below.
+      // A V: the leader, then pairs trailing behind it, one above and one below (legacy frame pixels).
       const side = k === 0 ? 0 : k % 2 ? -1 : 1;
       this.birds.push({ img, dx: Math.ceil(k / 2) * 6, dy: side * Math.ceil(k / 2) * 3, phase: k * 0.7 });
     }
@@ -243,6 +272,7 @@ export class Ambience {
   /** Builds the particles and lights for a world (replacing the last world's). */
   setWorld(w: AmbienceWorld): void {
     this.world = w;
+    this.k = w.scale;
     this.rand = rng(w.seed);
     for (const m of this.motes) m.img.destroy();
     for (const t of this.twinkles) t.img.destroy();
@@ -264,7 +294,7 @@ export class Ambience {
     const { atmo } = w;
 
     if (w.sky && atmo.stars > 0) {
-      for (const p of twinkleSpots(atmo, Math.round(4 + atmo.stars * 10), w.seed)) {
+      for (const p of twinkleSpots(atmo, Math.round(4 + atmo.stars * 10), w.seed, w.scale)) {
         const img = this.scene.add.image(p.x * P, p.y * P, 'amb_px').setOrigin(0, 0).setDepth(this.depth.stars);
         this.twinkles.push({ img, x: p.x, y: p.y, t: this.rand() * 2 });
       }
@@ -278,7 +308,7 @@ export class Ambience {
       const base = KINDS[kind];
       const def: KindDef = kind === atmo.particles && atmo.particleColors ? { ...base, colors: atmo.particleColors } : base;
       const storm = kind === 'rain' && atmo.weather === 'storm';
-      const use = storm ? { ...def, tex: ['amb_drop3'], vy: [105, 125] as const, vx: [-24, -18] as const } : def;
+      const use = inFrame(storm ? { ...def, tex: ['amb_drop3'], vy: [105, 125] as const, vx: [-24, -18] as const } : def, w.top, w.scale);
       const count = storm ? Math.round(def.count * 1.4) : def.count;
       for (let i = 0; i < count; i++) this.motes.push(this.spawn(use, i, count, true));
     }
@@ -291,7 +321,7 @@ export class Ambience {
     }
   }
 
-  private spawn(def: KindDef, i: number, count: number, first: boolean): Mote {
+  private spawn(def: Kind, i: number, count: number, first: boolean): Mote {
     const r = this.rand;
     const between = (a: readonly [number, number]) => a[0] + (a[1] - a[0]) * r();
     const front = r() < def.front;
@@ -310,11 +340,12 @@ export class Ambience {
   /** Puts a particle at its start: anywhere in its band on the first build, else at its spawn edge. */
   private place(m: Mote, anywhere: boolean, slot: number): void {
     const r = this.rand;
+    const k = this.k;
     const [top, bottom] = m.def.rows;
     m.x = (slot + r() * 0.9) * VIEW.w * 1.15 - 4;
     if (anywhere || m.def.spawn === 'band') m.y = top + r() * (bottom - top);
-    else if (m.def.spawn === 'top') m.y = top - 2 - r() * 6;
-    else m.y = bottom + r() * 4;
+    else if (m.def.spawn === 'top') m.y = top - (2 + r() * 6) * k;
+    else m.y = bottom + r() * 4 * k;
     if (!anywhere && m.def.spawn !== 'band') m.x = r() * (VIEW.w + 20) - 4 + (m.def.spawn === 'top' ? Math.max(0, -m.vx) * 3 : 0);
   }
 
@@ -370,7 +401,7 @@ export class Ambience {
       if (m.y < top) m.vy = Math.abs(m.vy);
       if (m.y > bottom) m.vy = -Math.abs(m.vy);
     }
-    const out = m.x < -8 || m.x > VIEW.w + 8 || (d.spawn === 'top' && m.y > bottom + 2) || (d.spawn === 'bottom' && m.y < top - 2);
+    const out = m.x < -8 || m.x > VIEW.w + 8 || (d.spawn === 'top' && m.y > bottom + 2 * this.k) || (d.spawn === 'bottom' && m.y < top - 2 * this.k);
     if (out) {
       if (d.spawn === 'band') {
         m.x = m.x < -8 ? VIEW.w + 6 : m.x > VIEW.w + 8 ? -6 : m.x;
@@ -423,8 +454,8 @@ export class Ambience {
       s.active = true;
       s.x = 20 + this.rand() * (VIEW.w - 10);
       s.y = 2 + this.rand() * w.atmo.horizon * 0.3;
-      s.vx = -(38 + this.rand() * 20);
-      s.vy = 14 + this.rand() * 8;
+      s.vx = -(38 + this.rand() * 20) * this.k;
+      s.vy = (14 + this.rand() * 8) * this.k;
       s.life = 0.55 + this.rand() * 0.25;
     }
     s.life -= dt;
@@ -438,7 +469,7 @@ export class Ambience {
     // Head and a fading tail, one pixel per step back along the path.
     const len = Math.hypot(s.vx, s.vy);
     for (const p of this.shooting) {
-      const back = p.k * 1.4;
+      const back = p.k * 1.4 * this.k;
       const x = Math.round(s.x - (s.vx / len) * back);
       const y = Math.round(s.y - (s.vy / len) * back);
       p.img.setVisible(true).setPosition(x * P, y * P).setAlpha(Math.min(1, s.life * 3) * (1 - p.k / this.shooting.length));
@@ -456,9 +487,9 @@ export class Ambience {
       if (f.wait > 0) return;
       const fromLeft = this.rand() < 0.5;
       f.active = true;
-      f.vx = (fromLeft ? 1 : -1) * (9 + this.rand() * 5);
-      f.x = fromLeft ? -16 : VIEW.w + 16;
-      f.y = 12 + this.rand() * Math.max(4, w.atmo.horizon * 0.35);
+      f.vx = (fromLeft ? 1 : -1) * (9 + this.rand() * 5) * this.k;
+      f.x = fromLeft ? -16 * this.k : VIEW.w + 16 * this.k;
+      f.y = 12 * this.k + this.rand() * Math.max(4, w.atmo.horizon * 0.35);
       f.t = 0;
     }
     f.t += dt;
@@ -468,9 +499,9 @@ export class Ambience {
       const back = f.vx > 0 ? -1 : 1;
       const frame = Math.floor((f.t + b.phase) / 0.18) % 2;
       b.img.setTexture(frame ? 'amb_bird1' : 'amb_bird0').setVisible(true)
-        .setPosition(Math.round(f.x + back * Math.abs(b.dx)) * P, Math.round(f.y + b.dy + bob) * P);
+        .setPosition(Math.round(f.x + back * Math.abs(b.dx) * this.k) * P, Math.round(f.y + b.dy * this.k + bob) * P);
     }
-    if (f.x < -40 || f.x > VIEW.w + 40) {
+    if (f.x < -40 * this.k || f.x > VIEW.w + 40 * this.k) {
       f.active = false;
       f.wait = 14 + this.rand() * 20;
     }

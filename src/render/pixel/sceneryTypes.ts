@@ -1,35 +1,75 @@
 /**
- * What a battle backdrop provides. The battle view is VIEW art pixels (1080 x 963 screen pixels at
- * P = 9 per art pixel); every set is four horizontally tiling layers, back to front.
+ * What a battle backdrop provides. The battle view is VIEW art pixels (1080 x 960 screen pixels at
+ * P = 6 per art pixel); every set is four horizontally tiling layers, back to front.
  *
- * Every scenery set is authored in one scene frame: SCENE_H rows with the fighters' feet on row
- * SCENE_FEET_ROW. The battle places that frame at view row SCENE_Y, so the rows above it are extra sky
- * (sets with a sky) or extra wall (the dungeon draws its far layer up into them). Layer spots
- * (LayerSpot.y) and light spots are in scene rows; add SCENE_Y for view rows.
+ * Scene frames. Each scenery set is drawn for its own scene frame (ScenerySet.frame): `h` rows with the
+ * fighters' feet on row `feetRow`. The battle lines every set's feet row up with one view row, FEET_ROW
+ * (137, the ground line at y 828), so a set's frame top is at view row FEET_ROW - feetRow (frameTop).
+ * Layer spots (LayerSpot.y), light spots, prop spots and the rows in a scenery module are rows of the
+ * set's own frame: frameTop(set) + row is the view row (worldLook.ts: layerRow).
+ *  - SCENE_FRAME (123 rows, feet on row 100) is the frame for sets drawn at the 6 px grid's resolution,
+ *    1.5 times the legacy rows: its top is view row 37 and its last row is the view's last row.
+ *  - LEGACY_FRAME (82 rows, feet on row 67) is the frame the first sets were drawn for at 9 px, and the
+ *    default. Its top is view row 70: the view shows extra sky above it (or a set without a sky draws
+ *    its far layer up into those rows), and the battle fills the 8 rows under it (worldLook.ts: a
+ *    layer that reaches the frame's bottom is carried down to the view's bottom edge).
+ * A world's atmosphere (worlds.json look.atmo) is written in legacy frame rows; worldLook.ts viewAtmo
+ * maps it into each set's frame (scaled by frameScale), so the sky lines up with the art.
  */
 import type { PixelBuf } from './buf';
 
-/** The battle view in art pixels (1080 x 963 screen pixels at P = 9). */
-export const VIEW = { w: 120, h: 107 } as const;
-/** Rows in the scene frame every scenery set is drawn for. */
-export const SCENE_H = 82;
-/** The scene row fighters stand on (the bottom edge of this row is the ground line). */
-export const SCENE_FEET_ROW = 67;
-/** The view row of the scene frame's top row: the 25 rows above it are new sky (or ceiling). */
-export const SCENE_Y = VIEW.h - SCENE_H;
+/** The battle view in art pixels (1080 x 960 screen pixels at P = 6). */
+export const VIEW = { w: 180, h: 160 } as const;
+
+/** A scenery set's scene frame: `h` rows, the fighters' feet on row `feetRow` (the bottom edge of that row is the ground line). */
+export interface SceneFrame {
+  readonly h: number;
+  readonly feetRow: number;
+}
+
+/** The frame the first sets were drawn for (at 9 px): 82 rows, feet on row 67. The default. */
+export const LEGACY_FRAME: SceneFrame = { h: 82, feetRow: 67 };
+
+/** The frame for sets drawn at the 6 px grid's resolution (1.5 times the legacy rows): 123 rows, feet on row 100. */
+export const SCENE_FRAME: SceneFrame = { h: 123, feetRow: 100 };
+
 /**
- * The view row fighters stand on: the bottom edge of this row is the ground line (837 screen px).
- * It leaves the bottom 14 rows for HP bars, the wave track and the foreground.
+ * The view row fighters stand on, whatever the set: its bottom edge is the ground line (y 828). Every
+ * set's feetRow is placed on it. Under it are the HP bars' rows, the wave track and the foreground.
  */
-export const FEET_ROW = SCENE_FEET_ROW + SCENE_Y;
+export const FEET_ROW = 137;
+
+/** A set's scene frame (the legacy frame when it declares none). */
+export function sceneFrame(set: { readonly frame?: SceneFrame }): SceneFrame {
+  return set.frame ?? LEGACY_FRAME;
+}
+
+/** The view row of a set's frame top (37 for SCENE_FRAME, 70 for the legacy frame). */
+export function frameTop(set: { readonly frame?: SceneFrame }): number {
+  return FEET_ROW - sceneFrame(set).feetRow;
+}
+
+/** How many times finer than the legacy frame a set is drawn (1.5 for SCENE_FRAME, 1 for legacy sets). */
+export function frameScale(set: { readonly frame?: SceneFrame }): number {
+  return sceneFrame(set).h / LEGACY_FRAME.h;
+}
+
+/**
+ * Legacy names for the 82-row frame, kept for the sets still drawn in it: its height, its feet row and
+ * its top in the view. A set in another frame uses sceneFrame(set) and frameTop(set).
+ */
+export const SCENE_H = LEGACY_FRAME.h;
+export const SCENE_FEET_ROW = LEGACY_FRAME.feetRow;
+export const SCENE_Y = FEET_ROW - SCENE_FEET_ROW;
+
 /**
  * Art pixels the full-view pictures (sky, layers, vignette, flashes) reach past each edge of the view,
  * so a screen shake (whole art pixels, at most this far) never shows an edge.
  */
-export const VIEW_MARGIN = 2;
+export const VIEW_MARGIN = 3;
 
 export interface LayerSpot {
-  /** Top edge in scene rows (view row SCENE_Y + y; negative for art that reaches above the scene). */
+  /** Top edge in the set's frame rows (view row frameTop(set) + y; negative for art that reaches above the frame). */
   y: number;
   /** Height in art pixels (the layer's buffer height). */
   h: number;
@@ -62,6 +102,11 @@ export interface LightSpot {
 }
 
 export interface ScenerySet {
+  /**
+   * The scene frame its rows are drawn in (default LEGACY_FRAME). Sets drawn for the 6 px grid declare
+   * SCENE_FRAME ({ h: 123, feetRow: 100 }).
+   */
+  frame?: SceneFrame;
   /** Width of every layer; they repeat horizontally without a seam. */
   tileW: number;
   layers: Readonly<Record<LayerName, LayerSpot>>;

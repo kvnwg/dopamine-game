@@ -11,15 +11,18 @@ import { dispatch } from '../app/store';
 import { haptics } from '../services';
 import { audio } from '../services/audio';
 import { useUi } from './uiStore';
+import { P } from '../render/pixel';
+import { FEET_ROW, VIEW } from '../render/pixel/sceneryTypes';
 
 const STAGE_W = 1080;
 const HOLD_MS = 170;
 const MOVE_PX = 8;
 /**
- * Dropping above this stage row equips: the battle view (963 px, src/render/BattleScene.ts BATTLE_H)
- * and a strip of the panel under it (92 px), so a drop just short of the raccoon still counts.
+ * Dropping above this stage row equips: the battle view (960 px, src/render/BattleScene.ts BATTLE_H)
+ * and a strip of the panel under it, so a drop just short of the raccoon still counts. The strip ends
+ * 37 art pixels (222 px) under the ground line the raccoon stands on (y 828): 1050.
  */
-const UPPER_Y = 963 + 92;
+const UPPER_Y = Math.max(VIEW.h * P, (FEET_ROW + 1 + 37) * P);
 /** An upward drag this long (stage px) equips wherever it ends. */
 const LIFT_PX = 180;
 

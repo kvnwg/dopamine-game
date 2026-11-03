@@ -6,10 +6,10 @@ import type { PixelBuf } from './buf';
 
 /**
  * Screen pixels per art pixel in the battle view. One size for everything in battle (Kevin's raccoon,
- * pack characters, backdrops, effects, text), so all pixels match: the 1080 x 963 view is 120 x 107
+ * pack characters, backdrops, effects, text), so all pixels match: the 1080 x 960 view is 180 x 160
  * art pixels (sceneryTypes.ts: VIEW), and every pixel of it sits on one P x P grid (docs/PIXEL_ART.md).
  */
-export const P = 9;
+export const P = 6;
 
 /** A canvas of `b` with every art pixel drawn as a `scale` x `scale` square. */
 export function toCanvas(b: PixelBuf, scale = P): HTMLCanvasElement {

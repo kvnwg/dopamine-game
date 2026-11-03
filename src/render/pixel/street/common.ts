@@ -1,13 +1,18 @@
 /**
- * Shared pieces of the street scenery (Sunny Suburbs, used by every world but the dungeon): the tile
- * width and drawing helpers for tiling layers. The layers themselves are in far.ts, mid.ts and
- * ground.ts, each with its place in the 82-row scene frame (sceneryTypes.ts); scenery.ts bundles them as SUBURBS.
+ * Shared pieces of the street scenery (Sunny Suburbs, used by every world but the dungeon and the farm):
+ * the tile width and drawing helpers for tiling layers. The layers themselves are in far.ts, mid.ts and
+ * ground.ts, each with its place in the street's 123-row scene frame (sceneryTypes.ts: SCENE_FRAME);
+ * scenery.ts bundles them as SUBURBS. The farm (farm.ts) borrows despeckle, foliage, plant, put and
+ * windowsOf, which work on any buffer width.
  */
-import { blit, clone, fromRows, mix, outline, setPx, type PixelBuf, type Rows } from '../buf';
+import { blit, clone, fromRows, hash01, mix, outline, setPx, type PixelBuf, type Rows } from '../buf';
 import { PAL } from '../palette';
 
-/** Width of every street layer, in art pixels: 12 sidewalk slabs. Each layer repeats seamlessly. */
-export const TILE_W = 228;
+/**
+ * Width of every street layer, in art pixels: twelve sidewalk slabs of 28 or 29 pixels (1.5 times the
+ * 9 px grid's 228). Each layer repeats seamlessly.
+ */
+export const TILE_W = 342;
 
 /** center x, center y, radius (x), and an optional y radius for tall crowns */
 export type Clump = readonly [number, number, number, number?];
@@ -21,6 +26,30 @@ export const wrap = (x: number): number => ((x % TILE_W) + TILE_W) % TILE_W;
 /** setPx on a tiling layer: x wraps across the seam. */
 export function dot(b: PixelBuf, x: number, y: number, c: string): void {
   setPx(b, wrap(x), y, c);
+}
+
+/** Deterministic noise for a tile cell (x wraps, so it repeats with the tile). */
+export const h2 = (x: number, y: number, seed: number): number => hash01(wrap(x) * 131 + y * 7907 + seed * 104729);
+
+/** Distance between two columns across the seam. */
+export function dist(a: number, b: number): number {
+  const d = Math.abs(wrap(a) - wrap(b));
+  return Math.min(d, TILE_W - d);
+}
+
+/**
+ * Splits the tile into runs of `min` to `max` columns, repeating seamlessly: each column's run index.
+ * Texture is laid in runs so it reads as strokes, never single pixels.
+ */
+export function runIds(seed: number, min: number, max: number): number[] {
+  const ids: number[] = [];
+  for (let k = 0, x = 0; x < TILE_W; k++) {
+    let len = min + Math.floor(hash01(seed * 997 + k) * (max - min + 1));
+    if (TILE_W - x - len < min) len = TILE_W - x;
+    for (let i = 0; i < len; i++) ids.push(k);
+    x += len;
+  }
+  return ids;
 }
 
 /**
@@ -84,6 +113,9 @@ export function rgbAt(b: PixelBuf, x: number, y: number): number {
   const i = (y * b.w + x) * 4;
   return b.px[i + 3] ? (b.px[i] << 16) | (b.px[i + 1] << 8) | b.px[i + 2] : -1;
 }
+
+/** A #hex color as the number rgbAt returns. */
+export const hexInt = (hex: string): number => parseInt(hex.slice(1), 16);
 
 /**
  * Recolors pixels that match none of their 4 neighbours (stray pixels) to their most common

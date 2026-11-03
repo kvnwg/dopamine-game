@@ -14,6 +14,11 @@
  *
  * Pure and deterministic (no DOM): the battle scene, the Worlds tab thumbnails and
  * tools/worldPreview.ts all paint from here. Each art pixel has one color and one alpha.
+ *
+ * Positions come in view rows and columns (worldLook.ts viewAtmo maps a world's atmosphere into the
+ * set's frame). `scale` is how many times finer than the legacy 82-row frame the scenery is drawn
+ * (sceneryTypes.ts frameScale: 1.5 for SCENE_FRAME): stars, clouds and glows are sized by it, so the
+ * sky keeps its look at the art's resolution.
  */
 import type { Atmo } from '../../data';
 import { blank, clone, rgb, type PixelBuf } from './buf';
@@ -201,34 +206,41 @@ function haloLevel(atmo: Atmo, x: number, y: number, seed: number): number {
  * The sky of a world: color bands and stars, `w` x `h` art pixels. The sun or moon and its halo
  * are a separate overlay (glowOverlay), drawn over the clouds.
  */
-export function paintSky(atmo: Atmo, w: number, h: number, seed: number): PixelBuf {
+export function paintSky(atmo: Atmo, w: number, h: number, seed: number, scale = 1): PixelBuf {
   const b = blank(w, h);
   const n = bandCount(atmo);
   const bands = Array.from({ length: n }, (_, i) => bandColor(atmo, i));
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) setRGB(b, x, y, bands[bandAt(atmo, x, y, seed)]);
   }
-  paintStars(b, atmo, seed);
+  paintStars(b, atmo, seed, scale);
   return b;
 }
 
-/** Scattered stars, thinning toward the horizon and hidden in the halo. A few bright ones get a dim cross. */
-function paintStars(b: PixelBuf, atmo: Atmo, seed: number): void {
+/**
+ * Scattered stars, thinning toward the horizon and hidden in the halo. A few bright ones get a dim
+ * cross. On a finer sky (`scale`) they are as many per screen area and stand as far apart on screen,
+ * with more of them crossed.
+ */
+function paintStars(b: PixelBuf, atmo: Atmo, seed: number, scale: number): void {
   if (atmo.stars <= 0) return;
   const top = Math.floor(atmo.horizon * 0.82);
   const taken = new Set<number>();
+  const gap = Math.round(2 * scale);
+  const density = (atmo.stars * 0.05) / (scale * scale);
+  const crossed = 1 - 0.07 * scale;
   for (let y = 0; y < top; y++) {
     const fade = (1 - y / top) ** 0.8;
     for (let x = 0; x < b.w; x++) {
-      if (hash3(x, y, seed + 101) >= atmo.stars * 0.05 * fade) continue;
-      if (haloLevel(atmo, x, y, seed) >= 2 || insideBody(atmo, x, y, 2)) continue;
+      if (hash3(x, y, seed + 101) >= density * fade) continue;
+      if (haloLevel(atmo, x, y, seed) >= 2 || insideBody(atmo, x, y, 2 * scale)) continue;
       let near = false;
-      for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) if (taken.has((y + dy) * 1000 + x + dx)) near = true;
+      for (let dy = -gap; dy <= gap && !near; dy++) for (let dx = -gap; dx <= gap; dx++) if (taken.has((y + dy) * 1000 + x + dx)) near = true;
       if (near) continue;
       taken.add(y * 1000 + x);
       const base = getRGB(b, x, y);
       const kind = hash3(x, y, seed + 202);
-      if (kind > 0.93 && x > 0 && y > 0 && x < b.w - 1) {
+      if (kind > crossed && x > 0 && y > 0 && x < b.w - 1) {
         setRGB(b, x, y, WHITE);
         const arm = mixLab(base, WHITE, 0.4);
         setRGB(b, x - 1, y, arm);
@@ -306,10 +318,13 @@ function paintBody(b: PixelBuf, atmo: Atmo, x0: number, y0: number, seed: number
         const lit = (-vx * 0.6 - vy * 0.8) / body.r;
         if (body.kind === 'moon') {
           if (lit < -0.45) c = mixLab(base, accent, 0.75);
-          const crater = (cx: number, cy: number, r: number) => Math.hypot(vx - cx * body.r, vy - cy * body.r) <= r;
+          // (Crater sizes follow the disc's: drawn for a radius of 5.)
+          const crater = (cx: number, cy: number, r: number) => Math.hypot(vx - cx * body.r, vy - cy * body.r) <= (r * body.r) / 5;
           if (crater(-0.3, -0.15, 1.1) || crater(0.25, 0.3, 0.9) || crater(0.35, -0.45, 0.7)) c = accent;
         } else {
-          const land = hash3(Math.floor((x + x0) / 2), Math.floor((y + y0) / 2), seed + 404) > 0.55;
+          // Land in patches of 2 x 2 pixels on a planet of radius 7 or less, bigger on a bigger one.
+          const cell = Math.max(2, Math.round(body.r / 3.4));
+          const land = hash3(Math.floor((x + x0) / cell), Math.floor((y + y0) / cell), seed + 404) > 0.55;
           if (land) c = accent;
           if (lit < -0.35) c = mixLab(c, shadow, 0.55);
           else if (lit > 0.55) c = mixLab(c, WHITE, 0.25);
@@ -322,14 +337,14 @@ function paintBody(b: PixelBuf, atmo: Atmo, x0: number, y0: number, seed: number
 }
 
 /** Positions for twinkling stars (drawn as sprites over the sky): upper sky, clear of the halo. */
-export function twinkleSpots(atmo: Atmo, count: number, seed: number): Array<{ x: number; y: number }> {
+export function twinkleSpots(atmo: Atmo, count: number, seed: number, scale = 1): Array<{ x: number; y: number }> {
   const out: Array<{ x: number; y: number }> = [];
   const top = Math.floor(atmo.horizon * 0.62);
   for (let k = 0; out.length < count && k < count * 30; k++) {
     const x = 1 + Math.floor(hash3(k, 1, seed + 909) * (VIEW.w - 2));
     const y = 1 + Math.floor(hash3(k, 2, seed + 909) * Math.max(1, top - 1));
-    if (haloLevel(atmo, x, y, seed) >= 1 || insideBody(atmo, x, y, 3)) continue;
-    if (out.some((p) => Math.abs(p.x - x) + Math.abs(p.y - y) < 6)) continue;
+    if (haloLevel(atmo, x, y, seed) >= 1 || insideBody(atmo, x, y, 3 * scale)) continue;
+    if (out.some((p) => Math.abs(p.x - x) + Math.abs(p.y - y) < 6 * scale)) continue;
     out.push({ x, y });
   }
   return out;
@@ -337,8 +352,12 @@ export function twinkleSpots(atmo: Atmo, count: number, seed: number): Array<{ x
 
 // ------------------------------------------------------------------ clouds
 
-/** Cloud strips tile horizontally every CLOUD_W art pixels. */
-export const CLOUD_W = 180;
+/**
+ * Cloud strips tile horizontally every CLOUD_W art pixels (1.5 views wide, so a strip never shows the
+ * same cloud twice). Heaps and streaks were laid out for a 180-pixel strip: a wider one gets more.
+ */
+export const CLOUD_W = 270;
+const CLOUD_MORE = CLOUD_W / 180;
 
 export interface CloudStrip {
   buf: PixelBuf;
@@ -358,41 +377,44 @@ interface Lobe {
 }
 
 /** Unit vector (screen axes, y down) pointing from a cloud band toward the light. */
-function lightDir(atmo: Atmo, bandY: number): [number, number] {
+function lightDir(atmo: Atmo, bandY: number, scale: number): [number, number] {
   const b = atmo.body;
   if (!b) return [-0.45, -0.9];
   let dx = (b.x - VIEW.w / 2) / VIEW.w;
-  let dy = (b.y - bandY) / 12 - 0.5;
+  let dy = (b.y - bandY) / (12 * scale) - 0.5;
   const len = Math.hypot(dx, dy) || 1;
   dx /= len;
   dy /= len;
   return [dx, dy];
 }
 
-/** A world's two cloud strips, back (smaller, hazier, slower) then front; empty without clouds. */
-export function paintClouds(atmo: Atmo, seed: number): CloudStrip[] {
+/**
+ * A world's two cloud strips, back (smaller, hazier, slower) then front; empty without clouds. Sizes and
+ * drift are for the legacy frame's pixels, times `scale` (the clouds keep their size on screen).
+ */
+export function paintClouds(atmo: Atmo, seed: number, scale = 1): CloudStrip[] {
   const cl = atmo.clouds;
   if (!cl || cl.cover <= 0) return [];
   const strips: CloudStrip[] = [];
   for (const back of [true, false]) {
-    const h = cl.style === 'puffy' ? (back ? 12 : 16) : back ? 10 : 12;
-    const y = cl.y + (back ? 0 : cl.style === 'puffy' ? 5 : 7);
-    const lobes = cl.style === 'puffy' ? puffy(cl.cover, back, h, seed) : streaks(cl.cover, back, h, seed);
-    const buf = shadeLobes(lobes, h, atmo, y, back, seed);
-    strips.push({ buf, y, speed: back ? 0.45 : 0.9 });
+    const h = Math.round((cl.style === 'puffy' ? (back ? 12 : 16) : back ? 10 : 12) * scale);
+    const y = cl.y + (back ? 0 : Math.round((cl.style === 'puffy' ? 5 : 7) * scale));
+    const lobes = cl.style === 'puffy' ? puffy(cl.cover, back, h, seed, scale) : streaks(cl.cover, back, h, seed, scale);
+    const buf = shadeLobes(lobes, h, atmo, y, back, scale);
+    strips.push({ buf, y, speed: (back ? 0.45 : 0.9) * scale });
   }
   return strips;
 }
 
 /** Cumulus heaps: a big lobe with smaller ones around it, flat along the bottom. */
-function puffy(cover: number, back: boolean, h: number, seed: number): Lobe[][] {
-  const count = Math.max(1, Math.round((back ? 2.5 : 1.5) + cover * (back ? 4 : 3)));
-  const scale = back ? 0.62 : 1;
+function puffy(cover: number, back: boolean, h: number, seed: number, scale: number): Lobe[][] {
+  const count = Math.max(1, Math.round(((back ? 2.5 : 1.5) + cover * (back ? 4 : 3)) * CLOUD_MORE));
+  const size = (back ? 0.62 : 1) * scale;
   const heaps: Lobe[][] = [];
   for (let i = 0; i < count; i++) {
     const r = (k: number) => hash3(i, k, seed + (back ? 31 : 37));
     const cx = ((i + 0.5 + (r(1) - 0.5) * 0.5) / count) * CLOUD_W;
-    const width = (15 + r(2) * 16) * scale;
+    const width = (15 + r(2) * 16) * size;
     const base = h - 2 - Math.floor(r(3) * (h * 0.3));
     const tall = width * (0.38 + r(4) * 0.12);
     const heap: Lobe[] = [{ cx, cy: base - tall * 0.42, rx: width * 0.3, ry: tall * 0.55, base }];
@@ -409,15 +431,15 @@ function puffy(cover: number, back: boolean, h: number, seed: number): Lobe[][] 
 }
 
 /** Sunset stratus: long thin streaks in loose rows. */
-function streaks(cover: number, back: boolean, h: number, seed: number): Lobe[][] {
-  const count = Math.round((back ? 6 : 4) + cover * (back ? 10 : 8));
+function streaks(cover: number, back: boolean, h: number, seed: number, scale: number): Lobe[][] {
+  const count = Math.round(((back ? 6 : 4) + cover * (back ? 10 : 8)) * CLOUD_MORE);
   const out: Lobe[][] = [];
   for (let i = 0; i < count; i++) {
     const r = (k: number) => hash3(i, k, seed + (back ? 41 : 47));
-    const rx = (back ? 6 : 9) + r(1) * (back ? 12 : 18);
-    const ry = (back ? 1.1 : 1.4) + r(2) * (back ? 0.9 : 1.4);
+    const rx = ((back ? 6 : 9) + r(1) * (back ? 12 : 18)) * scale;
+    const ry = ((back ? 1.1 : 1.4) + r(2) * (back ? 0.9 : 1.4)) * scale;
     const cx = r(3) * CLOUD_W;
-    const cy = 2 + r(4) * (h - 4);
+    const cy = 2 * scale + r(4) * (h - 4 * scale);
     const streak: Lobe[] = [{ cx, cy, rx, ry }];
     // A smaller puff riding on top of some streaks.
     if (r(5) > 0.45) streak.push({ cx: cx + (r(6) - 0.5) * rx, cy: cy - ry * 0.7, rx: rx * 0.45, ry: ry * 0.9 });
@@ -429,11 +451,12 @@ function streaks(cover: number, back: boolean, h: number, seed: number): Lobe[][
 /**
  * Rasterizes cloud lobes into a tiling strip, shaded on the outline of the whole cloud (not lobe by
  * lobe, so lobes merge into one body): a rim on the edge facing the light, a lit band behind it, a
- * shaded band along the far side (and a heap's flat base), the body in between.
+ * shaded band along the far side (and a heap's flat base), the body in between. The rim is one pixel;
+ * the bands are wider on a finer strip (`scale`).
  */
-function shadeLobes(groups: Lobe[][], h: number, atmo: Atmo, stripY: number, back: boolean, seed: number): PixelBuf {
+function shadeLobes(groups: Lobe[][], h: number, atmo: Atmo, stripY: number, back: boolean, scale: number): PixelBuf {
   const cl = atmo.clouds!;
-  const [lx, ly] = lightDir(atmo, stripY + h / 2);
+  const [lx, ly] = lightDir(atmo, stripY + h / 2, scale);
   const W = CLOUD_W;
   const mask = new Uint8Array(W * h);
   const baseRow = new Int16Array(W * h).fill(-1);
@@ -461,6 +484,15 @@ function shadeLobes(groups: Lobe[][], h: number, atmo: Atmo, stripY: number, bac
   const light = hexRgb(cl.light);
   const shade = hexRgb(cl.shade);
   const tones: RGB[] = [shade, mixLab(shade, light, 0.5), light, hexRgb(cl.rim)];
+  const band = Math.max(2, Math.round(2 * scale));
+  const lit = (x: number, y: number) => {
+    for (let j = 2; j <= band; j++) if (!inside(x + sx * j, y + sy * j) || (sy !== 0 && !inside(x, y + sy * j))) return true;
+    return false;
+  };
+  const shaded = (x: number, y: number) => {
+    for (let j = 1; j <= band; j++) if (!inside(x - sx * j, y - sy * j)) return true;
+    return false;
+  };
   const buf = blank(W, h);
   for (let y = 0; y < h; y++) {
     const sky = skyAt(atmo, stripY + y);
@@ -468,15 +500,14 @@ function shadeLobes(groups: Lobe[][], h: number, atmo: Atmo, stripY: number, bac
       if (!inside(x, y)) continue;
       let t = 1;
       if (!inside(x + sx, y + sy)) t = 3;
-      else if (!inside(x + sx * 2, y + sy * 2) || (sy !== 0 && !inside(x, y + sy * 2))) t = 2;
-      else if (!inside(x - sx, y - sy) || !inside(x - sx * 2, y - sy * 2)) t = 0;
+      else if (lit(x, y)) t = 2;
+      else if (shaded(x, y)) t = 0;
       const base = baseRow[y * W + x];
-      if (base >= 0 && y >= base - (back ? 0 : 1) && sy < 0) t = Math.min(t, 0);
+      if (base >= 0 && y >= base - (back ? 0 : band - 1) && sy < 0) t = Math.min(t, 0);
       // Clouds take a little of the sky behind them; far ones more.
       setRGB(buf, x, y, mixLab(tones[t], sky, back ? 0.28 : 0.1));
     }
   }
-  void seed;
   return buf;
 }
 
@@ -489,6 +520,8 @@ export interface LightOptions {
   seed: number;
   /** The layer's top row in the view (its haze defaults to the sky color a little below that). */
   top: number;
+  /** How many times finer than the legacy frame the layer is drawn (glows spread as far on screen). */
+  scale?: number;
 }
 
 /** Glow rings: thresholds on summed light, and how strongly each ring adds (art) or shows (open air). */
@@ -520,7 +553,8 @@ export function lightLayer(src: PixelBuf, o: LightOptions): PixelBuf {
   const W = out.w;
   const H = out.h;
   const amb = atmo.ambient ? hexRgb(atmo.ambient) : null;
-  const hazeC = atmo.haze.color ? hexRgb(atmo.haze.color) : skyAt(atmo, Math.min(atmo.horizon - 1, o.top + 8));
+  const scale = o.scale ?? 1;
+  const hazeC = atmo.haze.color ? hexRgb(atmo.haze.color) : skyAt(atmo, Math.min(atmo.horizon - 1, o.top + Math.round(8 * scale)));
   const hazeT = layer === 'far' ? atmo.haze.far : layer === 'mid' ? atmo.haze.mid : 0;
   const memo = new Map<number, RGB>();
   const grade = (c: RGB): RGB => {
@@ -605,7 +639,7 @@ export function lightLayer(src: PixelBuf, o: LightOptions): PixelBuf {
     for (const s of on) {
       const c = spotColor(atmo, s);
       const big = Math.max(s.w, s.h);
-      const R = s.radius ?? (s.kind === 'window' ? (layer === 'far' ? 2.6 : 3.4 + big * 0.9) : s.kind === 'lamp' ? 9 : 8);
+      const R = s.radius ?? (s.kind === 'window' ? (layer === 'far' ? 2.6 * scale : 3.4 * scale + big * 0.9) : (s.kind === 'lamp' ? 9 : 8) * scale);
       const power = s.power ?? (s.kind === 'window' ? (layer === 'far' ? 0.55 : 0.8) : 1.25);
       for (let y = Math.floor(s.y - R - 1); y <= Math.ceil(s.y + s.h + R); y++) {
         for (let x = Math.floor(s.x - R - 1); x <= Math.ceil(s.x + s.w + R); x++) {

@@ -6,7 +6,7 @@
  * Worlds tab's previews (src/ui/worldThumbs.ts, from composeWorld) and tools/worldPreview.ts.
  */
 import { DATA, type Atmo, type WorldDef } from '../data';
-import { clone, type PixelBuf } from './pixel/buf';
+import { blank, clone, type PixelBuf } from './pixel/buf';
 import { P } from './pixel';
 import { SUBURBS } from './pixel/scenery';
 import { DUNGEON } from './pixel/packs/dungeon';
@@ -14,7 +14,7 @@ import { FARM } from './pixel/farm';
 import {
   glowOverlay, lightLayer, litSpots, over, paintClouds, paintSky, paintVignette, type CloudStrip,
 } from './pixel/atmosphere';
-import { SCENE_Y, VIEW, type LayerName, type LightSpot, type ScenerySet } from './pixel/sceneryTypes';
+import { VIEW, frameScale, frameTop, sceneFrame, type LayerName, type LightSpot, type SceneFrame, type ScenerySet } from './pixel/sceneryTypes';
 import { frameBuf } from './pixel/indexed';
 import { PROPS, type PropId } from './pixel/packs/props';
 import { blit } from './pixel/buf';
@@ -39,37 +39,90 @@ export interface SceneryKeys {
 
 const built = new Map<ScenerySet, Record<LayerName, PixelBuf>>();
 
-/** A world's backdrop and its (ungraded) layer tiles, each set built once. */
+/**
+ * Rows of the view under a set's frame: none for a frame that reaches the view's bottom edge
+ * (SCENE_FRAME), 8 for the legacy frame. The battle never shows sky there: a layer that reaches the
+ * frame's bottom is carried down to the view's bottom (see layerRow and sceneryFor).
+ */
+export function rowsBelow(set: ScenerySet): number {
+  return Math.max(0, VIEW.h - (frameTop(set) + sceneFrame(set).h));
+}
+
+/** Whether a layer reaches its frame's bottom row (the ground and the foreground, usually). */
+function toBottom(set: ScenerySet, name: LayerName): boolean {
+  const { y, h } = set.layers[name];
+  return y + h >= sceneFrame(set).h;
+}
+
+/**
+ * Carries a layer that reaches the frame's bottom down to the view's bottom, under a frame that ends
+ * above it: the ground repeats its bottom rows (more verge, more floor); other layers stay as drawn
+ * (the foreground moves down instead, layerRow).
+ */
+function fitToView(set: ScenerySet, name: LayerName, b: PixelBuf): PixelBuf {
+  const below = rowsBelow(set);
+  if (name !== 'ground' || below === 0 || !toBottom(set, name)) return b;
+  const out = blank(b.w, b.h + below);
+  out.px.set(b.px);
+  const band = Math.min(b.h, Math.max(below, 4));
+  for (let y = b.h; y < out.h; y++) {
+    const sy = b.h - band + ((y - b.h) % band);
+    out.px.copyWithin(y * b.w * 4, sy * b.w * 4, (sy + 1) * b.w * 4);
+  }
+  return out;
+}
+
+/**
+ * A world's backdrop and its (ungraded) layer tiles, each set built once. A ground layer under a frame
+ * that ends above the view's bottom comes back taller (fitToView); the others as the set draws them.
+ */
 export function sceneryFor(def: WorldDef): { set: ScenerySet; bufs: Record<LayerName, PixelBuf> } {
   const set = scenerySet(def);
   let bufs = built.get(set);
   if (!bufs) {
-    bufs = { far: set.far(), mid: set.mid(), ground: set.ground(), fg: set.fg() };
+    bufs = {} as Record<LayerName, PixelBuf>;
+    for (const name of LAYER_NAMES) bufs[name] = fitToView(set, name, set[name]());
     built.set(set, bufs);
   }
   return { set, bufs };
 }
 
-/** A layer's top as a view row: the scene frame sits SCENE_Y rows down the view. */
+/**
+ * A layer's top as a view row: its row in the set's frame plus the frame's top (frameTop). Under a
+ * frame that ends above the view's bottom, a foreground that reaches the frame's bottom moves down to
+ * the view's bottom edge (the ground is drawn taller to meet it).
+ */
 export function layerRow(set: ScenerySet, name: LayerName): number {
-  return SCENE_Y + set.layers[name].y;
+  const row = frameTop(set) + set.layers[name].y;
+  return name === 'fg' && toBottom(set, name) ? row + rowsBelow(set) : row;
 }
 
-/** Layer tops in the 1080 x 963 battle view (multiples of the pixel size, so pixels line up). */
+/** Layer tops in the 1080 x 960 battle view (multiples of the pixel size, so pixels line up). */
 export function layerY(set: ScenerySet): Record<LayerName, number> {
   return { far: layerRow(set, 'far') * P, mid: layerRow(set, 'mid') * P, ground: layerRow(set, 'ground') * P, fg: layerRow(set, 'fg') * P };
 }
 
 /**
- * A world's atmosphere in view rows. worlds.json places the horizon, the sun or moon and the clouds in
- * rows of the 82-row scene frame; the battle view shows that frame SCENE_Y rows down, under more sky.
+ * A row of the legacy 82-row frame (worlds.json atmospheres are written in them) as a view row for a
+ * set: scaled to the set's frame (frameScale) and placed at its top, so the feet rows meet.
  */
-export function viewAtmo(atmo: Atmo): Atmo {
+export function legacyRow(set: { readonly frame?: SceneFrame }, row: number): number {
+  return frameTop(set) + row * frameScale(set);
+}
+
+/**
+ * A world's atmosphere in view rows and columns for the set it is shown with. worlds.json places the
+ * horizon, the sun or moon and the clouds in rows (and the sun's x in columns) of the legacy frame;
+ * they are scaled to the set's frame (1.5 times for SCENE_FRAME, with the sun's or moon's size) and
+ * placed at the frame's top, so the sky lines up with the art. Rows above a frame are more sky.
+ */
+export function viewAtmo(atmo: Atmo, set: { readonly frame?: SceneFrame } = {}): Atmo {
+  const k = frameScale(set);
   return {
     ...atmo,
-    horizon: atmo.horizon + SCENE_Y,
-    body: atmo.body && { ...atmo.body, y: atmo.body.y + SCENE_Y },
-    clouds: atmo.clouds && { ...atmo.clouds, y: atmo.clouds.y + SCENE_Y },
+    horizon: Math.round(legacyRow(set, atmo.horizon)),
+    body: atmo.body && { ...atmo.body, x: atmo.body.x * k, y: legacyRow(set, atmo.body.y), r: atmo.body.r * k, haloR: atmo.body.haloR * k },
+    clouds: atmo.clouds && { ...atmo.clouds, y: Math.round(legacyRow(set, atmo.clouds.y)) },
   };
 }
 
@@ -201,6 +254,9 @@ function rowHasInk(b: PixelBuf, y: number): boolean {
   return false;
 }
 
+/** Where each cloud strip starts scrolling (art pixels), back to front. */
+export const CLOUD_SCROLL0: readonly number[] = [55, 146];
+
 /** Seed for a world's sky and lights, so each world's stars, clouds and lit windows stay put. */
 export function worldSeed(world: number): number {
   return world * 7919 + 13;
@@ -211,7 +267,9 @@ export interface WorldArt {
   set: ScenerySet;
   /** The world's atmosphere in view rows (viewAtmo). */
   atmo: Atmo;
-  /** The sky, VIEW.w x (VIEW.h + 1) so it also fills the canvas' last screen rows. */
+  /** How many times finer than the legacy frame the set is drawn (frameScale): the sky's details scale with it. */
+  scale: number;
+  /** The sky, VIEW.w x VIEW.h. */
   sky: PixelBuf;
   clouds: CloudStrip[];
   /** The sun / moon / planet and its halo, placed at view (x, y). */
@@ -231,16 +289,17 @@ export function worldArt(world: number): WorldArt {
   const hit = arts.get(n);
   if (hit) return hit;
   const def = DATA.worlds[n - 1];
-  const atmo = viewAtmo(def.look.atmo);
   const seed = worldSeed(n);
   const { set, bufs } = sceneryFor(def);
+  const atmo = viewAtmo(def.look.atmo, set);
+  const scale = frameScale(set);
   const spots = lightsFor(set);
   const layers = {} as Record<LayerName, PixelBuf>;
   for (const name of LAYER_NAMES) {
     const graded = set.graded ? gradeBuf(bufs[name], def.look) : clone(bufs[name]);
     // A world's themed props stand in the mid layer's yards (in their own colors).
     const extra = name === 'mid' && def.look.props ? placeProps(graded, def.look.props, seed, set.propSpots) : [];
-    layers[name] = lightLayer(graded, { atmo, layer: name, lights: [...(spots[name] ?? []), ...extra], seed, top: layerRow(set, name) });
+    layers[name] = lightLayer(graded, { atmo, layer: name, lights: [...(spots[name] ?? []), ...extra], seed, top: layerRow(set, name), scale });
   }
   const flicker = LAYER_NAMES.flatMap((layer) =>
     litSpots(atmo, spots[layer] ?? [], seed).filter((spot) => spot.flicker).map((spot) => ({ layer, spot })),
@@ -248,12 +307,13 @@ export function worldArt(world: number): WorldArt {
   const art: WorldArt = {
     set,
     atmo,
-    sky: paintSky(atmo, VIEW.w, VIEW.h + 1, seed),
-    clouds: set.sky ? paintClouds(atmo, seed) : [],
+    scale,
+    sky: paintSky(atmo, VIEW.w, VIEW.h, seed, scale),
+    clouds: set.sky ? paintClouds(atmo, seed, scale) : [],
     glow: set.sky ? glowOverlay(atmo, seed) : null,
     layers,
     flicker,
-    vignette: paintVignette(VIEW.w, VIEW.h + 1, atmo.vignette, seed),
+    vignette: paintVignette(VIEW.w, VIEW.h, atmo.vignette, seed),
   };
   if (arts.size >= 3) arts.delete(arts.keys().next().value!);
   arts.set(n, art);
@@ -287,7 +347,7 @@ export function composeWorld(world: number, opts: { walk?: number; vignette?: bo
     for (let x = -off; x < out.w; x += src.w) over(out, src, x, y);
   };
   if (set.sky) {
-    art.clouds.forEach((c, i) => put(c.buf, 37 + i * 61, c.y));
+    art.clouds.forEach((c, i) => put(c.buf, CLOUD_SCROLL0[i] ?? 0, c.y));
     if (art.glow) over(out, art.glow.buf, art.glow.x, art.glow.y);
   }
   for (const name of LAYER_NAMES) {

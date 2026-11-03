@@ -36,15 +36,32 @@ export const ItemSchema = z.object({
 
 /** One spin of the reels. Each reel's item is rolled when the spin starts and lands when the spin ends. */
 export const SpinSchema = z.object({
-  /** One result per reel, decided when the spin starts. */
-  reels: z.array(z.object({ item: ItemSchema, odds: z.number() })).min(1),
+  /**
+   * One result per reel, decided when the spin starts: the luck tokens it lands on first (each
+   * multiplies its luck), then the item, which lands `landAt` seconds into the spin.
+   */
+  reels: z
+    .array(
+      z.object({
+        item: ItemSchema,
+        odds: z.number(),
+        mults: z.array(z.number()).default(() => []),
+        landAt: z.number().nonnegative().optional(),
+        landed: z.boolean().default(false),
+      }),
+    )
+    .min(1),
   lucky: z.boolean(),
   /** A Golden Spin (x5 luck). */
   golden: z.boolean(),
   luck: z.number(),
   /** Paid for with a Trash Bag: spins faster. */
   turbo: z.boolean(),
+  /** Until the last reel lands (luck tokens add stepSeconds each). */
   spinSeconds: z.number().positive(),
+  /** A spin without tokens; each token adds stepSeconds to its reel. */
+  baseSpinSeconds: z.number().positive().optional(),
+  stepSeconds: z.number().nonnegative().optional(),
   restSeconds: z.number().nonnegative(),
   landed: z.boolean(),
 });

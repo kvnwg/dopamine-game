@@ -153,6 +153,18 @@ export const BalanceSchema = z.object({
     luckyRollMult: positive,
     /** Luck multiplier of a Golden Spin (chance bought in the upgrade tree). */
     goldenLuckMult: positive,
+    /**
+     * Luck tokens: a reel can land on a clover token instead of an item. The token multiplies that
+     * reel's luck and the reel spins again (stepSeconds more, shorter with Spin Speed), chaining up to
+     * maxSteps tokens until it lands an item rolled at the multiplied luck.
+     */
+    multiplier: z.object({
+      chance: z.number().min(0).max(0.5),
+      maxSteps: z.number().int().min(0),
+      stepSeconds: positive,
+      minStepSeconds: positive,
+      values: z.array(z.object({ x: z.number().min(1.5), weight: positive })).min(1),
+    }),
   }),
   /** Base odds as "1 in X" for every rarity above Junk. */
   rarityOdds: z.object({
@@ -263,6 +275,8 @@ export const BaseItemSchema = z.object({
   legendaryName: z.string().min(1),
   flavor: z.string().min(1),
   material: MaterialSchema,
+  /** Rebirths needed before the dumpster can roll it (0: from the start). */
+  unlock: z.number().int().min(0).default(0),
   unique: z.boolean().optional(),
   bonus: z.array(ModSchema).optional(),
   art: z.object({ icon: z.string(), overlay: z.string() }),

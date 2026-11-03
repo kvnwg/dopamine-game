@@ -2,13 +2,15 @@
  * Rebirth: once you beat the required world and hold enough gold, start over from scratch in
  * World 1 with permanent multipliers (luck, gold, ATK/HP, cheaper upgrades). Wipes world progress,
  * gold, the upgrade tree, every item (equipped and in the bag), and level/XP. Keeps the Dumpster
- * Level, Codex, Gems and best-find record.
+ * Level, Codex, Gems and best-find record. Each rebirth also unlocks more items for the dumpster
+ * (unlocks.ts).
  */
 import { BAL } from '../../data';
 import { emptyEquipment, type GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { startStage } from './combat';
 import { growth, worldCount } from './stages';
+import { unlocksAt } from './unlocks';
 
 /** World to beat and gold to hold for the next rebirth. Gold follows the world's gold growth. */
 export function rebirthRequirement(rebirths: number): { world: number; gold: number } {
@@ -49,7 +51,7 @@ export function doRebirth(d: GameState, ev: CoreEvent[]): boolean {
   d.stage.showToughHint = false;
   d.offline.buckets = [];
   d.offline.trackingSince = null;
-  ev.push({ type: 'rebirth', count: d.rebirths });
+  ev.push({ type: 'rebirth', count: d.rebirths, unlocked: unlocksAt(d.rebirths).map((i) => i.id) });
   startStage(d, 1, ev, true);
   return true;
 }

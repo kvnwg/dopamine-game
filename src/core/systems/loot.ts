@@ -11,6 +11,7 @@ import type { Item, ItemEnchant, Substat } from '../types';
 import { enchantMods, enchantPowerMult } from './enchants';
 import { itemOddsOneIn } from './luck';
 import { rarityAtLeast, round2 } from '../util';
+import { isItemUnlocked } from './unlocks';
 import { modsScore } from './stats';
 
 /** Main stat value before the item is sized to its power: slotBase x rarity multiplier (it sets the mix). */
@@ -83,9 +84,14 @@ export function createItem(
   return fitToPower({ uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false, tier });
 }
 
-/** Picks the base item for a slot from the active theme. Legendary+ can roll one of the theme's unique Legendaries. */
-export function pickBaseItem(slot: Slot, themeId: string, rarity: Rarity, rng: Rng): BaseItem {
-  const inTheme = DATA.items.filter((i) => i.theme === themeId && i.slot === slot);
+/**
+ * Picks the base item for a slot from the active theme, among the items unlocked after `rebirths`
+ * rebirths. Legendary+ can roll one of the theme's unique Legendaries.
+ */
+export function pickBaseItem(slot: Slot, themeId: string, rarity: Rarity, rng: Rng, rebirths = Infinity): BaseItem {
+  const all = DATA.items.filter((i) => i.theme === themeId && i.slot === slot);
+  const open = all.filter((i) => isItemUnlocked(i, rebirths));
+  const inTheme = open.length > 0 ? open : all;
   const regular = inTheme.filter((i) => !i.unique);
   const uniques = inTheme.filter((i) => i.unique);
   if (uniques.length > 0 && rarityAtLeast(rarity, 'legendary') && rng.chance(BAL.dumpster.uniqueLegendaryChance)) {

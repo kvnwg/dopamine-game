@@ -35,15 +35,21 @@ export type CoreEvent =
   | { type: 'stageStart'; stage: number; push: boolean }
   | { type: 'bossAttempt'; stage: number }
   | { type: 'levelUp'; level: number }
-  /** The reels start rolling; each reel's `item` is where it will land after `spinSeconds`. */
+  /**
+   * The reels start rolling. Each reel first lands on its luck tokens (`mults`, each multiplying its
+   * luck, one every `stepSeconds` after `baseSpinSeconds`), then on `item` at `landAt`; the last reel
+   * lands after `spinSeconds`.
+   */
   | {
       type: 'spinStart';
-      reels: { item: Item; odds: number }[];
+      reels: { item: Item; odds: number; mults: number[]; landAt: number }[];
       lucky: boolean;
       golden: boolean;
       luck: number;
       turbo: boolean;
       spinSeconds: number;
+      baseSpinSeconds: number;
+      stepSeconds: number;
       restSeconds: number;
     }
   /** One reel lands (a spin with several reels sends one of these per reel). */
@@ -57,7 +63,10 @@ export type CoreEvent =
       source: 'free' | 'turbo';
       /** Base odds of the item's rarity, "1 in X" (1 for Junk). */
       odds: number;
+      /** The luck it was rolled at (the spin's luck times `mult`). */
       luck: number;
+      /** Product of the luck tokens this reel landed on first (1 without any). */
+      mult: number;
       placed: RollPlacement;
       newRecord: boolean;
     }
@@ -66,7 +75,8 @@ export type CoreEvent =
   | { type: 'scrapAll'; count: number; xp: number; coins: number }
   | { type: 'luckBoost'; endsAt: number; seconds: number }
   | { type: 'upgradeBought'; id: string; level: number }
-  | { type: 'rebirth'; count: number }
+  /** `unlocked`: base items the dumpster can roll from now on. */
+  | { type: 'rebirth'; count: number; unlocked: string[] }
   | { type: 'codexEntry'; key: string; total: number }
   | { type: 'codexBonus'; index: number; gems: number }
   | { type: 'dumpsterUpgradeStarted'; level: number; endsAt: number }

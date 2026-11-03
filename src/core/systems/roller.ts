@@ -5,6 +5,9 @@
  *   (Spin Speed upgrades shorten the cycle);
  * - a Trash Bag from fights makes a spin a faster turbo spin;
  * - every Nth spin is a lucky spin, and a golden spin can strike any spin (both cover every reel);
+ * - a reel can land on luck tokens (x2, x3, x5, x10) before its item: each multiplies that reel's
+ *   luck and the reel spins again, so a chain of tokens can end on something very rare;
+ * - the dumpster only rolls items unlocked by the raccoon's rebirths (unlocks.ts);
  * - new items go to the bag; the player equips by dragging them onto the raccoon;
  * - the bag has limited space and always keeps the highest-power items (the rest are scrapped).
  */
@@ -188,8 +191,28 @@ function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number): Item {
   const level = rollItemLevel(d.player.level, rng);
   const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
   rarity = bumpRarity(rarity, rarityBump(enchants));
-  const base = pickBaseItem(slot, theme, rarity, rng);
+  const base = pickBaseItem(slot, theme, rarity, rng, d.rebirths);
   return createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
+}
+
+/** The luck tokens a reel lands on before its item, in order (usually none). */
+export function rollTokens(rng: Rng): number[] {
+  const m = BAL.roll.multiplier;
+  const pool = m.values.map((v) => [String(v.x), v.weight] as const);
+  const out: number[] = [];
+  while (out.length < m.maxSteps && rng.chance(m.chance)) out.push(Number(rng.weighted(pool)));
+  return out;
+}
+
+/** Seconds each luck token adds to its reel: shorter on faster spins. */
+export function tokenStepSeconds(baseSpinSeconds: number): number {
+  const m = BAL.roll.multiplier;
+  return Math.max(m.minStepSeconds, (m.stepSeconds * baseSpinSeconds) / BAL.roll.spinSeconds);
+}
+
+/** Product of a reel's luck tokens (1 without any). */
+export function tokenMult(mults: readonly number[]): number {
+  return mults.reduce((a, b) => a * b, 1);
 }
 
 /** Starts a spin: rolls every reel's result. A Trash Bag, if there is one, pays for a faster turbo spin. */
@@ -197,30 +220,41 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const turbo = d.currencies.bags >= 1;
   if (turbo) d.currencies.bags -= 1;
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
-  const reels: { item: Item; odds: number }[] = [];
+  const cycle = spinCycle(d, turbo);
+  const baseSpinSeconds = cycle * spinShare();
+  const restSeconds = cycle - baseSpinSeconds;
+  const stepSeconds = tokenStepSeconds(baseSpinSeconds);
+  const reels: { item: Item; odds: number; mults: number[]; landAt: number; landed: boolean }[] = [];
   let dry = d.dumpster.dryStreak;
   for (let i = 0, n = reelCount(d); i < n; i++) {
-    const item = rollReelItem(d, rng, luck, dry);
+    // No tokens on the tutorial spin or a forced (debug) roll.
+    const mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng) : [];
+    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry);
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
-    reels.push({ item, odds: itemOddsOneIn(item) });
+    reels.push({ item, odds: itemOddsOneIn(item), mults, landAt: baseSpinSeconds + mults.length * stepSeconds, landed: false });
   }
-  const cycle = spinCycle(d, turbo);
-  const spinSeconds = cycle * spinShare();
-  const restSeconds = cycle - spinSeconds;
-  d.roll.current = { reels, lucky, golden, luck, turbo, spinSeconds, restSeconds, landed: false };
+  const spinSeconds = Math.max(...reels.map((r) => r.landAt));
+  d.roll.current = { reels, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false };
   d.roll.timer = 0;
   ev.push({
-    type: 'spinStart', reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds })), lucky, golden, luck, turbo, spinSeconds, restSeconds,
+    type: 'spinStart',
+    reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt })),
+    lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds,
   });
 }
 
-/** The reels stop: for each result, records, Codex, then bag or scrap. */
-function landSpin(d: GameState, ev: CoreEvent[]): void {
+/**
+ * Reels stop: every reel due by `upTo` seconds into the spin (all of them by default) lands its
+ * item: records, Codex, then bag or scrap.
+ */
+function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
   const spin = d.roll.current;
   if (!spin || spin.landed) return;
-  spin.landed = true;
   const dz = d.dumpster;
   spin.reels.forEach((r, reel) => {
+    if (r.landed || (r.landAt ?? spin.spinSeconds) > upTo + 1e-9) return;
+    r.landed = true;
+    const mult = tokenMult(r.mults);
     const item = snap(r.item);
     d.roll.count += 1;
     dz.totalDives += 1;
@@ -233,13 +267,14 @@ function landSpin(d: GameState, ev: CoreEvent[]): void {
     }
     const placed = decidePlacement(d, item);
     ev.push({
-      type: 'roll', item, reel, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: r.odds, luck: spin.luck,
-      placed, newRecord,
+      type: 'roll', item, reel, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: r.odds,
+      luck: spin.luck * mult, mult, placed, newRecord,
     });
     registerCodex(d, item, ev);
     if (placed === 'bag') addToBag(d, item, ev);
     else scrapItem(d, item, ev, true);
   });
+  spin.landed = spin.reels.every((r) => r.landed);
 }
 
 /** True when `item` would beat what is equipped in its slot (or the slot is empty). */
@@ -264,17 +299,29 @@ export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[]
   return performSpin(d, rng, now, ev)[0];
 }
 
-/** Advances the reels by `dt` seconds: spin, land, rest, spin again. */
+/** When the next reel of the current spin lands (seconds into the spin), or Infinity once all have. */
+function nextLanding(cur: NonNullable<GameState['roll']['current']>): number {
+  let at = Infinity;
+  if (cur.landed) return at;
+  for (const r of cur.reels) if (!r.landed) at = Math.min(at, r.landAt ?? cur.spinSeconds);
+  return at;
+}
+
+/** Advances the reels by `dt` seconds: spin, land (reel by reel), rest, spin again. */
 export function rollTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[], dt: number): void {
   let t = dt;
-  for (let guard = 0; guard < BAL.roll.maxRollsPerTick * 2 + 2; guard++) {
+  for (let guard = 0; guard < BAL.roll.maxRollsPerTick * (BAL.roll.maxReels + 2) + 2; guard++) {
     if (!d.roll.current) startSpin(d, rng, now, ev);
     const cur = d.roll.current!;
     const total = cur.spinSeconds + cur.restSeconds;
-    const step = Math.min(t, total - d.roll.timer);
+    const land = nextLanding(cur);
+    const step = Math.max(0, Math.min(t, Math.min(land, total) - d.roll.timer));
     d.roll.timer += step;
     t -= step;
-    if (!cur.landed && d.roll.timer >= cur.spinSeconds - 1e-9) landSpin(d, ev);
+    if (!cur.landed && d.roll.timer >= land - 1e-9) {
+      landSpin(d, ev, d.roll.timer);
+      continue;
+    }
     if (d.roll.timer < total - 1e-9) return;
     d.roll.current = null;
     d.roll.timer = 0;

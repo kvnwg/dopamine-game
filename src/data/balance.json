@@ -507,7 +507,19 @@
     "luckyRollEvery": 10,
     "luckyRollMinEvery": 4,
     "luckyRollMult": 2,
-    "goldenLuckMult": 5
+    "goldenLuckMult": 5,
+    "multiplier": {
+      "chance": 0.08,
+      "maxSteps": 4,
+      "stepSeconds": 0.85,
+      "minStepSeconds": 0.4,
+      "values": [
+        { "x": 2, "weight": 60 },
+        { "x": 3, "weight": 25 },
+        { "x": 5, "weight": 11 },
+        { "x": 10, "weight": 4 }
+      ]
+    }
   },
   "rarityOdds": {
     "decent": 3,

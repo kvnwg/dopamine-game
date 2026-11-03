@@ -43,9 +43,19 @@ class Pose:
             for p in sel:
                 if self.px.pop(p, None) is not None:
                     gone.add(p)
+        placed = set()
         for part in lifted:
             self.px.update(part)
+            placed |= part.keys()
+        # Outline that only bordered a moved part (say, between two legs) goes with it.
+        for (x, y) in {n for (x, y) in gone for n in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))} - placed:
+            if self.px.get((x, y)) == LINE and not self.colored_next_to((x, y)):
+                del self.px[(x, y)]
         return self.close(gone - self.px.keys())
+
+    def colored_next_to(self, p):
+        x, y = p
+        return any(self.px.get(n, LINE) != LINE for n in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)))
 
     def squash(self, y, x0=-FAR, x1=FAR):
         """Drops row y (between columns x0..x1): everything above it comes down a pixel."""
@@ -308,7 +318,7 @@ def pig(base, extra):
         step_a=base.copy().move((ff, 1, 0), (bf, -1, 0), (fn, -1, 0), (bn, 1, 0)).squash(6),
         step_b=base.copy().move((ff, -1, 0), (bf, 1, 0), (fn, 1, 0), (bn, -1, 0)).squash(6),
         wind=base.copy().lean((0, 14, 1)),
-        charge=base.copy().squash(14, 0, 8).lean((0, 6, -2), (7, 14, -1)),
+        charge=base.copy().squash(14, 0, 6).lean((0, 14, -1)),
         charge2=base.copy().lean((0, 14, -1)),
         hurt=base.copy().lean((0, 14, 1)).put('d', (6, 7)),
     )

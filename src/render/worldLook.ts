@@ -3,11 +3,11 @@
  * brightness grade for the street layers (dark outline pixels are left alone so line work stays
  * crisp; the fantasy dungeon keeps its own colors), and the world's atmosphere (atmosphere.ts:
  * sky, clouds, sun or moon, haze, lit windows and lamps, vignette). Used by the battle scene, the
- * Worlds tab (small preview cards) and tools/worldPreview.ts.
+ * Worlds tab's previews (src/ui/worldThumbs.ts, from composeWorld) and tools/worldPreview.ts.
  */
 import { DATA, type Atmo, type WorldDef } from '../data';
-import { clone, crop, type PixelBuf } from './pixel/buf';
-import { P, toCanvas } from './pixel';
+import { clone, type PixelBuf } from './pixel/buf';
+import { P } from './pixel';
 import { SUBURBS } from './pixel/scenery';
 import { DUNGEON } from './pixel/packs/dungeon';
 import { FARM } from './pixel/farm';
@@ -296,57 +296,4 @@ export function composeWorld(world: number, opts: { walk?: number; vignette?: bo
   }
   if (opts.vignette !== false) over(out, art.vignette, 0, 0);
   return out;
-}
-
-const thumbs = new Map<number, string>();
-const waiting = new Map<number, Array<(url: string) => void>>();
-let pumping = false;
-
-/** A world's thumbnail if it's already made. */
-export function cachedThumb(world: number): string | undefined {
-  return thumbs.get(world);
-}
-
-/**
- * A world's thumbnail, made in the background: one world per task (each takes a few tens of
- * milliseconds), so a screen full of them never blocks a frame for long.
- */
-export function requestThumb(world: number): Promise<string> {
-  const hit = thumbs.get(world);
-  if (hit) return Promise.resolve(hit);
-  return new Promise((resolve) => {
-    const list = waiting.get(world);
-    if (list) list.push(resolve);
-    else waiting.set(world, [resolve]);
-    if (!pumping) {
-      pumping = true;
-      setTimeout(pump, 0);
-    }
-  });
-}
-
-function pump(): void {
-  const next = waiting.keys().next();
-  if (next.done) {
-    pumping = false;
-    return;
-  }
-  const world = next.value;
-  const url = worldThumbUrl(world);
-  for (const done of waiting.get(world) ?? []) done(url);
-  waiting.delete(world);
-  setTimeout(pump, 16);
-}
-
-/** A preview of a world (its backdrop as in battle, lit) as a data URL, cached. Pixel-crisp at 4x. */
-export function worldThumbUrl(world: number): string {
-  const hit = thumbs.get(world);
-  if (hit) return hit;
-  // The band of the scene with the houses (or the dungeon wall), trees and road.
-  const top = SCENE_Y + 15;
-  const full = composeWorld(world, { vignette: false, fg: false });
-  const cropped = crop(full, 6, top, 96, 58);
-  const url = toCanvas(cropped, 4).toDataURL('image/png');
-  thumbs.set(world, url);
-  return url;
 }

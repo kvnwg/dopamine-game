@@ -8,7 +8,7 @@ import { createBattleGame } from '../../render/BattleScene';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { Chunky } from './Chunky';
-import { ArrowUpIcon, SkullIcon } from './Icons';
+import { ArrowRightIcon, SkullIcon } from './Icons';
 import { TopHud } from './TopHud';
 import s from './hud.module.css';
 
@@ -49,7 +49,7 @@ function BossChoice() {
               <span className={s.choiceFill} style={{ width: `${(1 - left / total) * 100}%` }} />
               <span className={s.choiceLabel}>
                 {t('choice.next')}
-                <ArrowUpIcon size={40} className={s.choiceArrow} />
+                <ArrowRightIcon size="sm" />
               </span>
               <span className={s.choiceAuto}>{t('choice.auto', { s: secs })}</span>
             </button>
@@ -102,7 +102,7 @@ export function BattlePanel() {
                 <span key={i} className={s.waveSeg}>
                   {i > 0 && <span className={`${s.waveLine} ${i <= wave ? s.waveLineDone : ''}`} />}
                   {boss ? (
-                    <SkullIcon size={i === wave ? 40 : 34} className={i < wave ? s.waveDone : ''} />
+                    <SkullIcon size="sm" className={i < wave ? s.waveDone : ''} />
                   ) : (
                     <span className={[s.waveDot, i < wave ? s.waveDotDone : '', i === wave ? s.waveDotNow : ''].join(' ')} />
                   )}

@@ -555,10 +555,30 @@ const TARGET: Rows = [
   '................',
 ];
 
+/** A little CRT found in the trash: the Watch tab. */
+const TV: Rows = [
+  '................',
+  '..k..........k..',
+  '...k........k...',
+  '....k......k....',
+  '.....kk..kk.....',
+  '.kkkkkkkkkkkkkk.',
+  'kTTTTTTTTTTTTTtk',
+  'kTkkkkkkkkkTttNk',
+  'kTkCCCccccktyyNk',
+  'kTkCwCcccUktOONk',
+  'kTkCCccccUktttNk',
+  'kTkcccccUUkt22Nk',
+  'kTkccccUUuktt2Nk',
+  'kTkkkkkkkkkttNNk',
+  'ktNNNNNNNNNNNNnk',
+  '.kkkkkkkkkkkkkk.',
+];
+
 export type UiIcon =
   | 'coin' | 'gem' | 'bag' | 'heart' | 'sword' | 'shield' | 'clover' | 'bolt' | 'power' | 'gear'
   | 'lock' | 'trash' | 'arrowUp' | 'rebirth' | 'dumpster' | 'potion' | 'dice' | 'book' | 'chart' | 'cart'
-  | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target';
+  | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target' | 'tv';
 
 export const UI_SPRITES: Record<UiIcon, Rows> = {
   coin: REF_COIN,
@@ -591,6 +611,547 @@ export const UI_SPRITES: Record<UiIcon, Rows> = {
   backpack: BACKPACK,
   drop: DROP,
   target: TARGET,
+  tv: TV,
+};
+
+/*
+ * The UI draws every icon at 9 stage px per art pixel (the battle's pixel size), so each size an icon
+ * shows at is its own drawing: 5 x 5 next to text, 7 x 7 in the HUD and on map hexes, 10 x 10 in the
+ * nav bar, and the 16 x 16 originals above for big spots. An icon missing from a set falls back to the
+ * nearest size that has it (src/render/icons.ts).
+ */
+
+/** Inline icons, about 5 x 5 (45 stage px): next to text on buttons, chips and prices. */
+export const UI_SM: Partial<Record<UiIcon, Rows>> = {
+  coin: [
+    '.kkk.',
+    'kYYyk',
+    'kYyOk',
+    'kyOOk',
+    '.kkk.',
+  ],
+  gem: [
+    '.kkk.',
+    'kwAak',
+    'kAagk',
+    '.kgk.',
+    '..k..',
+  ],
+  bag: [
+    '.kyk.',
+    '.k3k.',
+    'k332k',
+    'k321k',
+    '.kkk.',
+  ],
+  bolt: [
+    '..kkk',
+    '.kYyk',
+    'kYyk.',
+    'kkyyk',
+    '.kyk.',
+    '..k..',
+  ],
+  book: [
+    'kkkkk',
+    'kvMmk',
+    'kvmmk',
+    'kWWWk',
+    'kkkkk',
+  ],
+  star: [
+    '..k..',
+    '.kYk.',
+    'kYyyk',
+    '.kyk.',
+    '.k.k.',
+  ],
+  skull: [
+    '.kkk.',
+    'kwWWk',
+    'kkWkk',
+    'kWWTk',
+    '.kTk.',
+    '.kkk.',
+  ],
+  power: [
+    '..k..',
+    '.kOk.',
+    'kOYOk',
+    'kOyOk',
+    '.kkk.',
+  ],
+  trash: [
+    '.kkk.',
+    'k554k',
+    'kkkkk',
+    'k4k3k',
+    'k4k3k',
+    '.kkk.',
+  ],
+  check: [
+    '....kk',
+    'k..kLk',
+    'kLkLk.',
+    'kLGk..',
+    '.kk...',
+  ],
+  lock: [
+    '.kkk.',
+    '.k.k.',
+    'kkkkk',
+    'kYYyk',
+    'kYxyk',
+    'kkkkk',
+  ],
+  clock: [
+    '.kkk.',
+    'kWkWk',
+    'kWkkk',
+    'kWW5k',
+    '.kkk.',
+  ],
+  arrowUp: [
+    '..k..',
+    '.kLk.',
+    'kLlGk',
+    'kkLkk',
+    '.kGk.',
+    '.kkk.',
+  ],
+  sword: [
+    '...kk',
+    '..k5k',
+    'kk5k.',
+    'kyyk.',
+    'kNk..',
+  ],
+  shield: [
+    'kkkkk',
+    'kCcUk',
+    'kCcUk',
+    'kcUuk',
+    '.kUk.',
+    '..k..',
+  ],
+  tv: [
+    'k...k',
+    '.k.k.',
+    'kkkkk',
+    'kCcNk',
+    'kcUyk',
+    'kkkkk',
+  ],
+};
+
+/** HUD and map icons, about 7 x 7 (63 stage px). */
+export const UI_MD: Partial<Record<UiIcon, Rows>> = {
+  coin: [
+    '..kkk..',
+    '.kYYyk.',
+    'kYyOyok',
+    'kYyOyok',
+    'kyyOyok',
+    '.koook.',
+    '..kkk..',
+  ],
+  gem: [
+    '.kkkkk.',
+    'kwAAaak',
+    'kAAaagk',
+    '.kAagk.',
+    '..kgk..',
+    '...k...',
+  ],
+  gear: [
+    '..kkk..',
+    'kkk5kkk',
+    'k55443k',
+    'k54.43k',
+    'k54433k',
+    'kkk3kkk',
+    '..kkk..',
+  ],
+  bag: [
+    '.kk.kk.',
+    '..kyk..',
+    '.k232k.',
+    'k33221k',
+    'k32211k',
+    'k2111xk',
+    '.kkkkk.',
+  ],
+  clover: [
+    '.kk.kk.',
+    'kLlklGk',
+    'kllkGgk',
+    '.kkLkk.',
+    'kLlkllk',
+    'kllkGGk',
+    '.kk.kk.',
+  ],
+  heart: [
+    '.kk.kk.',
+    'keRkRRk',
+    'keRRRrk',
+    'kRRRRrk',
+    '.kRRrk.',
+    '..krk..',
+    '...k...',
+  ],
+  sword: [
+    '....kkk',
+    '...k55k',
+    '..k54k.',
+    'kkk4k..',
+    'kyykk..',
+    '.knk...',
+    'kOk....',
+  ],
+  shield: [
+    'kkkkkkk',
+    'k5CcUuk',
+    'k5CcUuk',
+    'k5ccUuk',
+    '.k5cUk.',
+    '..k4k..',
+    '...k...',
+  ],
+  bolt: [
+    '...kkkk',
+    '..kYyyk',
+    '.kYyyk.',
+    'kYyyykk',
+    'kkkyyOk',
+    '..kyOk.',
+    '..kkk..',
+  ],
+  power: [
+    'k..k..k',
+    '.kkYkk.',
+    '.kYyOk.',
+    'kYyyyOk',
+    '.kyyOk.',
+    '.kkOkk.',
+    'k..k..k',
+  ],
+  lock: [
+    '.kkkkk.',
+    '.k5kk3k',
+    '.k4k.k3k',
+    'kkkkkkk',
+    'kYYyyOk',
+    'kYyxyOk',
+    'kOOOOOk',
+    'kkkkkkk',
+  ],
+  trash: [
+    '..kkk..',
+    'kkk5kkk',
+    'k55544k',
+    'kkkkkkk',
+    'k5k4k3k',
+    'k5k4k3k',
+    'k4k3k2k',
+    '.kkkkk.',
+  ],
+  arrowUp: [
+    '...k...',
+    '..kLk..',
+    '.kLlGk.',
+    'kLllGGk',
+    'kkLlGkk',
+    '.kLlGk.',
+    '.kGGGk.',
+    '.kkkkk.',
+  ],
+  rebirth: [
+    '.kkkkk.',
+    'kMmmmVk',
+    'kmkkkkk',
+    'kmkYyk.',
+    'kmkyOkk',
+    'kVkkkVk',
+    '.kVVVk.',
+  ],
+  potion: [
+    '..kkk..',
+    '..kNk..',
+    '..kCk..',
+    '.kCwCk.',
+    'kLLLLlk',
+    'kLlllGk',
+    '.kGGGk.',
+  ],
+  dice: [
+    '.kkkkk.',
+    'kwwwww5k',
+    'kwxwxw5k',
+    'kwwxww5k',
+    'kwxwxw5k',
+    'k55555k',
+    '.kkkkk.',
+  ],
+  book: [
+    'kkkkkk.',
+    'kvMmmVk',
+    'kvmYmVk',
+    'kvmmmVk',
+    'kvVVVVk',
+    'kvWWWWk',
+    'kkkkkkk',
+  ],
+  star: [
+    '...k...',
+    '..kYk..',
+    'kkkYykk',
+    'kYyyyOk',
+    '.kyyyk.',
+    'kyOkyOk',
+    'kkk.kkk',
+  ],
+  check: [
+    '.....kk',
+    '....kLk',
+    'k..kLGk',
+    'kLkLGk.',
+    'kLLGk..',
+    '.kGk...',
+    '..k....',
+  ],
+  clock: [
+    '..kkk..',
+    '.kWWWk.',
+    'kWWkWWk',
+    'kWWkkck',
+    'kWWWW5k',
+    '.kc55k.',
+    '..kkk..',
+  ],
+  skull: [
+    '.kkkkk.',
+    'kwWWWTk',
+    'kWWWWTk',
+    'kkkWkkk',
+    'kkkWkkk',
+    '.kWkTk.',
+    '.kkkkk.',
+  ],
+  reel: [
+    'kkkkkkk',
+    'keeeeRk',
+    'kekkkrk',
+    'kekyOkk',
+    'kekkkrk',
+    'kRrrrrk',
+    'kkkkkkk',
+  ],
+  reelGold: [
+    'kkkkkkk',
+    'kYYYYyk',
+    'kYkkkOk',
+    'kYkeRkk',
+    'kYkkkOk',
+    'kyOOOOk',
+    'kkkkkkk',
+  ],
+  backpack: [
+    '..kkk..',
+    '.kNkNk.',
+    'kTTTTtk',
+    'ktNNNnk',
+    'ktTyTnk',
+    'ktNNNnk',
+    '.kkkkk.',
+  ],
+  drop: [
+    '...k...',
+    '..kek..',
+    '.keRRk.',
+    'keRRRrk',
+    'kewRRrk',
+    '.kRrrk.',
+    '..kkk..',
+  ],
+  target: [
+    '.kkkkk.',
+    'kewwwRk',
+    'kwkkkwk',
+    'kwkRkwk',
+    'kwkkkwk',
+    'kRwwwrk',
+    '.kkkkk.',
+  ],
+};
+
+/** Nav bar icons, 10 x 10 (90 stage px), and a few big spots that use the same size. */
+export const UI_NAV: Partial<Record<UiIcon, Rows>> = {
+  reel: [
+    '.kkkkkkkk.',
+    'keeeeeeeRk',
+    'kekkkkkkrk',
+    'kekYyyOkrk',
+    'kekWWyOkrk',
+    'kekWyOWkrk',
+    'kekWyOWkrk',
+    'kekkkkkkrk',
+    'kRrrrrrrrk',
+    '.kkkkkkkk.',
+  ],
+  bag: [
+    '.kk....kk.',
+    'k32k..k21k',
+    '.kk2kk1kk.',
+    '..kYyyOk..',
+    '..k3221k..',
+    '.k332211k.',
+    'k33222111k',
+    'k3221111xk',
+    'k221111xxk',
+    '.kkkkkkkk.',
+  ],
+  arrowUp: [
+    '....kk....',
+    '...kLLk...',
+    '..kLLllk..',
+    '.kLLlllGk.',
+    'kLLllllGGk',
+    'kkkLllGkkk',
+    '..kLllGk..',
+    '..kLllGk..',
+    '..kGGGGk..',
+    '..kkkkkk..',
+  ],
+  rebirth: [
+    '..kkkkk...',
+    '.kMMmmmk..',
+    'kMmkkkmmk.',
+    'kmk...kmkk',
+    'kmk..kmmmk',
+    'kmk...kmk.',
+    'kVk....k..',
+    'kVVk..kk..',
+    '.kVVVVk...',
+    '..kkkk....',
+  ],
+  globe: [
+    '..kkkkkk..',
+    '.kcCccUUk.',
+    'kcCllcUGUk',
+    'kcllGcUGGk',
+    'kccGGUUUGk',
+    'kUcUUUGGuk',
+    'kUUUGGGuuk',
+    'kUUUGguuuk',
+    '.kUuuuuuk.',
+    '..kkkkkk..',
+  ],
+  tv: [
+    '.k......k.',
+    '..k....k..',
+    '...kkkk...',
+    'kkkkkkkkkk',
+    'kTkkkkkTNk',
+    'kTkCcckyNk',
+    'kTkcwUkTNk',
+    'kTkcUukONk',
+    'kTkkkkkTNk',
+    'kkkkkkkkkk',
+  ],
+  clover: [
+    '..kk..kk..',
+    '.kLlkkLlk.',
+    '.kllkklGk.',
+    'kk.kllk.kk',
+    'kLlkllkLlk',
+    'kllklGkGgk',
+    '.kkkkGkkk.',
+    '.kLlkGkLk.',
+    '.kllk.kk..',
+    '..kk......',
+  ],
+  coin: [
+    '...kkkk...',
+    '.kkYYyykk.',
+    'kYYyyyyyok',
+    'kYyyOOyyok',
+    'kYyOyyOyok',
+    'kyyOyyOyok',
+    'kyyyOOyyok',
+    'kyyyyyyook',
+    '.kkooookk.',
+    '...kkkk...',
+  ],
+};
+
+/** 3 x 5 numerals for the luck tokens ('#' takes the token's digit color). */
+const DIGITS: Record<string, readonly string[]> = {
+  x: ['...', '#.#', '.#.', '#.#', '...'],
+  '0': ['###', '#.#', '#.#', '#.#', '###'],
+  '1': ['.#', '##', '.#', '.#', '.#'],
+  '2': ['###', '..#', '###', '#..', '###'],
+  '3': ['###', '..#', '.##', '..#', '###'],
+  '5': ['###', '#..', '###', '..#', '###'],
+};
+
+/** Clover leaves above and below the token's plaque. */
+const TOKEN_TOP: Rows = [
+  '...kkk....kkk...',
+  '..kLLlk..kLllk..',
+  '..kLllGkkLllGk..',
+  '...kllGllllGk...',
+];
+const TOKEN_BOTTOM: Rows = [
+  '...kllGllllGk...',
+  '..kLllGkklllGk..',
+  '..kllGk..kGGGk..',
+  '...kkk....kkk...',
+];
+
+/** A luck token: the clover with a plaque across it reading "×N" (plaque light/mid colors, digit color). */
+function luckToken(x: number, light: string, mid: string, digit: string): Rows {
+  const glyphs = ['x', ...String(x)].map((c) => DIGITS[c]);
+  const gap = x >= 10 ? 1 : 2;
+  const width = glyphs.reduce((n, g) => n + g[0].length, 0) + gap + (glyphs.length - 2);
+  const rows: string[] = [];
+  for (let y = 0; y < 5; y++) {
+    const cells = Array.from({ length: 14 }, () => mid);
+    let cx = Math.floor((14 - width) / 2);
+    glyphs.forEach((g, i) => {
+      for (let gx = 0; gx < g[y].length; gx++) if (g[y][gx] === '#') cells[cx + gx] = digit;
+      cx += g[0].length + (i === 0 ? gap : 1);
+    });
+    rows.push(`k${cells.join('')}k`);
+  }
+  return [
+    ...TOKEN_TOP,
+    '.kkkkkkkkkkkkkk.',
+    `k${light.repeat(14)}k`,
+    ...rows,
+    '.kkkkkkkkkkkkkk.',
+    ...TOKEN_BOTTOM,
+  ];
+}
+
+/** Luck tokens (16 x 16): a four-leaf clover badge reading its multiplier, keyed by multiplier. */
+export const LUCK_TOKENS: Record<2 | 3 | 5 | 10, Rows> = {
+  2: luckToken(2, 'l', 'G', 'w'),
+  3: luckToken(3, 'c', 'U', 'w'),
+  5: luckToken(5, 'm', 'V', 'w'),
+  10: luckToken(10, 'y', 'O', 'w'),
+};
+
+/** Small UI pieces: the payline arrows on the reels. */
+export const UI_BITS: Record<string, Rows> = {
+  paylineL: [
+    'kk...',
+    'kYk..',
+    'kyyk.',
+    'kyyOk',
+    'kyOk.',
+    'kOk..',
+    'kk...',
+  ],
 };
 
 /**

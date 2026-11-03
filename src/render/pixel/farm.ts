@@ -1,7 +1,8 @@
 /**
  * World 5's battle backdrop, "Funky Farmland": a harvest farm in golden late-afternoon light (style
  * rules: docs/PIXEL_ART.md). Four horizontally tiling layers, TILE_W art pixels wide, on the battle
- * grid (sceneryTypes.ts: VIEW, the fighters' feet on FEET_ROW). Rows below are view rows.
+ * grid, in the scene frame (sceneryTypes.ts: SCENE_H rows, the fighters' feet on SCENE_FEET_ROW). Rows
+ * below are scene rows (the battle shows them SCENE_Y rows down, under more sky).
  *  - far (24 to 53): the countryside in depth bands that get hazier with distance, nothing inked:
  *    a pale violet range, a misty ridge, then rolling hills of patchwork fields (golden wheat,
  *    stubble with round bales, plowed rows, an orchard, pasture) between hedgerows, a windmill, a far
@@ -20,7 +21,7 @@
  * top. Light comes from the top left; ramps are hue-shifted (warm lights, cool violet shadows).
  */
 import { blank, blit, clone, fromRows, hash01, mix, outline, setPx, type PixelBuf, type Rows, type SheetEntry } from './buf';
-import { FEET_ROW, VIEW, type LightSpot, type ScenerySet } from './sceneryTypes';
+import { SCENE_FEET_ROW, SCENE_H, type LightSpot, type ScenerySet } from './sceneryTypes';
 import { despeckle, foliage, plant, put, windowsOf } from './street/common';
 
 // ------------------------------------------------------------------ layout
@@ -28,11 +29,11 @@ import { despeckle, foliage, plant, put, windowsOf } from './street/common';
 /** Width of every layer, in art pixels; each layer repeats seamlessly. */
 const TILE_W = 260;
 
-/** Where each layer sits in the view: top row and height. */
+/** Where each layer sits in the scene frame: top row and height. */
 const FAR_SPOT = { y: 24, h: 30 } as const;
 const MID_SPOT = { y: 2, h: 58 } as const;
-const GROUND_SPOT = { y: 52, h: VIEW.h - 52 } as const;
-const FG_SPOT = { y: 73, h: VIEW.h - 73 } as const;
+const GROUND_SPOT = { y: 52, h: SCENE_H - 52 } as const;
+const FG_SPOT = { y: 73, h: SCENE_H - 73 } as const;
 
 // ------------------------------------------------------------------ helpers
 
@@ -218,7 +219,7 @@ const NEAR = skyline(fy(48), [
   [FARM_X, 30, 5],
   [226, 22, 2],
 ]);
-/** The meadow under the tree line (the farmyard covers it from view row 50). */
+/** The meadow under the tree line (the farmyard covers it from scene row 50). */
 const MEADOW = fy(50);
 
 let farBuilt: PixelBuf | null = null;
@@ -640,7 +641,7 @@ function drawMeadow(b: PixelBuf): void {
 
 // ================================================================== mid
 
-/** A view row as a mid-layer row. */
+/** A scene row as a mid-layer row. */
 const my = (row: number): number => row - MID_SPOT.y;
 /** The farmyard's far edge (the far fields show above it). */
 const YARD = my(50);
@@ -1366,7 +1367,7 @@ function midLights(): LightSpot[] {
 
 // ================================================================== ground
 
-/** A view row as a ground-layer row. */
+/** A scene row as a ground-layer row. */
 const gy = (row: number): number => row - GROUND_SPOT.y;
 /**
  * The far verge's base row (its clumps peak up to 4 rows above it, a few seed heads up to row 52),
@@ -1375,12 +1376,12 @@ const gy = (row: number): number => row - GROUND_SPOT.y;
 const VERGE = 59;
 const ROAD0 = 62;
 const ROAD1 = 72;
-const CALM0 = FEET_ROW;
+const CALM0 = SCENE_FEET_ROW;
 const CALM1 = 70;
 /** The near verge and the wheat field's edge. */
 const NEAR0 = 73;
 const FIELD = 76;
-const BOTTOM = VIEW.h - 1;
+const BOTTOM = SCENE_H - 1;
 
 const ROAD = { deep: '#6c4a44', rut: '#8a6250', shade: '#a27a58', soft: '#b68d62', base: '#bd9466', lit: '#d2ab78', pale: '#e2c391', pebble: '#ecdcbc', pebbleDark: '#8a7680' };
 /** Verge grass, green and gone to straw. */

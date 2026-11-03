@@ -1,19 +1,30 @@
 /**
- * What a battle backdrop provides. The battle view is VIEW art pixels (1080 x 820 screen pixels at
- * 12 per art pixel); every set is four horizontally tiling layers, back to front.
+ * What a battle backdrop provides. The battle view is VIEW art pixels (1080 x 963 screen pixels at
+ * P = 9 per art pixel); every set is four horizontally tiling layers, back to front.
+ *
+ * Every scenery set is authored in one scene frame: SCENE_H rows with the fighters' feet on row
+ * SCENE_FEET_ROW. The battle places that frame at view row SCENE_Y, so the rows above it are extra sky
+ * (sets with a sky) or extra wall (the dungeon draws its far layer up into them). Layer spots
+ * (LayerSpot.y) and light spots are in scene rows; add SCENE_Y for view rows.
  */
 import type { PixelBuf } from './buf';
 
-/** The battle view in art pixels (1080 x 820 screen pixels at P = 10). */
-export const VIEW = { w: 108, h: 82 } as const;
+/** The battle view in art pixels (1080 x 963 screen pixels at P = 9). */
+export const VIEW = { w: 120, h: 107 } as const;
+/** Rows in the scene frame every scenery set is drawn for. */
+export const SCENE_H = 82;
+/** The scene row fighters stand on (the bottom edge of this row is the ground line). */
+export const SCENE_FEET_ROW = 67;
+/** The view row of the scene frame's top row: the 25 rows above it are new sky (or ceiling). */
+export const SCENE_Y = VIEW.h - SCENE_H;
 /**
- * The view row fighters stand on: the bottom edge of this row is the ground line (680 screen px).
+ * The view row fighters stand on: the bottom edge of this row is the ground line (837 screen px).
  * It leaves the bottom 14 rows for HP bars, the wave track and the foreground.
  */
-export const FEET_ROW = 67;
+export const FEET_ROW = SCENE_FEET_ROW + SCENE_Y;
 
 export interface LayerSpot {
-  /** Top edge in view rows. */
+  /** Top edge in scene rows (view row SCENE_Y + y; negative for art that reaches above the scene). */
   y: number;
   /** Height in art pixels (the layer's buffer height). */
   h: number;

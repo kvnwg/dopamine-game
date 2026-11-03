@@ -3,8 +3,11 @@
  * by tools/packs/dungeon.py). Tiles are drawn 1:1 (never scaled; only cropped and stacked) in the
  * pack's own colors, so the set is not graded.
  *
- * The pack is drawn for a top-down 3/4 view; here it becomes a hall seen from the side:
- *  - far: darkness above the back wall, the wall's stone lip with gargoyle heads and column capitals
+ * The pack is drawn for a top-down 3/4 view; here it becomes a hall seen from the side. Rows are
+ * scene rows (sceneryTypes.ts: the 82-row scene frame, shown SCENE_Y rows down the battle view):
+ *  - far: the hall's upper dark (it reaches SCENE_Y rows above the scene, up to the top of the view):
+ *    a stone beam resting on the column capitals and chains hanging out of the dark above it; then
+ *    darkness above the back wall, the wall's stone lip with gargoyle heads and column capitals
  *    rising out of it, and the brick face down to the floor line: banners, holes, an arched door,
  *    two gargoyle fountains (water and lava) pouring into basins on the floor, engaged columns.
  *  - mid: a few props standing against the wall on the floor line (crates, a chest, a skull).
@@ -17,24 +20,26 @@
 import { blank, blit, crop, downsample2, fromRows, type PixelBuf, type Rows, type SheetEntry } from '../buf';
 import { frameBuf, fromIndexed, KEYS } from '../indexed';
 import { PROPS } from './props';
-import { VIEW, type LightSpot, type ScenerySet } from '../sceneryTypes';
+import { SCENE_H, SCENE_Y, type LightSpot, type ScenerySet } from '../sceneryTypes';
 import { DUNGEON_PAL, DUNGEON_TILES } from './dungeonTiles';
 
 /** The pack's grid. */
 const T = 16;
 /** Width of every layer: 16 pack tiles. */
 const TILE_W = 16 * T;
-/** View row where the floor starts (the far layer ends here), 7 rows above FEET_ROW (67). */
+/** Scene row where the floor starts (the far layer ends here), 7 rows above SCENE_FEET_ROW (67). */
 const FLOOR_Y = 60;
-/** The ground layer: floor slabs down to the bottom of the view (a second row peeks in at the bottom). */
-const GROUND_H = VIEW.h - FLOOR_Y;
-/** View row where the back wall's stone lip starts (it is 4 rows tall); bricks start below it. */
+/** The ground layer: floor slabs down to the bottom of the scene (a second row peeks in at the bottom). */
+const GROUND_H = SCENE_H - FLOOR_Y;
+/** Rows the far layer reaches above the scene frame (the top of the battle view). */
+const UP = SCENE_Y;
+/** Scene row where the back wall's stone lip starts (it is 4 rows tall); bricks start below it. */
 const LIP_Y = 8;
 /** First brick row under the lip. Bricks come in 4-row courses lined up with it. */
 const WALL_Y = LIP_Y + 4;
-/** The mid layer's top row in the view (room for two stacked crates); its bottom row sits on the floor line. */
+/** The mid layer's top row in the scene (room for two stacked crates); its bottom row sits on the floor line. */
 const MID_Y = 12;
-/** The near wall's lip (4 rows) along the bottom of the view. */
+/** The near wall's lip (4 rows) along the bottom of the scene. */
 const FG_H = 4;
 
 const VOID = '#222222';
@@ -188,15 +193,74 @@ const LAVA_X = 14 * T;
 
 /** What glows on the back wall: the torches' flames, the lava fountain and (faintly) the water one. */
 function farLights(): LightSpot[] {
-  const torches = TORCHES.map(([x, y]): LightSpot => ({ x: x + 1, y, w: 3, h: 4, kind: 'torch', color: '#FFA445', radius: 13, power: 1.15, flicker: true }));
+  // (Far-layer pixels: the wall's scene rows sit UP rows down the layer.)
+  const torches = TORCHES.map(([x, y]): LightSpot => ({ x: x + 1, y: UP + y, w: 3, h: 4, kind: 'torch', color: '#FFA445', radius: 13, power: 1.15, flicker: true }));
   const stream = (x: number, color: string, power: number): LightSpot[] => [
-    { x: x + 6, y: WALL_Y + 8, w: 4, h: FLOOR_Y - WALL_Y - 12, kind: 'fire', color, radius: 6, power: power * 0.7 },
-    { x: x + 2, y: FLOOR_Y - 4, w: 12, h: 4, kind: 'fire', color, radius: 9, power },
+    { x: x + 6, y: UP + WALL_Y + 8, w: 4, h: FLOOR_Y - WALL_Y - 12, kind: 'fire', color, radius: 6, power: power * 0.7 },
+    { x: x + 2, y: UP + FLOOR_Y - 4, w: 12, h: 4, kind: 'fire', color, radius: 9, power },
   ];
   return [...torches, ...stream(LAVA_X, '#FF6A2A', 1), ...stream(WATER_X, '#4AB0FF', 0.45)];
 }
 
+/**
+ * The far layer: the hall's upper dark (UP rows, above the scene frame) over the back wall (scene rows
+ * 0 to FLOOR_Y - 1, unchanged).
+ */
 function farLayer(): PixelBuf {
+  const b = blank(TILE_W, UP + FLOOR_Y);
+  blit(b, upperDark(), 0, 0);
+  blit(b, backWall(), 0, UP);
+  return b;
+}
+
+/** Chain links hanging in the dark: a ring seen face-on, then one edge-on (6 rows a link pair). */
+const CHAIN: Rows = [
+  '.d.',
+  'd.8',
+  'd.8',
+  '.8.',
+  '.d.',
+  '.8.',
+];
+/** A chain's end: a hook. */
+const HOOK: Rows = [
+  '.d.',
+  '.8.',
+  'd.8',
+  '.88',
+];
+/** Chains hanging from the dark (far-layer x and how many link pairs). */
+const CHAINS: ReadonlyArray<readonly [number, number]> = [
+  [28, 1],
+  [71, 2],
+  [104, 1],
+  [163, 2],
+  [187, 1],
+  [236, 2],
+];
+
+/**
+ * The UP rows above the scene: the hall rises into darkness. A stone beam (the wall's lip over one
+ * course of bricks) rests on the column capitals along its bottom, and chains hang out of the dark
+ * above it.
+ */
+function upperDark(): PixelBuf {
+  const b = blank(TILE_W, UP);
+  put(b, solid(TILE_W, UP, VOID), 0, 0);
+  const beam = stack([rowsOf('wall_top_mid', 12, 16), rowsOf('wall_mid', 0, 4)]);
+  for (let x = 0; x < TILE_W; x += T) put(b, beam, x, UP - beam.h - 1, (x / T) % 2 === 1);
+  const link = fromIndexed(CHAIN, DUNGEON_PAL);
+  const hook = fromIndexed(HOOK, DUNGEON_PAL);
+  for (const [x, pairs] of CHAINS) {
+    let y = 0;
+    for (let k = 0; k < pairs; k++, y += link.h) put(b, link, x, y);
+    put(b, hook, x, y);
+  }
+  return b;
+}
+
+/** The back wall in scene rows 0 to FLOOR_Y - 1 (the original far layer). */
+function backWall(): PixelBuf {
   const b = blank(TILE_W, FLOOR_Y);
   BRICKS.forEach(([shift, flip], i) => {
     for (let y = FLOOR_Y - T + shift; y > -T; y -= T) put(b, tile('wall_mid'), i * T, y, flip);
@@ -278,10 +342,10 @@ function fgLayer(): PixelBuf {
 export const DUNGEON: ScenerySet = {
   tileW: TILE_W,
   layers: {
-    far: { y: 0, h: FLOOR_Y },
+    far: { y: -UP, h: UP + FLOOR_Y },
     mid: { y: MID_Y, h: FLOOR_Y - MID_Y },
     ground: { y: FLOOR_Y, h: GROUND_H },
-    fg: { y: VIEW.h - FG_H, h: FG_H },
+    fg: { y: SCENE_H - FG_H, h: FG_H },
   },
   scroll0: { far: 240, mid: 254, ground: 0, fg: 0 },
   sky: false,

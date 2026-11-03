@@ -1,8 +1,8 @@
 /**
- * The street's mid layer (view rows 20 to 59): three houses set back behind front yards, with wide
+ * The street's mid layer (scene rows 20 to 59): three houses set back behind front yards, with wide
  * side yards between them for trees, a bird bath and the alley where the green dumpster lives.
  *
- * The houses' walls meet the lawn on view row 52 (their ink line), which is also the lawn's far edge
+ * The houses' walls meet the lawn on scene row 52 (their ink line), which is also the lawn's far edge
  * between them, with the far layer's tree line showing above it. The lawn runs on under the ground
  * layer's lawn edge (row 58), so each front yard is five rows deep (53 to 57): a walk or stepping
  * stones from the door, a mailbox at the front, shrubs and a flower bed along the foundation. Light
@@ -19,10 +19,10 @@ import { blank, hash01, mix, setPx, type PixelBuf, type Rows } from '../buf';
 import type { LightSpot } from '../sceneryTypes';
 import { TILE_W, despeckle, dot, ink, inked, plant, windowsOf, wrap } from './common';
 
-/** Where the mid layer sits in the view: top row and height (view rows 20 to 59). */
+/** Where the mid layer sits in the scene frame: top row and height (scene rows 20 to 59). */
 export const MID_SPOT = { y: 20, h: 40 } as const;
 
-/** A view row as a mid-layer row. */
+/** A scene row as a mid-layer row. */
 const vy = (row: number): number => row - MID_SPOT.y;
 /**
  * The houses' base line: the ink row where their walls meet the lawn, and the lawn's far edge between
@@ -863,7 +863,7 @@ export function midLights(): LightSpot[] {
 /**
  * Where a world's themed props (16 px sprites, see placeProps in worldLook.ts) can stand without
  * covering a door, a tree or a window (lit glass is painted over whatever covers it at night): the
- * left edge of each prop's frame, in mid-layer pixels, and the row their feet stand on (view row 55).
+ * left edge of each prop's frame, in mid-layer pixels, and the row their feet stand on (scene row 55).
  * In order of preference: the side yard left of the cherry, the garage driveway, and the side yard
  * right of the maple (behind the hero in the opening shot).
  */

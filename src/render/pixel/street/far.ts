@@ -1,5 +1,5 @@
 /**
- * The street's far layer (view rows 26 to 58): the countryside beyond the street, in depth bands that
+ * The street's far layer (scene rows 26 to 58): the countryside beyond the street, in depth bands that
  * get hazier with distance. Nothing here is inked, so it reads as far away:
  *  - a pale far range peeking over a distant ridge, sunlit flanks warmer, shaded flanks cooler;
  *  - back hills of fields and hedgerows, with a small town on one of them (roofs, a church steeple,
@@ -14,10 +14,10 @@ import { blank, blit, clone, hash01, mix, stamp, type PixelBuf, type Rows } from
 import type { LightSpot } from '../sceneryTypes';
 import { TILE_W, despeckle, dot, foliage, hz, rgbAt, wrap } from './common';
 
-/** Where the far layer sits in the view: top row and height. */
+/** Where the far layer sits in the scene frame: top row and height. */
 export const FAR_SPOT = { y: 26, h: 33 } as const;
 
-/** A view row as a far-layer row. */
+/** A scene row as a far-layer row. */
 const fy = (row: number): number => row - FAR_SPOT.y;
 
 /** Deterministic noise for a tile cell (x wraps). */
@@ -501,7 +501,7 @@ const WALLS: ReadonlyArray<readonly [string, string]> = [
   ['C', mix('c', 'U', 0.3)],
 ];
 
-/** The town's buildings, back to front: [rows, x, base (view row), roof, walls]. */
+/** The town's buildings, back to front: [rows, x, base (scene row), roof, walls]. */
 const TOWN: ReadonlyArray<readonly [Rows, number, number, number, number]> = [
   [WATER_TOWER, 80, 39, 2, 5],
   [HOUSE_GABLE, 89, 37, 0, 0],
@@ -527,7 +527,7 @@ function buildingMap(roof: number, walls: number, haze: number): Record<string, 
   };
 }
 
-/** The town's main street (view row) along the foot of its houses, and its street lights (x). */
+/** The town's main street (scene row) along the foot of its houses, and its street lights (x). */
 const STREET = { row: 43, x0: 79, x1: 126 } as const;
 const STREET_LIGHTS = [81, 89, 97, 105, 113, 121] as const;
 

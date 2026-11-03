@@ -14,7 +14,7 @@ import { FARM } from './pixel/farm';
 import {
   glowOverlay, lightLayer, litSpots, over, paintClouds, paintSky, paintVignette, type CloudStrip,
 } from './pixel/atmosphere';
-import { VIEW, type LayerName, type LightSpot, type ScenerySet } from './pixel/sceneryTypes';
+import { SCENE_Y, VIEW, type LayerName, type LightSpot, type ScenerySet } from './pixel/sceneryTypes';
 import { frameBuf } from './pixel/indexed';
 import { PROPS, type PropId } from './pixel/packs/props';
 import { blit } from './pixel/buf';
@@ -50,9 +50,27 @@ export function sceneryFor(def: WorldDef): { set: ScenerySet; bufs: Record<Layer
   return { set, bufs };
 }
 
-/** Layer tops in the 1080 x 820 battle view (multiples of the pixel size, so pixels line up). */
+/** A layer's top as a view row: the scene frame sits SCENE_Y rows down the view. */
+export function layerRow(set: ScenerySet, name: LayerName): number {
+  return SCENE_Y + set.layers[name].y;
+}
+
+/** Layer tops in the 1080 x 963 battle view (multiples of the pixel size, so pixels line up). */
 export function layerY(set: ScenerySet): Record<LayerName, number> {
-  return { far: set.layers.far.y * P, mid: set.layers.mid.y * P, ground: set.layers.ground.y * P, fg: set.layers.fg.y * P };
+  return { far: layerRow(set, 'far') * P, mid: layerRow(set, 'mid') * P, ground: layerRow(set, 'ground') * P, fg: layerRow(set, 'fg') * P };
+}
+
+/**
+ * A world's atmosphere in view rows. worlds.json places the horizon, the sun or moon and the clouds in
+ * rows of the 82-row scene frame; the battle view shows that frame SCENE_Y rows down, under more sky.
+ */
+export function viewAtmo(atmo: Atmo): Atmo {
+  return {
+    ...atmo,
+    horizon: atmo.horizon + SCENE_Y,
+    body: atmo.body && { ...atmo.body, y: atmo.body.y + SCENE_Y },
+    clouds: atmo.clouds && { ...atmo.clouds, y: atmo.clouds.y + SCENE_Y },
+  };
 }
 
 /** Where each layer's tile starts scrolling, in screen pixels. */
@@ -188,9 +206,10 @@ export function worldSeed(world: number): number {
   return world * 7919 + 13;
 }
 
-/** Everything a world's backdrop is painted from, in art pixels (see atmosphere.ts). */
+/** Everything a world's backdrop is painted from, in art pixels and view rows (see atmosphere.ts). */
 export interface WorldArt {
   set: ScenerySet;
+  /** The world's atmosphere in view rows (viewAtmo). */
   atmo: Atmo;
   /** The sky, VIEW.w x (VIEW.h + 1) so it also fills the canvas' last screen rows. */
   sky: PixelBuf;
@@ -212,7 +231,7 @@ export function worldArt(world: number): WorldArt {
   const hit = arts.get(n);
   if (hit) return hit;
   const def = DATA.worlds[n - 1];
-  const atmo = def.look.atmo;
+  const atmo = viewAtmo(def.look.atmo);
   const seed = worldSeed(n);
   const { set, bufs } = sceneryFor(def);
   const spots = lightsFor(set);
@@ -221,7 +240,7 @@ export function worldArt(world: number): WorldArt {
     const graded = set.graded ? gradeBuf(bufs[name], def.look) : clone(bufs[name]);
     // A world's themed props stand in the mid layer's yards (in their own colors).
     const extra = name === 'mid' && def.look.props ? placeProps(graded, def.look.props, seed, set.propSpots) : [];
-    layers[name] = lightLayer(graded, { atmo, layer: name, lights: [...(spots[name] ?? []), ...extra], seed, top: set.layers[name].y });
+    layers[name] = lightLayer(graded, { atmo, layer: name, lights: [...(spots[name] ?? []), ...extra], seed, top: layerRow(set, name) });
   }
   const flicker = LAYER_NAMES.flatMap((layer) =>
     litSpots(atmo, spots[layer] ?? [], seed).filter((spot) => spot.flicker).map((spot) => ({ layer, spot })),
@@ -273,7 +292,7 @@ export function composeWorld(world: number, opts: { walk?: number; vignette?: bo
   }
   for (const name of LAYER_NAMES) {
     if (name === 'fg' && opts.fg === false) continue;
-    put(art.layers[name], set.scroll0[name] + walk * speed[name], set.layers[name].y);
+    put(art.layers[name], set.scroll0[name] + walk * speed[name], layerRow(set, name));
   }
   if (opts.vignette !== false) over(out, art.vignette, 0, 0);
   return out;
@@ -323,8 +342,8 @@ function pump(): void {
 export function worldThumbUrl(world: number): string {
   const hit = thumbs.get(world);
   if (hit) return hit;
-  // The band of the battle view with the houses (or the dungeon wall), trees and road.
-  const top = 15;
+  // The band of the scene with the houses (or the dungeon wall), trees and road.
+  const top = SCENE_Y + 15;
   const full = composeWorld(world, { vignette: false, fg: false });
   const cropped = crop(full, 6, top, 96, 58);
   const url = toCanvas(cropped, 4).toDataURL('image/png');

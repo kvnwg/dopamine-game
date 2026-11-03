@@ -1,9 +1,9 @@
 /**
- * The street's ground layer (view rows 39 to 81) and foreground (rows 73 to 81).
+ * The street's ground layer (scene rows 39 to 81) and foreground (rows 73 to 81).
  *
  * Ground, top to bottom: two street lamps (iron lanterns on posts, rows 39 to 58) standing on the
  * lawn edge (row 58), the curb (59 lit top, 60 face, 61 shadow line) with a painted stretch and a
- * storm drain, the sidewalk the fighters stand on (62 to 72, their feet on row 67, FEET_ROW, mid-slab)
+ * storm drain, the sidewalk the fighters stand on (62 to 72, their feet on row 67, SCENE_FEET_ROW, mid-slab)
  * and a grass verge (73 to 81). The rows under the feet (68 to 70, where HP bars sit) stay plain slab.
  * Foreground: a few clumps of grass in shade, flowers and a stone along the bottom, in front of the
  * fighters.
@@ -15,7 +15,7 @@ import { blank, fromRows, hash01, mix, outline, stamp, type PixelBuf, type Rows 
 import type { LightSpot } from '../sceneryTypes';
 import { TILE_W, despeckle, dot, plant, put, rgbAt, wrap } from './common';
 
-// ------------------------------------------------------------------ layout (view rows)
+// ------------------------------------------------------------------ layout (scene rows)
 
 /** Top of the ground layer: the lamps' finials. */
 const TOP = 39;
@@ -23,13 +23,13 @@ const TOP = 39;
 const LAWN = 58;
 /** The curb: lit top, face, shadow line. */
 const CURB = 59;
-/** The sidewalk: fighters stand on row 67 (FEET_ROW), mid-slab, five rows of slab above and below. */
+/** The sidewalk: fighters stand on scene row 67 (SCENE_FEET_ROW), mid-slab, five rows of slab above and below. */
 const WALK0 = 62;
 const WALK1 = 72;
 /** HP bars sit on rows 68 to 70, under the feet: from the feet row down to them, nothing but plain slab. */
 const CALM0 = 68;
 const CALM1 = 70;
-/** The grass verge, down to the bottom of the view. */
+/** The grass verge, down to the bottom of the scene. */
 const VERGE = 73;
 const BOTTOM = 81;
 
@@ -37,7 +37,7 @@ const BOTTOM = 81;
 export const GROUND_SPOT = { y: TOP, h: BOTTOM - TOP + 1 } as const;
 export const FG_SPOT = { y: VERGE, h: BOTTOM - VERGE + 1 } as const;
 
-/** A view row as a ground-layer row. */
+/** A scene row as a ground-layer row. */
 const gy = (row: number): number => row - TOP;
 
 const calm = (row: number): boolean => row >= CALM0 - 1 && row <= CALM1;
@@ -270,7 +270,7 @@ function slabAt(x: number, row: number): { k: number; u: number } {
   return { k: Math.floor(v / SLAB_W), u: v % SLAB_W };
 }
 
-/** Wear patches on the slabs: [slab, x in the slab, view row, radius x, radius y]. */
+/** Wear patches on the slabs: [slab, x in the slab, scene row, radius x, radius y]. */
 const PATCHES: ReadonlyArray<readonly [number, number, number, number, number]> = [
   [0, 9, 64, 4.5, 1.4],
   [1, 12, 71, 4, 1.1],

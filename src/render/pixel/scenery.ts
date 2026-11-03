@@ -1,23 +1,24 @@
 /**
  * World 1 battle scenery, "Sunny Suburbs", as pixel art (style rules: docs/PIXEL_ART.md). It is drawn
- * at the battle's pixel size (10 screen px per art pixel), the same size as the raccoon's pixels.
+ * at the battle's pixel size (P screen px per art pixel), the same size as the raccoon's pixels.
  *
  * Four horizontally tiling parallax layers, each TILE_W art pixels wide; SUBURBS bundles them as a
  * ScenerySet, with the windows and lamps that light up at dusk and night (each world's sky, clouds and
- * lighting are painted by atmosphere.ts). Rows below are rows of the 108 x 82 battle view (sceneryTypes.ts):
+ * lighting are painted by atmosphere.ts). Rows below are rows of the 82-row scene frame (sceneryTypes.ts:
+ * SCENE_H; the battle shows it SCENE_Y rows down, under more sky):
  *  - far (26 to 58, street/far.ts): a distant town, hills and a tree line, pushed toward the sky and
  *    left uninked so it reads as distance.
  *  - mid (20 to 59, street/mid.ts): the street. A two-story house, a cottage and a brick ranch with
  *    wide side yards, a maple, a cherry and a spruce, yard details, and the alley's dumpsters, all on
  *    the lawn that starts at the house line (row 52). World props stand at MID_PROP_SPOTS.
  *  - ground (39 to 81, street/ground.ts): two street lamps behind the curb, then the lawn edge, curb,
- *    the sidewalk the fighters stand on (their feet on row 67, FEET_ROW) and a strip of verge.
+ *    the sidewalk the fighters stand on (their feet on row 67, SCENE_FEET_ROW) and a strip of verge.
  *  - fg (73 to 81): grass tufts and flowers along the bottom, in front of the fighters.
  * Every layer wraps seamlessly (sprites go down through wrapX, contours are periodic). Light comes from
  * the top left. Other worlds grade these colors later, so they stay natural.
  */
 import { blank, blit, checkRows, fill, mix, type PixelBuf, type Rows, type SheetEntry } from './buf';
-import { VIEW, type ScenerySet } from './sceneryTypes';
+import { SCENE_H, type ScenerySet } from './sceneryTypes';
 import { TILE_W } from './street/common';
 import { FAR_SPOT, FAR_SPRITES, farLayer, farLights } from './street/far';
 import { MID_PROP_SPOTS, MID_SPOT, MID_SPRITES, midLayer, midLights } from './street/mid';
@@ -30,7 +31,7 @@ export { fgLayer, groundLayer } from './street/ground';
 
 // ------------------------------------------------------------------ the set
 
-/** Where each layer's top edge sits in the battle view (VIEW), and its height. */
+/** Where each layer's top edge sits in the scene frame (SCENE_H rows), and its height. */
 export const LAYERS = { far: FAR_SPOT, mid: MID_SPOT, ground: GROUND_SPOT, fg: FG_SPOT } as const;
 
 export const SUBURBS: ScenerySet = {
@@ -70,7 +71,7 @@ export function sheet(): SheetEntry[] {
   const mid = midLayer();
   const ground = groundLayer();
   const fg = fgLayer();
-  const comp = skyBands(TILE_W, VIEW.h);
+  const comp = skyBands(TILE_W, SCENE_H);
   blit(comp, far, 0, LAYERS.far.y);
   blit(comp, mid, 0, LAYERS.mid.y);
   blit(comp, ground, 0, LAYERS.ground.y);

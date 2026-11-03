@@ -1,7 +1,7 @@
 /**
  * Shared pieces of the street scenery (Sunny Suburbs, used by every world but the dungeon): the tile
  * width and drawing helpers for tiling layers. The layers themselves are in far.ts, mid.ts and
- * ground.ts, each with its place in the 90 x 68 battle view; scenery.ts bundles them as SUBURBS.
+ * ground.ts, each with its place in the 82-row scene frame (sceneryTypes.ts); scenery.ts bundles them as SUBURBS.
  */
 import { blit, clone, fromRows, mix, outline, setPx, type PixelBuf, type Rows } from '../buf';
 import { PAL } from '../palette';

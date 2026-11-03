@@ -153,8 +153,11 @@ export function installRollController(): () => void {
           if (!e.auto && equips === 1) ui.toast(t('toast.equipped', { name: itemName(e.item) }), 'good');
           break;
         case 'levelUp':
-          ui.toast(t('toast.levelUp', { level: e.level }), 'good');
-          haptics.impact('medium');
+          // One toast for a batch (a big haul can grant many levels at once): the level reached.
+          if (e === lastOf(events, 'levelUp')) {
+            ui.toast(t('toast.levelUp', { level: e.level }), 'good');
+            haptics.impact('medium');
+          }
           break;
         case 'codexBonus':
           ui.toast(t('toast.codexBonus', { gems: e.gems }), 'good');
@@ -213,4 +216,10 @@ export function installRollController(): () => void {
     }
     if (popped) popSound(popped);
   });
+}
+
+/** The last event of a type in a batch. */
+function lastOf(events: readonly CoreEvent[], type: CoreEvent['type']): CoreEvent | undefined {
+  for (let i = events.length - 1; i >= 0; i--) if (events[i].type === type) return events[i];
+  return undefined;
 }

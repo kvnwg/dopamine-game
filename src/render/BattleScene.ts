@@ -1332,6 +1332,8 @@ export class BattleScene extends Phaser.Scene {
           this.cheer(1.2);
           break;
         case 'levelUp': {
+          // One burst for a batch: a big haul can grant many levels at once.
+          if (events.some((x, j) => j > events.indexOf(e) && x.type === 'levelUp')) break;
           if (!this.fx('levelUp', this.hero.x, FEET_Y - 8 * P, { depth: 33 })) {
             this.still('fx_puff', this.hero.x, FEET_Y - 14 * P, { depth: 33, tint: 0xffe14a, ms: 700 });
           }

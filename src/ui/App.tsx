@@ -8,6 +8,7 @@ import { RebirthPanel } from './components/RebirthPanel';
 import { WorldsPanel } from './components/WorldsPanel';
 import { WatchPanel } from './components/WatchPanel';
 import { UnlockedFx } from './components/Unlocks';
+import { SafeLayer } from './components/SafeLayer';
 import { BottomNav } from './components/BottomNav';
 import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
@@ -60,11 +61,11 @@ export function App() {
           </div>
           {!bare && <div className={styles.nav}><BottomNav /></div>}
           {tab === 'upgrades' && <UpgradeMap />}
-          <DragLayer />
-          <RevealLayer />
-          <UnlockedFx />
-          <PopupLayer />
-          <Toasts />
+          <SafeLayer name="drag"><DragLayer /></SafeLayer>
+          <SafeLayer name="reveal"><RevealLayer /></SafeLayer>
+          <SafeLayer name="unlocks"><UnlockedFx /></SafeLayer>
+          <SafeLayer name="popups"><PopupLayer /></SafeLayer>
+          <SafeLayer name="toasts"><Toasts /></SafeLayer>
           <AdOverlay />
           {SHOW_DEV && <DevPanel />}
         </div>

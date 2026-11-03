@@ -13,6 +13,7 @@ import { audio } from '../../services/audio';
 import { revealLanded, skipReveal } from '../rollController';
 import { DRAMA_LEVEL, revealPhases } from '../revealTiming';
 import { stagePoint } from '../drag';
+import { RAINBOW, raysUrl } from '../rays';
 import { t } from '../i18n';
 import { useUi, type RollView } from '../uiStore';
 import { enchantLabel, fmtOdds } from './AlleyPanel';
@@ -138,6 +139,8 @@ function RareReveal({ view }: { view: RollView }) {
   const ph = useMemo(() => revealPhases(drama, calm), [drama, calm]);
   const it = view.item;
   const color = rarityColor(it.rarity);
+  // The biggest deals get rainbow rays; the rest take the item's color.
+  const rays = useMemo(() => (drama === 'insane' ? raysUrl(RAINBOW, 24, 0.5) : raysUrl([color])), [drama, color]);
   const [phase, setPhase] = useState<Phase>('black');
   const [tier, setTier] = useState<Rarity>('junk');
   const [num, setNum] = useState('1');
@@ -226,8 +229,8 @@ function RareReveal({ view }: { view: RollView }) {
       {!lit && !calm && <Motes n={[14, 22, 32][lvl]} ms={ph.black + ph.dark + ph.appear} />}
       {phase === 'dark' && <div className={s.rareSpark} />}
       {lit && <div className={s.rareGlow} />}
-      {lit && !calm && <div className={s.rays} />}
-      {lit && !calm && lvl > 0 && <div className={`${s.rays} ${s.raysBack}`} />}
+      {lit && !calm && <div className={s.rays} style={{ backgroundImage: `url(${rays})` }} />}
+      {lit && !calm && lvl > 0 && <div className={`${s.rays} ${s.raysBack}`} style={{ backgroundImage: `url(${rays})` }} />}
       {landed && !calm && <Confetti n={[50, 80, 120][lvl]} />}
       {landed && !calm && <div className={s.shock} />}
       <div className={s.center}>
@@ -330,7 +333,8 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
     // The burst point (stage px, matching .haulCoin in overlays.module.css).
     const cx = 540;
     const cy = 806;
-    const n = [22, 36, 56][lvl];
+    // Few enough to stay smooth on phones.
+    const n = [14, 20, 26][lvl];
     return Array.from({ length: n }, (_, i) => {
       const a = i * 2.39996;
       const r2 = 120 + ((i * 89) % 260);
@@ -345,7 +349,7 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
   return (
     <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })}>
       <div className={s.haulBack} />
-      {!calm && <div className={s.haulRays} />}
+      {!calm && <div className={s.haulRays} style={{ backgroundImage: `url(${raysUrl(['#ffd23f'], 18, 0.42)})` }} />}
       <div className={s.haulCenter}>
         <div className={s.title}>
           <Chunky text={t(`haul.${haul.size}`)} size={[100, 112, 128][lvl]} grad="gold" />
@@ -386,7 +390,7 @@ function RebirthFx() {
   return (
     <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties}>
       <div className={s.backdrop} />
-      <div className={s.rays} />
+      <div className={s.rays} style={{ backgroundImage: `url(${raysUrl(['#c48bff'])})` }} />
       <Confetti n={60} />
       <div className={s.center}>
         <Chunky text={t('rebirth.done', { n })} size={124} grad="purple" className={s.title} />

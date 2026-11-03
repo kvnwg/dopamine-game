@@ -51,7 +51,8 @@ export function installSound(): () => void {
           audio.bag();
           break;
         case 'levelUp':
-          audio.levelUp(e.level);
+          // One jingle for a batch: a big haul can grant many levels at once.
+          if (e === lastLevelUp(events)) audio.levelUp(e.level);
           break;
         case 'bossSpecial':
           audio.bossWarn();
@@ -100,4 +101,10 @@ export function installSound(): () => void {
     unsubStore();
     unsubBus();
   };
+}
+
+/** The last level-up in a batch of core events (only it gets a jingle). */
+function lastLevelUp(events: readonly CoreEvent[]): CoreEvent | undefined {
+  for (let i = events.length - 1; i >= 0; i--) if (events[i].type === 'levelUp') return events[i];
+  return undefined;
 }

@@ -11,13 +11,16 @@ import { simulate } from '../tools/simCore';
  */
 describe('balance (headless bot)', () => {
   it('clears early worlds fast, slows down, and climbs further after each rebirth', () => {
-    const r = simulate({ minutes: 60, seed: 2 });
+    // 75 minutes: with full-length token re-rolls this seed beats World 5 (and rebirths) at about 61.
+    const r = simulate({ minutes: 75, seed: 2 });
     const w3 = r.clearedAt[3];
     expect(w3).toBeDefined();
     expect(w3).toBeGreaterThan(4);
-    expect(w3).toBeLessThan(25);
-    // Later worlds take longer than early ones.
-    expect(r.clearedAt[5] - r.clearedAt[4]).toBeGreaterThan(r.clearedAt[3] - r.clearedAt[2]);
+    // Luck tokens re-roll at full length (T5), so World 3 falls at about 10 to 26 minutes across seeds.
+    expect(w3).toBeLessThan(30);
+    // Later worlds take longer than early ones. (World to world the gaps vary with the luck of the
+    // token chains, so compare a late world with an early one rather than neighbors.)
+    expect(r.clearedAt[5] - r.clearedAt[4]).toBeGreaterThan(r.clearedAt[2] - r.clearedAt[1]);
     expect(r.rebirthAt.length).toBeGreaterThanOrEqual(1);
     expect(r.rebirthAt[0]).toBeGreaterThan(30);
     const best = Math.max(...Object.keys(r.clearedAt).map(Number));

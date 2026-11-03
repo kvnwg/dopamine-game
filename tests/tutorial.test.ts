@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, beginnerLuckDue, GameStateSchema, performSpin, Rng, spinCycle, tick, type CoreEvent, type GameState } from '../src/core';
+import { applyAction, beginnerLuckDue, GameStateSchema, performSpin, rebirthRequirement, Rng, spinCycle, tick, type CoreEvent, type GameState } from '../src/core';
 import { BAL, DATA } from '../src/data';
 import { freshState, T0 } from './helpers';
 
@@ -103,6 +103,21 @@ describe("tutorial: the first roll and beginner's luck", () => {
     reborn.dumpster.firstDiveDone = true;
     reborn.roll.count = 50;
     expect(beginnerLuckDue(reborn)).toBe(false);
+  });
+
+  it('a rebirth ends a tutorial that is still waiting (its bag is gone), without the gem gift', () => {
+    const st = clone(freshState());
+    st.dumpster.firstDiveDone = true;
+    st.dumpster.beginner = { state: 'rolled', uid: 99 };
+    const req = rebirthRequirement(0);
+    st.stage.highestCleared = req.world;
+    st.currencies.coins = req.gold;
+    const gems = st.currencies.gems;
+    const r = applyAction(st, { type: 'rebirth' }, new Rng(2), T0);
+    expect(r.state.rebirths).toBe(1);
+    expect(r.state.dumpster.beginner).toEqual({ state: 'done', uid: null });
+    expect(r.events.some((e) => e.type === 'tutorialDone')).toBe(false);
+    expect(r.state.currencies.gems).toBe(gems);
   });
 });
 

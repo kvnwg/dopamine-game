@@ -52,6 +52,8 @@ export function doRebirth(d: GameState, ev: CoreEvent[]): boolean {
   d.stage.showToughHint = false;
   d.offline.buckets = [];
   d.offline.trackingSince = null;
+  // A tutorial still waiting for beginner's luck to go on ends here (the bag it was in is gone).
+  if (d.dumpster.beginner.state !== 'done') d.dumpster.beginner = { state: 'done', uid: null };
   ev.push({ type: 'rebirth', count: d.rebirths, unlocked: unlocksAt(d.rebirths).map((i) => i.id) });
   startStage(d, 1, ev, true);
   return true;

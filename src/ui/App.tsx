@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styles from './App.module.css';
 import { BattlePanel } from './components/BattlePanel';
-import { StatStrip } from './components/StatStrip';
 import { AlleyPanel } from './components/AlleyPanel';
 import { InventoryPanel } from './components/InventoryPanel';
 import { UpgradeMap } from './components/UpgradeMap';
@@ -48,7 +47,6 @@ export function App() {
       <div className={styles.frame} ref={frameRef}>
         <div className={styles.stage} data-stage style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
           <div className={styles.battle}><BattlePanel /></div>
-          <div className={styles.strip}><StatStrip /></div>
           <div className={styles.lower}>
             {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
             {lowerTab === 'bag' && <InventoryPanel />}

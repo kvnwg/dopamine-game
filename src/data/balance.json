@@ -79,6 +79,7 @@
     },
     "firstClearGems": 10,
     "firstClearGemsPerWorld": 5,
+    "choiceSeconds": 5,
     "threat": {
       "waveSize": 4,
       "easyMargin": 2.5

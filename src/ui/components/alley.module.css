@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------ wheel card */
 .top {
   position: relative;
-  height: 330px;
+  height: 490px;
   flex: none;
   padding: 16px 18px 16px 20px;
   display: flex;
@@ -163,7 +163,7 @@
 /* ------------------------------------------------------------ last result */
 .last {
   --c: #9e9e9e;
-  height: 160px;
+  height: 196px;
   flex: none;
   padding: 10px 14px;
   display: flex;
@@ -310,44 +310,24 @@
 /* ------------------------------------------------------------ recent results */
 
 /* ------------------------------------------------------------ equipped gear (also a drop target) */
-.gearBox {
+.recordLine {
   flex: none;
-  padding: 8px 12px 10px;
-  border-radius: 26px;
-  background: rgba(0, 0, 0, 0.22);
-  border: 4px solid rgba(0, 0, 0, 0.35);
-}
-.gearHead {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 4px;
-  font-family: var(--font-display);
-  font-size: 24px;
-  color: #a9aed0;
-}
-.gearPower {
-  color: #ffc233;
-}
-/* The Equip best button in the gear box header: compact (beats the shared .btn.small size). */
-.gearBox .gearHead .equipBest {
-  height: 46px;
-  min-height: 0;
-  padding: 0 14px;
-  font-size: 22px;
-  border-width: 4px;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
 }
 .record {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 600px;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-family: var(--font-body);
   font-weight: 900;
-  font-size: 20px;
+  font-size: 26px;
   color: #ffe08a;
 }
 .gear {

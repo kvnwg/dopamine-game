@@ -10,7 +10,7 @@ import { BAL } from '../data';
 import type { Rng } from './rng';
 import type { GameState } from './state';
 import type { CoreEvent, GameAction, StepResult } from './types';
-import { combatTick, startStage } from './systems/combat';
+import { combatTick, resolveAfterBoss, startStage } from './systems/combat';
 import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './systems/dumpster';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { addXp } from './systems/progression';
@@ -73,6 +73,9 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         break;
       case 'travel':
         travelTo(d, action.world, ev);
+        break;
+      case 'afterBoss':
+        resolveAfterBoss(d, action.next, ev);
         break;
       case 'startDumpsterUpgrade':
         startUpgrade(d, now, ev);

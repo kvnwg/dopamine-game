@@ -4,7 +4,7 @@ import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { fmtOdds } from '../components/AlleyPanel';
 import { CloverIcon } from '../components/Icons';
-import { fmtLuck } from '../components/StatStrip';
+import { fmtLuck } from '../components/AlleyPanel';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { Modal } from './Modal';

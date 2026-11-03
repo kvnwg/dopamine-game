@@ -1,12 +1,14 @@
 /**
- * The Bag tab: equipped gear (a drop target), then the bag, always sorted by power (which is rarity:
+ * The Bag tab: equipped gear (a drop target) and the raccoon's power (the only place it shows), then
+ * the bag, always sorted by power (which is rarity:
  * a rarer item always has more power). Drag an item up to equip it, or Equip best to wear the biggest
  * upgrade in every slot at once; Scrap All clears every unlocked item.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatNumber, inventoryCapacity, isUpgrade, playerPower, scrapValue } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
+import { useCountUp } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { GearRow } from './AlleyPanel';
@@ -14,6 +16,22 @@ import { EquipBestButton } from './EquipBest';
 import { ItemIcon } from './ItemIcon';
 import { CoinIcon, PowerIcon, TrashIcon } from './Icons';
 import s from './panels.module.css';
+
+/** The worn power: ticks up to its new value and swells for a moment whenever it grows. */
+function PowerTag({ power }: { power: number }) {
+  const shown = useCountUp(power, 900);
+  const last = useRef(power);
+  const [pop, setPop] = useState(0);
+  useEffect(() => {
+    if (power > last.current) setPop((n) => n + 1);
+    last.current = power;
+  }, [power]);
+  return (
+    <span key={pop} className={`${s.powerTag} ${pop > 0 ? s.powerPop : ''}`}>
+      <PowerIcon size={38} /> {formatNumber(Math.round(shown))}
+    </span>
+  );
+}
 
 export function InventoryPanel() {
   const g = useGame((x) => x);
@@ -43,9 +61,7 @@ export function InventoryPanel() {
       <div className={s.gearCard}>
         <div className={s.headRow}>
           <span className={s.headTitle}>{t('bag.equipped')}</span>
-          <span className={s.powerTag}>
-            <PowerIcon size={38} /> {formatNumber(power)}
-          </span>
+          <PowerTag power={power} />
           <span style={{ flex: 1 }} />
           <span className={s.dragNote}>{t('bag.dragNote')}</span>
         </div>

@@ -1,19 +1,63 @@
 import { useEffect, useRef } from 'react';
 import type Phaser from 'phaser';
 import { BAL, DATA } from '../../data';
-import { nextWorldAvailable, worldThreat } from '../../core';
+import { worldCount } from '../../core';
 import { dispatch, useGame } from '../../app/store';
-import { createBattleGame } from '../../render/BattleScene';
 import { haptics } from '../../services';
+import { createBattleGame } from '../../render/BattleScene';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
-import { GlobeIcon, SkullIcon } from './Icons';
+import { Chunky } from './Chunky';
+import { ArrowUpIcon, SkullIcon } from './Icons';
 import { TopHud } from './TopHud';
 import s from './hud.module.css';
 
 export function worldLabel(world: number): string {
   const w = DATA.worlds[world - 1];
   return t('battle.worldLabel', { n: world, name: w?.name ?? '' });
+}
+
+/**
+ * A boss is down: the battle stops and asks, this world again or the next one? With no answer it goes
+ * on to the next world when the countdown runs out (in the last world it goes again).
+ */
+function BossChoice() {
+  const open = useGame((g) => g.battle.phase === 'choice');
+  const world = useGame((g) => g.battle.stage);
+  const left = useGame((g) => (g.battle.phase === 'choice' ? Math.max(0, g.battle.phaseTime) : 0));
+  const reward = useUi((u) => (u.afterBoss?.world === world ? u.afterBoss : null));
+  if (!open) return null;
+  const last = world >= worldCount();
+  const secs = Math.ceil(left);
+  const total = BAL.worlds.choiceSeconds;
+  const pick = (next: boolean) => {
+    haptics.impact(next ? 'medium' : 'light');
+    dispatch({ type: 'afterBoss', next });
+  };
+  return (
+    <div className={s.choice} role="dialog" aria-label={t('choice.cleared', { n: world })}>
+      <div className={s.choiceCard}>
+        <Chunky text={t('choice.cleared', { n: world })} size={66} grad="gold" />
+        {reward?.firstTime && <span className={s.choiceReward}>{t('choice.rewards', { gems: reward.gems })}</span>}
+        <div className={s.choiceBtns}>
+          <button className={`btn blue ${s.choiceBtn}`} onClick={() => pick(false)}>
+            {t('choice.again')}
+            {last && <span className={s.choiceAuto}>{t('choice.auto', { s: secs })}</span>}
+          </button>
+          {!last && (
+            <button className={`btn breathe ${s.choiceBtn} ${s.choiceNext}`} onClick={() => pick(true)}>
+              <span className={s.choiceFill} style={{ width: `${(1 - left / total) * 100}%` }} />
+              <span className={s.choiceLabel}>
+                {t('choice.next')}
+                <ArrowUpIcon size={40} className={s.choiceArrow} />
+              </span>
+              <span className={s.choiceAuto}>{t('choice.auto', { s: secs })}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function BattlePanel() {
@@ -26,7 +70,6 @@ export function BattlePanel() {
 
   const world = useGame((g) => g.battle.stage);
   const wave = useGame((g) => g.battle.wave);
-  const mode = useGame((g) => g.stage.mode);
   const hint = useGame((g) => g.stage.showToughHint);
   // "Too tough!" is a passing notice when the raccoon is beaten (not a sign that stays up while farming).
   const hintWas = useRef(hint);
@@ -34,9 +77,6 @@ export function BattlePanel() {
     if (hint && !hintWas.current) useUi.getState().toast(t('battle.toughHint'), 'warn');
     hintWas.current = hint;
   }, [hint]);
-  const highest = useGame((g) => g.stage.highestCleared);
-  const next = useGame(nextWorldAvailable);
-  const nextThreat = useGame((g) => (next !== null ? worldThreat(g, next).level : null));
   const waves = BAL.stages.wavesPerStage;
   const drag = useUi((u) => u.drag);
   // First-time nudge: nothing worn yet but gear waiting in the bag.
@@ -57,14 +97,12 @@ export function BattlePanel() {
         </div>
       )}
       <TopHud />
+      <BossChoice />
       {/* The world's name shows as a title card on arrival, then leaves the sky clear. */}
       <div key={world} className={s.worldCard} aria-hidden>
         {worldLabel(world)}
       </div>
       <div className={s.battleActions}>
-        <button className={`btn small blue ${s.worldsBtn}`} onClick={() => useUi.getState().setTab('worlds')} aria-label={t('tab.worlds')}>
-          <GlobeIcon size={46} />
-        </button>
         <button className={s.waveBox} onClick={() => useUi.getState().setTab('worlds')} aria-label={worldLabel(world)}>
           <div className={s.waveTrack}>
             {Array.from({ length: waves }, (_, i) => {
@@ -81,20 +119,7 @@ export function BattlePanel() {
               );
             })}
           </div>
-          {mode === 'farm' && world <= highest && <span className={s.farmTag}>{t('battle.farming')}</span>}
         </button>
-        <span style={{ flex: 1 }} />
-        {next !== null && mode === 'farm' && (
-          <button
-            className={`btn small ${nextThreat === 'easy' ? 'breathe' : nextThreat === 'tough' ? '' : 'red'}`}
-            onClick={() => {
-              haptics.impact('medium');
-              dispatch({ type: 'travel', world: next });
-            }}
-          >
-            {t('battle.nextWorld', { n: next })}
-          </button>
-        )}
       </div>
     </div>
   );

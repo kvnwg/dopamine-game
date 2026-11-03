@@ -7,7 +7,7 @@
  */
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { BAL, DATA, nodeKey, type HexNode } from '../../data';
-import { drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
+import { computeStats, drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
 import { dispatch, getGame, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
@@ -325,6 +325,8 @@ export function UpgradeMap() {
   const rebirths = useGame((g) => g.rebirths);
   const calm = useGame((g) => g.settings.reduceMotion);
   const shownCoins = useCountUp(coins);
+  const atk = useGame((g) => computeStats(g).ATK);
+  const def = useGame((g) => computeStats(g).DEF);
   const sel = useUi((u) => u.upgradeSel);
 
   // What every hex shows right now.
@@ -655,7 +657,16 @@ export function UpgradeMap() {
           <button className={`btn red ${s.close}`} data-ui onClick={close}>
             {t('upgrades.close')}
           </button>
-          <span className={s.barRight} />
+          <span className={s.barRight} data-ui>
+            <span className={s.stat} title={t('strip.atk')}>
+              <SwordIcon size={50} />
+              {formatNumber(atk)}
+            </span>
+            <span className={s.stat} title={t('strip.def')}>
+              <ShieldIcon size={48} />
+              {formatNumber(def)}
+            </span>
+          </span>
         </div>
       </div>
     </div>

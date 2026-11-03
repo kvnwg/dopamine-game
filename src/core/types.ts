@@ -28,6 +28,8 @@ export type CoreEvent =
   | { type: 'waveClear'; stage: number; wave: number }
   | { type: 'stageClear'; stage: number; firstTime: boolean }
   | { type: 'bossWin'; stage: number }
+  /** A boss is down: the battle waits `seconds` for Again or Next (`next` is null in the last world). */
+  | { type: 'bossChoice'; world: number; next: number | null; seconds: number; firstTime: boolean }
   | { type: 'worldFirstClear'; world: number; gems: number }
   | { type: 'playerDeath'; stage: number }
   | { type: 'stageStart'; stage: number; push: boolean }
@@ -85,6 +87,8 @@ export type GameAction =
   | { type: 'buyUpgrade'; id: string }
   | { type: 'rebirth' }
   | { type: 'travel'; world: number }
+  /** After a boss: on to the next world, or this one again. */
+  | { type: 'afterBoss'; next: boolean }
   | { type: 'startDumpsterUpgrade' }
   | { type: 'speedupDumpsterGems' }
   | { type: 'speedupDumpsterAd' }

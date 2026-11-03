@@ -89,6 +89,9 @@ export function installRollController(): () => void {
   return bus.on((events: CoreEvent[]) => {
     const ui = useUi.getState();
     popped = null;
+    // Equip best wears several items at once: one toast for the lot.
+    const equips = events.filter((e) => e.type === 'equip' && !e.auto).length;
+    if (equips > 1) ui.toast(t('toast.equippedN', { n: equips }), 'good');
     for (const e of events) {
       switch (e.type) {
         case 'spinStart': {
@@ -129,7 +132,7 @@ export function installRollController(): () => void {
           break;
         case 'equip':
           useUi.setState({ equipPulse: { slot: e.item.slot, id: e.item.uid } });
-          if (!e.auto) ui.toast(t('toast.equipped', { name: itemName(e.item) }), 'good');
+          if (!e.auto && equips === 1) ui.toast(t('toast.equipped', { name: itemName(e.item) }), 'good');
           break;
         case 'levelUp':
           ui.toast(t('toast.levelUp', { level: e.level }), 'good');
@@ -162,8 +165,11 @@ export function installRollController(): () => void {
           haptics.impact('heavy');
           break;
         case 'worldFirstClear':
-          ui.toast(t('toast.worldCleared', { n: e.world, gems: e.gems }), 'good');
+          useUi.setState({ afterBoss: { world: e.world, firstTime: true, gems: e.gems } });
           haptics.impact('heavy');
+          break;
+        case 'bossChoice':
+          if (!e.firstTime) useUi.setState({ afterBoss: { world: e.world, firstTime: false, gems: 0 } });
           break;
         case 'clockWentBackward':
           ui.toast(t('toast.clockBackward'), 'warn');

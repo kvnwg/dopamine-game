@@ -59,7 +59,7 @@
   },
   {
     "id": "officer_dale",
-    "name": "Officer Dale, Animal Control",
+    "name": "Concerned Guy",
     "kind": "boss",
     "hp": 58,
     "atk": 11,
@@ -67,7 +67,7 @@
     "atkSpd": 0.8,
     "special": {
       "type": "heavyHit",
-      "name": "Catch Pole",
+      "name": "Strongly Worded Complaint",
       "everySeconds": 6,
       "damageMult": 2.5
     }

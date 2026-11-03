@@ -1,12 +1,13 @@
 /**
- * The Roll tab: the reels roll on their own (Trash Bags make turbo spins). Shows luck, spin speed,
- * the lucky-spin meter, the latest result with its "1 in X", and equipped gear.
- * Items are equipped by dragging them onto the raccoon.
+ * The Roll tab: the reels roll on their own (Trash Bags make turbo spins). Shows luck (the only place
+ * it shows, with a Luck Potion's time left), spin speed, the lucky-spin meter, the latest result with
+ * its "1 in X", and the best roll ever. Equipped gear lives in the Bag tab; items are equipped by
+ * dragging them up onto the raccoon.
  */
 import type { CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, playerPower, rarityAtLeast, spinCycle,
+  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, spinCycle,
 } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
@@ -15,11 +16,13 @@ import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
-import { EquipBestButton } from './EquipBest';
 import { enchantColor, ItemIcon } from './ItemIcon';
-import { fmtLuck } from './StatStrip';
 import { ReelBank } from './Reel';
 import s from './alley.module.css';
+
+export function fmtLuck(v: number): string {
+  return v >= 100 ? formatNumber(v) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+}
 
 export function fmtOdds(x: number): string {
   return x < 100000 ? x.toLocaleString('en-US') : formatNumber(x);
@@ -64,7 +67,7 @@ function LastRoll() {
   const open = () => useUi.getState().openPopup('itemDetail', it.uid);
   return (
     <div key={last.id} className={`${s.last} card ${s.lastIn} ${rare ? s.lastRare : ''}`} style={{ ['--c' as string]: color } as CSSProperties}>
-      <ItemIcon item={it} size={128} showOdds={false} draggable={!!inBag} upgrade={upgrade} onTap={open} />
+      <ItemIcon item={it} size={160} showOdds={false} draggable={!!inBag} upgrade={upgrade} onTap={open} />
       <div className={s.lastBody} onClick={open}>
         <span className={s.lastName} style={{ color }}>
           {itemName(it)}
@@ -123,9 +126,10 @@ export function AlleyPanel() {
   const endsAt = useGame((g) => g.dumpster.upgradeEndsAt);
   const bags = useGame((g) => Math.floor(g.currencies.bags));
   const luck = useGame((g) => currentLuck(g, now));
-  const boosted = useGame((g) => g.luckBoostEndsAt !== null && g.luckBoostEndsAt > now);
+  const boostEnds = useGame((g) => g.luckBoostEndsAt);
+  const boostLeft = boostEnds !== null ? Math.max(0, (boostEnds - now) / 1000) : 0;
+  const boosted = boostLeft > 0;
   const cycle = useGame((g) => spinCycle(g));
-  const power = useGame(playerPower);
   const record = useGame((g) => g.records);
   const dry = useGame((g) => g.dumpster.dryStreak);
   const spell = useGame(drySpell);
@@ -172,7 +176,7 @@ export function AlleyPanel() {
             <button className={`${s.luckBadge} ${boosted ? s.luckBoosted : ''}`} onClick={() => open('luck')}>
               <CloverIcon size={54} />
               <span className={s.luckNum}>×{fmtLuck(luck)}</span>
-              <span className={s.luckWord}>{t('roll.luckLabel')}</span>
+              <span className={s.luckWord}>{boosted ? formatDuration(boostLeft) : t('roll.luckLabel')}</span>
             </button>
             {pityOn && <span className={s.pity}>{t('roll.pity', { n: Math.max(1, spell - dry) })}</span>}
             <span style={{ flex: 1 }} />
@@ -183,18 +187,11 @@ export function AlleyPanel() {
         </div>
       </div>
       <LastRoll />
-      <div className={s.gearBox}>
-        <div className={s.gearHead}>
-          <span>{t('roll.gear')}</span>
-          <span className={s.gearPower}>{t('gear.power', { power: formatNumber(power) })}</span>
-          <EquipBestButton className={s.equipBest} />
-          <span style={{ flex: 1 }} />
-          <span className={s.record}>
-            <StarIcon size={30} />
-            {record.bestRarity ? t('roll.best', { name: `${record.bestItemName} (1 in ${fmtOdds(record.bestOdds)})` }) : t('roll.bestNone')}
-          </span>
-        </div>
-        <GearRow />
+      <div className={s.recordLine}>
+        <StarIcon size={34} />
+        <span className={s.record}>
+          {record.bestRarity ? t('roll.best', { name: `${record.bestItemName} (1 in ${fmtOdds(record.bestOdds)})` }) : t('roll.bestNone')}
+        </span>
       </div>
     </div>
   );

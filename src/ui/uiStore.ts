@@ -57,6 +57,8 @@ interface UiState {
   mapView: { x: number; y: number; k: number } | null;
   /** The dev cheat panel is open (playtest builds; opened from Settings). */
   devOpen: boolean;
+  /** The last boss win, for the "again or next?" card (first clears list their rewards). */
+  afterBoss: { world: number; firstTime: boolean; gems: number } | null;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -80,6 +82,7 @@ export const useUi = create<UiState>((set) => ({
   upgradeSel: 'luck:1',
   prevTab: 'alley',
   mapView: null,
+  afterBoss: null,
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),

@@ -74,6 +74,8 @@ export const BalanceSchema = z.object({
     }),
     firstClearGems: nonNeg,
     firstClearGemsPerWorld: nonNeg,
+    /** After a boss falls the battle waits this long for Again or Next, then moves on to the next world. */
+    choiceSeconds: positive,
     /** Threat: margin = (your HP x your DPS) / (their HP x their DPS); under 1 you lose, at easyMargin+ it's easy. */
     threat: z.object({ waveSize: positive, easyMargin: positive }),
   }),

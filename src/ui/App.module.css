@@ -34,7 +34,6 @@
 }
 
 .battle { height: 820px; flex: none; position: relative; }
-.strip { height: 92px; flex: none; position: relative; z-index: 2; }
 .lower {
   flex: 1;
   min-height: 0;

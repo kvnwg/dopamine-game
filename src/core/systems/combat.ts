@@ -203,9 +203,8 @@ function onWaveCleared(c: Ctx) {
 }
 
 /**
- * The world's boss is down. The first clear pays Gems and a Luck Potion. Pushing raccoons move on to
- * the next world; farming raccoons loop this world, and retry the frontier once they are stronger
- * than when they last died there.
+ * The world's boss is down. The first clear pays Gems and a Luck Potion. Then the battle stops and
+ * asks: this world again, or the next one (see resolveAfterBoss)?
  */
 function onWorldCleared(c: Ctx) {
   const { d, ev, now } = c;
@@ -222,22 +221,33 @@ function onWorldCleared(c: Ctx) {
   d.lifetime.bossesBeaten += 1;
   ev.push({ type: 'stageClear', stage: world, firstTime });
   ev.push({ type: 'bossWin', stage: world });
+  // The battle waits for the call: this world again, or on to the next (automatic after a few seconds).
+  const b = d.battle;
+  b.phase = 'choice';
+  b.phaseTime = BAL.worlds.choiceSeconds;
+  b.enemies = [];
+  b.playerAtkProgress = 0;
+  ev.push({ type: 'bossChoice', world, next: world < worldCount() ? world + 1 : null, seconds: BAL.worlds.choiceSeconds, firstTime });
+}
+
+/**
+ * The call after a boss: on to the next world (also what happens when nobody answers in time) or this
+ * world again. In the last world there is no next, so it goes again.
+ */
+export function resolveAfterBoss(d: GameState, goNext: boolean, ev: CoreEvent[]): void {
+  if (d.battle.phase !== 'choice') return;
+  const s = d.stage;
+  const world = d.battle.stage;
   const next = world + 1;
-  if (s.mode === 'push' && next <= worldCount()) {
-    s.returnTo = world;
-    startStage(d, next, ev, true);
-    return;
-  }
-  const frontier = s.highestCleared + 1;
-  const stronger = s.powerAtDeath !== null && playerPower(d) > s.powerAtDeath;
-  if (s.mode === 'farm' && stronger && world === s.highestCleared && frontier <= worldCount()) {
-    s.mode = 'push';
+  if (goNext && next <= worldCount()) {
+    s.mode = next > s.highestCleared ? 'push' : 'farm';
     s.returnTo = world;
     s.powerAtDeath = null;
     s.showToughHint = false;
-    startStage(d, frontier, ev, true);
+    startStage(d, next, ev, s.mode === 'push');
     return;
   }
+  s.mode = 'farm';
   startStage(d, world, ev, false);
 }
 
@@ -271,6 +281,12 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
   if (b.phase === 'dead') {
     b.phaseTime -= dt;
     if (b.phaseTime <= 0) onDeathResolved(d, ev);
+    return;
+  }
+
+  if (b.phase === 'choice') {
+    b.phaseTime -= dt;
+    if (b.phaseTime <= 0) resolveAfterBoss(d, true, ev);
     return;
   }
 

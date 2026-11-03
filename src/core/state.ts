@@ -69,7 +69,7 @@ export const EnemyStateSchema = z.object({
 export const BattleSchema = z.object({
   stage: z.number().int().positive(),
   wave: z.number().int().nonnegative(),
-  phase: z.enum(['walking', 'fighting', 'dead']),
+  phase: z.enum(['walking', 'fighting', 'dead', 'choice']),
   phaseTime: z.number(),
   playerHp: z.number(),
   playerAtkProgress: z.number(),

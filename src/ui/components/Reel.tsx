@@ -20,7 +20,7 @@ import { useUi } from '../uiStore';
 import s from './reel.module.css';
 
 /** Cell height in stage px. */
-const CELL = 112;
+const CELL = 156;
 /** Reel bank width by reel count (1 to 5 reels). */
 const BANK_W = [300, 400, 480, 520, 540];
 const GAP = 8;
@@ -212,8 +212,8 @@ export function ReelBank() {
   const bankW = BANK_W[Math.min(BANK_W.length, n) - 1];
   const reelW = (bankW - 24 - GAP * (n - 1)) / n;
   const narrow = n >= 3;
-  const art = Math.min(84, reelW - (narrow ? 40 : 24));
-  const label = n === 1 ? 32 : n === 2 ? 29 : n === 3 ? 26 : 24;
+  const art = Math.min(112, reelW - (narrow ? 40 : 24));
+  const label = n === 1 ? 36 : n === 2 ? 32 : n === 3 ? 28 : 25;
   const style = { width: bankW, ['--cell' as string]: `${CELL}px`, ['--art' as string]: `${art}px`, ['--label' as string]: `${label}px` } as CSSProperties;
   return (
     <div

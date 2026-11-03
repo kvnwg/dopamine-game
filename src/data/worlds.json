@@ -25,7 +25,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Officer Dale",
+      "name": "Guy Who Is Concerned About Powerful Raccoon",
       "color": "#2B4C7E",
       "accent": "#F2C14E"
     },
@@ -211,7 +211,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Lifeguard Lou",
+      "name": "Doug, on His Lunch Break",
       "color": "#E53935",
       "accent": "#FFEB3B"
     },
@@ -422,7 +422,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Ranger Frost",
+      "name": "Gary, Who Is Cold",
       "color": "#4E7FB5",
       "accent": "#E3F2FD"
     },
@@ -609,7 +609,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Fire Marshal Dale",
+      "name": "Man Who Has Called the City Twice",
       "color": "#B71C1C",
       "accent": "#FFD54F"
     },
@@ -808,7 +808,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Captain Icicle",
+      "name": "Todd",
       "color": "#0277BD",
       "accent": "#B3E5FC"
     },
@@ -992,7 +992,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Sergeant Spark",
+      "name": "Neighbor Who Saw Everything",
       "color": "#263238",
       "accent": "#FFEA00"
     },
@@ -1174,7 +1174,7 @@
     ],
     "boss": {
       "id": "officer_dale",
-      "name": "Commander Dale",
+      "name": "Brian from the Homeowners Association",
       "color": "#1A237E",
       "accent": "#FFD740"
     },

@@ -3,7 +3,8 @@
  * The wheel spins on its own and the battle pushes through worlds by itself. Like an attentive
  * player, the bot drags every upgrade it finds onto the raccoon, buys the cheapest unlocked node of
  * the upgrade tree it can afford, upgrades the dumpster, rebirths as soon as it is allowed, and
- * jumps ahead to the hardest world that reads Easy.
+ * jumps ahead to the hardest world that reads Easy. After a boss it taps Next within a second and a
+ * half (when a push fails, the raccoon falls back on its own).
  */
 import {
   affordableUpgrades, applyAction, canRebirth, computeStats, createInitialState, currentLuck, isUpgrade, Rng, tick, upgradeCost,
@@ -67,8 +68,10 @@ export function simulate(opts: SimOptions): SimResult {
   let nextShop = 0;
   let nextJump = 0;
 
+  let choiceAt: number | null = null;
   const onEvents = (events: CoreEvent[]) => {
     for (const e of events) {
+      if (e.type === 'bossChoice') choiceAt = elapsed;
       if (e.type === 'stageClear' && clearedAt[e.stage] === undefined) clearedAt[e.stage] = elapsed / 60000;
       if (e.type === 'playerDeath') deaths++;
       if (e.type === 'bossWin') bossWins++;
@@ -110,6 +113,12 @@ export function simulate(opts: SimOptions): SimResult {
         options.sort((a, b) => upgradePrice(state, a) - upgradePrice(state, b));
         act({ type: 'buyUpgrade', id: options[0].id });
       }
+    }
+
+    // After a boss: a player taps Next within a second and a half (a death sends the raccoon back anyway).
+    if (choiceAt !== null && state.battle.phase === 'choice' && elapsed - choiceAt >= 1500) {
+      choiceAt = null;
+      act({ type: 'afterBoss', next: true });
     }
 
     if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead') {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatNumber, suffixForTier } from '../src/core';
+import { formatDuration, formatNumber, formatPower, suffixForTier } from '../src/core';
 
 describe('formatNumber', () => {
   it('follows 999, 1.2K, 3.4M, 5.6B, 7.8T, aa, ab', () => {
@@ -36,5 +36,22 @@ describe('formatDuration', () => {
     expect(formatDuration(9)).toBe('9s');
     expect(formatDuration(125)).toBe('2m 5s');
     expect(formatDuration(3725)).toBe('1h 2m');
+  });
+});
+
+describe('formatPower', () => {
+  it('shows power exactly (with commas) up to 9,999,999, then with two decimals, so every gain shows', () => {
+    expect(formatPower(0)).toBe('0');
+    expect(formatPower(999)).toBe('999');
+    expect(formatPower(1234)).toBe('1,234');
+    expect(formatPower(152_400)).toBe('152,400');
+    expect(formatPower(152_700)).toBe('152,700');
+    expect(formatPower(9_999_999.9)).toBe('9,999,999');
+    expect(formatPower(12_345_678)).toBe('12.34M');
+    expect(formatPower(5.678e9)).toBe('5.67B');
+    expect(formatPower(-1234)).toBe('-1,234');
+    // What formatNumber can't tell apart, formatPower can.
+    expect(formatNumber(152_400)).toBe(formatNumber(152_700));
+    expect(formatPower(152_400)).not.toBe(formatPower(152_700));
   });
 });

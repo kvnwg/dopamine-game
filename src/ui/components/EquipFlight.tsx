@@ -10,7 +10,7 @@
  * Everything moves in whole art pixels. With reduced motion there is no flight; the gear simply lands.
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { formatNumber, playerPower, rarityIndex, wornPower, type CoreEvent, type Item } from '../../core';
+import { formatPower, playerPower, rarityIndex, wornPower, type CoreEvent, type Item } from '../../core';
 import { bus } from '../../app/eventBus';
 import { getGame } from '../../app/store';
 import { haptics } from '../../services';
@@ -259,12 +259,12 @@ function PowerPop({ show, onDone }: { show: PowerShow; onDone: () => void }) {
           {t('equip.power')}
         </div>
         <div key={landed ? 'l' : 'c'} className={s.powerNum}>
-          {formatNumber(shown)}
+          {formatPower(shown)}
         </div>
         <div className={s.powerDiff} data-on={landed || undefined}>
           {up ? <ArrowUpIcon size="md" /> : <ArrowDownIcon size="md" />}
           {up ? '+' : '-'}
-          {formatNumber(Math.abs(diff))}
+          {formatPower(Math.abs(diff))}
         </div>
       </div>
     </div>

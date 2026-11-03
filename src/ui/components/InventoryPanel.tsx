@@ -5,7 +5,7 @@
  * biggest upgrade in every slot at once; Scrap All clears every unlocked item.
  */
 import { useEffect, useRef, useState } from 'react';
-import { formatNumber, inventoryCapacity, isUpgrade, playerPower, scrapValue } from '../../core';
+import { formatNumber, formatPower, inventoryCapacity, isUpgrade, playerPower, scrapValue } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { useCountUp } from '../hooks';
@@ -31,7 +31,7 @@ function PowerTag({ power }: { power: number }) {
       <PowerIcon />
       {/* Only the number swells; the icon stays on the pixel grid. */}
       <span key={pop} className={pop > 0 ? s.powerPop : ''}>
-        {formatNumber(Math.round(shown))}
+        {formatPower(Math.round(shown))}
       </span>
     </span>
   );

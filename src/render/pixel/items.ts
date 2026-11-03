@@ -13,6 +13,10 @@
  */
 import { checkRows, fromRows, type Rows, type SheetEntry } from './buf';
 import { REF_CONE } from './reference';
+import { GRIPS as ARMS_GRIPS, SPRITES as ARMS_SPRITES, TILTS as ARMS_TILTS } from './more/arms';
+import { SPRITES as CARRY_SPRITES } from './more/carry';
+import { SPRITES as CLOTHES_SPRITES } from './more/clothes';
+import { SPRITES as HEADGEAR_SPRITES } from './more/headgear';
 
 // ------------------------------------------------------------------ Hats: upright, brim or opening on rows 12 to 14
 
@@ -1849,6 +1853,11 @@ export const ITEM_SPRITES: Record<string, Rows> = {
   ring_pizza_cutter: RING_PIZZA_CUTTER,
   ring_mall_pass: RING_MALL_PASS,
   ring_hotel_key: RING_HOTEL_KEY,
+  // More items, by slot group (src/render/pixel/more).
+  ...HEADGEAR_SPRITES,
+  ...CLOTHES_SPRITES,
+  ...ARMS_SPRITES,
+  ...CARRY_SPRITES,
 };
 
 /** The pixel of each weapon icon where the paw holds it (the weapon is rotated about this point). */
@@ -1861,11 +1870,13 @@ export const WEAPON_GRIP: Record<string, { x: number; y: number }> = {
   weapon_tiki_torch: { x: 4, y: 12 },
   weapon_unique_leaf_blower: { x: 4, y: 11 },
   weapon_umbrella: { x: 7, y: 13 },
+  ...ARMS_GRIPS,
 };
 
 /** How far each weapon's art leans clockwise from straight up, in degrees (most are drawn on the 45 degree diagonal). */
 export const WEAPON_ART_TILT: Readonly<Record<string, number>> = {
   weapon_umbrella: 0,
+  ...ARMS_TILTS,
 };
 export const DEFAULT_WEAPON_TILT = 45;
 

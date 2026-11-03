@@ -4,6 +4,10 @@
  */
 import balanceJson from './balance.json';
 import itemsJson from './items.json';
+import itemsHeadgearJson from './itemsHeadgear.json';
+import itemsClothesJson from './itemsClothes.json';
+import itemsArmsJson from './itemsArms.json';
+import itemsCarryJson from './itemsCarry.json';
 import affixesJson from './affixes.json';
 import themesJson from './themes.json';
 import enemiesJson from './enemies.json';
@@ -288,7 +292,8 @@ function buildHeistData(
 /** The validated game data. Built once at module load (boot). */
 export const DATA: GameData = buildGameData({
   balance: balanceJson,
-  items: itemsJson,
+  // The base items, and more of them by slot group (one file each, so they can be edited apart).
+  items: [...itemsJson, ...itemsHeadgearJson, ...itemsClothesJson, ...itemsArmsJson, ...itemsCarryJson],
   affixes: affixesJson,
   themes: themesJson,
   enemies: enemiesJson,

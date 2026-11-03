@@ -47,6 +47,25 @@ export function formatNumber(value: number): string {
   return sign + body + suffixForTier(tier);
 }
 
+/**
+ * A power total, exact with commas up to 9,999,999 (1,234,567) so every gain shows; past that, two
+ * decimals (12.34M, 5.67B). Floored like formatNumber. (formatNumber keeps two or three digits, so
+ * 152,400 and 152,700 would both read "152K".)
+ */
+export function formatPower(value: number): string {
+  if (!Number.isFinite(value)) return formatNumber(value);
+  const sign = value < 0 ? '-' : '';
+  const v = Math.floor(Math.abs(value));
+  if (v < 10_000_000) return sign + v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  let tier = Math.floor(Math.log10(v) / 3);
+  let scaled = v / Math.pow(1000, tier);
+  if (scaled >= 1000) {
+    tier += 1;
+    scaled /= 1000;
+  }
+  return sign + (Math.floor(scaled * 100) / 100).toFixed(2) + suffixForTier(tier);
+}
+
 /** 3725 -> "1h 2m", 125 -> "2m 5s", 9 -> "9s". */
 export function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.ceil(totalSeconds));

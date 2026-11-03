@@ -560,7 +560,7 @@ const TARGET: Rows = [
   '................',
 ];
 
-/** A little CRT found in the trash: the Watch tab. */
+/** A little CRT found in the trash: watching an ad. */
 const TV: Rows = [
   '................',
   '..k..........k..',
@@ -580,11 +580,211 @@ const TV: Rows = [
   '.kkkkkkkkkkkkkk.',
 ];
 
+/** A loot sack with a $ on it: the Heist tab. */
+const HEIST: Rows = [
+  '................',
+  '....kk.kk.kk....',
+  '...kTtkTtkTNk...',
+  '....kTTttNNk....',
+  '.....kyyyOk.....',
+  '....kTtttNNk....',
+  '...kTttGttNNk...',
+  '..kTttGGGGtNNk..',
+  '.kTttGtGttttNNk.',
+  '.kTtttGGGtttNNk.',
+  '.kTttttGtGttNNk.',
+  '.ktttGGGGtttNNk.',
+  '.ktttttGttttNNk.',
+  '..kttttttNNNNk..',
+  '...kkkkkkkkkk...',
+  '................',
+];
+
+/** A heist ticket: a red stub with a gold star. */
+const TICKET: Rows = [
+  '................',
+  '................',
+  '................',
+  '.kkkkkkkkkkkkkk.',
+  'keeeeeeeeeereeek',
+  'keRRRRyRRRRRRRrk',
+  'keRRRyYyRRRrRRrk',
+  '.kRRyYyyyRRRRRk.',
+  '.kRRRyyORRRrRRk.',
+  'keRRyORyORRRRRrk',
+  'keRRRRRRRRRrRRrk',
+  'krrrrrrrrrrrrrrk',
+  '.kkkkkkkkkkkkkk.',
+  '................',
+  '................',
+  '................',
+];
+
+/** A speech bubble with a question mark: a heist choice event. */
+const CHOICE: Rows = [
+  '................',
+  '...kkkkkkkkkk...',
+  '..kwwwwwwwwwWk..',
+  '.kwwwwVVVwwwW5k.',
+  '.kwwwVwwwVwwW5k.',
+  '.kwwwwwwwVwwW5k.',
+  '.kwwwwwVVwwwW5k.',
+  '.kwwwwwVwwwwW5k.',
+  '.kwwwwwwwwwwW5k.',
+  '.kwwwwwVwwwwW5k.',
+  '..kWWWWWWWWW5k..',
+  '...kkW5kkkkkk...',
+  '...kW5k.........',
+  '..kkkk..........',
+  '................',
+  '................',
+];
+
+/** A treasure chest: a heist treasure stop. */
+const TREASURE: Rows = [
+  '................',
+  '................',
+  '...kkkkkkkkkk...',
+  '..ktNyNNNNyNnk..',
+  '.ktNNyNNNNyNnnk.',
+  '.ktNNyNNNNyNnnk.',
+  '.kkkkykkkkykkkk.',
+  '.ktNNykYykyNnnk.',
+  '.ktNNykyOkyNnnk.',
+  '.ktNNyNkkNyNnnk.',
+  '.ktNNyNNNNyNnnk.',
+  '.knnnOnnnnOnnbk.',
+  '.kkkkkkkkkkkkkk.',
+  '................',
+  '................',
+  '................',
+];
+
+/** A market stall under a striped awning: a heist shop. */
+const SHOP: Rows = [
+  '................',
+  '.kkkkkkkkkkkkkk.',
+  'kwwRRwwRRwwRRwwk',
+  'kwwRRwwRRwwRRwwk',
+  'k55rr55rr55rr55k',
+  '.k5kkr5kkr5kkrk.',
+  '.kk..kk..kk..kk.',
+  '..kN........Nk..',
+  '..kN..kkk...Nk..',
+  '..kN.kYyOk..Nk..',
+  '.kkkkkkkkkkkkkk.',
+  '.kTTTTTTTTTTTtk.',
+  '.ktNNNNNNNNNNnk.',
+  '.ktNkkkkkkkkNnk.',
+  '.kkk........kkk.',
+  '................',
+];
+
+/** A stone pedestal with a purple flame: a heist shrine. */
+const SHRINE: Rows = [
+  '.......kk.......',
+  '......kMmk......',
+  '......kMmk......',
+  '.....kMwMVk.....',
+  '.....kmMmVk.....',
+  '......kVVk......',
+  '....kkkkkkkk....',
+  '...k55555543k...',
+  '....kk4443kk....',
+  '.....k5433k.....',
+  '.....k5433k.....',
+  '.....k5432k.....',
+  '....k554332k....',
+  '...k55443322k...',
+  '...kkkkkkkkkk...',
+  '................',
+];
+
+/** A warning sign: a heist trap. */
+const TRAP: Rows = [
+  '................',
+  '.......kk.......',
+  '......kYyk......',
+  '......kYyk......',
+  '.....kYyyOk.....',
+  '.....kYkkOk.....',
+  '....kYykkyOk....',
+  '....kYykkyOk....',
+  '...kYyykkyyOk...',
+  '...kYyykkyyOk...',
+  '..kYyyyyyyyyOk..',
+  '..kYyyykkyyyOk..',
+  '.kYyyyykkyyyyOk.',
+  '.kOOOOOOOOOOOOk.',
+  '.kkkkkkkkkkkkkk.',
+  '................',
+];
+
+/** A prize wheel under its pointer: the Jackpot Wheel. */
+const WHEEL: Rows = [
+  '......kkkk......',
+  '......kwwk......',
+  '.....kkwwkk.....',
+  '...kklRkkRykk...',
+  '..klllRRRRyyyk..',
+  '..kllllRRyyyyk..',
+  '.kcllllRRyyyyck.',
+  '.kcccllRRyycccck',
+  '.kccccckwcccccck',
+  '.kccccc5kcccccck',
+  '.kcccyyRRllcccck',
+  '.kcyyyyRRllllck.',
+  '..kyyyyRRllllk..',
+  '..kyyyRRRRlllk..',
+  '...kkyRRRRlkk...',
+  '.....kkkkkk.....',
+];
+
+/** A flame: the fire perk tag. */
+const FLAME: Rows = [
+  '................',
+  '.......k........',
+  '......kRk.......',
+  '......kRRk......',
+  '.....kReRk..k...',
+  '....kReyeRk.kk..',
+  '....kRyyeRRkRk..',
+  '...kReyYyeRRRk..',
+  '...kRyYYyyeRRrk.',
+  '..kReyYwYyyeRrk.',
+  '..kRyYwwYyyeRrk.',
+  '..kRyYwwwYyeRrk.',
+  '..kReyYwYyyeRrk.',
+  '...kReyyyyeRrk..',
+  '....kkRRRRrkk...',
+  '......kkkkk.....',
+];
+
+/** A city pigeon: the crew perk tag. */
+const PIGEON: Rows = [
+  '................',
+  '................',
+  '.....kkkk.......',
+  '....k5544k......',
+  '...k54O44k......',
+  '..kwk4444k......',
+  '.k23ka44aak.....',
+  '..kkkaAaa3kkkk..',
+  '....k5a444443k..',
+  '...k5444444333k.',
+  '...k44443333332k',
+  '...k3443333322k.',
+  '....k33333222k..',
+  '.....kkkekekk...',
+  '.......ke.ke....',
+  '................',
+];
+
 export type UiIcon =
   | 'coin' | 'gem' | 'bag' | 'heart' | 'sword' | 'shield' | 'clover' | 'bolt' | 'power' | 'gear'
   | 'lock' | 'trash' | 'arrowUp' | 'rebirth' | 'dumpster' | 'potion' | 'dice' | 'book' | 'chart' | 'cart'
   | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target' | 'tv'
-  | 'arrowRight';
+  | 'arrowRight' | 'heist' | 'ticket' | 'choice' | 'treasure' | 'shop' | 'shrine' | 'trap' | 'wheel' | 'flame' | 'pigeon';
 
 /** Rows turned a quarter turn clockwise (an up arrow points right; light from the left lands on top). */
 function turnRows(rows: Rows): Rows {
@@ -626,6 +826,16 @@ export const UI_SPRITES: Record<UiIcon, Rows> = {
   target: TARGET,
   tv: TV,
   arrowRight: turnRows(ARROW_UP),
+  heist: HEIST,
+  ticket: TICKET,
+  choice: CHOICE,
+  treasure: TREASURE,
+  shop: SHOP,
+  shrine: SHRINE,
+  trap: TRAP,
+  wheel: WHEEL,
+  flame: FLAME,
+  pigeon: PIGEON,
 };
 
 /*

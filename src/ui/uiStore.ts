@@ -4,7 +4,7 @@ import type { HaulSize, Item, RollDrama, RollPlacement } from '../core';
 import type { AdPlacement } from '../services';
 
 export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world';
-export type Tab = 'alley' | 'watch' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
+export type Tab = 'alley' | 'heist' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
 export interface RollView {
   id: number;
@@ -71,8 +71,6 @@ interface UiState {
   afterBoss: { world: number; firstTime: boolean; gems: number } | null;
   /** Items the last rebirth unlocked (shown after the rebirth burst). */
   unlocked: { count: number; ids: string[] } | null;
-  /** The Watch tab hides everything but the battle and the rolls. */
-  watchHideUi: boolean;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -100,7 +98,6 @@ export const useUi = create<UiState>((set) => ({
   goldPulse: 0,
   afterBoss: null,
   unlocked: null,
-  watchHideUi: false,
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),

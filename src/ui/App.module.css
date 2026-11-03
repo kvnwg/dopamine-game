@@ -44,8 +44,3 @@
     linear-gradient(180deg, #2c2e45, #232538);
 }
 .nav { height: 160px; flex: none; position: relative; z-index: 2; }
-
-/* The Watch tab's clean view: no top bar (the nav is not rendered). */
-.stage[data-bare] [data-hud] {
-  display: none;
-}

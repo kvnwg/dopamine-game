@@ -68,4 +68,57 @@ export const BLING: Readonly<Record<string, BlingArt>> = {
     pal: { g: '4', w: 'w', W: 'W', d: '3' },
     art: piece([2, 0], ['g...g', '.g.g.', '.#Ww#', '.#w#.', '.#dW#', '..##.']),
   },
+
+  // ---------------------------------------------------------------- more bling (carry group)
+  // Red cat collar round his neck, a gold jingle bell under his chin.
+  bling_bell_collar: {
+    pal: { e: 'e', R: 'R', r: 'r', Y: 'Y', y: 'y', O: 'O' },
+    art: piece([2, 0], ['.eRr.', '..y..', '.YyO.', '.y#O.']),
+  },
+  // "HELLO my name is" sticker on his chest: red band, the name in blue pen.
+  bling_name_tag: {
+    pal: { e: 'e', R: 'R', r: 'r', w: 'w', x: 'x' },
+    art: piece([2, -2], ['eRRr', 'wxww']),
+  },
+  // Blue bandana knotted at his neck, its point down his chest.
+  bling_bandana: {
+    pal: { c: 'c', U: 'U', u: 'u', w: 'w' },
+    art: piece([2, 0], ['.cUu.', 'cUwUu', '.cUu.', '..u..']),
+  },
+  // Scratched CD hanging from a string, a rainbow glint on it.
+  bling_cd_pendant: {
+    pal: { g: '2', w: '5', d: '4', s: '3', C: 'C', m: 'm' },
+    art: piece([2, 0], ['.g.g.', '..g..', '#wCd#', '#d#s#', '.#m#.']),
+  },
+  // Red headphones round his neck, the cups on his chest.
+  bling_headphones: {
+    pal: { g: '2', R: 'R', e: 'e', r: 'r' },
+    art: piece([3, 0], ['eRgggeR', 'rr...rr']),
+    on: ['n', 'b', 'h'],
+  },
+  // Plastic lei of pink, yellow and purple flowers round his neck.
+  bling_lei: {
+    pal: { q: 'q', P: 'P', Y: 'Y', y: 'y', M: 'M', m: 'm' },
+    art: piece([3, 0], ['..qYm..', '.Pq.yY.', '..MmP..']),
+  },
+  // Lobster bib tied at his neck: a red lobster on white.
+  bling_lobster_bib: {
+    pal: { w: 'w', W: 'W', e: 'e', R: 'R', r: 'r' },
+    art: piece([2, 0], ['.#w#.', 'wwwwW', 'wRwRW', 'wwRWW', 'wRrRW']),
+  },
+  // Purple lanyard down to a gold VIP pass.
+  bling_vip_lanyard: {
+    pal: { V: 'V', v: 'v', g: '4', Y: 'Y', y: 'y', O: 'O', x: 'x' },
+    art: piece([2, 0], ['.V.v.', '..V..', '..g..', '.Yyy.', '.yxO.']),
+  },
+  // Participation medal on a red and blue ribbon.
+  bling_participation_medal: {
+    pal: { U: 'U', R: 'R', e: 'e', Y: 'Y', y: 'y', O: 'O' },
+    art: piece([2, 0], ['.U.R.', '..e..', '#YyO#', '#yOO#', '.###.']),
+  },
+  // Big clock on a heavy gold chain, its face on his belly.
+  bling_big_clock: {
+    pal: { y: 'y', Y: 'Y', O: 'O', W: 'W', w: 'w', x: 'x' },
+    art: piece([3, 0], ['..y.y..', '..O.O..', '.YyyyO.', '.yWxWO.', '.yWWWO.']),
+  },
 };

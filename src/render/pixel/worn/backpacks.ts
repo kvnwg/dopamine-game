@@ -96,4 +96,157 @@ export const BACKPACKS: Readonly<Record<string, PackArt>> = {
     ]),
     straps: piece([3, -1], ['.......N', '.......N']),
   },
+
+  // ---------------------------------------------------------------- more packs (carry group)
+  // Green frog kiddie backpack: its big eyes pop up over his shoulder, pink cheeks and a smile.
+  backpack_frog_kiddie: {
+    pal: { w: 'w', x: 'x', L: 'L', l: 'l', G: 'G', g: 'g', P: 'P' },
+    back: bag([
+      '.##.##.',
+      '#wx#wx#',
+      '#LLLLl#',
+      '#LPllP#',
+      '#lgggl#',
+      '#lllGG#',
+      '#######',
+    ]),
+    straps: STRAPS('g'),
+  },
+  // Paper grocery bag, celery leaves and an apple sticking out of the top.
+  backpack_paper_grocery_bag: {
+    pal: { L: 'L', l: 'l', G: 'G', e: 'e', R: 'R', T: 'T', t: 't', N: 'N' },
+    back: bag([
+      '.##.#.',
+      '#Ll#e#',
+      '#lG#R#',
+      '######',
+      '#TTTt#',
+      '#TttN#',
+      '#tttN#',
+      '######',
+    ]),
+    straps: piece([3, -1], ['.......N', '.......N']),
+  },
+  // Red shopping basket, its handles up, slots in its sides.
+  backpack_shopping_basket: {
+    pal: { e: 'e', R: 'R', r: 'r' },
+    back: bag([
+      '.####.',
+      '.#..#.',
+      '######',
+      '#eeeR#',
+      '#rrrr#',
+      '#eRRr#',
+      '#rrrr#',
+      '######',
+    ]),
+    straps: STRAPS('r'),
+  },
+  // Wooden birdhouse with a red roof and a round hole.
+  backpack_birdhouse: {
+    pal: { e: 'e', R: 'R', r: 'r', T: 'T', t: 't', N: 'N', x: 'x' },
+    back: bag([
+      '..##..',
+      '.#eR#.',
+      '#eRRr#',
+      '######',
+      '#TTtN#',
+      '#TxtN#',
+      '#TttN#',
+      '######',
+    ]),
+    straps: STRAPS('N'),
+  },
+  // Chrome toaster, two slices of toast sticking up.
+  backpack_toaster: {
+    pal: { T: 'T', t: 't', w: 'w', 5: '5', 4: '4', 3: '3', 2: '2' },
+    back: bag([
+      '.##.##.',
+      '#TT#Tt#',
+      '#######',
+      '#w5554#',
+      '#54443#',
+      '#44433#',
+      '#33322#',
+      '#######',
+    ]),
+    straps: STRAPS('2'),
+  },
+  // Silver boombox: handle up, two dark speakers.
+  backpack_boombox: {
+    pal: { w: 'w', 5: '5', 4: '4', 3: '3', 2: '2', 1: '1', y: 'y' },
+    back: bag([
+      '..###..',
+      '.#...#.',
+      '#######',
+      '#w5y55#',
+      '#21521#',
+      '#11511#',
+      '#44443#',
+      '#######',
+    ]),
+    straps: STRAPS('1'),
+  },
+  // Pink piggy bank, a gold coin in its slot.
+  backpack_piggy_bank: {
+    pal: { P: 'P', q: 'q', w: 'w', y: 'y', O: 'O', x: 'r' },
+    back: bag([
+      '..##...',
+      '.#yO#.#',
+      '.####q#',
+      '#PwPPP#',
+      '#PPPqq#',
+      '#PPPqx#',
+      '#qqqqq#',
+      '.#q#q#.',
+    ]),
+    straps: STRAPS('q'),
+  },
+  // Steel kitchen sink, its faucet arching up over his shoulder.
+  backpack_kitchen_sink: {
+    pal: { w: 'w', 5: '5', 4: '4', 3: '3', 2: '2', R: 'R', U: 'U', C: 'C' },
+    back: piece([-5, 11], [
+      '.###...',
+      '#554#..',
+      '#4##4#.',
+      '#4#.C..',
+      '#4#....',
+      '#######',
+      '#w5554#',
+      '#22222#',
+      '#44443#',
+      '#######',
+    ]),
+    straps: STRAPS('3'),
+  },
+  // Round fishbowl, an orange goldfish swimming in it.
+  backpack_fishbowl: {
+    pal: { C: 'C', c: 'c', U: 'U', w: 'w', O: 'O', y: 'y', T: 'T', t: 't' },
+    back: bag([
+      '.#####.',
+      '.#CwC#.',
+      '#CcccU#',
+      '#cOyOU#',
+      '#ccOcU#',
+      '#TTttU#',
+      '.#####.',
+    ]),
+    straps: STRAPS('U'),
+  },
+  // The soda jetpack: two green bottles taped together, flames out of the caps.
+  backpack_unique_soda_jetpack: {
+    pal: { L: 'L', G: 'G', g: 'g', 5: '5', 4: '4', e: 'e', R: 'R', Y: 'Y', O: 'O' },
+    back: bag([
+      '..##.##.',
+      '.#LG#LG#',
+      '.#LG#LG#',
+      '.#eR#eR#',
+      '.#Gg#Gg#',
+      '.#RR#RR#',
+      '.#YY#YY#',
+      '..#O##O#',
+      '...#..#.',
+    ]),
+    straps: STRAPS('4'),
+  },
 };

@@ -98,4 +98,213 @@ export const HATS: Readonly<Record<string, HatArt>> = {
     on: { x: 6, y: 1 },
     ears: 0,
   },
+  // >>> headgear
+  // Open takeout box perched between his ears: noodles heaped up, chopsticks stuck in, a red band.
+  hat_takeout_box: {
+    pal: { T: 'T', t: 't', y: 'y', Y: 'Y', w: 'w', W: 'W', '5': '5', R: 'R', r: 'r' },
+    art: { at: TOP, rows: [
+      '........Tt',
+      '.#####.Tt.',
+      '#yYyyyTty#',
+      '#wWWWWWW5#',
+      '.#RRRRRr#.',
+      '..#WWW5#..',
+    ] },
+    on: { x: 7, y: 1 },
+    ears: 2,
+  },
+  // Green ball cap pulled down over his ears, the bent brim sticking out front.
+  hat_bent_cap: {
+    pal: { G: 'G', g: 'g', l: 'l', L: 'L' },
+    art: { at: TOP, rows: [
+      '........######...',
+      '.......#lGGGGg#..',
+      '......#lGGGGGGg#.',
+      '......#lGGGGGGg#.',
+      '.######ggggggggg#',
+      '#LlllllgG#.......',
+      '.#gggg##.........',
+      '..####...........',
+    ] },
+    on: { x: 1, y: 2 },
+    ears: 0,
+  },
+  // Puffy lilac shower cap pulled over his ears (two bumps), white dots, a frilly elastic edge.
+  hat_shower_cap: {
+    pal: { M: 'M', m: 'm', V: 'V', w: 'w' },
+    art: { at: TOP, rows: [
+      '...####..####...',
+      '..#MMMM##mmmV#..',
+      '.#MMwMMMmmmmVV#.',
+      '.#MMMMmmmwmmVV#.',
+      '#MwMMmmmmmmmVVV#',
+      '#MMMMMMMMMMMMMm#',
+      '#MM#MM#MM#MM#Mm#',
+      '.##.##.##.##.##.',
+    ] },
+    on: { x: 4, y: 2 },
+    ears: 0,
+  },
+  // Blue birthday party hat leaning off his head, pink dots, a gold pompom.
+  hat_party_hat: {
+    pal: { C: 'C', c: 'c', U: 'U', q: 'q', Y: 'Y', y: 'y', O: 'O' },
+    art: { at: TOP, rows: [
+      '....#Yy#',
+      '...##yO#',
+      '..#Cc##.',
+      '.#CqU#..',
+      '#CccU#..',
+      '#cqcU#..',
+    ] },
+    on: { x: 9, y: 1 },
+    ears: 2,
+  },
+  // Steel colander upside down over his ears: the foot ring on top, rows of holes, a loop handle each side.
+  hat_colander: {
+    pal: { w: 'w', '5': '5', '4': '4', '3': '3', '2': '2' },
+    art: { at: TOP, rows: [
+      '......####......',
+      '....##w554##....',
+      '...#5w555554#...',
+      '..#5w52552554#..',
+      '###5555555554###',
+      '#.#2552552553#.#',
+      '###4444444443###',
+      '..############..',
+    ] },
+    on: { x: 4, y: 1 },
+    ears: 0,
+  },
+  // A crumpled tinfoil cone pulled down over his ears.
+  hat_tinfoil: {
+    pal: { w: 'w', '5': '5', '4': '4', '3': '3' },
+    art: { at: TOP, rows: [
+      '......##......',
+      '.....#w4#.....',
+      '....#w5w4#....',
+      '...#w55w43#...',
+      '..#w5w54w43#..',
+      '.#w5w55w4433#.',
+      '#5w5w5444w433#',
+      '#3#33#3#3#33#.',
+    ] },
+    on: { x: 5, y: 1 },
+    ears: 0,
+  },
+  // Pink lampshade pulled down over his ears, gold fringe at his brow.
+  hat_lampshade: {
+    pal: { P: 'P', w: 'w', q: 'q', O: 'O', y: 'y' },
+    art: { at: TOP, rows: [
+      '....######.....',
+      '....#wPPq#.....',
+      '...#wPPPPq#....',
+      '...#wPPPPq#....',
+      '..#wPPPPPPq#...',
+      '.#wwPPPPPPqq#..',
+      '#OyyyyyyyyyyyO#',
+      '#y#y#y#y#y#y#y#',
+    ] },
+    on: { x: 5, y: 1 },
+    ears: 0,
+  },
+  // Jack-o'-lantern lid perched between his ears: ribbed orange, a green stem, the zigzag cut.
+  hat_pumpkin_lid: {
+    pal: { G: 'G', g: 'g', y: 'y', O: 'O', o: 'o', Y: 'Y' },
+    art: { at: TOP, rows: [
+      '....##....',
+      '...#Gg#...',
+      '..##Gg##..',
+      '#yOOoOOoo#',
+      '.#yOoOOo#.',
+      '..#YoYo#..',
+    ] },
+    on: { x: 7, y: 1 },
+    ears: 2,
+  },
+  // Twig nest perched between his ears, three robin's eggs on top.
+  hat_bird_nest: {
+    pal: { w: 'w', A: 'A', t: 't', N: 'N', n: 'n', b: 'b' },
+    art: { at: TOP, rows: [
+      '..##.##.##..',
+      '.#wA#wA#wA#.',
+      '#tNtnNtNtnN#',
+      '.#NnbNnbNn#.',
+      '..#nnbnbb#..',
+      '...#bnbb#...',
+    ] },
+    on: { x: 6, y: 1 },
+    ears: 2,
+  },
+  // Puffy chef's toque standing tall between his ears.
+  hat_chef_toque: {
+    pal: { w: 'w', W: 'W', '5': '5' },
+    art: { at: TOP, rows: [
+      '..###.###.',
+      '.#wWW#WW5#',
+      '#wWWWWWW5#',
+      '.#WWWW55#.',
+      '..#WW5W#..',
+      '..#WW5W#..',
+    ] },
+    on: { x: 7, y: 1 },
+    ears: 2,
+  },
+  // Propeller beanie between his ears: red, yellow and blue panels, a green band, the propeller up top.
+  hat_propeller_beanie: {
+    pal: { R: 'R', y: 'y', U: 'U', u: 'u', G: 'G', '4': '4' },
+    art: { at: TOP, rows: [
+      '.####..####..',
+      '#RRRR#4#yyyy#',
+      '.####.#.####.',
+      '...#RRyyUU#..',
+      '...#RRyyUu#..',
+      '...#GGGGGG#..',
+    ] },
+    on: { x: 6, y: 1 },
+    ears: 2,
+  },
+  // Black mortarboard balanced between his ears, the gold tassel hanging past his ear.
+  hat_graduation_cap: {
+    pal: { '2': '2', '1': '1', x: 'x', y: 'y', Y: 'Y', O: 'O' },
+    art: { at: TOP, rows: [
+      '....####....',
+      '..##22y2##..',
+      '##111111y1##',
+      '..##xxxx##y.',
+      '...#1xx1#.y.',
+      '...#xxxx#.Y.',
+      '.........O..',
+    ] },
+    on: { x: 6, y: 1 },
+    ears: 2,
+  },
+  // Granny's china teapot on his head: spout out front, a loop handle at the back, a blue band.
+  hat_teapot: {
+    pal: { w: 'w', W: 'W', '5': '5', U: 'U' },
+    art: { at: TOP, rows: [
+      '.......##......',
+      '#w#..#wWW5#....',
+      '.#W##wWWWW5###.',
+      '..#WwUUUUUU5#W#',
+      '....##WWW55####',
+      '.....#5555#....',
+    ] },
+    on: { x: 4, y: 1 },
+    ears: 2,
+  },
+  // The Curb King's crown perched between his ears: gold points, bottle caps round the band, a glint.
+  hat_unique_curb_crown: {
+    pal: { Y: 'Y', y: 'y', O: 'O', w: 'w', R: 'R', c: 'c', G: 'G' },
+    art: { at: TOP, rows: [
+      '.#.##.#.',
+      '#w#Yy#y#',
+      '#YyYyyO#',
+      '#yRycGO#',
+      '#yyyyyO#',
+      '.#OOOO#.',
+    ] },
+    on: { x: 8, y: 1 },
+    ears: 2,
+  },
+  // <<< headgear
 };

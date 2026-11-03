@@ -144,4 +144,231 @@ export const MASKS: Readonly<Record<string, MaskArt>> = {
     ] },
     on: EYE,
   },
+  // >>> headgear
+  // Paper bag pulled over his head, ears poking out the top: two eye holes and a marker smile.
+  mask_paper_bag: {
+    pal: { T: 'T', t: 't', N: 'N', n: 'n' },
+    art: { at: { x: 1, y: 4 }, rows: [
+      '..T#TT..',
+      '##TTtt##',
+      'TTTTTTtN',
+      'TTTTTTtN',
+      'T.TTT.tN',
+      'TnTTTntN',
+      'TTnnntNN',
+      '##...###',
+    ] },
+    squash: { at: { x: 1, y: 4 }, rows: [
+      '..T#TT..',
+      '##TTtt##',
+      'TTTTTTtN',
+      'TTTTTTtN',
+      'T.TTT.tN',
+      'TnnnnnNN',
+      '##...###',
+    ] },
+    on: EYE,
+  },
+  // Red foam clown nose on his nose.
+  mask_clown_nose: {
+    pal: { w: 'w', e: 'e', R: 'R', r: 'r' },
+    art: { at: { x: -1, y: 0 }, rows: [
+      'weR',
+      'eRr',
+      'Rrr',
+    ] },
+    squash: { at: { x: -1, y: 1 }, rows: [
+      'weR',
+      'eRr',
+      'Rrr',
+    ] },
+    on: EYE,
+  },
+  // Red bandana tied over his muzzle outlaw style, white dots, the point hanging under his chin.
+  mask_bandana: {
+    pal: { e: 'e', R: 'R', r: 'r', w: 'w' },
+    art: { at: { x: 1, y: -1 }, rows: [
+      'eeeeeeeR',
+      'RRwRRRwr',
+      '#R...Rr#',
+    ] },
+    squash: { at: { x: 1, y: -1 }, rows: [
+      'eRwRRRwR',
+      '#R...Rr#',
+    ] },
+    free: { at: { x: 0, y: -3 }, rows: [
+      '.RRr',
+      '#Rr#',
+      '.##.',
+    ] },
+    on: EYE,
+  },
+  // Fake nose and glasses: bushy brows, thick black frames, a big pink nose, a black mustache.
+  mask_groucho_glasses: {
+    pal: { x: 'x', C: 'C', s: 's', S: 'S' },
+    art: { at: { x: 1, y: 2 }, rows: [
+      'xxx.xxx.',
+      '#######.',
+      'C.###C.#',
+      '..ssS...',
+      'xxsSSxx.',
+    ] },
+    squash: { at: { x: 1, y: 2 }, rows: [
+      'xxx.xxx.',
+      '#######.',
+      'C.#s#C.#',
+      'xxxSxxx.',
+    ] },
+    on: EYE,
+  },
+  // Two cucumber slices over his eyes. Spa day.
+  mask_cucumber_slices: {
+    pal: { G: 'G', g: 'g', L: 'L', l: 'l', W: 'W' },
+    art: { at: { x: 2, y: 1 }, rows: [
+      '.Gg...Gg.',
+      'GLWg.GLWg',
+      'GWlg.GWlg',
+      '.gg...gg.',
+    ] },
+    on: EYE,
+  },
+  // Ski goggles: a white frame, a gold mirror lens across both eyes, the blue strap round his head.
+  mask_ski_goggles: {
+    pal: { w: 'w', '5': '5', Y: 'Y', y: 'y', O: 'O', U: 'U' },
+    art: { at: { x: 2, y: 2 }, rows: [
+      '.wwwwwwww.',
+      'UwYwYYYy5U',
+      'UwyyyyyO5U',
+      '.555#5555.',
+    ] },
+    on: EYE,
+  },
+  // Glasses with two big googly eyes, the pupils off in two directions.
+  mask_googly_glasses: {
+    pal: { w: 'w', '5': '5', x: 'x' },
+    art: { at: { x: 2, y: 2 }, rows: [
+      '.###.###.',
+      '#www#wxx#',
+      '#www#wx5#',
+      '#xx5#w55#',
+      '.###.###.',
+    ] },
+    on: EYE,
+  },
+  // Black welding mask down over his face: a dark green window, a flame decal.
+  mask_welding: {
+    pal: { '2': '2', '1': '1', g: 'g', G: 'G', y: 'y', O: 'O', R: 'R' },
+    art: { at: { x: 1, y: 3 }, rows: [
+      '########',
+      '22222221',
+      '2######1',
+      '2#Gggg#1',
+      '2######1',
+      '2yORyOy1',
+      '##...###',
+    ] },
+    squash: { at: { x: 1, y: 3 }, rows: [
+      '########',
+      '22222221',
+      '2######1',
+      '2#Gggg#1',
+      '2yORyOy1',
+      '##...###',
+    ] },
+    on: EYE,
+  },
+  // A cereal box robot face: bottle cap eyes, a red stripe, a grille mouth, a wire antenna.
+  mask_cereal_box_robot: {
+    pal: { Y: 'Y', y: 'y', O: 'O', w: 'w', '5': '5', '4': '4', R: 'R', r: 'r', e: 'e' },
+    art: { at: { x: 1, y: 3 }, rows: [
+      '########',
+      'YYYYYyyO',
+      'w5yyyw5O',
+      '54yyy54O',
+      'RRRRRRRr',
+      'Y#5#5#yO',
+      '##...###',
+    ] },
+    squash: { at: { x: 1, y: 3 }, rows: [
+      '########',
+      'YYYYYyyO',
+      'w5yyyw5O',
+      '54yyy54O',
+      'Y#5#5#yO',
+      '##...###',
+    ] },
+    free: { at: { x: -2, y: 7 }, rows: [
+      '.#.',
+      '#e#',
+      '.#.',
+    ] },
+    on: EYE,
+  },
+  // Gray rubber gas mask: two round lenses, a khaki filter can at the snout.
+  mask_gas_mask: {
+    pal: { '3': '3', '2': '2', '1': '1', w: 'w', C: 'C', c: 'c', T: 'T', t: 't', N: 'N' },
+    art: { at: { x: 1, y: 3 }, rows: [
+      '########',
+      '33333332',
+      'wC3332wC',
+      'Cc2222Cc',
+      '32222221',
+      '32222111',
+      '##...###',
+    ] },
+    squash: { at: { x: 1, y: 3 }, rows: [
+      '########',
+      '33333332',
+      'wC3332wC',
+      'Cc2222Cc',
+      '32222111',
+      '##...###',
+    ] },
+    free: { at: { x: 0, y: -1 }, rows: [
+      '#TTt#',
+      '#tTN#',
+      '#NtN#',
+      '.###.',
+    ] },
+    on: EYE,
+  },
+  // A monocle cut from a bottle bottom, gold rim round his eye, its chain dangling to his chest.
+  mask_monocle: {
+    pal: { Y: 'Y', y: 'y', O: 'O' },
+    art: { at: { x: 1, y: 1 }, rows: [
+      'Yyy',
+      'y.O',
+      'yOO',
+    ] },
+    free: { at: { x: -1, y: -2 }, rows: [
+      'y..',
+      'O..',
+      '.y.',
+      '..O',
+    ] },
+    on: EYE,
+  },
+  // Blue luchador mask: a white crest up the middle, gold flames round the eyes, laced up tight.
+  mask_luchador: {
+    pal: { c: 'c', U: 'U', u: 'u', w: 'w', y: 'y', Y: 'Y', R: 'R' },
+    art: { at: { x: 1, y: 3 }, rows: [
+      'cUUwwUUu',
+      'cUUwwUUu',
+      'yYyUUyYy',
+      'y.yUUy.y',
+      'cyUUUUyu',
+      'cURRRUUu',
+      '##...###',
+    ] },
+    squash: { at: { x: 1, y: 3 }, rows: [
+      'cUUwwUUu',
+      'cUUwwUUu',
+      'yYyUUyYy',
+      'y.yUUy.y',
+      'cURRRUUu',
+      '##...###',
+    ] },
+    on: EYE,
+  },
+  // <<< headgear
 };

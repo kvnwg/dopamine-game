@@ -38,4 +38,57 @@ export const SHOES: Readonly<Record<string, ShoeArt>> = {
     pal: { w: 'w', g: '5', R: 'R', y: 'y', l: 'l', c: 'c' },
     front: piece([2, 1], ['.#ww#', '#Rylc#']),
   },
+
+  // ---------------------------------------------------------------- more clothes (itemsClothes.json)
+
+  // Grocery bags tied round the feet: the handles knotted at the ankle, red THANK YOU print.
+  sneakers_grocery_bags: {
+    pal: { w: 'w', W: 'W', d: '5', R: 'R' },
+    front: piece([2, 2], ['..#W#.', '.#wWd#', '#WRWd#']),
+  },
+  // Soda cans stomped round the feet: red, a white swoosh, silver rims at toe and heel.
+  sneakers_can_stompers: {
+    pal: { R: 'R', r: 'r', w: 'w', d: '5' },
+    front: piece([2, 1], ['.#RRr#.', '#dRwRd#']),
+  },
+  // Tissue boxes: blue with a white flower, a tissue puffing out of the top.
+  sneakers_tissue_boxes: {
+    pal: { C: 'C', c: 'c', U: 'U', W: 'W', w: 'w' },
+    front: piece([2, 2], ['..#w#.', '#CCwC#', '#cWcU#']),
+  },
+  // Red canvas high-tops: up over the ankle, a white toe cap and sole.
+  sneakers_high_tops: {
+    pal: { R: 'R', e: 'e', w: 'w', W: 'W', d: '5' },
+    front: piece([2, 2], ['..#eR#', '#wRRR#', '#WWWWd#']),
+  },
+  // White tube socks with a red stripe in brown sandals.
+  sneakers_socks_and_sandals: {
+    pal: { R: 'R', w: 'w', W: 'W', n: 'n', N: 'N', b: 'b' },
+    front: piece([2, 2], ['..#R#.', '.#wWW#', '#WnNnb#']),
+  },
+  // Rental bowling shoes: red toe and heel, a tan laced middle.
+  sneakers_bowling_shoes: {
+    pal: { R: 'R', r: 'r', T: 'T', x: 'x' },
+    front: piece([2, 1], ['.#TxR#', '#RTTRr#']),
+  },
+  // Swim flippers: the dark foot pocket, a long aqua blade slapping out in front.
+  sneakers_flippers: {
+    pal: { A: 'A', a: 'a', g: 'g' },
+    front: piece([4, 1], ['....#gg#', '#AAAaagg#']),
+  },
+  // Cowboy boots: brown, up the leg, a pointy toe, a dark heel and a silver spur.
+  sneakers_cowboy_boots: {
+    pal: { N: 'N', n: 'n', t: 't', b: 'b', d: '5' },
+    front: piece([2, 2], ['..#Nn#.', '.#tNn#.', '#tNNnbd']),
+  },
+  // Clown shoes: long and red, a huge round toe, a yellow bow at the ankle.
+  sneakers_clown_shoes: {
+    pal: { R: 'R', r: 'r', e: 'e', y: 'y' },
+    front: piece([4, 2], ['.##.....', '#eR#.#y#', '#RRRRRr#']),
+  },
+  // The sneakers off the power line: white, a red stripe, a gold sole, a lace loop at the heel.
+  sneakers_unique_power_line: {
+    pal: { w: 'w', W: 'W', R: 'R', y: 'y', Y: 'Y' },
+    front: piece([2, 2], ['...#w#', '.#wRW#', '#Yyyyy#']),
+  },
 };

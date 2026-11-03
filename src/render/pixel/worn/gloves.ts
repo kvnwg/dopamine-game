@@ -81,4 +81,80 @@ export const GLOVES: Readonly<Record<string, GloveArt>> = {
     out: piece([1, 1], ['.####', '#wWWW', '#Wgdd', '.####']),
     up: piece([1, 1], ['.##.', '#wW#', '#Wd#', '#WW#', '#WW#']),
   },
+
+  // ---------------------------------------------------------------- more clothes (itemsClothes.json)
+
+  // Cheese puff dust: paws licked clean twice and still orange to the wrist.
+  gloves_cheese_dust: {
+    pal: { o: 'o', O: 'O', y: 'y' },
+    ...make(false, { C: 'o', L: 'y', H: 'O', S: 'o' }),
+  },
+  // Bread bags pulled over the paws: polka dots, a green twist tie at the wrist.
+  gloves_bread_bags: {
+    pal: { w: 'w', W: 'W', d: '5', R: 'R', c: 'c', G: 'G' },
+    down: piece([2, 1], ['.#G#.', '#wRW#', '#cWd#', '.###.']),
+    out: piece([2, 1], ['.###..', '#wRWG.', '#cWdG.', '.###..']),
+    up: piece([1, 2], ['.##.', '#wR#', '#cW#', '#Wd#', '#GG#']),
+  },
+  // Toilet paper wound round each paw, a sheet dangling from the hanging one.
+  gloves_toilet_paper: {
+    pal: { w: 'w', W: 'W', d: '5' },
+    down: piece([1, 1], ['#W#.', '#wW#', '#dW#', '.#W#', '..#.']),
+    out: piece([1, 1], ['.###.', '#wWW.', '#WdW.', '.###.']),
+    up: piece([1, 1], ['.##.', '#wW#', '#Wd#', '#WW#']),
+  },
+  // A soup can on each paw: silver rims, the red and white label.
+  gloves_soup_cans: {
+    pal: { w: 'w', d: '5', g: '4', R: 'R', r: 'r', W: 'W' },
+    down: piece([2, 2], ['.###.', '#dwg#', '#RRr#', '#WWd#', '.###.']),
+    out: piece([2, 1], ['.####.', '#wRWd#', '#dRWg#', '.####.']),
+    up: piece([2, 3], ['.###.', '#dwg#', '#RRr#', '#WWd#', '.###.']),
+  },
+  // Sock puppets with googly eyes: a blue one on the front paw, a red one on the back paw.
+  gloves_sock_puppets: {
+    pal: { w: 'w', x: 'x', U: 'U', u: 'u', W: 'W', R: 'R', r: 'r' },
+    down: piece([2, 1], ['.#W#.', '#wxU#', '#UUu#', '.###.']),
+    out: piece([2, 1], ['.###..', '#xwUW.', '#UUuW.', '.###..']),
+    up: piece([1, 2], ['.##.', '#wx#', '#UU#', '#Uu#', '#WW#']),
+    back: {
+      down: piece([2, 1], ['.#W#.', '#wxR#', '#RRr#', '.###.']),
+      out: piece([2, 1], ['.###..', '#xwRW.', '#RRrW.', '.###..']),
+      up: piece([1, 2], ['.##.', '#wx#', '#RR#', '#Rr#', '#WW#']),
+    },
+  },
+  // Fingerless biker gloves: black leather, a silver stud, his furry fingertips poking out.
+  gloves_fingerless_biker: {
+    pal: { b: '1', x: 'x', a: '5', n: 'n' },
+    down: piece([1, 1], ['#b#.', '#ab#', '#nn#', '.##.']),
+    out: piece([1, 1], ['.###.', '#nab.', '#nxb.', '.###.']),
+    up: piece([1, 1], ['.##.', '#nn#', '#ab#', '#bx#']),
+  },
+  // An ice cream cone in each paw, held up: a strawberry scoop over the waffle cone.
+  gloves_ice_cream_cones: {
+    pal: { w: 'w', P: 'P', q: 'q', t: 't', N: 'N' },
+    down: piece([1, 3], ['.##.', '#wP#', '#Pq#', '#tN#', '#t#.', '.#..']),
+    out: piece([1, 3], ['.##.', '#wP#', '#Pq#', '#tN#', '#t#.', '.#..']),
+    up: piece([1, 3], ['.##.', '#wP#', '#Pq#', '#tN#', '#t#.', '.#..']),
+  },
+  // Blue foam fingers, the finger pointing the way the arm does (straight up when he cheers).
+  gloves_foam_finger: {
+    pal: { c: 'c', U: 'U', u: 'u', W: 'W' },
+    down: piece([2, 1], ['.#W#.', '#cUU#', '#UUu#', '.#u#.', '..#..']),
+    out: piece([3, 2], ['..##.', '.#cU#', '#uUUW', '.#Uu#', '..##.']),
+    up: piece([2, 3], ['..#..', '.#c#.', '#cUU#', '#UUu#', '.#W#.']),
+  },
+  // Lobster claw mitts: red pincers, open.
+  gloves_lobster_claws: {
+    pal: { e: 'e', R: 'R', r: 'r' },
+    down: piece([2, 1], ['.#r#.', '#eRr#', '#R#r#', '#R#r#', '.#.#.']),
+    out: piece([3, 2], ['.###.', '#eRR#', '.##Rr', '#Rrr#', '..##.']),
+    up: piece([2, 3], ['.#.#.', '#e#r#', '#R#r#', '#eRr#', '.#r#.']),
+  },
+  // Takeout chopsticks fanned out of the paper sleeve wrapped round each paw, like claws.
+  gloves_chopstick_claws: {
+    pal: { R: 'R', W: 'W', T: 'T' },
+    down: piece([3, 1], ['..#R#..', '.#WWW#.', '.#TTT#.', '#T#T#T#', '.#.#.#.']),
+    out: piece([3, 3], ['.#...', '#T##.', '.#TW#', '#TTWR', '.#TW#', '#T##.', '.#...']),
+    up: piece([3, 3], ['.#.#.#.', '#T#T#T#', '.#TTT#.', '.#WWW#.', '..#R#..']),
+  },
 };

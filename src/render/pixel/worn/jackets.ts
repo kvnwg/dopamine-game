@@ -173,4 +173,186 @@ export const JACKETS: Readonly<Record<string, JacketArt>> = {
       return shade(['r', 'R', 'e'], g);
     },
   },
+
+  // ---------------------------------------------------------------- more clothes (itemsClothes.json)
+
+  // Cardboard box armor: kraft board, its lit top edge and dark bottom edge, a red FRAGILE stamp. No sleeves.
+  jacket_cardboard_box: {
+    pal: { N: 'N', t: 't', T: 'T', R: 'R' },
+    cut: 'vest',
+    paint: (g) => {
+      if (g.part === 'n' && !g.curled) return '';
+      if (g.curled) return shade(['N', 't', 'T'], g);
+      if (g.hem) return 'N';
+      if (g.v === 1) return g.tone === 0 ? 't' : 'T';
+      if (g.v === 2 && Math.abs(g.u) <= 1) return 'R';
+      return shade(['N', 't', 'T'], g);
+    },
+  },
+  // Duct tape jacket: silver strips, each one's top edge catching the light, a red tape cross on the chest.
+  jacket_duct_tape: {
+    pal: { a: '2', b: '3', c: '4', d: '5', w: 'w', R: 'R' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return 'c';
+      if (!sleeve(g) && !g.curled && ((g.u === 2 && g.v >= 1 && g.v <= 3) || (g.v === 2 && (g.u === 1 || g.u === 3)))) return 'R';
+      if (g.hem || g.cuff) return g.tone === 0 ? 'a' : 'b';
+      if (odd(g.v)) return g.tone === 0 ? 'b' : g.tone === 2 ? 'w' : 'd';
+      return g.tone === 0 ? 'a' : 'c';
+    },
+  },
+  // Newspaper suit: cream newsprint, folded lapels round a V, a line of print across the chest.
+  jacket_newspaper: {
+    pal: { d: '5', W: 'W', w: 'w', g: '4', t: '3' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return g.u === 0 ? '' : 'w';
+      if (!sleeve(g) && !g.curled && g.v === 1 && Math.abs(g.u) <= 1) return g.u === 0 ? 'g' : 'w';
+      if (!sleeve(g) && !g.curled && g.u === 0) return 'g';
+      if (g.v === 2 && g.tone > 0 && ((g.u % 3) + 3) % 3 !== 2) return 't';
+      return shade(['d', 'W', 'w'], g);
+    },
+  },
+  // Hawaiian shirt: sky blue, pink hibiscus with yellow hearts, an open collar.
+  jacket_hawaiian_shirt: {
+    pal: { U: 'U', c: 'c', C: 'C', q: 'q', y: 'y', G: 'G' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return '';
+      if (!sleeve(g) && !g.curled && g.v === 1 && Math.abs(g.u) <= 1) return g.u === 0 ? '' : 'C';
+      const k = (((g.u + 2 * g.v) % 4) + 4) % 4;
+      if (k === 0) return odd(g.v) ? 'y' : 'q';
+      if (k === 2 && odd(g.u)) return 'G';
+      return shade(['U', 'c', 'C'], g);
+    },
+  },
+  // Hotel bathrobe: white terry, the shawl collar round his neck, a blue belt knotted at the waist, a gold monogram.
+  jacket_bathrobe: {
+    pal: { d: '5', W: 'W', w: 'w', C: 'C', c: 'c', y: 'y' },
+    cut: 'coat',
+    paint: (g) => {
+      if (g.curled) return shade(['d', 'W', 'w'], g);
+      if (g.part === 'n') return 'w';
+      if (!sleeve(g) && g.v === 1 && Math.abs(g.u) <= 1) return g.u === 0 ? '' : 'w';
+      if (!sleeve(g) && g.v === 3) return g.u === 0 ? 'c' : 'C';
+      if (!sleeve(g) && g.v === 4 && g.u === -1) return 'C';
+      if (!sleeve(g) && g.v === 2 && g.u === 2) return 'y';
+      if (g.cuff) return 'w';
+      return shade(['d', 'W', 'w'], g);
+    },
+  },
+  // Tuxedo T-shirt: black, a printed white shirt front with a bow tie and a stud; short sleeves.
+  jacket_tuxedo_tee: {
+    pal: { x: 'x', a: '1', b: '2', w: 'w', g: '5' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return 'a';
+      if (!sleeve(g) && !g.curled && !g.hem && Math.abs(g.u) <= 1) {
+        if (g.v === 1) return g.u === 0 ? 'a' : 'x';
+        if (g.v === 3 && g.u === 0) return 'x';
+        return g.tone === 0 ? 'g' : 'w';
+      }
+      if (g.cuff) return '';
+      return shade(['x', 'a', 'b'], g);
+    },
+  },
+  // Donut pool float round his belly: pink frosting with sprinkles over golden dough; it sticks out past his paws.
+  jacket_pool_float: {
+    pal: { P: 'P', q: 'q', w: 'w', t: 't', N: 'N', T: 'T', y: 'y', c: 'c', l: 'l' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part !== 'b') return '';
+      if (g.v === 3) return g.u === -2 ? 'y' : g.u === 1 ? 'c' : g.u === 3 ? 'l' : g.tone === 2 ? 'w' : g.tone === 0 ? 'q' : 'P';
+      if (g.v === 4) return g.tone === 0 ? 'N' : 't';
+      return '';
+    },
+    back: piece([8, -2], [
+      '.################.',
+      '#wPPPPPPPPPPPPPPq#',
+      '#tttttttttttttttN#',
+      '.################.',
+    ]),
+  },
+  // Velour track jacket: purple, zipped to the chin, a silver zip, white piping at the cuffs.
+  jacket_velour_tracksuit: {
+    pal: { v: 'v', V: 'V', m: 'm', w: 'w', g: '5', d: '4' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return g.u === 0 ? 'w' : 'V';
+      if (!sleeve(g) && !g.curled && g.u === 0) return g.tone === 0 ? 'd' : 'g';
+      if (g.cuff) return 'w';
+      if (g.hem) return 'v';
+      return shade(['v', 'V', 'm'], g);
+    },
+  },
+  // Letterman jacket: blue wool body, cream leather sleeves, a gold letter, a gold-striped ribbed hem and collar.
+  jacket_letterman: {
+    pal: { u: 'u', U: 'U', c: 'c', g: '5', W: 'W', w: 'w', y: 'y' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return g.u === 0 ? 'y' : 'u';
+      if (sleeve(g)) return shade(['g', 'W', 'w'], g);
+      if (g.hem) return 'y';
+      if (!g.curled && g.u === -2 && (g.v === 2 || g.v === 3)) return 'y';
+      return shade(['u', 'U', 'c'], g);
+    },
+  },
+  // Sandwich board hung from a rope round his neck: a cream sign with red lettering, its edges in shadow.
+  jacket_sandwich_board: {
+    pal: { t: 't', N: 'N', W: 'W', g: '5', R: 'R' },
+    cut: 'vest',
+    paint: (g) => {
+      if (g.curled) return g.hem ? 'N' : 'W';
+      if (g.part === 'n') return g.u === 0 ? '' : 't';
+      if (g.v === 1) return g.u === -2 || g.u === 3 ? 't' : '';
+      if (g.hem) return 'N';
+      if (g.v === 3 && g.u >= -2 && g.u <= 3 && g.u !== 0) return 'R';
+      return g.tone === 0 ? 'g' : 'W';
+    },
+  },
+  // Sequin blazer: gold sequins glinting here and there, black satin lapels round a white shirt, a black button.
+  jacket_sequin_blazer: {
+    pal: { O: 'O', y: 'y', Y: 'Y', w: 'w', x: 'x', a: '1' },
+    cut: 'jacket',
+    paint: (g) => {
+      if (g.part === 'n') return 'w';
+      if (!sleeve(g) && !g.curled) {
+        if (g.v === 1 && g.u === 0) return 'w';
+        if (g.v === 1 && Math.abs(g.u) === 1) return 'x';
+        if (g.v === 2 && g.u === 0) return 'x';
+        if (g.v === 3 && g.u === 0) return 'a';
+      }
+      if (g.tone > 0 && (((g.u + 2 * g.v) % 3) + 3) % 3 === 0) return g.tone === 2 ? 'w' : 'Y';
+      return shade(['O', 'y', 'Y'], g);
+    },
+  },
+  // Hot dog costume: the sausage down his front with a mustard zigzag, the bun round his sides and arms; the
+  // sausage's tip pokes up between his ears and the bun rises behind his shoulders.
+  jacket_hot_dog: {
+    pal: { r: 'r', R: 'R', e: 'e', N: 'N', t: 't', T: 'T', y: 'y' },
+    cut: 'coat',
+    paint: (g) => {
+      if (g.part === 'n') return 'R';
+      if (!sleeve(g) && !g.curled && Math.abs(g.u) <= 1) {
+        if (g.v >= 1 && g.u === [-1, 0, 1, 0][(g.v - 1) % 4]) return 'y';
+        return shade(['r', 'R', 'e'], g);
+      }
+      return shade(['N', 't', 'T'], g);
+    },
+    back: piece([7, 11], [
+      '.......##.......',
+      '......#eR#......',
+      '.....#eRRr#.....',
+      '.....#RRRr#.....',
+      '.##..#RRRr#..##.',
+      '#Tt#.#RRRr#.#tN#',
+      '#Tt#.#RRRr#.#tN#',
+      '#Tt#.#RRRr#.#tN#',
+      '#Tt#.#RRRr#.#tN#',
+      '#Tt#.#RRRr#.#tN#',
+      '#Tt#.#RRRr#.#tN#',
+      '#Tt#.#RRRr#.#tN#',
+      '.##..........##.',
+    ]),
+  },
 };

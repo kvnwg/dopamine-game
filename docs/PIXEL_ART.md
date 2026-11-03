@@ -73,8 +73,10 @@ clean outline, three-tone shading, one highlight, no stray pixels.
 
 Every pixel in the battle is the same size: `P = 6` screen pixels per art pixel
 (`src/render/pixel/index.ts`), so the 1080 x 960 view is 180 x 160 art pixels
-(`src/render/pixel/sceneryTypes.ts`: `VIEW`). Nothing in battle is scaled or squashed: sprites move
-and change frames, and only the weapon's swing rotates freely. Characters (the raccoon, enemies, worn
+(`src/render/pixel/sceneryTypes.ts`: `VIEW`). Nothing in battle is scaled by a fraction of a pixel:
+sprites move and change frames, squash and stretch go whole art pixels at a time (a struck foe a row
+or two shorter and as many columns wider for a moment), and only the weapon's swing rotates freely.
+Characters (the raccoon, enemies, worn
 gear, the effects packs) keep the art they had at 9 px, so they show at two thirds of their old size;
 the scenery is drawn at 1.5 times the old resolution, so the world keeps its size on screen with
 more detail. The older still effects (coin, bag, impact, puff) are shown whole (at 9 px they were
@@ -145,8 +147,11 @@ guaranteed by how the battle is built, in two layers:
      side (Phaser's TileSprite resamples textures whose size isn't a power of two). Sprites' origins
      are corners of art pixels; the hero's rig sits half a pixel over to match his sheet's
      mid-column origin.
-   - **The screen shake** moves the camera by whole art pixels; the sky, layers and vignette reach
-     `VIEW_MARGIN` pixels past the edges so it never shows one.
+   - **The screen shake** moves the camera by whole art pixels, its reach dying away a pixel at a
+     time; the sky, layers and vignette reach `VIEW_MARGIN` pixels past the edges so it never shows one.
+   - **Squash and stretch** (a struck foe, a landing coin) scale a sprite so it is whole art pixels
+     shorter and wider (or taller and narrower); the post-pass resamples it onto the grid, so it is
+     off wherever there is no post-pass (the canvas renderer, `?nosnap`).
    - The camera's origin is its top-left corner: with the default (its middle) the odd height puts
      everything half a pixel off.
    - Even a quarter-turn tumble is exact; only free rotation (the weapon) relies on the post-pass.

@@ -1,17 +1,26 @@
 /**
  * The battle view (Phaser). Reads GameState every frame and choreographs core events:
- * the raccoon hops along, closes in, winds up and dashes into a swing (pack hit effects, hit-stop
- * on crits, knockback), enemies walk in, attack, flinch and fall with their own animations, pixel
- * HP bars float over the fighters' heads (the boss's sits under the HUD), and coins arc up to the
- * gold counter. Combat results always come from core; this file only animates them.
+ * the raccoon hops along, closes in, winds up and dashes into a swing (pack hit effects, knockback),
+ * enemies walk in, attack, flinch and fall with their own animations, pixel HP bars float over the
+ * fighters' heads (the boss's sits under the HUD), and loot flies to the HUD. Combat results always
+ * come from core; this file only animates them.
+ *
+ * Game feel (Kevin's checklist): a blow freezes the fight for a beat when it's big (hitStop: crits,
+ * kills, heavy blows, longer for bosses, budgeted so a fast fight doesn't stutter), the view shakes
+ * by whole pixels and the shake dies away (a one-pixel kick on a plain hit), struck foes squash and
+ * spring back, sounds play on the frame a blow connects with their pitch climbing (blows as a foe's HP
+ * goes, kills through a wave, coins as they land), and the phone buzzes on crits, kills, a boss and a
+ * knock-out. A kill's gold and XP fly as coins and sparks to the HUD's counters, which hold them back
+ * until they land (ui/hudFlight.ts), and "+N" pops under each counter as they get there.
  *
  * Everything is drawn on one pixel grid (P screen pixels per art pixel, docs/PIXEL_ART.md "One
  * grid"): Kevin's raccoon, the pack characters, the backdrops, the effects, the HP bars and the text
- * (the bitmap font in pixel/font.ts). Nothing is scaled or squashed. Things move in whole art pixels:
- * positions are snapped, pops step and flash instead of scaling, particles are 1 x 1 and 2 x 2 art
- * pixel bits, lines are pixel lines, the screen shakes by whole art pixels. Only the weapon's swing
- * rotates freely; a camera post-pass (gridSnap.ts) puts that, and anything else that slips off the
- * grid, back on it.
+ * (the bitmap font in pixel/font.ts). Things move in whole art pixels: positions are snapped, pops
+ * step and flash instead of scaling, particles are 1 x 1 and 2 x 2 art pixel bits, lines are pixel
+ * lines, the screen shakes by whole art pixels. Squash and stretch change a sprite by whole art
+ * pixels (rows shorter, as many columns wider), never by a fraction. Only the weapon's swing rotates
+ * freely; a camera post-pass (gridSnap.ts) puts that, the squashes and anything else that slips off
+ * the grid back on it (squashes are off without it).
  */
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';

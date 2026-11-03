@@ -128,6 +128,22 @@ Check it: load the dev build with `?nosnap` to turn the post-pass off and count 
 battle screenshot that are not one flat color. With the pass, the count is 0; without it, only the
 swinging weapon's blocks show up.
 
+## One pixel size in the UI
+
+The UI uses the battle's pixel size too: every picture is drawn at exactly `UI_PX` = 9 stage px per
+art pixel (`src/render/icons.ts`), never resized by layout, rotated or scaled by a fraction.
+
+- Draw pictures with `<PixelArt art={...} />` (`src/ui/components/PixelArt.tsx`); `icons.ts` makes the
+  art (one image pixel per art pixel) and knows its size. Item icons are 16 x 16 (144 px on screen);
+  big moments (the rare-roll reveal, the Watch tab) show `itemArtHd`, a Scale2x version (32 x 32 at
+  the same 9 px), never a 2x blow-up.
+- UI icons come in drawn sizes, not scaled ones: `sm` about 5 x 5 (next to text), `md` about 7 x 7
+  (HUD, map hexes), `nav` 10 x 10 (nav bar, headers) and `lg` 16 x 16 (`src/render/pixel/ui.ts`).
+  `LUCK_TOKENS` are the reels' clover tokens (16 x 16, x2 to x10).
+- CSS borders, notched corners and drop shadows are whole multiples of `--px` (9px). Pops on pictures
+  are flashes or whole-pixel moves; only text may scale.
+- Text stays Pixelify Sans at readable sizes (a font at the art's pixel size would be enormous).
+
 ## Atmosphere and light
 
 Each world's backdrop is lit on the same grid (`src/render/pixel/atmosphere.ts`, settings in

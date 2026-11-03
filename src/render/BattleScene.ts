@@ -707,13 +707,13 @@ export class BattleScene extends Phaser.Scene {
     f.shownHp = Math.max(0, f.shownHp - s.amount);
     if (s.crit) {
       this.bigSparks.explode(12, p.x, p.y);
-      this.number(p.x, p.y - 70, formatNumber(s.amount), { size: 76, grad: ['#fff6a8', '#ff9a1a'], life: 950 });
+      this.number(p.x, this.overFoe(f, p.y - 70), formatNumber(s.amount), { size: 76, grad: ['#fff6a8', '#ff9a1a'], life: 950 });
       this.stamp(p.x + 10, p.y - 160, t('battle.crit'), '#FFD54F', 40);
       this.shake(110, 0.006);
       this.hitStop(70);
     } else {
       this.sparks.explode(6, p.x, p.y);
-      this.number(p.x, p.y - 60, formatNumber(s.amount), { size: s.echo ? 44 : 54, color: s.echo ? '#e2ccff' : '#ffffff' });
+      this.number(p.x, this.overFoe(f, p.y - 60), formatNumber(s.amount), { size: s.echo ? 44 : 54, color: s.echo ? '#e2ccff' : '#ffffff' });
     }
     for (const r of s.riders) r();
     if (s.killed || this.kills.has(f.uid)) this.die(f);
@@ -831,7 +831,7 @@ export class BattleScene extends Phaser.Scene {
       this.fx('hit', p.x + 3 * P, p.y, { depth: 34, flipX: true });
       this.shake(220, 0.012);
     }
-    this.number(p.x - 30, p.y - 60, `-${formatNumber(amount)}`, { size: heavy ? 58 : 44, color: '#ff8a80' });
+    this.number(p.x - 30, this.overHero(p.y - 60), `-${formatNumber(amount)}`, { size: heavy ? 58 : 44, color: '#ff8a80' });
   }
 
   /** Plays a foe's one-shot animation (attack / hurt) if it has one, then its base loop again. */
@@ -916,7 +916,7 @@ export class BattleScene extends Phaser.Scene {
             this.flash(b.spr, 0xfff3a0, 70);
             b.shownHp = Math.max(0, b.shownHp - e.amount);
             b.knockV += 300;
-            this.number(pb.x, pb.y - 50, formatNumber(e.amount), { size: 42, color: '#ffe14a' });
+            this.number(pb.x, this.overFoe(b, pb.y - 50), formatNumber(e.amount), { size: 42, color: '#ffe14a' });
             if (this.kills.has(b.uid)) this.die(b);
           };
           this.attachRider(lastSwing, e.toUid, run);
@@ -932,7 +932,7 @@ export class BattleScene extends Phaser.Scene {
               const pb = this.foeHitPoint(b);
               b.shownHp = Math.max(0, b.shownHp - e.amount);
               b.knockV += 500;
-              this.number(pb.x, pb.y - 50, formatNumber(e.amount), { size: 46, color: '#ffab70' });
+              this.number(pb.x, this.overFoe(b, pb.y - 50), formatNumber(e.amount), { size: 46, color: '#ffab70' });
               if (this.kills.has(b.uid)) this.die(b);
             }
           };
@@ -946,7 +946,7 @@ export class BattleScene extends Phaser.Scene {
           // (The pack's fire is taller than most enemies at this pixel size, so burns stay pixel flames.)
           this.flames.explode(6, p.x, p.y + 20);
           f.shownHp = Math.max(0, f.shownHp - e.amount);
-          this.number(p.x + 30, p.y - 30, formatNumber(e.amount), { size: 34, color: '#ff9e5e', life: 600 });
+          this.number(p.x + 30, this.overFoe(f, p.y - 30), formatNumber(e.amount), { size: 34, color: '#ff9e5e', life: 600 });
           if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           break;
         }
@@ -963,7 +963,7 @@ export class BattleScene extends Phaser.Scene {
             const p = this.foeHitPoint(f);
             this.sparks.explode(5, p.x, p.y);
             f.shownHp = Math.max(0, f.shownHp - e.amount);
-            this.number(p.x, p.y - 40, formatNumber(e.amount), { size: 36, color: '#9cff8a' });
+            this.number(p.x, this.overFoe(f, p.y - 40), formatNumber(e.amount), { size: 36, color: '#9cff8a' });
             if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           });
           break;
@@ -972,7 +972,7 @@ export class BattleScene extends Phaser.Scene {
           const f = this.foes.get(e.enemyUid);
           const dodge = () => {
             this.heroKnock = this.reduceMotion ? 0 : -46;
-            this.number(this.hero.x, FEET_Y - 260, t('battle.dodge'), { size: 40, color: '#7fe9ff' });
+            this.number(this.hero.x, this.overHero(FEET_Y - 260), t('battle.dodge'), { size: 40, color: '#7fe9ff' });
           };
           if (f) this.lungeAt(f, dodge, false);
           else dodge();
@@ -981,7 +981,7 @@ export class BattleScene extends Phaser.Scene {
         case 'heal':
           if (e.source === 'lifesteal') this.healAcc += e.amount;
           else {
-            this.number(this.hero.x - 40, FEET_Y - 250, `+${formatNumber(e.amount)}`, { size: 38, color: '#7ef08f' });
+            this.number(this.hero.x - 40, this.overHero(FEET_Y - 250), `+${formatNumber(e.amount)}`, { size: 38, color: '#7ef08f' });
             this.fx('sparkle', this.hero.x, FEET_Y - 8 * P, { depth: 34, tint: 0x9dff9a });
           }
           break;
@@ -1021,7 +1021,7 @@ export class BattleScene extends Phaser.Scene {
             this.tweens.add({ targets: ring, alpha: 0, duration: 700, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
           }
           this.bigSparks.explode(14, this.hero.x, FEET_Y - 160);
-          this.number(this.hero.x, FEET_Y - 320, t('battle.levelUp'), { size: 54, grad: ['#fff6a8', '#ffa21a'], life: 1100 });
+          this.number(this.hero.x, this.overHero(FEET_Y - 320), t('battle.levelUp'), { size: 54, grad: ['#fff6a8', '#ffa21a'], life: 1100 });
           this.cheer(1);
           break;
         }
@@ -1041,7 +1041,7 @@ export class BattleScene extends Phaser.Scene {
           this.flames.explode(20, this.hero.x, FEET_Y - 120);
           this.time.delayedCall(600, () => this.flames.setParticleTint([0xff7043, 0xffb300, 0xffe14a]));
           this.fx('sparkle', this.hero.x, FEET_Y - 9 * P, { depth: 34, tint: 0x8dff8a });
-          this.number(this.hero.x, FEET_Y - 330, t('battle.luckUp', { mult: BAL.luck.potion.mult }), { size: 50, grad: ['#d8ffd0', '#2fb150'], life: 1200 });
+          this.number(this.hero.x, this.overHero(FEET_Y - 330), t('battle.luckUp', { mult: BAL.luck.potion.mult }), { size: 50, grad: ['#d8ffd0', '#2fb150'], life: 1200 });
           break;
         case 'playerDeath':
           this.dead = true;
@@ -1276,7 +1276,7 @@ export class BattleScene extends Phaser.Scene {
     // Lifesteal heals are batched into one number.
     this.healTimer -= dt;
     if (this.healAcc >= 1 && this.healTimer <= 0) {
-      this.number(this.hero.x - 50, FEET_Y - 250, `+${formatNumber(this.healAcc)}`, { size: 34, color: '#7ef08f', life: 600 });
+      this.number(this.hero.x - 50, this.overHero(FEET_Y - 250), `+${formatNumber(this.healAcc)}`, { size: 34, color: '#7ef08f', life: 600 });
       this.healAcc = 0;
       this.healTimer = 0.5;
     }

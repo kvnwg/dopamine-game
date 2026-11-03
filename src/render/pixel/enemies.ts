@@ -392,7 +392,59 @@ type Move =
   /** Draws rows at a point: '.' leaves a pixel alone, '_' clears it. */
   | { at: readonly [number, number]; draw: Rows }
   /** Clears the pixels of these keys inside a box. */
-  | { erase: Box; keys: string };
+  | { erase: Box; keys: string }
+  /** Drops row `squash` (in columns x0..x1): everything above it comes down a pixel. */
+  | { squash: number; cols?: readonly [number, number] }
+  /** Doubles row `grow` (in columns x0..x1): everything above it goes up a pixel. */
+  | { grow: number; cols?: readonly [number, number] };
+
+/** Slides rows y0..y1, every column, sideways by dx (and down by dy): a lean, one band of rows at a time. */
+const band = (y0: number, y1: number, dx: number, dy = 0): Move => ({ move: [-40, y0, 80, y1], by: [dx, dy] });
+
+/**
+ * A smear: the crescent a swung tip sweeps around a pivot (the shoulder), drawn as one solid shape.
+ * Angles are in degrees from the pivot, 0 pointing left at the hero and 90 straight up; the crescent runs
+ * from `from` (where the swing started) to `to` (where the weapon is now), its outer edge `r` pixels from
+ * the pivot, and thickens from `w0` to `w1` pixels toward the leading end. `keys` color it from the outer
+ * edge in, so the edge the tip leads with is the lightest.
+ */
+function smear(pivot: readonly [number, number], r: number, from: number, to: number, w0: number, w1: number, keys: string): Move {
+  const [cx, cy] = pivot;
+  const span = to - from;
+  const rows: string[] = [];
+  for (let y = cy - r - 1; y <= cy + r + 1; y++) {
+    let row = '';
+    for (let x = cx - r - 1; x <= cx + r + 1; x++) {
+      const vx = cx - x;
+      const vy = cy - y;
+      const d = Math.hypot(vx, vy);
+      let a = (Math.atan2(vy, vx) * 180) / Math.PI;
+      // The angle along the swing, 0 at its start and 1 where the weapon is.
+      let t = (a - from) / span;
+      for (const turn of [-360, 360]) if (t < 0 || t > 1) (a += turn), (t = (a - from) / span);
+      const w = w0 + (w1 - w0) * t;
+      const depth = r + 0.5 - d;
+      row += t >= 0 && t <= 1 && depth > 0 && depth <= w ? keys[Math.min(keys.length - 1, Math.floor(depth))] : '.';
+    }
+    rows.push(row);
+  }
+  return { at: [cx - r - 1, cy - r - 1], draw: rows };
+}
+
+/**
+ * The attack's poses in play order: `wind` eases into the wind-up and `coil` is the full wind-up
+ * (leaning back, the weapon, beak, claws or head raised); `smear` is the swing in motion (the body
+ * stretched toward the hero, the moving part smeared along its path); `strike` is the blow at full
+ * reach, held while it lands; `recoil` and `settle` bring it back to idle.
+ */
+interface Attack {
+  wind: Move[];
+  coil: Move[];
+  smear: Move[];
+  strike: Move[];
+  recoil: Move[];
+  settle: Move[];
+}
 
 interface CastDef {
   fill: Rows;
@@ -412,9 +464,9 @@ interface CastDef {
   /** Extra moves per pose, drawn before the pose's own squash or lean. */
   idle?: Move[];
   blink?: Move[];
-  windup?: Move[];
-  strike?: Move[];
   hurt?: Move[];
+  /** The attack, drawn pose by pose: each pose's moves in order, leans included. */
+  attack: Attack;
 }
 
 const CAST: Record<CastShape, CastDef> = {
@@ -431,8 +483,15 @@ const CAST: Record<CastShape, CastDef> = {
     ],
     eyes: [[4, 4]],
     shut: '2',
-    strike: [{ at: [2, 7], draw: ['kk'] }],
     hurt: [{ at: [2, 7], draw: ['k'] }],
+    attack: {
+      wind: [...[], band(-9, 12, 1)],
+      coil: [...[], band(-9, 12, 1)],
+      smear: [...[{ at: [2, 7], draw: ['kk'] }], band(-9, 12, -2)],
+      strike: [...[{ at: [2, 7], draw: ['kk'] }], band(-9, 12, -2)],
+      recoil: [band(-9, 12, -1)],
+      settle: [],
+    },
   },
   pigeon: {
     fill: PIGEON,
@@ -448,8 +507,14 @@ const CAST: Record<CastShape, CastDef> = {
     eyes: [[7, 1]],
     shut: '2',
     idle: [{ move: [0, 0, 11, 3], by: [-1, 0] }],
-    windup: [{ move: [0, 0, 11, 3], by: [1, 0] }],
-    strike: [{ move: [0, 0, 11, 3], by: [-1, 1] }],
+    attack: {
+      wind: [...[{ move: [0, 0, 11, 3], by: [1, 0] }], band(-9, 12, 1)],
+      coil: [...[{ move: [0, 0, 11, 3], by: [1, 0] }], band(-9, 12, 1)],
+      smear: [...[{ move: [0, 0, 11, 3], by: [-1, 1] }], band(-9, 12, -2)],
+      strike: [...[{ move: [0, 0, 11, 3], by: [-1, 1] }], band(-9, 12, -2)],
+      recoil: [band(-9, 12, -1)],
+      settle: [],
+    },
   },
   soldier: {
     fill: SOLDIER,
@@ -465,11 +530,20 @@ const CAST: Record<CastShape, CastDef> = {
     eyes: [[4, 6]],
     shut: 'S',
     idle: [{ move: [6, 0, 10, 1], by: [1, 0] }],
-    windup: [{ move: [13, 3, 15, 10], by: [0, -1], stretch: true }],
-    strike: [
+    attack: {
+      wind: [...[{ move: [13, 3, 15, 10], by: [0, -1], stretch: true }], band(-9, 14, 1)],
+      coil: [...[{ move: [13, 3, 15, 10], by: [0, -1], stretch: true }], band(-9, 14, 1)],
+      smear: [...[
       { erase: [13, 3, 15, 10], keys: '54ys' },
       { at: [-1, 8], draw: ['........y', 'w5555555ysU', '........y'] },
-    ],
+    ], band(-9, 14, -2)],
+      strike: [...[
+      { erase: [13, 3, 15, 10], keys: '54ys' },
+      { at: [-1, 8], draw: ['........y', 'w5555555ysU', '........y'] },
+    ], band(-9, 14, -2)],
+      recoil: [band(-9, 14, -1)],
+      settle: [],
+    },
   },
   orc: {
     fill: ORC,
@@ -487,11 +561,20 @@ const CAST: Record<CastShape, CastDef> = {
       [11, 5],
     ],
     shut: 'g',
-    windup: [{ move: [17, 0, 20, 9], by: [0, -1], stretch: true }],
-    strike: [
+    attack: {
+      wind: [...[{ move: [17, 0, 20, 9], by: [0, -1], stretch: true }], band(-9, 16, 1)],
+      coil: [...[{ move: [17, 0, 20, 9], by: [0, -1], stretch: true }], band(-9, 16, 1)],
+      smear: [...[
       { erase: [17, 0, 20, 9], keys: 'tTolGg' },
       { at: [-2, 8], draw: ['.tTt', 'tTTTooo', 'tTToooolG', '.too...lG'] },
-    ],
+    ], band(-9, 16, -2)],
+      strike: [...[
+      { erase: [17, 0, 20, 9], keys: 'tTolGg' },
+      { at: [-2, 8], draw: ['.tTt', 'tTTTooo', 'tTToooolG', '.too...lG'] },
+    ], band(-9, 16, -2)],
+      recoil: [band(-9, 16, -1)],
+      settle: [],
+    },
   },
   pumpkin: {
     fill: PUMPKIN,
@@ -511,15 +594,24 @@ const CAST: Record<CastShape, CastDef> = {
       { at: [3, 5], draw: ['yO', 'yy'] },
       { at: [8, 5], draw: ['yO', 'yy'] },
     ],
-    windup: [{ move: [13, 1, 16, 14], by: [0, -1], stretch: true }],
-    strike: [
-      { move: [13, 1, 16, 14], by: [-1, 1] },
-      { at: [2, 8], draw: ['YYYYYYYY'] },
-    ],
     hurt: [
       { at: [3, 5], draw: ['oo', 'yo'] },
       { at: [8, 5], draw: ['oo', 'yo'] },
     ],
+    attack: {
+      wind: [...[{ move: [13, 1, 16, 14], by: [0, -1], stretch: true }], band(-9, 14, 1)],
+      coil: [...[{ move: [13, 1, 16, 14], by: [0, -1], stretch: true }], band(-9, 14, 1)],
+      smear: [...[
+      { move: [13, 1, 16, 14], by: [-1, 1] },
+      { at: [2, 8], draw: ['YYYYYYYY'] },
+    ], band(-9, 14, -2)],
+      strike: [...[
+      { move: [13, 1, 16, 14], by: [-1, 1] },
+      { at: [2, 8], draw: ['YYYYYYYY'] },
+    ], band(-9, 14, -2)],
+      recoil: [band(-9, 14, -1)],
+      settle: [],
+    },
   },
   doc: {
     fill: DOC,
@@ -535,7 +627,14 @@ const CAST: Record<CastShape, CastDef> = {
     eyes: [[8, 7]],
     shut: 'C',
     idle: [{ move: [0, 14, 3, 16], by: [1, 0] }],
-    strike: [{ move: [0, 13, 3, 16], by: [-1, -2] }],
+    attack: {
+      wind: [...[], band(-9, 16, 1)],
+      coil: [...[], band(-9, 16, 1)],
+      smear: [...[{ move: [0, 13, 3, 16], by: [-1, -2] }], band(-9, 16, -2)],
+      strike: [...[{ move: [0, 13, 3, 16], by: [-1, -2] }], band(-9, 16, -2)],
+      recoil: [band(-9, 16, -1)],
+      settle: [],
+    },
   },
   bigDemon: {
     fill: BIG_DEMON,
@@ -558,16 +657,25 @@ const CAST: Record<CastShape, CastDef> = {
       { at: [5, 8], draw: ['RR', 'kk', 'RR'] },
       { at: [11, 8], draw: ['RR', 'kk', 'RR'] },
     ],
-    windup: [
-      { move: [20, 3, 25, 10], by: [0, -1] },
-      { move: [0, 4, 2, 9], by: [0, -1] },
-    ],
-    strike: [{ at: [8, 12], draw: ['kkkk', 'wkkw', 'rkkr'] }],
     hurt: [
       { at: [5, 8], draw: ['kR', 'Rk', 'kR'] },
       { at: [11, 8], draw: ['Rk', 'kR', 'Rk'] },
       { at: [9, 12], draw: ['kk'] },
     ],
+    attack: {
+      wind: [...[
+      { move: [20, 3, 25, 10], by: [0, -1] },
+      { move: [0, 4, 2, 9], by: [0, -1] },
+    ], band(-9, 21, 1)],
+      coil: [...[
+      { move: [20, 3, 25, 10], by: [0, -1] },
+      { move: [0, 4, 2, 9], by: [0, -1] },
+    ], band(-9, 21, 1)],
+      smear: [...[{ at: [8, 12], draw: ['kkkk', 'wkkw', 'rkkr'] }], band(-9, 21, -2)],
+      strike: [...[{ at: [8, 12], draw: ['kkkk', 'wkkw', 'rkkr'] }], band(-9, 21, -2)],
+      recoil: [band(-9, 21, -1)],
+      settle: [],
+    },
   },
   officer: {
     fill: OFFICER,
@@ -585,13 +693,25 @@ const CAST: Record<CastShape, CastDef> = {
       [9, 8],
     ],
     shut: 'S',
-    strike: [
+    hurt: [{ move: [3, 0, 17, 6], by: [0, -1] }],
+    attack: {
+      wind: [...[], band(-9, 22, 1)],
+      coil: [...[], band(-9, 22, 1)],
+      smear: [...[
       { move: [0, 11, 4, 13], by: [-1, 0] },
       { at: [12, 10], draw: ['P', 'P'] },
       { erase: [2, 16, 3, 19], keys: 's' },
       { at: [-1, 15], draw: ['s', 'sUUU'] },
-    ],
-    hurt: [{ move: [3, 0, 17, 6], by: [0, -1] }],
+    ], band(-9, 22, -2)],
+      strike: [...[
+      { move: [0, 11, 4, 13], by: [-1, 0] },
+      { at: [12, 10], draw: ['P', 'P'] },
+      { erase: [2, 16, 3, 19], keys: 's' },
+      { at: [-1, 15], draw: ['s', 'sUUU'] },
+    ], band(-9, 22, -2)],
+      recoil: [band(-9, 22, -1)],
+      settle: [],
+    },
   },
   ratKing: {
     fill: RAT_KING,
@@ -609,12 +729,23 @@ const CAST: Record<CastShape, CastDef> = {
       [14, 8],
     ],
     shut: '2',
-    strike: [
+    hurt: [{ move: [8, 0, 14, 3], by: [1, 0] }],
+    attack: {
+      wind: [...[], band(-9, 21, 1)],
+      coil: [...[], band(-9, 21, 1)],
+      smear: [...[
       { at: [1, 11], draw: ['kkk3', '.333'] },
       { erase: [1, 16, 2, 16], keys: 'P' },
       { at: [0, 13], draw: ['PP'] },
-    ],
-    hurt: [{ move: [8, 0, 14, 3], by: [1, 0] }],
+    ], band(-9, 21, -2)],
+      strike: [...[
+      { at: [1, 11], draw: ['kkk3', '.333'] },
+      { erase: [1, 16, 2, 16], keys: 'P' },
+      { at: [0, 13], draw: ['PP'] },
+    ], band(-9, 21, -2)],
+      recoil: [band(-9, 21, -1)],
+      settle: [],
+    },
   },
   raccoonBoss: {
     fill: RACCOON_BOSS,
@@ -635,9 +766,15 @@ const CAST: Record<CastShape, CastDef> = {
     ],
     shut: '1',
     idle: [{ move: [20, 3, 25, 7], by: [0, -1] }],
-    windup: [{ move: [19, 3, 25, 8], by: [0, -2], stretch: true }],
-    strike: [{ move: [19, 3, 25, 8], by: [-2, 2] }],
     hurt: [{ move: [3, 0, 18, 4], by: [0, -1] }],
+    attack: {
+      wind: [...[{ move: [19, 3, 25, 8], by: [0, -2], stretch: true }], band(-9, 22, 1)],
+      coil: [...[{ move: [19, 3, 25, 8], by: [0, -2], stretch: true }], band(-9, 22, 1)],
+      smear: [...[{ move: [19, 3, 25, 8], by: [-2, 2] }], band(-9, 22, -2)],
+      strike: [...[{ move: [19, 3, 25, 8], by: [-2, 2] }], band(-9, 22, -2)],
+      recoil: [band(-9, 22, -1)],
+      settle: [],
+    },
   },
 };
 
@@ -646,11 +783,22 @@ const CAST: Record<CastShape, CastDef> = {
 type Grid = string[][];
 
 /** Room around the fill for moves and their outline (left, top, right); nothing moves below the feet. */
-const MARGIN = { l: 7, t: 4, r: 4 };
+const MARGIN = { l: 14, t: 10, r: 10 };
 
 function apply(g: Grid, m: Move): void {
   const inside = (x: number, y: number) => y >= 0 && y < g.length && x >= 0 && x < g[0].length;
-  if ('move' in m) {
+  if ('squash' in m || 'grow' in m) {
+    const row = ('squash' in m ? m.squash : m.grow) + MARGIN.t;
+    const [c0, c1] = m.cols ?? [-MARGIN.l, g[0].length];
+    for (let x = Math.max(0, c0 + MARGIN.l); x <= Math.min(g[0].length - 1, c1 + MARGIN.l); x++) {
+      if ('squash' in m) {
+        for (let y = row; y > 0; y--) g[y][x] = g[y - 1][x];
+        g[0][x] = '.';
+      } else {
+        for (let y = 0; y < row; y++) g[y][x] = g[y + 1][x];
+      }
+    }
+  } else if ('move' in m) {
     const [x0, y0, x1, y1] = m.move;
     const picked: Array<[number, number, string]> = [];
     for (let y = y0 + MARGIN.t; y <= y1 + MARGIN.t; y++) {
@@ -680,13 +828,13 @@ function outlined(g: Grid): Grid {
   return g.map((row, y) => row.map((ch, x) => (ch === '.' && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1)) ? 'x' : ch)));
 }
 
-/** The poses every character has, in sheet frame order. */
-const POSES = ['base', 'breathe', 'blink', 'stepA', 'stepB', 'windup', 'strike', 'hurt'] as const;
+/** The poses every character has, in sheet frame order (the attack's six from frame 5). */
+const POSES = ['base', 'breathe', 'blink', 'stepA', 'stepB', 'wind', 'coil', 'smear', 'strike', 'recoil', 'settle', 'hurt'] as const;
 type Pose = (typeof POSES)[number];
 
 function poseMoves(d: CastDef, pose: Pose): Move[] {
   const shut: Move[] = d.eyes.map(([x, y]) => ({ at: [x, y], draw: [d.shut] }));
-  const lean = (dx: number): Move => ({ move: [-MARGIN.l, -MARGIN.t, d.fill[0].length + MARGIN.r, d.waist - 1], by: [dx, 0] });
+  const lean = (dx: number): Move => band(-MARGIN.t, d.waist - 1, dx);
   const squash: Move = { move: d.breathe, by: [0, 1] };
   switch (pose) {
     case 'base':
@@ -699,12 +847,10 @@ function poseMoves(d: CastDef, pose: Pose): Move[] {
       return [{ move: d.steps[0], by: [-1, 0] }];
     case 'stepB':
       return [{ move: d.steps[1], by: [1, 0] }];
-    case 'windup':
-      return [...(d.windup ?? []), lean(1)];
-    case 'strike':
-      return [...(d.strike ?? []), lean(-2)];
     case 'hurt':
       return [...shut, ...(d.hurt ?? []), lean(1)];
+    default:
+      return d.attack[pose];
   }
 }
 
@@ -789,6 +935,14 @@ export interface EnemySheet {
 /** Breathing at 6 fps with a blink every 3 s (frames: 0 standing, 1 breathing in, 2 blink). */
 const IDLE = [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 2, 0, 1, 1, 1];
 
+/**
+ * The attack at 25 fps (40 ms a beat), timed to the battle's lunge (BattleScene `lungeAt`): wind 40 ms
+ * and coil 80 ms while it rocks back, the smear while it lunges (120 to 160 ms), the strike from 160 ms
+ * (the blow lands at 170 ms) held 120 ms, then recoil and settle, 80 ms each: 440 ms in all.
+ */
+export const ATTACK_FPS = 25;
+const ATTACK = [5, 6, 6, 7, 8, 8, 8, 9, 9, 10, 10];
+
 function castSheet(shape: CastShape): { sheet: EnemySheet; still: EnemyArt } {
   const d = CAST[shape];
   const { frames, feet } = castFrames(d);
@@ -810,8 +964,8 @@ function castSheet(shape: CastShape): { sheet: EnemySheet; still: EnemyArt } {
     anims: {
       idle: { fps: 6, loop: true, frames: IDLE },
       walk: { fps: 8, loop: true, frames: [3, 1, 4, 1] },
-      attack: { fps: 10, loop: false, frames: [5, 6, 6] },
-      hurt: { fps: 8, loop: false, frames: [7, 7] },
+      attack: { fps: ATTACK_FPS, loop: false, frames: ATTACK },
+      hurt: { fps: 8, loop: false, frames: [11, 11] },
     },
   };
   const still = tight(frames[0], feet);

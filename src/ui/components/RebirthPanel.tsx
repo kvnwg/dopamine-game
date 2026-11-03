@@ -1,5 +1,6 @@
 /** Rebirth: reach the stage and gold requirement to restart with permanent luck and gold multipliers. */
-import { useState } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { BAL } from '../../data';
 import {
   canRebirth, formatNumber, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
 } from '../../core';
@@ -7,8 +8,26 @@ import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { Chunky } from './Chunky';
-import { CheckIcon, CloverIcon, CoinIcon, RebirthIcon } from './Icons';
+import { ArrowUpIcon, CheckIcon, CloverIcon, CoinIcon, RebirthIcon, SwordIcon } from './Icons';
 import s from './panels.module.css';
+
+function discount(n: number): number {
+  return Math.round((1 - Math.pow(1 - BAL.rebirth.upgradeDiscountPer, n)) * 100);
+}
+
+function Reward({ icon, color, label, from, to }: { icon: ReactNode; color: string; label: string; from: string; to: string }) {
+  return (
+    <div className={s.rbReward} style={{ ['--rc' as string]: color } as CSSProperties}>
+      {icon}
+      <div className={s.rbRewardText}>
+        <span className={s.rbRewardName}>{label}</span>
+        <span className={s.rbFromTo}>
+          {from} <b>▶</b> <em>{to}</em>
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Req({ label, have, need, done }: { label: string; have: number; need: number; done: boolean }) {
   return (
@@ -43,11 +62,11 @@ export function RebirthPanel() {
     dispatch({ type: 'rebirth' });
   };
   return (
-    <div className={s.panel}>
+    <div className={`${s.panel} ${s.rbPanel}`}>
       <div className={`${s.rbHero} card`}>
-        <RebirthIcon size={124} className={s.rbIcon} />
+        <RebirthIcon size={96} className={s.rbIcon} />
         <div className={s.rbTitles}>
-          <Chunky text={t('rebirth.title')} size={66} grad="purple" />
+          <Chunky text={t('rebirth.title')} size={56} grad="purple" />
           <span className={s.rbCount}>{t('rebirth.count', { n })}</span>
           <span className={s.rbSub}>{t('rebirth.sub')}</span>
         </div>
@@ -60,24 +79,10 @@ export function RebirthPanel() {
       <div className={`${s.rbCard} card`}>
         <span className={s.cardLabel}>{t('rebirth.rewards')}</span>
         <div className={s.rbRewards}>
-          <div className={s.rbReward} style={{ ['--rc' as string]: '#46d36b' }}>
-            <CloverIcon size={78} />
-            <div className={s.rbRewardText}>
-              <span className={s.rbRewardName}>{t('rebirth.luck')}</span>
-              <span className={s.rbFromTo}>
-                ×{rebirthLuckMult(n).toFixed(2)} <b>▶</b> <em>×{rebirthLuckMult(n + 1).toFixed(2)}</em>
-              </span>
-            </div>
-          </div>
-          <div className={s.rbReward} style={{ ['--rc' as string]: '#ffc233' }}>
-            <CoinIcon size={74} />
-            <div className={s.rbRewardText}>
-              <span className={s.rbRewardName}>{t('rebirth.gold')}</span>
-              <span className={s.rbFromTo}>
-                ×{rebirthGoldMult(n).toFixed(1)} <b>▶</b> <em>×{rebirthGoldMult(n + 1).toFixed(1)}</em>
-              </span>
-            </div>
-          </div>
+          <Reward icon={<CloverIcon size={60} />} color="#46d36b" label={t('rebirth.rLuck')} from={`×${rebirthLuckMult(n).toFixed(2)}`} to={`×${rebirthLuckMult(n + 1).toFixed(2)}`} />
+          <Reward icon={<CoinIcon size={56} />} color="#ffc233" label={t('rebirth.rGold')} from={`×${rebirthGoldMult(n).toFixed(1)}`} to={`×${rebirthGoldMult(n + 1).toFixed(1)}`} />
+          <Reward icon={<SwordIcon size={56} />} color="#ef5350" label={t('rebirth.rPower')} from={`+${n * BAL.rebirth.statPctPer}%`} to={`+${(n + 1) * BAL.rebirth.statPctPer}%`} />
+          <Reward icon={<ArrowUpIcon size={54} />} color="#42a5f5" label={t('rebirth.rCost')} from={discount(n) > 0 ? `-${discount(n)}%` : '0%'} to={`-${discount(n + 1)}%`} />
         </div>
         <span className={s.rbNote}>{t('rebirth.resets')}</span>
         <span className={s.rbNote}>{t('rebirth.keeps')}</span>

@@ -1,156 +1,50 @@
 .panel {
   position: absolute;
   inset: 0;
-  padding: 16px 24px 14px;
+  padding: 14px 24px 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
-/* ------------------------------------------------------------ dumpster machine card */
+/* ------------------------------------------------------------ wheel card */
 .top {
   position: relative;
-  height: 290px;
+  height: 330px;
   flex: none;
-  padding: 16px 20px 16px 360px;
+  padding: 14px 18px 14px 350px;
   display: flex;
 }
-.machine {
+.wheelBox {
   position: absolute;
-  left: 96px;
-  top: 14px;
-  width: 236px;
-  height: 186px;
-}
-.binShadow {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: -6px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(46, 37, 35, 0.2);
-}
-.binBody {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 236px;
-  z-index: 1;
-}
-.binLid {
-  position: absolute;
-  left: -6px;
-  bottom: 132px;
-  width: 248px;
-  z-index: 3;
-  transform-origin: 8% 90%;
-}
-.lidHop {
-  animation: lidHop 380ms cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-@keyframes lidHop {
-  0% { transform: rotate(0deg) translateY(0); }
-  35% { transform: rotate(-16deg) translateY(-18px); }
-  70% { transform: rotate(2deg) translateY(2px); }
-  100% { transform: rotate(0deg) translateY(0); }
-}
-.pop {
-  position: absolute;
-  left: 68px;
-  bottom: 90px;
-  width: 100px;
-  height: 100px;
-  z-index: 2;
-  pointer-events: none;
-  filter: drop-shadow(0 0 10px var(--c));
-  animation: popOut 900ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
-}
-.popBig {
-  width: 130px;
-  height: 130px;
-  left: 53px;
-  filter: drop-shadow(0 0 22px var(--c)) drop-shadow(0 0 8px #fff);
-}
-@keyframes popOut {
-  0% { transform: translateY(70px) scale(0.3); opacity: 0; }
-  25% { transform: translateY(-14px) scale(1.12); opacity: 1; }
-  60% { transform: translateY(-26px) scale(1); opacity: 1; }
-  100% { transform: translateY(-40px) scale(0.85); opacity: 0; }
-}
-.charging .binBody,
-.charging .binLid {
-  animation: shake 90ms linear infinite;
-  filter: drop-shadow(0 0 18px var(--glow)) drop-shadow(0 0 6px var(--glow));
-}
-@keyframes shake {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-5px, 2px) rotate(-1.5deg); }
-  50% { transform: translate(4px, -2px) rotate(1deg); }
-  75% { transform: translate(-3px, -1px) rotate(-0.5deg); }
-}
-
-.luckBadge {
-  position: absolute;
-  left: 30px;
-  bottom: 14px;
-  z-index: 4;
-  height: 74px;
-  padding: 0 24px 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
-  background: linear-gradient(180deg, #8af59a, #34b553 60%, #23913e);
-  box-shadow: 0 6px 0 var(--ink), inset 0 4px 0 rgba(255, 255, 255, 0.35);
-  color: #fff;
-  transition: transform 130ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.luckBadge:active {
-  transform: scale(0.93);
-}
-.luckNum {
-  font-size: 44px;
-  -webkit-text-stroke: 7px var(--ink);
-  paint-order: stroke fill;
-}
-.luckWord {
-  font-size: 24px;
-  margin-top: 10px;
-  -webkit-text-stroke: 5px var(--ink);
-  paint-order: stroke fill;
-}
-.luckBoosted {
-  animation: luckGlow 1s ease-in-out infinite;
-}
-@keyframes luckGlow {
-  50% { box-shadow: 0 6px 0 var(--ink), 0 0 34px rgba(110, 255, 150, 0.95), inset 0 4px 0 rgba(255, 255, 255, 0.35); }
+  left: 16px;
+  top: 7px;
+  width: 316px;
+  height: 316px;
 }
 .miniBtns {
   position: absolute;
-  left: 14px;
-  top: 14px;
+  left: 8px;
+  top: 8px;
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .mini {
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   display: grid;
   place-items: center;
-  border-radius: 20px;
+  border-radius: 18px;
   border: 5px solid var(--ink);
   background: linear-gradient(180deg, #ffffff, #e9dcc0);
-  box-shadow: 0 5px 0 var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
   transition: transform 120ms;
 }
 .mini:active {
   transform: scale(0.9);
 }
-
 .info {
   flex: 1;
   min-width: 0;
@@ -162,95 +56,54 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 .binTitle {
   font-family: var(--font-display);
-  font-size: 42px;
+  font-size: 36px;
   color: var(--ink);
+  white-space: nowrap;
 }
-.autoRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.autoTag {
-  padding: 4px 14px;
-  border-radius: 12px;
-  border: 4px solid var(--ink);
-  background: #5bc236;
-  font-family: var(--font-display);
-  font-size: 26px;
-  color: #fff;
-  -webkit-text-stroke: 4px var(--ink);
-  paint-order: stroke fill;
-  animation: autoBlink 1.6s ease-in-out infinite;
-}
-@keyframes autoBlink {
-  50% { opacity: 0.75; }
-}
-.bar {
-  position: relative;
-  flex: 1;
-  height: 48px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
-  background: #3b3446;
-  overflow: hidden;
-}
-.barFill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0 40%, rgba(255, 255, 255, 0) 40%),
-    linear-gradient(90deg, #5bc236, #a5ef5a);
-  border-radius: 999px;
-}
-.barText {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-size: 26px;
-  color: #fff;
-  -webkit-text-stroke: 5px var(--ink);
-  paint-order: stroke fill;
-}
-.bonusRow {
+.statLine {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-display);
   font-size: 28px;
+  color: var(--ink);
+}
+.autoTag {
+  padding: 2px 12px;
+  border-radius: 12px;
+  border: 4px solid var(--ink);
+  background: #5bc236;
+  font-size: 22px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
 }
 .bonusOn {
-  color: var(--ink);
-  font-weight: 900;
+  color: #2569b8;
 }
 .bonusOff {
-  color: #8b7d72;
-}
-.pity {
-  padding: 2px 14px;
-  border-radius: 999px;
-  background: #efe1ff;
-  border: 3px solid #a463f2;
-  color: #6b2fb8;
+  font-family: var(--font-body);
+  font-weight: 900;
   font-size: 22px;
+  color: #8b7d72;
 }
 .lucky {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 .luckySegs {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 .seg {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   border: 4px solid var(--ink);
   background: #d8cbb0;
   transform: rotate(45deg) scale(0.8);
@@ -267,29 +120,76 @@
 }
 .luckyText {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 24px;
   color: #3a8f25;
+  white-space: nowrap;
 }
 .luckyReady {
   color: #d48a12;
 }
-
-/* ------------------------------------------------------------ last roll card */
-.last {
-  --c: #9e9e9e;
-  height: 186px;
-  flex: none;
-  padding: 12px 16px;
+.luckRow {
   display: flex;
   align-items: center;
-  gap: 20px;
-  cursor: pointer;
+  gap: 12px;
+}
+.luckBadge {
+  height: 66px;
+  padding: 0 20px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 5px solid var(--ink);
+  background: linear-gradient(180deg, #8af59a, #34b553 60%, #23913e);
+  box-shadow: 0 5px 0 var(--ink), inset 0 4px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
+  transition: transform 130ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.luckBadge:active {
+  transform: scale(0.93);
+}
+.luckNum {
+  font-size: 40px;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+}
+.luckWord {
+  font-size: 22px;
+  margin-top: 8px;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.luckBoosted {
+  animation: luckGlow 1s ease-in-out infinite;
+}
+@keyframes luckGlow {
+  50% { box-shadow: 0 5px 0 var(--ink), 0 0 34px rgba(110, 255, 150, 0.95), inset 0 4px 0 rgba(255, 255, 255, 0.35); }
+}
+.pity {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: #efe1ff;
+  border: 3px solid #a463f2;
+  color: #6b2fb8;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ last result */
+.last {
+  --c: #9e9e9e;
+  height: 160px;
+  flex: none;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 .waiting {
   flex: 1;
   text-align: center;
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: 32px;
   color: #8b7d72;
 }
 .lastIn {
@@ -310,11 +210,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  cursor: pointer;
 }
 .lastName {
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 36px;
   line-height: 1.1;
   -webkit-text-stroke: 7px var(--ink);
   paint-order: stroke fill;
@@ -323,35 +224,42 @@
   text-overflow: ellipsis;
 }
 .lastMeta {
-  font-size: 26px;
+  font-size: 23px;
   color: #7a6a60;
 }
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  max-height: 84px;
+  gap: 6px;
+  max-height: 76px;
   overflow: hidden;
 }
 .chip {
-  padding: 3px 14px;
+  padding: 2px 12px;
   border-radius: 999px;
   border: 4px solid var(--ink);
   background: #7c82a8;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 21px;
   color: #fff;
   -webkit-text-stroke: 4px var(--ink);
   paint-order: stroke fill;
-}
-.placed_equipped {
-  background: #5bc236;
 }
 .placed_bag {
   background: #42a5f5;
 }
 .placed_scrapped {
   background: #9a9aa6;
+}
+.chipUpgrade {
+  background: #5bc236;
+  animation: hintBob 0.9s ease-in-out infinite;
+}
+@keyframes hintBob {
+  50% { transform: translateY(-4px); }
+}
+.chipGold {
+  background: linear-gradient(180deg, #fff3a0, #ffc233);
 }
 .chipLucky {
   background: #46d36b;
@@ -364,53 +272,79 @@
   from { transform: rotate(-4deg) scale(1); }
   to { transform: rotate(4deg) scale(1.08); }
 }
+
+/* The result's odds: big, loud, rarity colored. */
 .lastOdds {
   flex: none;
-  width: 156px;
-  height: 140px;
+  min-width: 176px;
+  height: 136px;
+  padding: 0 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   border-radius: 26px;
-  border: 5px solid var(--ink);
-  box-shadow: 0 6px 0 var(--ink), inset 0 5px 0 rgba(255, 255, 255, 0.35);
+  border: 6px solid var(--ink);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 60%, #fff), var(--c));
+  box-shadow: 0 7px 0 var(--ink);
   font-family: var(--font-display);
   color: #fff;
-  -webkit-text-stroke: 6px var(--ink);
+  -webkit-text-stroke: 7px var(--ink);
   paint-order: stroke fill;
+  transform: rotate(2deg);
 }
 .oddsSmall {
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1;
 }
 .oddsBig {
-  font-size: 46px;
+  font-size: 54px;
   line-height: 1.05;
+  white-space: nowrap;
+}
+.lastOddsRare {
+  animation: oddsThrob 0.9s ease-in-out infinite;
+}
+@keyframes oddsThrob {
+  50% { transform: rotate(2deg) scale(1.07); box-shadow: 0 7px 0 var(--ink), 0 0 36px var(--c); }
+}
+.lastOdds[data-rarity='legendary'],
+.lastOdds[data-rarity='mint'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
+}
+.lastOdds[data-rarity='mythic'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
 }
 
-/* ------------------------------------------------------------ recent rolls */
+/* ------------------------------------------------------------ recent results */
 .recent {
-  height: 124px;
+  height: 128px;
   flex: none;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-end;
+  gap: 8px;
 }
 .recentLabel {
+  align-self: center;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 22px;
   color: #a9aed0;
   letter-spacing: 2px;
 }
 .recentRow {
   flex: 1;
   display: flex;
-  gap: 13px;
+  gap: 18px;
   overflow: hidden;
-  padding: 4px 2px 8px;
+  padding: 22px 6px 8px;
 }
 .slideIn {
   animation: slideIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -424,10 +358,10 @@
   opacity: 0.7;
 }
 
-/* ------------------------------------------------------------ equipped gear */
+/* ------------------------------------------------------------ equipped gear (also a drop target) */
 .gearBox {
   flex: none;
-  padding: 10px 14px 14px;
+  padding: 8px 12px 10px;
   border-radius: 26px;
   background: rgba(0, 0, 0, 0.22);
   border: 4px solid rgba(0, 0, 0, 0.35);
@@ -435,10 +369,10 @@
 .gearHead {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 10px;
+  gap: 14px;
+  margin-bottom: 4px;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 24px;
   color: #a9aed0;
 }
 .gearPower {
@@ -447,19 +381,32 @@
 .record {
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: 560px;
+  gap: 6px;
+  max-width: 600px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-family: var(--font-body);
   font-weight: 900;
-  font-size: 22px;
+  font-size: 20px;
   color: #ffe08a;
 }
 .gear {
   display: flex;
   justify-content: space-between;
+  padding-top: 16px;
+  border-radius: 20px;
+  transition: box-shadow 160ms, background 160ms;
+}
+.gearDrop {
+  background: rgba(126, 240, 143, 0.12);
+  box-shadow: 0 0 0 4px #7ef08f, 0 0 26px rgba(126, 240, 143, 0.6);
+}
+.slotTarget {
+  animation: slotPulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes slotPulse {
+  to { transform: scale(1.1); filter: brightness(1.3) drop-shadow(0 0 12px #7ef08f); }
 }
 .equipPop {
   animation: equipPop 520ms cubic-bezier(0.34, 1.56, 0.64, 1);

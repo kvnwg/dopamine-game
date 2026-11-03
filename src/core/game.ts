@@ -15,7 +15,7 @@ import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './sy
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { addXp } from './systems/progression';
 import { doRebirth } from './systems/rebirth';
-import { addLuckBoost, equipFromBag, rollTick, scrapFromBag, toggleLock } from './systems/roller';
+import { addLuckBoost, equipFromBag, rollTick, scrapAllFromBag, scrapFromBag, toggleLock } from './systems/roller';
 import { worldCount } from './systems/stages';
 import { travelTo } from './systems/worlds';
 import { buyUpgrade } from './systems/upgrades';
@@ -56,11 +56,11 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'scrapItem':
         scrapFromBag(d, action.uid, ev);
         break;
+      case 'scrapAll':
+        scrapAllFromBag(d, ev);
+        break;
       case 'toggleLock':
         toggleLock(d, action.uid);
-        break;
-      case 'setAutoEquip':
-        d.autoEquip = action.enabled;
         break;
       case 'buyUpgrade':
         buyUpgrade(d, action.id, ev);

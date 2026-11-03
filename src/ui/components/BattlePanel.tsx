@@ -32,10 +32,24 @@ export function BattlePanel() {
   const next = useGame(nextWorldAvailable);
   const nextThreat = useGame((g) => (next !== null ? worldThreat(g, next).level : null));
   const waves = BAL.stages.wavesPerStage;
+  const drag = useUi((u) => u.drag);
+  // First-time nudge: nothing worn yet but gear waiting in the bag.
+  const bare = useGame((g) => g.inventory.length > 0 && Object.values(g.equipped).every((it) => !it));
 
   return (
-    <div className={s.battle}>
+    <div className={s.battle} data-drop="equip">
       <div className={s.canvasHost} ref={host} />
+      {drag && (
+        <div className={`${s.dropRing} ${drag.over ? s.dropRingOn : ''}`}>
+          <span className={s.dropLabel}>{t('drag.ring')}</span>
+        </div>
+      )}
+      {bare && !drag && (
+        <div className={s.dragTip}>
+          {t('drag.tip')}
+          <span className={s.dragTipArrow} />
+        </div>
+      )}
       <TopHud />
       <button className={s.stageBox} onClick={() => useUi.getState().setTab('worlds')}>
         <span className={s.stageName}>{worldLabel(world)}</span>

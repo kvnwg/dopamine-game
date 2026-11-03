@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, type Slot } from '../data';
 import type { Item } from './types';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export const SubstatSchema = z.object({
   affixId: z.string(),
@@ -32,6 +32,21 @@ export const ItemSchema = z.object({
   /** The world it was rolled in: its flat HP/ATK/DEF/REGEN scale with worlds.itemGrowth^(tier - 1). */
   tier: z.number().int().positive(),
   power: z.number(),
+});
+
+/** One spin of the wheel. The item is rolled when the spin starts and lands when the spin ends. */
+export const SpinSchema = z.object({
+  item: ItemSchema,
+  lucky: z.boolean(),
+  /** A Golden Spin (x5 luck). */
+  golden: z.boolean(),
+  odds: z.number(),
+  luck: z.number(),
+  /** Paid for with a Trash Bag: spins faster. */
+  turbo: z.boolean(),
+  spinSeconds: z.number().positive(),
+  restSeconds: z.number().nonnegative(),
+  landed: z.boolean(),
 });
 
 export const EnemyStateSchema = z.object({
@@ -90,7 +105,6 @@ export const GameStateSchema = z.object({
   equipped: z.record(SlotSchema, ItemSchema.nullable()),
   /** Items in the bag (not equipped). Capacity is limited; the best items are kept. */
   inventory: z.array(ItemSchema),
-  autoEquip: z.boolean(),
   nextItemUid: z.number().int(),
   /** Worlds: `current` is the world being fought in; `highestCleared` the best world whose boss is beaten. */
   stage: z.object({
@@ -114,9 +128,10 @@ export const GameStateSchema = z.object({
     adSpeedupDay: z.string(),
     adSpeedupsUsed: z.number().int().nonnegative(),
   }),
+  /** The wheel: the spin in progress (its result is decided when it starts) and seconds into it. */
   roll: z.object({
     timer: z.number(),
-    bagTimer: z.number(),
+    current: SpinSchema.nullable(),
     count: z.number().int().nonnegative(),
     sinceLucky: z.number().int().nonnegative(),
   }),
@@ -170,7 +185,6 @@ export function createInitialState(now: number, seed: number): GameState {
     currencies: { coins: start.coins, gems: start.gems, bags: start.bags },
     equipped: emptyEquipment(),
     inventory: [],
-    autoEquip: true,
     nextItemUid: 1,
     stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false },
     battle: {
@@ -194,7 +208,7 @@ export function createInitialState(now: number, seed: number): GameState {
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },
-    roll: { timer: 0, bagTimer: 0, count: 0, sinceLucky: 0 },
+    roll: { timer: 0, current: null, count: 0, sinceLucky: 0 },
     upgrades: {},
     rebirths: 0,
     luckBoostEndsAt: null,

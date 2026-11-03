@@ -264,9 +264,11 @@ A few tricks raise spending for a week, then bring refunds, store rejections, re
 What the build already does from this playbook (the rest is scheduled in `DECISIONS.md`):
 
 - Scripted Legendary on the very first roll (first few seconds).
-- Constant small wins: a roll pops out of the dumpster every 2 seconds, faster with upgrades and Trash Bag bonus rolls.
-- A visible variable-ratio beat: the Lucky Roll meter fills toward a x2-luck roll.
-- Legendary and better: the dumpster shakes and glows in the rarity's color with rising rattle beats, a riser and a silence drop, then a full-screen reveal (rays, confetti, "1 in X" odds, NEW BEST FIND!). Big rolls never get lost; they queue.
+- Constant small wins: the dumpster's prize wheel spins on its own and lands an item every 2.6 seconds, faster with the Spin Speed upgrade and Trash Bag turbo spins.
+- A visible variable-ratio beat: the Lucky Spin meter fills toward a x2-luck spin, and once unlocked, a Golden Spin (x5 luck) can strike any spin.
+- Legendary and better: while the wheel spins, it glows in the rarity's color with rising rattle beats, a riser and a silence drop; when it lands, a full-screen reveal (rays, confetti, giant "1 in X" odds, NEW BEST FIND!). Big rolls never get lost; they queue.
+- Every item wears its "1 in X" odds on a big banner (pulsing for Epic, gold for Legendary, rainbow for Mythic), so the bag itself shows how lucky you got.
+- Equipping is hands-on: you drag the item onto the raccoon, and it puts it on right there in the fight.
 - Reveal intensity scales by tier (pop → sting + burst for Epic → full reveal for Legendary, Mythic and Mint).
 - Haptics per tier using Capacitor presets (custom patterns need the native plugin in M5).
 - Bad-luck protection with a visible "Epic+ guaranteed in N" readout.

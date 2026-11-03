@@ -57,6 +57,22 @@ export function rarityChances(luck: number, minRarity: Rarity = 'junk'): Record<
   return out;
 }
 
+/**
+ * "1 in X" for an item: the chance, at base luck, of rolling its rarity together with its
+ * enchantments (their count and tiers, at the base enchant chance). Shown on every item.
+ */
+export function itemOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: number }> }): number {
+  let p = rarityChances(1)[item.rarity];
+  const n = item.enchants.length;
+  if (n > 0) {
+    const e = BAL.enchant;
+    const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+    p *= e.baseChance * (e.countWeights[Math.min(n, e.countWeights.length) - 1] / sum(e.countWeights));
+    for (const en of item.enchants) p *= e.tierWeights[en.tier - 1] / sum(e.tierWeights);
+  }
+  return Math.max(1, Math.round(1 / p));
+}
+
 /** Rolls a rarity: tiers are tried from rarest down; anything below `minRarity` is never rolled. */
 export function rollRarity(luck: number, rng: Rng, minRarity: Rarity = 'junk'): Rarity {
   for (let i = RARITIES.length - 1; i >= 1; i--) {

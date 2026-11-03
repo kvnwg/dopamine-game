@@ -80,6 +80,10 @@ export function installSound(): () => void {
         case 'scrap':
           audio.recycle(e.auto);
           break;
+        case 'scrapAll':
+          audio.recycle(false);
+          audio.coin();
+          break;
         case 'upgradeBought':
           audio.coin();
           break;

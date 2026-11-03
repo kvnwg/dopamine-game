@@ -1,50 +1,31 @@
 /**
- * The Roll tab: the dumpster rolls on its own (free timed rolls + Trash Bag bonus rolls).
- * Shows the roll timer, luck, the lucky-roll meter, the latest roll, recent rolls, and gear.
+ * The Roll tab: the wheel spins on its own (Trash Bags make turbo spins). Shows luck, spin speed,
+ * the lucky-spin meter, the latest result with its "1 in X", recent results, and equipped gear.
+ * Items are equipped by dragging them onto the raccoon.
  */
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  currentLuck, formatDuration, formatNumber, itemName, luckyEvery, playerPower, rarityAtLeast, rollInterval,
+  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, playerPower, rarityAtLeast, spinCycle,
 } from '../../core';
-import { getGame, useGame } from '../../app/store';
-import { dumpsterArt, itemIconUrl } from '../../render/icons';
+import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { haptics } from '../../services';
-import { useFrame, useNow } from '../hooks';
+import { useNow } from '../hooks';
 import { t } from '../i18n';
-import { useUi, type RollView } from '../uiStore';
-import { ArrowUpIcon, BagIcon, BookIcon, ChartIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
+import { useUi } from '../uiStore';
+import { ArrowUpIcon, BagIcon, BookIcon, BoltIcon, ChartIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { fmtLuck } from './StatStrip';
+import { Wheel } from './Wheel';
 import s from './alley.module.css';
 
 export function fmtOdds(x: number): string {
-  return x < 10000 ? x.toLocaleString('en-US') : formatNumber(x);
+  return x < 100000 ? x.toLocaleString('en-US') : formatNumber(x);
 }
 
 export function enchantLabel(id: string, tier: number): string {
   return `${DATA.enchantsById.get(id)?.name ?? id} ${t(`enchant.tier${tier}`)}`;
-}
-
-/** Smooth progress toward the next free roll (the core ticks at 10/s; this interpolates per frame). */
-function RollBar() {
-  useFrame(true);
-  const seen = useRef({ timer: 0, at: performance.now(), count: -1 });
-  const g = getGame();
-  if (g.roll.timer !== seen.current.timer || g.roll.count !== seen.current.count) {
-    seen.current = { timer: g.roll.timer, at: performance.now(), count: g.roll.count };
-  }
-  const interval = rollInterval(g);
-  const paused = g.offline.pending !== null;
-  const est = paused ? seen.current.timer : seen.current.timer + Math.min(0.12, (performance.now() - seen.current.at) / 1000);
-  const k = Math.max(0, Math.min(1, est / interval));
-  return (
-    <div className={s.bar}>
-      <div className={s.barFill} style={{ width: `${k * 100}%` }} />
-      <span className={s.barText}>{t('roll.every', { s: interval.toFixed(1) })}</span>
-    </div>
-  );
 }
 
 function LuckyMeter() {
@@ -65,40 +46,10 @@ function LuckyMeter() {
   );
 }
 
-/** The dumpster: lid hops and the rolled item pops out on every roll; shakes before big rolls. */
-function Machine() {
-  const last = useUi((u) => u.lastRoll);
-  const charging = useUi((u) => u.charging);
-  const art = dumpsterArt();
-  const [pops, setPops] = useState<RollView[]>([]);
-  useEffect(() => {
-    if (!last) return;
-    setPops((p) => [...p.slice(-3), last]);
-    const id = setTimeout(() => setPops((p) => p.filter((x) => x.id !== last.id)), 900);
-    return () => clearTimeout(id);
-  }, [last]);
-  const glow = charging ? rarityColor(charging.item.rarity) : null;
-  return (
-    <div className={`${s.machine} ${charging ? s.charging : ''}`} style={glow ? ({ ['--glow' as string]: glow } as CSSProperties) : undefined}>
-      <div className={s.binShadow} />
-      <img className={s.binBody} src={art.body} alt="" draggable={false} />
-      <img key={last?.id ?? 0} className={`${s.binLid} ${last ? s.lidHop : ''}`} src={art.lid} alt="" draggable={false} />
-      {pops.map((p) => (
-        <img
-          key={p.id}
-          className={`${s.pop} ${rarityAtLeast(p.item.rarity, 'epic') ? s.popBig : ''}`}
-          src={itemIconUrl(p.item.slot, p.item.rarity)}
-          style={{ ['--c' as string]: rarityColor(p.item.rarity) } as CSSProperties}
-          alt=""
-          draggable={false}
-        />
-      ))}
-    </div>
-  );
-}
-
 function LastRoll() {
   const last = useUi((u) => u.lastRoll);
+  const inBag = useGame((g) => (last ? g.inventory.find((x) => x.uid === last.item.uid) ?? null : null));
+  const upgrade = useGame((g) => (inBag ? isUpgrade(g, inBag) : false));
   if (!last) {
     return (
       <div className={`${s.last} card`}>
@@ -106,18 +57,14 @@ function LastRoll() {
       </div>
     );
   }
-  const it = last.item;
+  const it = inBag ?? last.item;
   const color = rarityColor(it.rarity);
   const rare = rarityAtLeast(it.rarity, 'epic');
+  const open = () => useUi.getState().openPopup('itemDetail', it.uid);
   return (
-    <div
-      key={last.id}
-      className={`${s.last} card ${s.lastIn} ${rare ? s.lastRare : ''}`}
-      style={{ ['--c' as string]: color } as CSSProperties}
-      onClick={() => useUi.getState().openPopup('itemDetail', it.uid)}
-    >
-      <ItemIcon item={it} size={150} />
-      <div className={s.lastBody}>
+    <div key={last.id} className={`${s.last} card ${s.lastIn} ${rare ? s.lastRare : ''}`} style={{ ['--c' as string]: color } as CSSProperties}>
+      <ItemIcon item={it} size={128} showOdds={false} draggable={!!inBag} upgrade={upgrade} onTap={open} />
+      <div className={s.lastBody} onClick={open}>
         <span className={s.lastName} style={{ color }}>
           {itemName(it)}
         </span>
@@ -125,7 +72,12 @@ function LastRoll() {
           {t(`rarity.${it.rarity}`)} · {t(`slot.${it.slot}`)} · {t('item.worldTier', { n: it.tier })}
         </span>
         <div className={s.chips}>
-          <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
+          {upgrade ? (
+            <span className={`${s.chip} ${s.chipUpgrade}`}>{t('roll.dragHint')}</span>
+          ) : (
+            <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
+          )}
+          {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('wheel.golden')}</span>}
           {last.lucky && <span className={`${s.chip} ${s.chipLucky}`}>{t('roll.lucky')}</span>}
           {last.newRecord && <span className={`${s.chip} ${s.chipRecord}`}>{t('roll.newRecord')}</span>}
           {it.enchants.map((en) => (
@@ -135,7 +87,7 @@ function LastRoll() {
           ))}
         </div>
       </div>
-      <div className={s.lastOdds} style={{ background: color }}>
+      <div className={`${s.lastOdds} ${rare ? s.lastOddsRare : ''}`} data-rarity={it.rarity}>
         <span className={s.oddsSmall}>1 in</span>
         <span className={s.oddsBig}>{fmtOdds(last.odds)}</span>
       </div>
@@ -145,37 +97,46 @@ function LastRoll() {
 
 function Recent() {
   const recent = useUi((u) => u.recent);
+  const bag = useGame((g) => g.inventory);
+  const equipped = useGame((g) => g.equipped);
   return (
     <div className={s.recent}>
       <span className={s.recentLabel}>{t('roll.recent')}</span>
       <div className={s.recentRow}>
-        {recent.slice(0, 7).map((r, i) => (
-          <ItemIcon
-            key={r.id}
-            item={r.item}
-            size={108}
-            className={`${i === 0 ? s.slideIn : ''} ${r.placed === 'scrapped' ? s.scrapped : ''}`}
-            onClick={r.placed !== 'scrapped' ? () => useUi.getState().openPopup('itemDetail', r.item.uid) : undefined}
-          />
-        ))}
+        {recent.slice(0, 8).map((r, i) => {
+          const inBag = bag.find((x) => x.uid === r.item.uid);
+          return (
+            <ItemIcon
+              key={r.id}
+              item={inBag ?? r.item}
+              size={96}
+              draggable={!!inBag}
+              upgrade={inBag ? isUpgrade({ equipped }, inBag) : false}
+              className={`${i === 0 ? s.slideIn : ''} ${!inBag ? s.scrapped : ''}`}
+              onTap={inBag ? () => useUi.getState().openPopup('itemDetail', r.item.uid) : undefined}
+            />
+          );
+        })}
       </div>
     </div>
   );
 }
 
-export function GearRow({ size = 94 }: { size?: number }) {
+/** The equipped gear, also a drop target: drop an item here (or on the raccoon) to put it on. */
+export function GearRow({ size = 86 }: { size?: number }) {
   const equipped = useGame((g) => g.equipped);
   const pulse = useUi((u) => u.equipPulse);
+  const drag = useUi((u) => u.drag);
   return (
-    <div className={s.gear}>
+    <div className={`${s.gear} ${drag ? s.gearDrop : ''}`} data-drop="equip">
       {SLOTS.map((slot) => (
         <ItemIcon
           key={pulse?.slot === slot ? `${slot}-${pulse.id}` : slot}
           item={equipped[slot]}
           slot={slot}
           size={size}
-          className={pulse?.slot === slot ? s.equipPop : ''}
-          onClick={() => useUi.getState().openPopup('itemDetail', equipped[slot]?.uid ?? -1)}
+          className={[pulse?.slot === slot ? s.equipPop : '', drag?.item.slot === slot ? s.slotTarget : ''].join(' ')}
+          onTap={() => useUi.getState().openPopup('itemDetail', equipped[slot]?.uid ?? -1)}
         />
       ))}
     </div>
@@ -189,9 +150,11 @@ export function AlleyPanel() {
   const bags = useGame((g) => Math.floor(g.currencies.bags));
   const luck = useGame((g) => currentLuck(g, now));
   const boosted = useGame((g) => g.luckBoostEndsAt !== null && g.luckBoostEndsAt > now);
+  const cycle = useGame((g) => spinCycle(g));
   const power = useGame(playerPower);
   const record = useGame((g) => g.records);
   const dry = useGame((g) => g.dumpster.dryStreak);
+  const spell = useGame(drySpell);
   const bl = BAL.dumpster.badLuck;
   const pityOn = level >= bl.minDumpsterLevel;
   const maxed = level >= BAL.dumpster.maxLevel;
@@ -202,50 +165,53 @@ export function AlleyPanel() {
   return (
     <div className={s.panel}>
       <div className={`${s.top} card`}>
-        <Machine />
-        <button className={`${s.luckBadge} ${boosted ? s.luckBoosted : ''}`} onClick={() => open('luck')}>
-          <CloverIcon size={64} />
-          <span className={s.luckNum}>×{fmtLuck(luck)}</span>
-          <span className={s.luckWord}>{t('roll.luckLabel')}</span>
-        </button>
+        <div className={s.wheelBox}>
+          <Wheel />
+        </div>
+        <div className={s.miniBtns}>
+          <button className={s.mini} onClick={() => open('luck')} aria-label={t('roll.odds')}>
+            <ChartIcon size={44} />
+          </button>
+          <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')}>
+            <BookIcon size={44} />
+          </button>
+        </div>
         <div className={s.info}>
           <div className={s.infoHead}>
             <span className={s.binTitle}>{t('roll.dumpster', { level })}</span>
             <button className={`btn small ${endsAt === null && !maxed ? '' : 'gray'}`} onClick={() => open('upgrade')}>
               {endsAt !== null ? (
                 <>
-                  <ClockIcon size={40} />
+                  <ClockIcon size={38} />
                   {t('roll.upgrading', { time: formatDuration((endsAt - now) / 1000) })}
                 </>
               ) : maxed ? (
                 t('roll.maxed')
               ) : (
                 <>
-                  <ArrowUpIcon size={40} />
+                  <ArrowUpIcon size={38} />
                   {t('roll.upgrade')}
                 </>
               )}
             </button>
           </div>
-          <div className={s.autoRow}>
+          <div className={s.statLine}>
             <span className={s.autoTag}>{t('roll.auto')}</span>
-            <RollBar />
+            <span>{t('roll.every', { s: cycle.toFixed(1) })}</span>
           </div>
-          <div className={s.bonusRow}>
-            <BagIcon size={50} />
-            <span className={bags > 0 ? s.bonusOn : s.bonusOff}>{bags > 0 ? t('roll.bonus', { n: formatNumber(bags) }) : t('roll.bonusNone')}</span>
-            <span style={{ flex: 1 }} />
-            {pityOn && <span className={s.pity}>{t('roll.pity', { n: Math.max(1, bl.drySpell - dry) })}</span>}
+          <div className={s.statLine}>
+            {bags > 0 ? <BoltIcon size={42} /> : <BagIcon size={42} />}
+            <span className={bags > 0 ? s.bonusOn : s.bonusOff}>{bags > 0 ? t('roll.turbo', { n: formatNumber(bags) }) : t('roll.turboNone')}</span>
           </div>
           <LuckyMeter />
-        </div>
-        <div className={s.miniBtns}>
-          <button className={s.mini} onClick={() => open('luck')} aria-label={t('roll.odds')}>
-            <ChartIcon size={50} />
-          </button>
-          <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')}>
-            <BookIcon size={50} />
-          </button>
+          <div className={s.luckRow}>
+            <button className={`${s.luckBadge} ${boosted ? s.luckBoosted : ''}`} onClick={() => open('luck')}>
+              <CloverIcon size={54} />
+              <span className={s.luckNum}>×{fmtLuck(luck)}</span>
+              <span className={s.luckWord}>{t('roll.luckLabel')}</span>
+            </button>
+            {pityOn && <span className={s.pity}>{t('roll.pity', { n: Math.max(1, spell - dry) })}</span>}
+          </div>
         </div>
       </div>
       <LastRoll />
@@ -256,10 +222,8 @@ export function AlleyPanel() {
           <span className={s.gearPower}>{t('gear.power', { power: formatNumber(power) })}</span>
           <span style={{ flex: 1 }} />
           <span className={s.record}>
-            <StarIcon size={34} />
-            {record.bestRarity
-              ? t('roll.best', { name: `${record.bestItemName} (1 in ${fmtOdds(record.bestOdds)})` })
-              : t('roll.bestNone')}
+            <StarIcon size={30} />
+            {record.bestRarity ? t('roll.best', { name: `${record.bestItemName} (1 in ${fmtOdds(record.bestOdds)})` }) : t('roll.bestNone')}
           </span>
         </div>
         <GearRow />

@@ -129,15 +129,23 @@ export const BalanceSchema = z.object({
     maxTickGapSeconds: positive,
   }),
   start: z.object({ coins: nonNeg, gems: nonNeg, bags: nonNeg }),
+  /**
+   * The wheel: each roll is one spin (spinSeconds) then a short rest (restSeconds). Spin Speed
+   * upgrades shrink the whole cycle; a Trash Bag makes one spin turboSpeedMult times faster.
+   */
   roll: z.object({
-    baseIntervalSeconds: positive,
-    minIntervalSeconds: positive,
+    spinSeconds: positive,
+    restSeconds: nonNeg,
+    minCycleSeconds: positive,
     speedPerLevel: z.number().min(0).max(1),
-    bagRollsPerSecond: positive,
+    turboSpeedMult: positive,
+    minTurboCycleSeconds: positive,
     maxRollsPerTick: z.number().int().positive(),
     luckyRollEvery: z.number().int().positive(),
     luckyRollMinEvery: z.number().int().positive(),
     luckyRollMult: positive,
+    /** Luck multiplier of a Golden Spin (chance bought in the upgrade tree). */
+    goldenLuckMult: positive,
   }),
   /** Base odds as "1 in X" for every rarity above Junk. */
   rarityOdds: z.object({ decent: positive, shiny: positive, epic: positive, legendary: positive, mythic: positive, mint: positive }),
@@ -154,15 +162,25 @@ export const BalanceSchema = z.object({
     goldPerRebirth: positive,
     luckPer: nonNeg,
     goldMultPer: nonNeg,
+    /** +% ATK and HP per rebirth. */
+    statPctPer: nonNeg,
+    /** Upgrades cost (1 - this)^rebirths as much. */
+    upgradeDiscountPer: z.number().min(0).max(0.9),
   }),
   upgrades: z
     .array(
       z.object({
         id: z.string().min(1),
-        effect: z.enum(['luck', 'goldPct', 'rollSpeed', 'capacity', 'luckyEvery', 'enchantChance', 'atkPct', 'hpPct', 'bagFind']),
+        effect: z.enum([
+          'luck', 'goldPct', 'rollSpeed', 'capacity', 'luckyEvery', 'enchantChance', 'atkPct', 'hpPct', 'bagFind',
+          'turboPower', 'luckyMult', 'goldenSpin', 'enchantTier', 'pity', 'scrapPct', 'xpPct', 'potionTime', 'offlinePct',
+          'lifesteal', 'critChance', 'critDmg', 'bossDmg',
+        ]),
         perLevel: positive,
         max: z.number().int().positive(),
         cost: z.object({ base: positive, growth: positive }),
+        /** The upgrade tree: this node unlocks once its parent reaches `level`. */
+        requires: z.object({ id: z.string().min(1), level: z.number().int().positive() }).optional(),
       }),
     )
     .min(1),
@@ -170,6 +188,8 @@ export const BalanceSchema = z.object({
     baseChance: z.number().min(0).max(1),
     countWeights: z.array(nonNeg).length(3),
     tierWeights: z.array(nonNeg).length(3),
+    /** Enchant Mastery: per level, added to the tier I/II/III weights. */
+    tierShiftPerLevel: z.array(z.number()).length(3),
     powerPerTier: z.array(nonNeg).length(3),
     burnSeconds: positive,
     chainDamage: nonNeg,

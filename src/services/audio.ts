@@ -235,6 +235,25 @@ class AudioEngine {
     this.noise(at, 0.02, { freq: 3000, q: 2, gain: 0.03 });
   }
 
+  /** A peg of the wheel clicking past the pointer: brighter while fast, a fuller clack as it slows. */
+  wheelTick(speed01: number): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('wheelTick', 28)) return;
+    const at = ctx.currentTime;
+    const slow = 1 - Math.max(0, Math.min(1, speed01));
+    this.tone(this.vary(1300 + 1100 * speed01, 0.03), at, 0.03, { type: 'square', gain: 0.025 + 0.04 * slow, filter: 3400 });
+    this.noise(at, 0.014, { freq: 4200 - 1600 * slow, q: 4, gain: 0.02 + 0.03 * slow });
+  }
+
+  /** The wheel settles on its result. */
+  wheelStop(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('wheelStop', 120)) return;
+    const at = ctx.currentTime;
+    this.tone(220, at, 0.09, { gain: 0.12, freqEnd: 140 });
+    this.noise(at, 0.04, { freq: 2600, q: 3, gain: 0.06 });
+  }
+
   /** The dumpster lid clunk on a manual dive. */
   lidClunk(): void {
     const ctx = this.live;

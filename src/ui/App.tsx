@@ -10,6 +10,7 @@ import { WorldsPanel } from './components/WorldsPanel';
 import { BottomNav } from './components/BottomNav';
 import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
+import { DragLayer } from './components/DragLayer';
 import { Toasts } from './components/Toasts';
 import { AdOverlay } from './components/AdOverlay';
 import { DevPanel } from '../dev/DevPanel';
@@ -42,7 +43,7 @@ export function App() {
   return (
     <div className={styles.viewport}>
       <div className={styles.frame} ref={frameRef}>
-        <div className={styles.stage} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
+        <div className={styles.stage} data-stage style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
           <div className={styles.battle}><BattlePanel /></div>
           <div className={styles.strip}><StatStrip /></div>
           <div className={styles.lower}>
@@ -53,6 +54,7 @@ export function App() {
             {tab === 'worlds' && <WorldsPanel />}
           </div>
           <div className={styles.nav}><BottomNav /></div>
+          <DragLayer />
           <RevealLayer />
           <PopupLayer />
           <Toasts />

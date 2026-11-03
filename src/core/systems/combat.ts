@@ -11,7 +11,7 @@ import type { CoreEvent, Stats } from '../types';
 import { combatEffects, type CombatEffects } from './enchants';
 import { addXp } from './progression';
 import { recordRewards } from './offline';
-import { addLuckBoost, goldMult } from './roller';
+import { addLuckBoost, goldMult, potionSeconds, xpMult } from './roller';
 import { defConstant, generateWave, isBossWave, killRewards, worldCount } from './stages';
 import { computeStats, playerPower } from './stats';
 
@@ -76,12 +76,13 @@ function onKill(c: Ctx, e: EnemyState) {
   const { d, ev, now } = c;
   const stage = d.battle.stage;
   const r = killRewards(stage, e.kind, c.stats.COIN_FIND);
+  r.xp *= xpMult(d);
   const coins = r.coins * goldMult(d);
   d.currencies.coins += coins;
   d.lifetime.kills += 1;
   ev.push({ type: 'kill', enemyUid: e.uid, enemyId: e.enemyId, coins, xp: r.xp, kind: e.kind });
   if (e.kind === 'regular') recordRewards(d, now, { bags: 0, coins, xp: r.xp });
-  else if (c.rng.chance(BAL.worlds.boss.potionChance)) addLuckBoost(d, now, BAL.luck.potion.seconds, ev);
+  else if (c.rng.chance(BAL.worlds.boss.potionChance)) addLuckBoost(d, now, potionSeconds(d), ev);
   addXp(d, r.xp, ev);
 }
 
@@ -185,7 +186,7 @@ function onWaveCleared(c: Ctx) {
   } else {
     bags = BAL.drops.bagsPerWave + rollExtraBags(stats.BAG_FIND, rng);
     recordRewards(d, now, { bags, coins: 0, xp: 0 });
-    if (rng.chance(BAL.luck.potion.waveDropChance)) addLuckBoost(d, now, BAL.luck.potion.seconds, ev);
+    if (rng.chance(BAL.luck.potion.waveDropChance)) addLuckBoost(d, now, potionSeconds(d), ev);
   }
   d.currencies.bags += bags;
   d.lifetime.wavesCleared += 1;
@@ -216,7 +217,7 @@ function onWorldCleared(c: Ctx) {
     const gems = BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world;
     d.currencies.gems += gems;
     ev.push({ type: 'worldFirstClear', world, gems });
-    addLuckBoost(d, now, BAL.luck.potion.seconds, ev);
+    addLuckBoost(d, now, potionSeconds(d), ev);
   }
   d.lifetime.bossesBeaten += 1;
   ev.push({ type: 'stageClear', stage: world, firstTime });

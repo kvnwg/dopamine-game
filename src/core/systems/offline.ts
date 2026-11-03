@@ -5,6 +5,7 @@ import type { CoreEvent } from '../types';
 import { computeElapsed, MS_PER_HOUR, MS_PER_MINUTE } from '../time';
 import { addXp } from './progression';
 import { killRewards } from './stages';
+import { upgradeEffects } from './upgrades';
 import { computeStats } from './stats';
 
 export function offlineCapMs(_state: GameState): number {
@@ -71,9 +72,9 @@ export function offlineReward(rate: Rate, elapsedMs: number, bonusPct: number): 
   };
 }
 
-/** Offline bonus %. None yet (neighborhood clear bonuses went away with the worlds); kept as the hook for later bonuses. */
-export function offlineBonusPct(_state: GameState): number {
-  return 0;
+/** Offline bonus % (Offline Earnings in the upgrade tree). */
+export function offlineBonusPct(state: GameState): number {
+  return upgradeEffects(state).offlinePct;
 }
 
 /** App going to background: remember when and how fast we were earning. */

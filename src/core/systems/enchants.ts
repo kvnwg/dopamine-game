@@ -5,17 +5,24 @@ import type { GameState } from '../state';
 import type { ItemEnchant } from '../types';
 import { SLOTS } from '../../data';
 
+/** Tier weights after `mastery` levels of Enchant Mastery (shifted toward tiers II and III). */
+export function enchantTierWeights(mastery = 0): number[] {
+  const e = BAL.enchant;
+  return e.tierWeights.map((w, i) => Math.max(1, w + e.tierShiftPerLevel[i] * mastery));
+}
+
 /** Rolls 0-3 enchantments (distinct) for a new item. */
-export function rollEnchants(rng: Rng, chance: number): ItemEnchant[] {
+export function rollEnchants(rng: Rng, chance: number, mastery = 0): ItemEnchant[] {
   if (!rng.chance(chance)) return [];
   const e = BAL.enchant;
+  const tierWeights = enchantTierWeights(mastery);
   const count = 1 + Number(rng.weighted(e.countWeights.map((w, i) => [String(i), w] as [string, number])));
   const pool: Array<[string, number]> = DATA.enchants.map((x) => [x.id, x.weight]);
   const out: ItemEnchant[] = [];
   for (let i = 0; i < count && pool.length > 0; i++) {
     const id = rng.weighted(pool);
     pool.splice(pool.findIndex(([k]) => k === id), 1);
-    const tier = 1 + Number(rng.weighted(e.tierWeights.map((w, k) => [String(k), w] as [string, number])));
+    const tier = 1 + Number(rng.weighted(tierWeights.map((w, k) => [String(k), w] as [string, number])));
     out.push({ id, tier });
   }
   return out;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyAction, canRebirth, combatEffects, createItem, currentLuck, enchantPowerMult, goldMult, inventoryCapacity,
-  luckBreakdown, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollInterval, rollRarity, Rng, tick,
+  computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng,
+  spinCycle, spinShare, tick,
   upgradeCostAt, upgradeDef, upgradeEffects, type CoreEvent, type GameState, type Item,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
@@ -96,57 +97,86 @@ describe('luck odds ("1 in X")', () => {
   });
 });
 
-describe('the auto-roller', () => {
-  it('the first roll is the scripted Legendary Traffic Cone, then rolls keep coming without input', () => {
+describe('the wheel', () => {
+  it('the first spin is the scripted Legendary Traffic Cone, then spins keep coming without input', () => {
     const rng = new Rng(1);
     const { events } = runTicks(clone(freshState()), 120, rng);
     const rolls = events.filter((e) => e.type === 'roll');
-    expect(rolls.length).toBeGreaterThanOrEqual(Math.floor(12 / BAL.roll.baseIntervalSeconds) - 1);
+    expect(rolls.length).toBeGreaterThanOrEqual(Math.floor(12 / spinCycle(freshState())) - 1);
     const first = rolls[0];
     expect(first.type === 'roll' && first.item.baseId).toBe('hat_traffic_cone');
     expect(first.type === 'roll' && first.item.rarity).toBe('legendary');
   });
 
-  it('trash bags are spent as fast bonus rolls', () => {
-    const rng = new Rng(2);
+  it('a spin starts with its result already decided, lands after spinSeconds, then rests', () => {
+    const rng = new Rng(11);
     const st = rollingState();
-    st.currencies.bags = 8;
-    const ticks = Math.ceil((8 / BAL.roll.bagRollsPerSecond) * 10) + 2;
-    const { state, events } = runTicks(st, ticks, rng);
-    expect(state.currencies.bags).toBe(0);
-    expect(events.filter((e) => e.type === 'roll' && e.source === 'bag')).toHaveLength(8);
+    st.currencies.bags = 0;
+    const cycle = spinCycle(st);
+    expect(cycle).toBeGreaterThanOrEqual(2);
+    expect(cycle).toBeLessThanOrEqual(3);
+    const { events } = runTicks(st, 1, rng);
+    const start = events.find((e) => e.type === 'spinStart');
+    expect(start?.type === 'spinStart' && start.spinSeconds).toBeCloseTo(cycle * spinShare());
+    expect(start?.type === 'spinStart' && start.restSeconds).toBeCloseTo(cycle * (1 - spinShare()));
+    const ticksToLand = Math.ceil(((start as Extract<CoreEvent, { type: 'spinStart' }>).spinSeconds) * 10);
+    const { events: ev2 } = runTicks(st, ticksToLand + 1, new Rng(11));
+    const landed = ev2.find((e) => e.type === 'roll');
+    expect(landed?.type === 'roll' && start?.type === 'spinStart' && landed.item.uid).toBe(start?.type === 'spinStart' ? start.item.uid : -1);
   });
 
-  it('every Nth roll is a lucky roll', () => {
+  it('Spin Speed upgrades shorten the cycle, down to a floor', () => {
+    const st = rollingState();
+    const base = spinCycle(st);
+    st.upgrades.rollSpeed = 3;
+    expect(spinCycle(st)).toBeCloseTo(base * (1 - BAL.roll.speedPerLevel) ** 3);
+    st.upgrades.rollSpeed = 999;
+    expect(spinCycle(st)).toBe(BAL.roll.minCycleSeconds);
+  });
+
+  it('a Trash Bag pays for a faster turbo spin', () => {
+    const rng = new Rng(2);
+    const st = rollingState();
+    st.currencies.bags = 5;
+    expect(spinCycle(st, true)).toBeCloseTo(Math.max(BAL.roll.minTurboCycleSeconds, spinCycle(st) / BAL.roll.turboSpeedMult));
+    const seconds = 5 * spinCycle(st, true) + 0.5;
+    const { state, events } = runTicks(st, Math.ceil(seconds * 10), rng);
+    const turbo = events.filter((e) => e.type === 'roll' && e.source === 'turbo').length;
+    expect(turbo).toBeGreaterThanOrEqual(4);
+    expect(state.currencies.bags).toBeLessThanOrEqual(1);
+    // Without bags the same time gives fewer spins.
+    const plain = runTicks(rollingState(), Math.ceil(seconds * 10), new Rng(2)).events.filter((e) => e.type === 'roll').length;
+    expect(turbo).toBeGreaterThan(plain);
+  });
+
+  it('every Nth spin is a lucky spin', () => {
     const rng = new Rng(3);
     const st = rollingState();
     st.currencies.bags = 40;
-    const { events } = runTicks(st, 120, rng);
+    const { events } = runTicks(st, 300, rng);
     const rolls = events.filter((e) => e.type === 'roll');
     const lucky = rolls.filter((e) => e.type === 'roll' && e.lucky).length;
     expect(lucky).toBe(Math.floor(rolls.length / luckyEvery(st)));
   });
 
-  it('auto-equips upgrades and keeps the highest-power items when the bag is full', () => {
+  it('never equips by itself; the bag keeps the highest-power items when full', () => {
     const rng = new Rng(4);
     const st = rollingState();
     st.currencies.bags = 300;
-    const { state } = runTicks(st, 1200, rng);
+    const { state, events } = runTicks(st, 1200, rng);
+    expect(events.some((e) => e.type === 'equip')).toBe(false);
+    for (const slot of Object.keys(state.equipped)) expect(state.equipped[slot as keyof typeof state.equipped]).toBeNull();
     const cap = inventoryCapacity(state);
     expect(state.inventory.length).toBe(cap);
-    // Sorted by power, strongest first.
     for (let i = 1; i < state.inventory.length; i++) expect(state.inventory[i - 1].power).toBeGreaterThanOrEqual(state.inventory[i].power);
-    // Nothing in the bag beats the equipped item of its slot (auto-equip on).
-    for (const it of state.inventory) expect(it.power).toBeLessThanOrEqual(state.equipped[it.slot]!.power);
+    expect(events.some((e) => e.type === 'roll' && e.placed === 'scrapped')).toBe(true);
   });
 
   it('scraps a new item that is weaker than everything in a full bag', () => {
     const rng = new Rng(5);
     const st = rollingState();
-    st.autoEquip = false;
     st.inventory = Array.from({ length: inventoryCapacity(st) }, (_, i) => makeItem({ uid: 1000 + i, power: 1e9 }));
-    st.currencies.bags = 1;
-    const { state, events } = runTicks(st, 4, rng);
+    const { state, events } = runTicks(st, 40, rng);
     expect(state.inventory.every((x) => x.power === 1e9)).toBe(true);
     expect(events.some((e) => e.type === 'roll' && e.placed === 'scrapped')).toBe(true);
     expect(state.currencies.coins).toBeGreaterThan(0);
@@ -155,23 +185,47 @@ describe('the auto-roller', () => {
   it('locked items are never auto-scrapped', () => {
     const rng = new Rng(6);
     const st = rollingState();
-    st.autoEquip = false;
     st.inventory = Array.from({ length: inventoryCapacity(st) }, (_, i) => makeItem({ uid: 2000 + i, power: 0, locked: true }));
     st.currencies.bags = 5;
-    const { state } = runTicks(st, 10, rng);
+    const { state } = runTicks(st, 60, rng);
     expect(state.inventory.filter((x) => x.locked)).toHaveLength(inventoryCapacity(st));
   });
 
-  it('manual equip, scrap and lock from the bag', () => {
+  it('equipping (by dragging) moves the old item to the bag; scrap, lock, and Scrap All', () => {
     const rng = new Rng(7);
     let st = rollingState();
-    st.inventory = [makeItem({ uid: 77, slot: 'hat', power: 5 }), makeItem({ uid: 78, slot: 'ring', power: 6 })];
+    st.inventory = [
+      makeItem({ uid: 77, slot: 'hat', power: 5 }),
+      makeItem({ uid: 78, slot: 'ring', power: 6 }),
+      makeItem({ uid: 79, slot: 'hat', power: 9 }),
+    ];
     st = act(st, { type: 'equipItem', uid: 77 }, rng).state;
     expect(st.equipped.hat?.uid).toBe(77);
+    expect(isUpgrade(st, st.inventory.find((x) => x.uid === 79)!)).toBe(true);
+    st = act(st, { type: 'equipItem', uid: 79 }, rng).state;
+    expect(st.equipped.hat?.uid).toBe(79);
+    expect(st.inventory.some((x) => x.uid === 77)).toBe(true);
     st = act(st, { type: 'toggleLock', uid: 78 }, rng).state;
-    expect(act(st, { type: 'scrapItem', uid: 78 }, rng).state.inventory).toHaveLength(1);
-    st = act(st, { type: 'toggleLock', uid: 78 }, rng).state;
-    expect(act(st, { type: 'scrapItem', uid: 78 }, rng).state.inventory).toHaveLength(0);
+    expect(act(st, { type: 'scrapItem', uid: 78 }, rng).state.inventory.some((x) => x.uid === 78)).toBe(true);
+    const coins = st.currencies.coins;
+    const r = act(st, { type: 'scrapAll' }, rng);
+    expect(r.state.inventory.map((x) => x.uid)).toEqual([78]);
+    const ev = r.events.find((e) => e.type === 'scrapAll');
+    expect(ev?.type === 'scrapAll' && ev.count).toBe(1);
+    expect(r.state.currencies.coins).toBeGreaterThan(coins);
+  });
+});
+
+describe('"1 in X" item odds', () => {
+  it('match the base chance of the rarity, and enchantments make an item rarer', () => {
+    const c = rarityChances(1);
+    expect(itemOddsOneIn({ rarity: 'legendary', enchants: [] })).toBe(Math.round(1 / c.legendary));
+    expect(itemOddsOneIn({ rarity: 'junk', enchants: [] })).toBe(Math.round(1 / c.junk));
+    const plain = itemOddsOneIn({ rarity: 'epic', enchants: [] });
+    const one = itemOddsOneIn({ rarity: 'epic', enchants: [{ tier: 1 }] });
+    const three = itemOddsOneIn({ rarity: 'epic', enchants: [{ tier: 3 }, { tier: 3 }, { tier: 3 }] });
+    expect(one).toBeGreaterThan(plain * 10);
+    expect(three).toBeGreaterThan(one * 1000);
   });
 });
 
@@ -183,14 +237,18 @@ describe('upgrade grid', () => {
     expect(upgradeCostAt(def, 3)).toBe(Math.round(def.cost.base * def.cost.growth ** 3));
     let st = rollingState();
     st.currencies.coins = 1e6;
-    const before = rollInterval(st);
+    const before = spinCycle(st);
+    // The tree: Spin Speed is locked until Luck is bought.
+    expect(act(st, { type: 'buyUpgrade', id: 'rollSpeed' }, rng).state.upgrades.rollSpeed).toBeUndefined();
+    st = act(st, { type: 'buyUpgrade', id: 'luck' }, rng).state;
     for (let i = 0; i < 3; i++) st = act(st, { type: 'buyUpgrade', id: 'rollSpeed' }, rng).state;
     expect(st.upgrades.rollSpeed).toBe(3);
-    expect(rollInterval(st)).toBeCloseTo(before * (1 - BAL.roll.speedPerLevel) ** 3);
-    st = act(st, { type: 'buyUpgrade', id: 'bagSpace' }, rng).state;
-    expect(inventoryCapacity(st)).toBe(BAL.inventory.baseCapacity + upgradeDef('bagSpace')!.perLevel);
+    expect(spinCycle(st)).toBeCloseTo(before * (1 - BAL.roll.speedPerLevel) ** 3);
     st = act(st, { type: 'buyUpgrade', id: 'gold' }, rng).state;
     expect(goldMult(st)).toBeCloseTo(1 + upgradeDef('gold')!.perLevel / 100);
+    st = act(st, { type: 'buyUpgrade', id: 'gold' }, rng).state;
+    st = act(st, { type: 'buyUpgrade', id: 'bagSpace' }, rng).state;
+    expect(inventoryCapacity(st)).toBe(BAL.inventory.baseCapacity + upgradeDef('bagSpace')!.perLevel);
   });
 
   it('cannot buy without gold or past max level', () => {
@@ -205,7 +263,7 @@ describe('upgrade grid', () => {
 });
 
 describe('rebirth', () => {
-  it('requires the world and gold, then resets progress and multiplies luck and gold', () => {
+  it('requires the world and gold, then wipes the raccoon and grants permanent multipliers', () => {
     const rng = new Rng(10);
     let st = rollingState();
     const req = rebirthRequirement(0);
@@ -222,10 +280,16 @@ describe('rebirth', () => {
     expect(st.upgrades).toEqual({});
     expect(st.stage.highestCleared).toBe(0);
     expect(st.battle.stage).toBe(1);
-    expect(st.equipped.hat?.uid).toBe(5);
-    expect(st.player.level).toBe(9);
+    // Items, bag and level are gone.
+    expect(st.equipped.hat).toBeNull();
+    expect(st.inventory).toEqual([]);
+    expect(st.player.level).toBe(1);
+    expect(st.player.xp).toBe(0);
     expect(currentLuck(st, T0)).toBeCloseTo(1 + BAL.rebirth.luckPer);
     expect(goldMult(st)).toBeCloseTo(1 + BAL.rebirth.goldMultPer);
+    expect(computeStats(st).ATK).toBeCloseTo(BAL.player.base.ATK * (1 + BAL.rebirth.statPctPer / 100));
+    const luckDef = upgradeDef('luck')!;
+    expect(upgradeCostAt(luckDef, 0, 1)).toBe(Math.max(1, Math.round(luckDef.cost.base * (1 - BAL.rebirth.upgradeDiscountPer))));
     expect(rebirthRequirement(1).world).toBeGreaterThan(req.world);
     expect(rebirthRequirement(1).gold).toBeGreaterThan(req.gold);
     expect(rebirthRequirement(99).world).toBe(DATA.worlds.length);
@@ -258,19 +322,15 @@ describe('enchantments', () => {
     const mult = 1 + enchantPowerMult([{ id: 'golden', tier: 2 }]);
     expect(Math.abs(ench.power - plain.power * mult)).toBeLessThanOrEqual(1.5);
     expect(ench.power).toBeGreaterThan(plain.power);
-    let st = rollingState();
-    st.dumpster.forcedRarity = 'decent';
-    st.upgrades.enchant = 0;
-    // Force a Prismatic roll by rolling until one appears in a controlled loop.
+    // Roll instantly (no wheel) until a Prismatic shows up on a forced Decent.
+    const st = rollingState();
+    st.upgrades.luck = 3;
+    st.upgrades.enchant = upgradeDef('enchant')!.max;
     let bumped = false;
-    for (let i = 0; i < 4000 && !bumped; i++) {
-      st.currencies.bags = 1;
+    for (let i = 0; i < 20_000 && !bumped; i++) {
       st.dumpster.forcedRarity = 'decent';
-      const r = runTicks(st, 1, rng);
-      st = r.state;
-      for (const e of r.events) {
-        if (e.type === 'roll' && e.item.enchants.some((x) => x.id === 'prismatic')) bumped = e.item.rarity !== 'decent';
-      }
+      const item = performRoll(st, rng, T0, []);
+      if (item.enchants.some((x) => x.id === 'prismatic')) bumped = item.rarity !== 'decent';
     }
     expect(bumped).toBe(true);
   });
@@ -289,7 +349,6 @@ describe('enchantments', () => {
   it('burn, chain and explosion show up in a real fight', () => {
     const rng = new Rng(13);
     const st = rollingState();
-    st.autoEquip = false;
     st.equipped.weapon = makeItem({
       slot: 'weapon', power: 1e9,
       enchants: [{ id: 'flaming', tier: 3 }, { id: 'thundering', tier: 3 }, { id: 'explosive', tier: 3 }],
@@ -303,7 +362,6 @@ describe('enchantments', () => {
   it('thorns reflect damage to attackers', () => {
     const rng = new Rng(14);
     const st = rollingState();
-    st.autoEquip = false;
     st.equipped.jacket = makeItem({ slot: 'jacket', power: 1e9, enchants: [{ id: 'thorny', tier: 3 }] });
     const { events } = runTicks(st, 300, rng);
     const thorns = events.find((e) => e.type === 'thorns');

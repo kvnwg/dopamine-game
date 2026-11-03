@@ -145,13 +145,14 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, 152px);
+  grid-template-columns: repeat(6, 146px);
   justify-content: space-between;
-  row-gap: 18px;
+  row-gap: 40px;
+  padding-top: 22px;
 }
 .slotEmpty {
-  width: 152px;
-  height: 152px;
+  width: 146px;
+  height: 146px;
   border-radius: 30px;
   border: 4px dashed rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
@@ -162,6 +163,52 @@
   font-size: 28px;
   line-height: 1.4;
   color: #a9aed0;
+}
+
+/* ------------------------------------------------------------ bag tools */
+.dragNote {
+  font-size: 20px;
+  color: #a9aed0;
+  max-width: 420px;
+  text-align: right;
+  line-height: 1.15;
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.segmented {
+  display: flex;
+  border-radius: 999px;
+  border: 5px solid var(--ink);
+  background: #15172a;
+  overflow: hidden;
+}
+.segBtn {
+  padding: 8px 26px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #8f95bd;
+}
+.segOn {
+  background: linear-gradient(180deg, #8fd0ff, #42a5f5 55%, #2569b8);
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.scrapAll {
+  gap: 8px;
+}
+.scrapGold {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding: 0 12px 0 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 26px;
 }
 
 /* ------------------------------------------------------------ upgrades */
@@ -255,9 +302,16 @@
 }
 
 /* ------------------------------------------------------------ rebirth */
+.rbPanel {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.rbPanel::-webkit-scrollbar {
+  display: none;
+}
 .rbHero {
   position: relative;
-  height: 150px;
+  height: 116px;
   flex: none;
   display: flex;
   align-items: center;
@@ -287,10 +341,10 @@
 }
 .rbCard {
   flex: none;
-  padding: 12px 24px 16px;
+  padding: 10px 24px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .req {
   display: flex;
@@ -332,13 +386,13 @@
   background: linear-gradient(90deg, #5bc236, #a5ef5a);
 }
 .rbRewards {
-  display: flex;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 .rbReward {
   --rc: #fff;
-  flex: 1;
-  padding: 10px 16px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -358,7 +412,7 @@
 }
 .rbFromTo {
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: 30px;
   color: #7a6a60;
 }
 .rbFromTo b {
@@ -376,7 +430,8 @@
   text-align: center;
 }
 .rbGo {
-  min-height: 110px;
+  flex: none;
+  min-height: 100px;
   font-size: 52px;
-  margin: 4px 60px 0;
+  margin: 2px 60px 0;
 }

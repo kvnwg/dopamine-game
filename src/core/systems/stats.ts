@@ -36,7 +36,7 @@ export interface StatBreakdown {
   pct: Stats;
 }
 
-type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades'>>;
+type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades' | 'rebirths'>>;
 
 export function statSources(state: StatState): StatBreakdown {
   const flat = zeroStats();
@@ -56,6 +56,13 @@ export function statSources(state: StatState): StatBreakdown {
   pct.ATK += up.atkPct;
   pct.HP += up.hpPct;
   flat.BAG_FIND += up.bagFind;
+  flat.CRIT += up.critChance;
+  flat.CRIT_DMG += up.critDmg;
+  flat.LIFESTEAL += up.lifesteal;
+  flat.BOSS_DMG += up.bossDmg;
+  const reb = (state.rebirths ?? 0) * BAL.rebirth.statPctPer;
+  pct.ATK += reb;
+  pct.HP += reb;
   return { flat, pct };
 }
 

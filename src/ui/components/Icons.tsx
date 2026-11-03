@@ -257,3 +257,16 @@ export const GlobeIcon = (p: P) => (
     <path d="M18 18c2-3 6-6 10-7" stroke="#d6f0ff" strokeWidth={4} />
   </Svg>
 );
+
+export const WheelIcon = (p: P & { gold?: boolean }) => (
+  <Svg {...p}>
+    <circle cx="32" cy="34" r="25" fill={p.gold ? '#ffc233' : '#ffffff'} />
+    <path d="M32 34 32 9M32 34 53 22M32 34 53 46M32 34 32 59M32 34 11 46M32 34 11 22" strokeWidth={3.5} />
+    <path d="M32 34 32 9 A25 25 0 0 1 53 22 Z" fill={p.gold ? '#ff8a00' : '#ef5350'} strokeWidth={3.5} />
+    <path d="M32 34 53 46 A25 25 0 0 1 32 59 Z" fill={p.gold ? '#fff3a0' : '#42a5f5'} strokeWidth={3.5} />
+    <path d="M32 34 11 46 A25 25 0 0 1 11 22 Z" fill={p.gold ? '#ffd23f' : '#5bc236'} strokeWidth={3.5} />
+    <circle cx="32" cy="34" r="25" />
+    <circle cx="32" cy="34" r="6" fill="#2e2523" />
+    <path d="M26 2h12l-6 10z" fill="#ef5350" strokeWidth={3.5} />
+  </Svg>
+);

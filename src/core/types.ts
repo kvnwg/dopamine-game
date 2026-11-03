@@ -8,8 +8,8 @@ export type ItemEnchant = z.infer<typeof ItemEnchantSchema>;
 
 export type Stats = Record<StatId, number>;
 
-/** Where a rolled item ended up. */
-export type RollPlacement = 'equipped' | 'bag' | 'scrapped';
+/** Where a rolled item ended up (equipping is always the player's call). */
+export type RollPlacement = 'bag' | 'scrapped';
 
 /** Events emitted by core for rendering, UI juice, and analytics. Never saved. */
 export type CoreEvent =
@@ -33,11 +33,25 @@ export type CoreEvent =
   | { type: 'stageStart'; stage: number; push: boolean }
   | { type: 'bossAttempt'; stage: number }
   | { type: 'levelUp'; level: number }
+  /** The wheel starts turning; `item` is where it will land after `spinSeconds`. */
+  | {
+      type: 'spinStart';
+      item: Item;
+      lucky: boolean;
+      golden: boolean;
+      odds: number;
+      luck: number;
+      turbo: boolean;
+      spinSeconds: number;
+      restSeconds: number;
+    }
+  /** The wheel lands. */
   | {
       type: 'roll';
       item: Item;
       lucky: boolean;
-      source: 'timer' | 'bag';
+      golden: boolean;
+      source: 'free' | 'turbo';
       /** Base odds of the item's rarity, "1 in X" (1 for Junk). */
       odds: number;
       luck: number;
@@ -46,6 +60,7 @@ export type CoreEvent =
     }
   | { type: 'equip'; item: Item; replaced: Item | null; auto: boolean }
   | { type: 'scrap'; item: Item; xp: number; coins: number; auto: boolean }
+  | { type: 'scrapAll'; count: number; xp: number; coins: number }
   | { type: 'luckBoost'; endsAt: number; seconds: number }
   | { type: 'upgradeBought'; id: string; level: number }
   | { type: 'rebirth'; count: number }
@@ -61,8 +76,9 @@ export type CoreEvent =
 export type GameAction =
   | { type: 'equipItem'; uid: number }
   | { type: 'scrapItem'; uid: number }
+  /** Scraps every unlocked item in the bag. */
+  | { type: 'scrapAll' }
   | { type: 'toggleLock'; uid: number }
-  | { type: 'setAutoEquip'; enabled: boolean }
   | { type: 'buyUpgrade'; id: string }
   | { type: 'rebirth' }
   | { type: 'travel'; world: number }

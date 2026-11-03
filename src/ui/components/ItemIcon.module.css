@@ -1,11 +1,26 @@
-/* Item tile: chunky cel card. Every size derives from --s. */
-.tile {
+/* Item tile: chunky cel card with a loud "1 in X" banner on top. Every size derives from --s. */
+.wrap {
   --c: #9e9e9e;
-  --bw: max(3px, calc(var(--s) * 0.034));
   position: relative;
   flex: none;
   width: var(--s);
   height: var(--s);
+  -webkit-touch-callout: none;
+}
+.tappable {
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tappable:active {
+  transform: scale(0.93);
+}
+.grab {
+  touch-action: pan-y;
+}
+.tile {
+  --bw: max(3px, calc(var(--s) * 0.034));
+  position: absolute;
+  inset: 0;
   border-radius: calc(var(--s) * 0.2);
   border: var(--bw) solid var(--ink);
   box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink);
@@ -14,13 +29,6 @@
     linear-gradient(180deg, color-mix(in srgb, var(--c) 72%, #fff) 0%, var(--c) 52%, color-mix(in srgb, var(--c) 66%, #000) 100%);
   overflow: hidden;
   isolation: isolate;
-}
-.tappable {
-  cursor: pointer;
-  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.tappable:active {
-  transform: scale(0.92);
 }
 .glow {
   position: absolute;
@@ -31,10 +39,10 @@
 }
 .art {
   position: absolute;
-  left: 7%;
-  top: 3%;
-  width: 86%;
-  height: 86%;
+  left: 9%;
+  top: 9%;
+  width: 82%;
+  height: 82%;
   object-fit: contain;
   z-index: 1;
   filter: drop-shadow(0 calc(var(--s) * 0.02) 0 rgba(46, 37, 35, 0.35));
@@ -51,22 +59,22 @@
   background: rgba(36, 28, 27, 0.82);
   color: #fff;
   font-family: var(--font-display);
-  font-size: max(15px, calc(var(--s) * 0.17));
+  font-size: max(14px, calc(var(--s) * 0.15));
   line-height: 1.25;
   white-space: nowrap;
 }
 .pips {
   position: absolute;
   left: calc(var(--s) * 0.06);
-  top: calc(var(--s) * 0.06);
+  top: calc(var(--s) * 0.16);
   display: flex;
   flex-direction: column;
   gap: calc(var(--s) * 0.025);
   z-index: 3;
 }
 .pip {
-  width: calc(var(--s) * 0.13);
-  height: calc(var(--s) * 0.13);
+  width: calc(var(--s) * 0.12);
+  height: calc(var(--s) * 0.12);
   border-radius: 50%;
   border: max(2px, calc(var(--s) * 0.022)) solid var(--ink);
   box-shadow: inset 0 calc(var(--s) * -0.02) 0 rgba(0, 0, 0, 0.25);
@@ -82,8 +90,97 @@
 .corner {
   position: absolute;
   right: calc(var(--s) * 0.04);
-  top: calc(var(--s) * 0.04);
+  top: calc(var(--s) * 0.16);
   z-index: 3;
+}
+
+/* The "1 in X" banner: sticks out over the top edge, rarity colored, chunky, impossible to miss. */
+.odds {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--s) * -0.15);
+  transform: translateX(-50%) rotate(-3deg);
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--s) * 0.03);
+  padding: calc(var(--s) * 0.01) calc(var(--s) * 0.08) calc(var(--s) * 0.02);
+  border-radius: calc(var(--s) * 0.12);
+  border: max(3px, calc(var(--s) * 0.03)) solid var(--ink);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, #fff), var(--c));
+  box-shadow: 0 calc(var(--s) * 0.03) 0 var(--ink);
+  font-family: var(--font-display);
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.odds i {
+  font-style: normal;
+  font-size: max(11px, calc(var(--s) * 0.12));
+  -webkit-text-stroke: max(3px, calc(var(--s) * 0.03)) var(--ink);
+  paint-order: stroke fill;
+}
+.odds b {
+  font-weight: 400;
+  font-size: max(16px, calc(var(--s) * 0.22));
+  line-height: 1;
+  -webkit-text-stroke: max(4px, calc(var(--s) * 0.04)) var(--ink);
+  paint-order: stroke fill;
+}
+.oddsRare {
+  animation: oddsPulse 1.3s ease-in-out infinite;
+}
+@keyframes oddsPulse {
+  50% {
+    transform: translateX(-50%) rotate(-3deg) scale(1.08);
+    box-shadow: 0 calc(var(--s) * 0.03) 0 var(--ink), 0 0 calc(var(--s) * 0.16) var(--c);
+  }
+}
+.oddsLegend {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
+  background-size: 100% 100%, 200% 100%;
+  animation: oddsPulse 1s ease-in-out infinite, oddsSlide 2s linear infinite;
+}
+@keyframes oddsSlide {
+  to { background-position: 0 0, 200% 0; }
+}
+.wrap[data-rarity='mythic'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #ff5252);
+  background-size: 100% 100%, 200% 100%;
+}
+.wrap[data-rarity='mint'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #ffffff, #fff1c7, #ffcf4a, #fff1c7, #ffffff);
+  background-size: 100% 100%, 200% 100%;
+}
+.upgrade {
+  position: absolute;
+  right: calc(var(--s) * -0.06);
+  bottom: calc(var(--s) * 0.18);
+  z-index: 6;
+  width: calc(var(--s) * 0.3);
+  height: calc(var(--s) * 0.3);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: max(3px, calc(var(--s) * 0.03)) solid var(--ink);
+  background: #5bc236;
+  color: #fff;
+  font-size: max(13px, calc(var(--s) * 0.17));
+  line-height: 1;
+  box-shadow: 0 0 calc(var(--s) * 0.1) #a6ff7a;
+  animation: upBob 0.9s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes upBob {
+  50% { transform: translateY(calc(var(--s) * -0.05)); }
 }
 
 /* Rarity flourishes. */
@@ -150,7 +247,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .shine::after,
-  .mythic {
+  .mythic,
+  .oddsRare,
+  .oddsLegend,
+  .upgrade {
     animation: none;
   }
 }

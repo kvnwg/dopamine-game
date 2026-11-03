@@ -1,12 +1,13 @@
 /**
  * Headless balance simulator: plays the real core logic with a bot.
- * The roller runs on its own and the battle pushes through worlds by itself. The bot buys the
- * cheapest upgrade it can afford, upgrades the dumpster, rebirths as soon as it is allowed, and
- * (like a player watching the Worlds tab) jumps ahead to the hardest world that looks easy.
+ * The wheel spins on its own and the battle pushes through worlds by itself. Like an attentive
+ * player, the bot drags every upgrade it finds onto the raccoon, buys the cheapest unlocked node of
+ * the upgrade tree it can afford, upgrades the dumpster, rebirths as soon as it is allowed, and
+ * jumps ahead to the hardest world that reads Easy.
  */
 import {
-  applyAction, canRebirth, computeStats, createInitialState, currentLuck, Rng, tick, upgradeCost, upgradeCostAt,
-  upgradeLevel, worldCount, worldThreat, TICK_MS, type CoreEvent, type GameAction, type GameState,
+  affordableUpgrades, applyAction, canRebirth, computeStats, createInitialState, currentLuck, isUpgrade, Rng, tick, upgradeCost,
+  upgradePrice, worldCount, worldThreat, TICK_MS, type CoreEvent, type GameAction, type GameState,
 } from '../src/core';
 import { BAL, RARITIES } from '../src/data';
 
@@ -96,17 +97,18 @@ export function simulate(opts: SimOptions): SimResult {
         && state.currencies.coins >= upgradeCost(state.dumpster.level)) {
         act({ type: 'startDumpsterUpgrade' });
       }
-      // Buy the cheapest affordable upgrade, repeatedly.
-      for (let guard = 0; guard < 20; guard++) {
-        let best: { id: string; cost: number } | null = null;
-        for (const def of BAL.upgrades) {
-          const lvl = upgradeLevel(state, def.id);
-          if (lvl >= def.max) continue;
-          const cost = upgradeCostAt(def, lvl);
-          if (!best || cost < best.cost) best = { id: def.id, cost };
-        }
-        if (!best || best.cost > state.currencies.coins) break;
-        act({ type: 'buyUpgrade', id: best.id });
+      // Equip anything better than what is worn (the player drags it on).
+      for (let guard = 0; guard < 10; guard++) {
+        const up = state.inventory.find((it) => isUpgrade(state, it));
+        if (!up) break;
+        act({ type: 'equipItem', uid: up.uid });
+      }
+      // Buy the cheapest unlocked, affordable node of the tree, repeatedly.
+      for (let guard = 0; guard < 30; guard++) {
+        const options = affordableUpgrades(state);
+        if (options.length === 0) break;
+        options.sort((a, b) => upgradePrice(state, a) - upgradePrice(state, b));
+        act({ type: 'buyUpgrade', id: options[0].id });
       }
     }
 

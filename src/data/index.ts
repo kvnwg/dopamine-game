@@ -115,6 +115,17 @@ export function buildGameData(raw: {
 
   const enemiesById = new Map(enemies.map((e) => [e.id, e]));
   if (enemiesById.size !== enemies.length) fail('duplicate enemy id');
+  const upIds = new Set(balance.upgrades.map((u) => u.id));
+  for (const u of balance.upgrades) {
+    if (u.requires && !upIds.has(u.requires.id)) fail(`upgrade ${u.id} requires unknown upgrade ${u.requires.id}`);
+    // Walk up the tree to catch cycles.
+    let cur = u.requires?.id;
+    for (let steps = 0; cur; steps++) {
+      if (steps > balance.upgrades.length) fail(`upgrade tree has a cycle at ${u.id}`);
+      cur = balance.upgrades.find((x) => x.id === cur)?.requires?.id;
+    }
+  }
+
   const worldIds = new Set<string>();
   for (const w of worlds) {
     if (worldIds.has(w.id)) fail(`duplicate world id ${w.id}`);

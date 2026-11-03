@@ -71,6 +71,17 @@ export const MIGRATIONS: Record<number, Migration> = {
       battle,
     };
   },
+  /** v3 -> v4: the wheel. Rolls become spins; nothing is mid-spin after loading. Equipping is manual now. */
+  3: (s) => {
+    const roll = (s.roll ?? {}) as Record<string, unknown>;
+    const rest = { ...s };
+    delete rest.autoEquip;
+    return {
+      ...rest,
+      saveVersion: 4,
+      roll: { timer: 0, current: null, count: Number(roll.count ?? 0), sinceLucky: Number(roll.sinceLucky ?? 0) },
+    };
+  },
 };
 
 export function migrate(

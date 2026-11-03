@@ -7,7 +7,6 @@ import { useMemo, type CSSProperties } from 'react';
 import { DATA } from '../../data';
 import { itemName, rebirthGoldMult, rebirthLuckMult } from '../../core';
 import { useGame } from '../../app/store';
-import { dumpsterArt } from '../../render/icons';
 import { rarityColor } from '../../render/art';
 import { skipReveal } from '../rollController';
 import { t } from '../i18n';
@@ -65,23 +64,6 @@ function enchantDesc(id: string, tier: number): string {
 }
 export { enchantDesc };
 
-function Charging() {
-  const charging = useUi((u) => u.charging);
-  const art = dumpsterArt();
-  if (!charging) return null;
-  const color = rarityColor(charging.item.rarity);
-  return (
-    <div className={s.charge} style={{ ['--c' as string]: color } as CSSProperties}>
-      <div className={s.chargeGlow} />
-      <div className={s.chargeBin}>
-        <img className={s.chargeBody} src={art.body} alt="" draggable={false} />
-        <img className={s.chargeLid} src={art.lid} alt="" draggable={false} />
-      </div>
-      <span className={s.chargeBang}>!!!</span>
-    </div>
-  );
-}
-
 function Celebrate() {
   const view = useUi((u) => u.celebrate);
   const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
@@ -100,14 +82,17 @@ function Celebrate() {
           <Chunky text={title} size={it.rarity === 'mint' ? 96 : 116} grad={GRAD[it.rarity] ?? 'gold'} />
         </div>
         <div className={s.itemWrap}>
-          <ItemIcon item={it} size={320} />
+          <ItemIcon item={it} size={300} showOdds={false} />
         </div>
         <span className={s.name}>{itemName(it)}</span>
-        <span className={s.odds}>{t('reveal.oneIn', { odds: fmtOdds(view.odds) })}</span>
+        <span className={s.odds} data-rarity={it.rarity}>
+          <i>1 in</i>
+          <b>{fmtOdds(view.odds)}</b>
+        </span>
         <div className={s.tags}>
+          {view.golden && <span className={`${s.tag} ${s.tagGold}`}>{t('wheel.golden')}</span>}
           {view.lucky && <span className={`${s.tag} ${s.tagLucky}`}>{t('reveal.lucky')}</span>}
           {view.newRecord && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
-          {view.placed === 'equipped' && <span className={`${s.tag} ${s.tagEquip}`}>{t('reveal.equipped')}</span>}
         </div>
         {it.enchants.length > 0 && (
           <div className={s.enchants}>
@@ -123,7 +108,7 @@ function Celebrate() {
         )}
       </div>
       {!reduceFlashing && <div className={s.flash} />}
-      <span className={s.tap}>{t('reveal.tap')}</span>
+      <span className={s.tap}>{view.placed === 'bag' ? t('reveal.dragHint') : t('reveal.tap')}</span>
     </div>
   );
 }
@@ -151,7 +136,6 @@ function RebirthFx() {
 export function RevealLayer() {
   return (
     <>
-      <Charging />
       <Celebrate />
       <RebirthFx />
     </>

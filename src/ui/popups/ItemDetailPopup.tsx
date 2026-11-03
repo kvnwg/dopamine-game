@@ -1,5 +1,6 @@
+import type { CSSProperties } from 'react';
 import { DATA, SLOTS } from '../../data';
-import { formatNumber, formatStatValue, itemFlavor, itemName, RARITY_ODDS, scrapValue, type Item } from '../../core';
+import { formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { haptics } from '../../services';
@@ -36,16 +37,19 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
   const scrapGold = scrapValue(g, item).coins;
   return (
     <Modal title={t(`rarity.${item.rarity}`)} tone={item.rarity === 'legendary' || item.rarity === 'mint' ? 'gold' : item.rarity === 'epic' ? 'purple' : item.rarity === 'mythic' ? 'red' : item.rarity === 'decent' ? 'green' : 'blue'} onClose={onClose}>
+      <div className={s.bigOdds} data-rarity={item.rarity} style={{ ['--c' as string]: color } as CSSProperties}>
+        <i>1 in</i>
+        <b>{fmtOdds(itemOddsOneIn(item))}</b>
+      </div>
       <div className={s.itemHead}>
-        <ItemIcon item={item} size={200} equipped={equipped} showPower={false} />
+        <ItemIcon item={item} size={200} equipped={equipped} showPower={false} showOdds={false} />
         <div className={s.itemHeadText}>
           <span className={s.itemName} style={{ color }}>
             {itemName(item)}
           </span>
           <span className={s.meta}>
-            {t('item.meta', { slot: t(`slot.${item.slot}`), level: item.level })} · {t('roll.oneIn', { odds: fmtOdds(RARITY_ODDS[item.rarity]) })}
+            {t('item.meta', { slot: t(`slot.${item.slot}`), level: item.level })} · {t('item.worldTier', { n: item.tier })}
           </span>
-          <span className={s.meta}>{t('item.worldTier', { n: item.tier })}</span>
           <div className={s.powerBig}>
             <PowerIcon size={54} />
             {formatNumber(item.power)}
@@ -94,16 +98,6 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
         ) : (
           <>
             <button
-              className="btn"
-              onClick={() => {
-                haptics.impact('medium');
-                dispatch({ type: 'equipItem', uid: item.uid });
-                onClose();
-              }}
-            >
-              {t('item.equip')}
-            </button>
-            <button
               className="btn blue"
               onClick={() => {
                 haptics.impact('light');
@@ -128,6 +122,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
           </>
         )}
       </div>
+      {!equipped && <p className={s.dragHint}>{t('item.dragHint')}</p>}
       {!equipped && <p className={s.note}>{t('item.lockedNote')}</p>}
     </Modal>
   );

@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
 import { DATA, type Slot } from '../../data';
-import { formatNumber, rarityAtLeast, type Item } from '../../core';
+import { formatNumber, itemOddsOneIn, rarityAtLeast, type Item } from '../../core';
 import { emptyIconUrl, itemIconUrl } from '../../render/icons';
 import { rarityColor } from '../../render/art';
+import { useItemDrag } from '../drag';
 import { CheckIcon, LockIcon } from './Icons';
 import s from './ItemIcon.module.css';
 
@@ -11,8 +12,14 @@ interface Props {
   slot?: Slot;
   size?: number;
   showPower?: boolean;
+  /** The big "1 in X" banner (on by default for every item). */
+  showOdds?: boolean;
   equipped?: boolean;
-  onClick?: () => void;
+  /** Better than what is equipped in its slot: green arrow. */
+  upgrade?: boolean;
+  /** Can be dragged onto the raccoon to equip. */
+  draggable?: boolean;
+  onTap?: () => void;
   className?: string;
   style?: CSSProperties;
 }
@@ -21,38 +28,60 @@ export function enchantColor(id: string): string {
   return DATA.enchantsById.get(id)?.color ?? '#ffffff';
 }
 
-/** An item tile: rarity-colored card, item art, power badge, enchant gems, lock/equipped badges. */
-export function ItemIcon({ item, slot, size = 150, showPower = true, equipped, onClick, className, style }: Props) {
+/** "1 in X" with short numbers (1K, 25K, 1M). */
+export function oddsShort(x: number): string {
+  return formatNumber(x);
+}
+
+/** An item tile: rarity card, art, power, enchant gems, a loud "1 in X" banner, and badges. */
+export function ItemIcon({
+  item, slot, size = 150, showPower = true, showOdds = true, equipped, upgrade, draggable, onTap, className, style,
+}: Props) {
+  const drag = useItemDrag(draggable && item ? item : null, onTap);
   const theSlot = item?.slot ?? slot ?? 'hat';
   const vars = { ['--s' as string]: `${size}px`, ...style } as CSSProperties;
   if (!item) {
     return (
-      <div className={`${s.tile} ${s.empty} ${className ?? ''}`} style={vars} onClick={onClick}>
-        <img className={s.ghost} src={emptyIconUrl(theSlot)} alt="" draggable={false} />
+      <div className={`${s.wrap} ${className ?? ''}`} style={vars} onClick={onTap} data-slot={theSlot}>
+        <div className={`${s.tile} ${s.empty}`}>
+          <img className={s.ghost} src={emptyIconUrl(theSlot)} alt="" draggable={false} />
+        </div>
       </div>
     );
   }
   const r = item.rarity;
   (vars as Record<string, string>)['--c'] = rarityColor(r);
+  const rare = rarityAtLeast(r, 'epic');
+  const handlers = draggable ? drag : { onClick: onTap };
   return (
     <div
-      className={[s.tile, s[r] ?? '', rarityAtLeast(r, 'epic') ? s.shine : '', onClick ? s.tappable : '', className ?? ''].join(' ')}
+      className={[s.wrap, onTap || draggable ? s.tappable : '', draggable ? s.grab : '', className ?? ''].join(' ')}
       style={vars}
       data-rarity={r}
-      onClick={onClick}
+      data-slot={theSlot}
+      {...handlers}
     >
-      <span className={s.glow} />
-      <img className={s.art} src={itemIconUrl(item.slot, r)} alt="" draggable={false} />
-      {item.enchants.length > 0 && (
-        <span className={s.pips}>
-          {item.enchants.map((en) => (
-            <span key={en.id} className={s.pip} style={{ background: enchantColor(en.id) }} data-tier={en.tier} />
-          ))}
+      <div className={[s.tile, s[r] ?? '', rare ? s.shine : ''].join(' ')}>
+        <span className={s.glow} />
+        <img className={s.art} src={itemIconUrl(item.slot, r)} alt="" draggable={false} />
+        {item.enchants.length > 0 && (
+          <span className={s.pips}>
+            {item.enchants.map((en) => (
+              <span key={en.id} className={s.pip} style={{ background: enchantColor(en.id) }} data-tier={en.tier} />
+            ))}
+          </span>
+        )}
+        {equipped && <CheckIcon className={s.corner} size={Math.round(size * 0.27)} />}
+        {!equipped && item.locked && <LockIcon className={s.corner} size={Math.round(size * 0.25)} />}
+        {showPower && <span className={s.power}>{formatNumber(item.power)}</span>}
+      </div>
+      {showOdds && (
+        <span className={`${s.odds} ${rare ? s.oddsRare : ''} ${rarityAtLeast(r, 'legendary') ? s.oddsLegend : ''}`}>
+          <i>1 in</i>
+          <b>{oddsShort(itemOddsOneIn(item))}</b>
         </span>
       )}
-      {equipped && <CheckIcon className={s.corner} size={Math.round(size * 0.27)} />}
-      {!equipped && item.locked && <LockIcon className={s.corner} size={Math.round(size * 0.25)} />}
-      {showPower && <span className={s.power}>{formatNumber(item.power)}</span>}
+      {upgrade && !equipped && <span className={s.upgrade}>▲</span>}
     </div>
   );
 }

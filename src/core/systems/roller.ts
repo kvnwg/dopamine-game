@@ -1,8 +1,10 @@
 /**
- * The always-on dumpster roller (RNG-game style):
- * - a free roll every `rollInterval` seconds, plus Trash Bags from fights spent as bonus rolls;
- * - every Nth roll is a lucky roll;
- * - new items auto-equip when they beat the equipped item's power, otherwise go to the bag;
+ * The always-on dumpster wheel (RNG-game style):
+ * - every roll is one spin: the result is rolled when the spin starts, lands when it stops, then
+ *   the wheel rests briefly and spins again (Spin Speed upgrades shorten the cycle);
+ * - a Trash Bag from fights makes a spin a faster turbo spin;
+ * - every Nth spin is a lucky spin;
+ * - new items go to the bag; the player equips by dragging them onto the raccoon;
  * - the bag has limited space and always keeps the highest-power items (the rest are scrapped).
  */
 import { BAL, DATA, RARITIES, type Rarity } from '../../data';
@@ -14,7 +16,7 @@ import { registerCodex } from './codex';
 import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
-import { currentLuck, luckyEvery, RARITY_ODDS, rollRarity } from './luck';
+import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity } from './luck';
 import { addXp } from './progression';
 import { rebirthGoldMult } from './rebirth';
 import { computeStats } from './stats';
@@ -22,10 +24,17 @@ import { upgradeEffects } from './upgrades';
 import { combatEffects } from './enchants';
 import { itemTierFor } from './worlds';
 
-export function rollInterval(state: GameState): number {
+/** Seconds for one spin cycle (spin + rest) at the current Spin Speed; turbo spins are faster. */
+export function spinCycle(state: Pick<GameState, 'upgrades'>, turbo = false): number {
   const r = BAL.roll;
   const levels = upgradeEffects(state).rollSpeed;
-  return Math.max(r.minIntervalSeconds, r.baseIntervalSeconds * Math.pow(1 - r.speedPerLevel, levels));
+  const cycle = Math.max(r.minCycleSeconds, (r.spinSeconds + r.restSeconds) * Math.pow(1 - r.speedPerLevel, levels));
+  return turbo ? Math.max(r.minTurboCycleSeconds, cycle / (r.turboSpeedMult + upgradeEffects(state).turboPower)) : cycle;
+}
+
+/** The share of a cycle spent spinning (the rest is the pause on the result). */
+export function spinShare(): number {
+  return BAL.roll.spinSeconds / (BAL.roll.spinSeconds + BAL.roll.restSeconds);
 }
 
 export function inventoryCapacity(state: GameState): number {
@@ -34,6 +43,21 @@ export function inventoryCapacity(state: GameState): number {
 
 export function enchantChance(state: GameState): number {
   return Math.min(1, BAL.enchant.baseChance + upgradeEffects(state).enchantChance);
+}
+
+/** XP multiplier from the XP Boost upgrade. */
+export function xpMult(state: Pick<GameState, 'upgrades'>): number {
+  return 1 + upgradeEffects(state).xpPct / 100;
+}
+
+/** Seconds a Luck Potion lasts (Potion Time upgrade adds to it). */
+export function potionSeconds(state: Pick<GameState, 'upgrades'>): number {
+  return BAL.luck.potion.seconds + upgradeEffects(state).potionTime;
+}
+
+/** Rolls without Epic or better before bad-luck protection kicks in (Pity Shield shortens it). */
+export function drySpell(state: Pick<GameState, 'upgrades'>): number {
+  return Math.max(8, BAL.dumpster.badLuck.drySpell - upgradeEffects(state).pity);
 }
 
 /** Gold multiplier from the Gold upgrade, Golden enchantments, and rebirths. */
@@ -60,9 +84,10 @@ function lowestUnlockedIndex(bag: Item[]): number {
 export function scrapValue(state: GameState, item: Item): { coins: number; xp: number } {
   const r = recycleRewards(item);
   const enchantBonus = 1 + 0.5 * item.enchants.reduce((s, e) => s + e.tier, 0);
+  const scrapBonus = 1 + upgradeEffects(state).scrapPct / 100;
   return {
-    coins: Math.round(r.coins * enchantBonus * goldMult(state) * BAL.economy.scrapGoldMult),
-    xp: Math.round(r.xp * enchantBonus * BAL.economy.scrapXpMult),
+    coins: Math.round(r.coins * enchantBonus * goldMult(state) * scrapBonus * BAL.economy.scrapGoldMult),
+    xp: Math.round(r.xp * enchantBonus * BAL.economy.scrapXpMult * xpMult(state)),
   };
 }
 
@@ -104,18 +129,17 @@ export function equip(d: GameState, item: Item, ev: CoreEvent[], auto: boolean):
 }
 
 function decidePlacement(d: GameState, item: Item): RollPlacement {
-  const cur = d.equipped[item.slot];
-  if (d.autoEquip && (!cur || item.power > cur.power)) return 'equipped';
   if (d.inventory.length < inventoryCapacity(d)) return 'bag';
   const worst = lowestUnlockedIndex(d.inventory);
   return worst >= 0 && item.power > d.inventory[worst].power ? 'bag' : 'scrapped';
 }
 
-/** One roll of the dumpster. */
-export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[], source: 'timer' | 'bag'): Item {
+/** Rolls the next item (the wheel's target) without placing it. */
+function rollItem(d: GameState, rng: Rng, now: number): { item: Item; lucky: boolean; golden: boolean; luck: number } {
   const dz = d.dumpster;
   const theme = dz.theme;
   let lucky = false;
+  let golden = false;
   let luck = currentLuck(d, now);
   let item: Item;
   if (!dz.firstDiveDone) {
@@ -123,70 +147,112 @@ export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[]
     item = createItem(DATA.itemsById.get(t.baseId)!, t.rarity, t.level, theme, rng, d.nextItemUid++);
     dz.firstDiveDone = true;
   } else {
+    const up = upgradeEffects(d);
     d.roll.sinceLucky += 1;
     if (d.roll.sinceLucky >= luckyEvery(d)) {
       lucky = true;
       d.roll.sinceLucky = 0;
-      luck *= BAL.roll.luckyRollMult;
+      luck *= BAL.roll.luckyRollMult + up.luckyMult;
+    }
+    if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) {
+      golden = true;
+      luck *= BAL.roll.goldenLuckMult;
     }
     let rarity: Rarity;
     const bl = BAL.dumpster.badLuck;
     if (dz.forcedRarity) {
       rarity = dz.forcedRarity;
       dz.forcedRarity = null;
-    } else if (dz.level >= bl.minDumpsterLevel && dz.dryStreak >= bl.drySpell) {
+    } else if (dz.level >= bl.minDumpsterLevel && dz.dryStreak >= drySpell(d)) {
       rarity = rollRarity(luck, rng, bl.minRarity);
     } else {
       rarity = rollRarity(luck, rng);
     }
     const slot = rollSlot(rng);
     const level = rollItemLevel(d.player.level, rng);
-    const enchants = rollEnchants(rng, enchantChance(d));
+    const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
     rarity = bumpRarity(rarity, rarityBump(enchants));
     const base = pickBaseItem(slot, theme, rarity, rng);
     item = createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
   }
+  return { item, lucky, golden, luck };
+}
+
+/** Starts a spin. A Trash Bag, if there is one, pays for a faster turbo spin. */
+export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
+  const turbo = d.currencies.bags >= 1;
+  if (turbo) d.currencies.bags -= 1;
+  const { item, lucky, golden, luck } = rollItem(d, rng, now);
+  const cycle = spinCycle(d, turbo);
+  const spinSeconds = cycle * spinShare();
+  const restSeconds = cycle - spinSeconds;
+  const odds = itemOddsOneIn(item);
+  d.roll.current = { item, lucky, golden, luck, odds, turbo, spinSeconds, restSeconds, landed: false };
+  d.roll.timer = 0;
+  ev.push({ type: 'spinStart', item: snap(item), lucky, golden, luck, odds, turbo, spinSeconds, restSeconds });
+}
+
+/** The wheel stops: records, Codex, then equip, bag, or scrap. */
+function landSpin(d: GameState, ev: CoreEvent[]): void {
+  const spin = d.roll.current;
+  if (!spin || spin.landed) return;
+  spin.landed = true;
+  const item = snap(spin.item);
+  const dz = d.dumpster;
   d.roll.count += 1;
   dz.totalDives += 1;
   dz.dryStreak = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dz.dryStreak + 1;
-  const odds = RARITY_ODDS[item.rarity];
-  const newRecord = odds > d.records.bestOdds;
+  const newRecord = spin.odds > d.records.bestOdds;
   if (newRecord) {
-    d.records.bestOdds = odds;
+    d.records.bestOdds = spin.odds;
     d.records.bestItemName = itemName(item);
     d.records.bestRarity = item.rarity;
   }
   const placed = decidePlacement(d, item);
-  ev.push({ type: 'roll', item, lucky, source, odds, luck, placed, newRecord });
+  ev.push({
+    type: 'roll', item, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: spin.odds, luck: spin.luck,
+    placed, newRecord,
+  });
   registerCodex(d, item, ev);
-  if (placed === 'equipped') equip(d, item, ev, true);
-  else if (placed === 'bag') addToBag(d, item, ev);
+  if (placed === 'bag') addToBag(d, item, ev);
   else scrapItem(d, item, ev, true);
+}
+
+/** True when `item` would beat what is equipped in its slot (or the slot is empty). */
+export function isUpgrade(state: Pick<GameState, 'equipped'>, item: Item): boolean {
+  const cur = state.equipped[item.slot];
+  return !cur || item.power > cur.power;
+}
+
+/** One whole roll right now (spin start and landing at once). Used by tests and tools. */
+export function performRoll(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): Item {
+  if (d.roll.current && !d.roll.current.landed) landSpin(d, ev);
+  startSpin(d, rng, now, ev);
+  const item = snap(d.roll.current!.item);
+  landSpin(d, ev);
+  d.roll.current = null;
+  d.roll.timer = 0;
   return item;
 }
 
-/** Advances the roller: timed free rolls plus bonus rolls from Trash Bags. */
+/** Advances the wheel by `dt` seconds: spin, land, rest, spin again. */
 export function rollTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[], dt: number): void {
-  let budget = BAL.roll.maxRollsPerTick;
-  const interval = rollInterval(d);
-  d.roll.timer += dt;
-  while (d.roll.timer >= interval && budget > 0) {
-    d.roll.timer -= interval;
-    performRoll(d, rng, now, ev, 'timer');
-    budget--;
-  }
-  if (d.roll.timer > interval) d.roll.timer = interval;
-  if (d.currencies.bags >= 1) {
-    const step = 1 / BAL.roll.bagRollsPerSecond;
-    d.roll.bagTimer += dt;
-    while (d.roll.bagTimer >= step && d.currencies.bags >= 1 && budget > 0) {
-      d.roll.bagTimer -= step;
-      d.currencies.bags -= 1;
-      performRoll(d, rng, now, ev, 'bag');
-      budget--;
+  let t = dt;
+  for (let guard = 0; guard < BAL.roll.maxRollsPerTick * 2 + 2; guard++) {
+    if (!d.roll.current) startSpin(d, rng, now, ev);
+    const cur = d.roll.current!;
+    const total = cur.spinSeconds + cur.restSeconds;
+    const step = Math.min(t, total - d.roll.timer);
+    d.roll.timer += step;
+    t -= step;
+    if (!cur.landed && d.roll.timer >= cur.spinSeconds - 1e-9) landSpin(d, ev);
+    if (d.roll.timer < total - 1e-9) return;
+    d.roll.current = null;
+    d.roll.timer = 0;
+    if (t <= 1e-9) {
+      startSpin(d, rng, now, ev);
+      return;
     }
-  } else {
-    d.roll.bagTimer = 0;
   }
 }
 
@@ -197,6 +263,31 @@ export function equipFromBag(d: GameState, uid: number, ev: CoreEvent[]): boolea
   const [item] = d.inventory.splice(idx, 1);
   equip(d, snap(item), ev, false);
   return true;
+}
+
+/** Scraps every unlocked item in the bag at once (one event, one XP grant). */
+export function scrapAllFromBag(d: GameState, ev: CoreEvent[]): number {
+  let coins = 0;
+  let xp = 0;
+  const keep: Item[] = [];
+  let count = 0;
+  for (const it of d.inventory) {
+    if (it.locked) {
+      keep.push(it);
+      continue;
+    }
+    const v = scrapValue(d, it);
+    coins += v.coins;
+    xp += v.xp;
+    count++;
+  }
+  if (count === 0) return 0;
+  d.inventory = keep;
+  d.currencies.coins += coins;
+  d.lifetime.itemsRecycled += count;
+  ev.push({ type: 'scrapAll', count, coins, xp });
+  addXp(d, xp, ev);
+  return count;
 }
 
 export function scrapFromBag(d: GameState, uid: number, ev: CoreEvent[]): boolean {

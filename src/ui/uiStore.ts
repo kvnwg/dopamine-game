@@ -11,9 +11,29 @@ export interface RollView {
   item: Item;
   odds: number;
   lucky: boolean;
+  golden: boolean;
   placed: RollPlacement;
   newRecord: boolean;
   at: number;
+}
+
+/** An item being dragged toward the raccoon (stage coordinates). */
+export interface DragState {
+  item: Item;
+  x: number;
+  y: number;
+  /** Over a drop target (the raccoon or a gear panel). */
+  over: boolean;
+}
+
+export type BagSort = 'power' | 'rarity';
+
+function loadSort(): BagSort {
+  try {
+    return localStorage.getItem('dl.bagSort') === 'rarity' ? 'rarity' : 'power';
+  } catch {
+    return 'power';
+  }
 }
 
 export interface Toast {
@@ -38,6 +58,11 @@ interface UiState {
   adPlaying: AdPlacement | null;
   equipPulse: { slot: string; id: number } | null;
   newCodexKeys: string[];
+  drag: DragState | null;
+  bagSort: BagSort;
+  /** Selected node in the upgrade tree. */
+  upgradeSel: string;
+  setBagSort: (s: BagSort) => void;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -58,6 +83,17 @@ export const useUi = create<UiState>((set) => ({
   adPlaying: null,
   equipPulse: null,
   newCodexKeys: [],
+  drag: null,
+  bagSort: loadSort(),
+  upgradeSel: 'luck',
+  setBagSort: (bagSort) => {
+    set({ bagSort });
+    try {
+      localStorage.setItem('dl.bagSort', bagSort);
+    } catch {
+      /* private mode */
+    }
+  },
   setTab: (tab) => set({ tab }),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),
   toast: (text, tone = 'info') => {

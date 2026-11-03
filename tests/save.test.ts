@@ -10,6 +10,9 @@ function played(): GameState {
   const rng = new Rng(1);
   let st = freshState();
   st = tick(st, { ticks: 300 }, rng, T0 + 30_000).state;
+  // Drag the first find (the Legendary cone) onto the raccoon.
+  const cone = st.inventory.find((x) => x.slot === 'hat');
+  if (cone) st = applyAction(st, { type: 'equipItem', uid: cone.uid }, rng, T0 + 30_000).state;
   st = applyAction(st, { type: 'cheat', cheat: { kind: 'addCurrency', coins: 500 } }, rng, T0 + 30_000).state;
   st = applyAction(st, { type: 'buyUpgrade', id: 'luck' }, rng, T0 + 30_000).state;
   return st;

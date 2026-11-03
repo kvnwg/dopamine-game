@@ -4,7 +4,7 @@
  * full-screen reveal. Also toasts for level-ups, luck boosts, upgrades and rebirths.
  */
 import { BAL, DATA } from '../data';
-import { formatNumber, rarityIndex, type CoreEvent } from '../core';
+import { formatNumber, itemName, rarityIndex, type CoreEvent } from '../core';
 import { bus } from '../app/eventBus';
 import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
@@ -12,59 +12,60 @@ import { t } from './i18n';
 import { useUi, type RollView } from './uiStore';
 
 let rollId = 1;
-const BUILD_MS = 900;
 /** Big rolls that land while another reveal is showing wait their turn (at most a few). */
 const queue: RollView[] = [];
 let revealTimer: ReturnType<typeof setTimeout> | null = null;
 
 function revealBusy(): boolean {
-  const u = useUi.getState();
-  return u.charging !== null || u.celebrate !== null;
+  return useUi.getState().celebrate !== null;
 }
 
 function next(): void {
   const v = queue.shift();
-  if (v) bigReveal(v);
+  if (v) celebrate(v);
 }
 
-function material(baseId: string): Material {
-  return (DATA.itemsById.get(baseId)?.material ?? 'plastic') as Material;
-}
-
-function bigReveal(view: RollView) {
+/** While the wheel spins toward a Legendary or better: rising rattle, a riser, then a silence drop. */
+function buildUp(view: RollView, spinSeconds: number) {
   const tier = rarityIndex(view.item.rarity);
   useUi.setState({ charging: view });
-  audio.lidClunk();
+  const ms = spinSeconds * 1000;
   const beats = BAL.feel.rattleBeatsByRarity[view.item.rarity];
   for (let b = 0; b < beats; b++) {
     setTimeout(() => {
       audio.rattle(b, beats, true);
       haptics.impact('light');
-    }, (b * BUILD_MS * 0.6) / beats);
+    }, ms * 0.35 + (b * ms * 0.45) / beats);
   }
-  setTimeout(() => audio.riser(BUILD_MS * 0.0004, tier), BUILD_MS * 0.6);
-  setTimeout(() => audio.silenceDrop(0.2), BUILD_MS - 200);
-  setTimeout(() => {
-    useUi.setState({ charging: null, celebrate: view });
-    audio.material(material(view.item.baseId));
-    audio.reveal(view.item.rarity);
-    haptics.impact('heavy');
-    [180, 300, 420].forEach((ms) => setTimeout(() => haptics.impact('light'), ms));
-    revealTimer = setTimeout(() => {
-      if (useUi.getState().celebrate?.id === view.id) {
-        useUi.setState({ celebrate: null });
-        next();
-      }
-    }, BAL.feel.revealSecondsByRarity[view.item.rarity] * 1000 + 600);
-  }, BUILD_MS);
+  setTimeout(() => audio.riser(Math.max(0.3, (ms * 0.5) / 1000), tier), ms * 0.4);
+  setTimeout(() => audio.silenceDrop(0.15), Math.max(0, ms - 160));
+}
+
+/** The full-screen reveal for a Legendary or better, as the wheel lands. */
+function celebrate(view: RollView) {
+  useUi.setState({ charging: null, celebrate: view });
+  audio.material(material(view.item.baseId));
+  audio.reveal(view.item.rarity);
+  haptics.impact('heavy');
+  [180, 300, 420].forEach((ms) => setTimeout(() => haptics.impact('light'), ms));
+  if (revealTimer) clearTimeout(revealTimer);
+  revealTimer = setTimeout(() => {
+    if (useUi.getState().celebrate?.id === view.id) {
+      useUi.setState({ celebrate: null });
+      next();
+    }
+  }, BAL.feel.revealSecondsByRarity[view.item.rarity] * 1000 + 600);
 }
 
 export function skipReveal(): void {
-  if (useUi.getState().charging) return;
   if (revealTimer) clearTimeout(revealTimer);
   revealTimer = null;
   useUi.setState({ celebrate: null });
   next();
+}
+
+function material(baseId: string): Material {
+  return (DATA.itemsById.get(baseId)?.material ?? 'plastic') as Material;
 }
 
 export function installRollController(): () => void {
@@ -72,13 +73,27 @@ export function installRollController(): () => void {
     const ui = useUi.getState();
     for (const e of events) {
       switch (e.type) {
+        case 'spinStart': {
+          if (rarityIndex(e.item.rarity) >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
+            const view: RollView = {
+              id: -e.item.uid, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false, at: performance.now(),
+            };
+            buildUp(view, e.spinSeconds);
+          }
+          if (e.golden) audio.jingle(5);
+          break;
+        }
         case 'roll': {
-          const view: RollView = { id: rollId++, item: e.item, odds: e.odds, lucky: e.lucky, placed: e.placed, newRecord: e.newRecord, at: performance.now() };
+          const view: RollView = {
+            id: rollId++, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: e.placed, newRecord: e.newRecord,
+            at: performance.now(),
+          };
           useUi.setState((s) => ({ lastRoll: view, recent: [view, ...s.recent].slice(0, 8) }));
           const tier = rarityIndex(e.item.rarity);
           if (tier >= rarityIndex(BAL.dumpster.bigRevealMinRarity)) {
-            if (!revealBusy()) bigReveal(view);
+            if (!revealBusy()) celebrate(view);
             else if (queue.length < 3) queue.push(view);
+            if (useUi.getState().charging?.item.uid === e.item.uid) useUi.setState({ charging: null });
           } else {
             audio.autoPop(e.item.rarity);
             if (tier >= rarityIndex('epic')) {
@@ -97,6 +112,7 @@ export function installRollController(): () => void {
           break;
         case 'equip':
           useUi.setState({ equipPulse: { slot: e.item.slot, id: e.item.uid } });
+          if (!e.auto) ui.toast(t('toast.equipped', { name: itemName(e.item) }), 'good');
           break;
         case 'levelUp':
           ui.toast(t('toast.levelUp', { level: e.level }), 'good');
@@ -137,6 +153,9 @@ export function installRollController(): () => void {
           break;
         case 'scrap':
           if (!e.auto) ui.toast(t('toast.scrapped', { gold: formatNumber(e.coins) }), 'info');
+          break;
+        case 'scrapAll':
+          ui.toast(t('toast.scrappedAll', { n: e.count, gold: formatNumber(e.coins) }), 'good');
           break;
       }
     }

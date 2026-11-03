@@ -1,10 +1,11 @@
 /**
- * Rebirth: once you beat the required world and hold enough gold, start over from World 1 with
- * permanent luck and gold multipliers. Resets world progress, gold and the upgrade grid. Keeps
- * items, level, Dumpster Level, Codex and Gems.
+ * Rebirth: once you beat the required world and hold enough gold, start over from scratch in
+ * World 1 with permanent multipliers (luck, gold, ATK/HP, cheaper upgrades). Wipes world progress,
+ * gold, the upgrade tree, every item (equipped and in the bag), and level/XP. Keeps the Dumpster
+ * Level, Codex, Gems and best-find record.
  */
 import { BAL } from '../../data';
-import type { GameState } from '../state';
+import { emptyEquipment, type GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { startStage } from './combat';
 import { growth, worldCount } from './stages';
@@ -34,8 +35,16 @@ export function doRebirth(d: GameState, ev: CoreEvent[]): boolean {
   d.rebirths += 1;
   d.currencies.coins = 0;
   d.upgrades = {};
+  d.equipped = emptyEquipment();
+  d.inventory = [];
+  d.player.level = 1;
+  d.player.xp = 0;
+  d.luckBoostEndsAt = null;
+  d.roll.current = null;
+  d.roll.timer = 0;
   d.stage.highestCleared = 0;
   d.stage.mode = 'push';
+  d.stage.returnTo = 1;
   d.stage.powerAtDeath = null;
   d.stage.showToughHint = false;
   d.offline.buckets = [];

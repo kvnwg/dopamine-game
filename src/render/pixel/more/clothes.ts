@@ -127,23 +127,23 @@ const JACKET_TUXEDO_TEE: Rows = [
   '................',
 ];
 
-/** Rubber duck swim ring: a yellow tube with a white shine, the duck's head and beak up front, its tail behind. */
+/** Lifebuoy: a white ring with four red bands, its rope looped round the outside. */
 const JACKET_POOL_FLOAT: Rows = [
   '................',
-  '....kkk.........',
-  '...kYYyk........',
-  '..kYYxyyk.......',
-  '.kOOkYyyk.......',
-  '.kooOYyyk..kk...',
-  '..kkYYyyk.kyk...',
-  '..kkYyyykkyyykk.',
-  '.kYwYyyyYYYyyyk.',
-  '.kYYwkkkkkkyyyk.',
-  '.kYYk......kyOk.',
-  '.kYyykkkkkkyyOk.',
-  '.kyYwwwwyyyyOOk.',
-  '..kkOOOOOOOOkk..',
-  '....kkkkkkkk....',
+  '....kk....kk....',
+  '...kTTkkkkttk...',
+  '..kTkkeeeRkktk..',
+  '.kTkwwweR555ktk.',
+  '.kTkwwwRR555ktk.',
+  '..keww5kk555rk..',
+  '..keeRk..kRrrk..',
+  '..keRRk..krrrk..',
+  '..kR555kk444rk..',
+  '.ktk555Rr444kNk.',
+  '.ktk555rr444kNk.',
+  '..ktkkrrrrkkNk..',
+  '...kttkkkkNNk...',
+  '....kk....kk....',
   '................',
 ];
 

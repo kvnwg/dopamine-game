@@ -256,27 +256,22 @@ export const JACKETS: Readonly<Record<string, JacketArt>> = {
       return shade(['x', 'a', 'b'], g);
     },
   },
-  // Rubber duck swim ring round his belly: a yellow tube with a white shine; the ring sticks out past his paws, and
-  // the duck's head (black eye, orange beak) rises from its front end beside his paw, facing the way he does.
+  // Lifebuoy round his belly: white with red bands (one in front, one at each end where it sticks out past his
+  // paws, the fourth behind him).
   jacket_pool_float: {
-    pal: { O: 'O', o: 'o', y: 'y', Y: 'Y', w: 'w', x: 'x' },
+    pal: { w: 'w', g: '5', d: '4', e: 'e', R: 'R', r: 'r' },
     cut: 'jacket',
     paint: (g) => {
-      if (g.part !== 'b') return '';
-      if (g.v === 3) return g.u === -3 || g.u === -2 ? 'w' : g.tone === 0 ? 'y' : 'Y';
-      if (g.v === 4) return g.tone === 0 ? 'O' : 'y';
-      return '';
+      if (g.part !== 'b' || (g.v !== 3 && g.v !== 4)) return '';
+      const red = Math.abs(g.u) <= 1;
+      if (g.v === 3) return red ? 'R' : g.tone === 0 ? 'g' : 'w';
+      return red ? 'r' : g.tone === 0 ? 'd' : 'g';
     },
-    back: piece([10, 3], [
-      '..###...............',
-      '.#YYy#..............',
-      '#OxYy#..............',
-      '#oYyy#..............',
-      '.##yy#..............',
-      '..#yy##############.',
-      '..#wwYYYYYYYYYYYYYy#',
-      '..#yyyyyyyyyyyyyyyO#',
-      '...################.',
+    back: piece([9, -2], [
+      '.##################.',
+      '#eRwwwwwRRRwwwwwwRr#',
+      '#rrgggggrrrggggggrr#',
+      '.##################.',
     ]),
   },
   // Velour track jacket: purple, zipped to the chin, a silver zip, white piping at the cuffs.

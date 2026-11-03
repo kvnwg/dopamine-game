@@ -4,7 +4,8 @@
  * mohawk in its accent), the Mucho Pixels human as Officer Dale (shirt in the world's color), and
  * the fantasy pack characters and the farm animals (their own colors). Pure buffers, so Node tests can check them.
  */
-import { rampOf, setPx, type PixelBuf } from './buf';
+import { rampOf, rgb, setPx, type PixelBuf } from './buf';
+import { CHARACTER_OUTLINE } from './palette';
 import { frameBuf, type AnimSheet } from './indexed';
 import { ENEMY_ART } from './enemies';
 import { frameOffsets } from './hero';
@@ -58,7 +59,7 @@ export function punkFrame(f: number, color: string, accent: string): PixelBuf {
   const o = frameOffsets()[f];
   if (!o.head) return b;
   const acc = rampOf(accent);
-  const keys: Record<string, string> = { o: RACCOON.pal[0], L: acc[2], A: acc[1], D: acc[0] };
+  const keys: Record<string, string> = { o: CHARACTER_OUTLINE, L: acc[2], A: acc[1], D: acc[0] };
   MOHAWK.forEach((row, y) => {
     [...row].forEach((ch, x) => {
       if (ch !== '.') setPx(b, 10 + x + o.dx, 1 + y + o.dy, keys[ch]);
@@ -67,8 +68,48 @@ export function punkFrame(f: number, color: string, accent: string): PixelBuf {
   return b;
 }
 
-/** Every frame of a sheet enemy in a world's colors (as drawn, before facing it left). */
+/**
+ * Recolors a sheet's outline to the raccoon's brown in every frame. A pack sprite's outline is its
+ * most common edge color (an opaque pixel next to open space); it is only recolored when dark, so a
+ * sprite drawn without outlines keeps its colors.
+ */
+export function brownOutlines(frames: PixelBuf[]): PixelBuf[] {
+  const counts = new Map<number, number>();
+  for (const b of frames) {
+    const open = (x: number, y: number) => x < 0 || y < 0 || x >= b.w || y >= b.h || !b.px[(y * b.w + x) * 4 + 3];
+    for (let y = 0; y < b.h; y++) {
+      for (let x = 0; x < b.w; x++) {
+        const i = (y * b.w + x) * 4;
+        if (!b.px[i + 3] || !(open(x - 1, y) || open(x + 1, y) || open(x, y - 1) || open(x, y + 1))) continue;
+        const c = (b.px[i] << 16) | (b.px[i + 1] << 8) | b.px[i + 2];
+        counts.set(c, (counts.get(c) ?? 0) + 1);
+      }
+    }
+  }
+  let line = -1;
+  let best = 0;
+  for (const [c, n] of counts) if (n > best) [line, best] = [c, n];
+  const luma = (0.299 * ((line >> 16) & 255) + 0.587 * ((line >> 8) & 255) + 0.114 * (line & 255)) / 255;
+  if (line < 0 || luma > 0.25) return frames;
+  const [r, g, bl] = rgb(CHARACTER_OUTLINE);
+  for (const b of frames) {
+    for (let i = 0; i < b.px.length; i += 4) {
+      if (b.px[i + 3] && ((b.px[i] << 16) | (b.px[i + 1] << 8) | b.px[i + 2]) === line) {
+        b.px[i] = r;
+        b.px[i + 1] = g;
+        b.px[i + 2] = bl;
+      }
+    }
+  }
+  return frames;
+}
+
+/** Every frame of a sheet enemy in a world's colors (as drawn, before facing it left), outlined in the raccoon's brown. */
 export function sheetFrames(look: SheetLook, color: string, accent: string): PixelBuf[] {
+  return brownOutlines(rawSheetFrames(look, color, accent));
+}
+
+function rawSheetFrames(look: SheetLook, color: string, accent: string): PixelBuf[] {
   const s = look.sheet;
   return s.frames.map((_, f) => {
     if (look.punk) return punkFrame(f, color, accent);

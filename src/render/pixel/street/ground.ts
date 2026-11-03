@@ -5,14 +5,15 @@
  * lawn edge (row 58), the curb (59 lit top, 60 face, 61 shadow line) with a painted stretch and a
  * storm drain, the sidewalk the fighters stand on (62 to 72, their feet on row 67, FEET_ROW, mid-slab)
  * and a grass verge (73 to 81). The rows under the feet (68 to 70, where HP bars sit) stay plain slab.
- * Foreground: a few grass tufts, flowers and stones along the bottom, in front of the fighters.
+ * Foreground: a few clumps of grass in shade, flowers and a stone along the bottom, in front of the
+ * fighters.
  *
  * Colors are hue-shifted: shadows lean blue-violet, lights lean warm. The grass mixes are shared with
  * the middle layer's lawn, so the two meet without a seam.
  */
-import { blank, fromRows, hash01, mix, stamp, type PixelBuf, type Rows } from '../buf';
+import { blank, fromRows, hash01, mix, outline, stamp, type PixelBuf, type Rows } from '../buf';
 import type { LightSpot } from '../sceneryTypes';
-import { TILE_W, despeckle, dot, inked, plant, put, rgbAt, wrap } from './common';
+import { TILE_W, despeckle, dot, plant, put, rgbAt, wrap } from './common';
 
 // ------------------------------------------------------------------ layout (view rows)
 
@@ -450,30 +451,61 @@ const FLOWER: Rows = [
   '.G.',
 ];
 
+/** A fuller clump with a daisy rising out of it. */
+const DAISY_TUFT: Rows = [
+  '......w..',
+  '.L...wyw.',
+  '.lL.L.wG.',
+  'llG.lGlG.',
+  'lGGlGGGGl',
+  'GgGGgGGgG',
+];
+
+/** A dandelion on a tall stem over a rosette of leaves. */
+const DANDELION: Rows = [
+  '.yY.',
+  'yyYy',
+  '.yy.',
+  '..G.',
+  'L.G.',
+  'lGGL',
+  'GlGl',
+];
+
 /** A small stone. */
 const STONE: Rows = [
   '.54.',
   '5443',
 ];
 
+/**
+ * The foreground, nearest the camera, is grass in shade: deeper greens than the verge behind it, tips
+ * catching the light, outlined in a near-black green rather than ink so the clumps read as a soft dark
+ * fringe along the bottom instead of stickers.
+ */
 export function fgLayer(): PixelBuf {
   const H = FG_SPOT.h;
   const b = blank(TILE_W, H);
-  const fgGreens = { L: K.grassTip, l: K.grassLit, G: K.grass, g: K.grassShade };
-  const tufts = TUFTS.map((t) => inked(t, fgGreens));
-  const flowers = [inked(FLOWER, { G: K.grassShade }), inked(FLOWER, { w: 'P', y: 'y', G: K.grassShade }), inked(FLOWER, { w: 'y', y: 'O', G: K.grassShade })];
-  const stone = inked(STONE, { '5': K.slabLit, '4': K.slabDim, '3': K.groove });
-  // [x, what]: tufts (0 to 2), flowers (3 to 5), a stone (6), sparse
+  const edge = mix(K.grassDeep, 'k', 0.45);
+  const near = (rows: Rows, recolor: Partial<Record<string, string>>) => outline(fromRows(rows, recolor), edge);
+  const greens = { L: K.grass, l: K.grassShade, G: K.grassDeep, g: mix(K.grassDeep, 'k', 0.2) };
+  const tufts = TUFTS.map((t) => near(t, greens));
+  const flowers = [near(FLOWER, { G: K.grassShade }), near(FLOWER, { w: 'P', y: 'y', G: K.grassShade }), near(FLOWER, { w: 'y', y: 'O', G: K.grassShade })];
+  const stone = near(STONE, { '5': K.slabLit, '4': K.slabDim, '3': K.groove });
+  const daisy = near(DAISY_TUFT, { ...greens, w: 'W' });
+  const dandelion = near(DANDELION, greens);
+  const sprites = [...tufts, ...flowers, stone, daisy, dandelion];
+  // [x, sprite]: tufts (0 to 2), flowers (3 to 5), a stone (6), a daisy tuft (7), a dandelion (8); sparse
   const items: ReadonlyArray<readonly [number, number]> = [
-    [4, 2], [12, 3],
+    [4, 7],
     [58, 1],
     [97, 0], [104, 4],
     [150, 6],
-    [176, 2], [185, 5],
+    [176, 2], [185, 8],
     [214, 1],
   ];
   for (const [x, what] of items) {
-    const s = what < 3 ? tufts[what] : what < 6 ? flowers[what - 3] : stone;
+    const s = sprites[what];
     put(b, s, x, H - s.h + 1, what < 3 && h2(x, 0, 9) < 0.5);
   }
   return b;
@@ -481,7 +513,8 @@ export function fgLayer(): PixelBuf {
 
 /** Authored sprites, for the preview sheet. */
 export const GROUND_SPRITES: Array<[string, Rows]> = [
-  ['lamp', LAMP], ['drain', DRAIN], ['flower', FLOWER], ['stone', STONE], ['gum', GUM], ['leaf', LEAF],
+  ['lamp', LAMP], ['drain', DRAIN], ['flower', FLOWER], ['daisy_tuft', DAISY_TUFT], ['dandelion', DANDELION],
+  ['stone', STONE], ['gum', GUM], ['leaf', LEAF],
   ...CRACKS.map((r, i): [string, Rows] => [`crack${i}`, r]),
   ...TUFTS.map((r, i): [string, Rows] => [`tuft${i}`, r]),
 ];

@@ -131,7 +131,7 @@ function build(): PixelBuf {
   const b = blank(TILE_W, FAR_SPOT.h);
   detail = new Uint8Array(TILE_W * b.h);
   const distant = blank(TILE_W, b.h);
-  drawPlain(distant, RANGE, HAZE.range, 0.55, 5, false);
+  drawPlain(distant, RANGE, HAZE.range, 0.62, 5, false);
   drawPlain(distant, RIDGE, HAZE.ridge, 0.42, 5, true);
   despeckle(distant);
   layer(b, distant, false);
@@ -172,7 +172,7 @@ function tidy(b: PixelBuf): void {
 
 /** A plain distant band: flanks lit and shaded, a warm rim on sunlit crests, mist pooling at its foot. */
 function drawPlain(b: PixelBuf, crest: readonly number[], haze: number, blue: number, reach: number, mist: boolean): void {
-  const base = mix('G', 'U', blue);
+  const base = mix(mix('G', 'U', blue), 'V', blue * 0.2);
   const [shade, mid, lit] = tones(base, haze, 0.16);
   const rim = hz(mix(mix('l', 'U', blue * 0.5), WARM, 0.4), haze);
   const fog = hz(base, haze + 0.14);

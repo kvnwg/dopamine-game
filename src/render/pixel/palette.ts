@@ -55,6 +55,12 @@ export const PAL = {
 
 export type PalKey = keyof typeof PAL;
 
+/**
+ * The raccoon hero's outline brown. Every character in the game is outlined in exactly this color
+ * (hand-drawn enemies draw their outlines with it; pack sprites' outlines are recolored to it).
+ */
+export const CHARACTER_OUTLINE = '#32282b';
+
 /** Ramps (dark, mid, light) for shading by hand or recoloring. */
 export const RAMPS = {
   gray: ['2', '3', '4'],

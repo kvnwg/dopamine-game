@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DATA } from '../src/data';
-import { alphaAt, bounds, checkRows, fromRows } from '../src/render/pixel/buf';
+import { alphaAt, bounds, checkRows, fromRows, toHex, type PixelBuf } from '../src/render/pixel/buf';
+import { CHARACTER_OUTLINE } from '../src/render/pixel/palette';
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from '../src/render/pixel/enemies';
 import { FOE_SHAPES, FOE_SHEETS, sheetFrames } from '../src/render/pixel/foes';
 import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf, type GearSlot } from '../src/render/pixel/hero';
@@ -115,5 +116,26 @@ describe('pixel art', () => {
     }
     for (const key of ['slash', 'impact', 'puff', 'sparkle', 'coin', 'bag', 'dumpsterBody', 'dumpsterLid'] as const) checkRows(key, FX[key]);
     expect(FX.confetti.length).toBe(4);
+  });
+
+  it('every pack character is outlined in the raccoon hero\'s brown', () => {
+    const edge = (b: PixelBuf) => {
+      const counts = new Map<string, number>();
+      for (let y = 0; y < b.h; y++) {
+        for (let x = 0; x < b.w; x++) {
+          const i = (y * b.w + x) * 4;
+          if (!b.px[i + 3]) continue;
+          const open = (xx: number, yy: number) => xx < 0 || yy < 0 || xx >= b.w || yy >= b.h || !b.px[(yy * b.w + xx) * 4 + 3];
+          if (!(open(x - 1, y) || open(x + 1, y) || open(x, y - 1) || open(x, y + 1))) continue;
+          const c = toHex(b.px[i], b.px[i + 1], b.px[i + 2]);
+          counts.set(c, (counts.get(c) ?? 0) + 1);
+        }
+      }
+      return [...counts].sort((a, b2) => b2[1] - a[1])[0][0];
+    };
+    for (const [shape, look] of Object.entries(FOE_SHEETS)) {
+      const frames = sheetFrames(look, '#7A6A72', '#E53935');
+      expect(edge(frames[look.sheet.anims.idle?.frames[0] ?? 0]), shape).toBe(CHARACTER_OUTLINE);
+    }
   });
 });

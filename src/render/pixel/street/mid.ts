@@ -894,12 +894,13 @@ export function midLayer(): PixelBuf {
   for (const [s, x] of houses) plant(b, s, x, BASE);
   for (const [t, x, base] of TREES) plant(b, t, x, base);
 
-  // foundation plantings and the ranch's flower bed
-  plant(b, HYDRANGEA, ax + 2, BASE + 1);
-  plant(b, BOX_SHRUB, ax + 26, BASE + 1);
+  // foundation plantings and the ranch's flower bed (all clear of window glass: lit windows glow
+  // over whatever covers their glass)
+  plant(b, HYDRANGEA, ax + 2, BASE + 3);
+  plant(b, BOX_SHRUB, ax + 26, BASE + 2);
   plant(b, ROSE_BUSH, bx - 7, BASE + 1);
   plant(b, ROUND_SHRUB, cx - 3, BASE + 1);
-  plant(b, flowerBed(11, [['#b88af0', '#6a48b8'], ['#fff8ec', '#f2c23c'], ['#f08ab8', '#b8407a']]), cx + 5, BASE + 3);
+  plant(b, flowerBed(11, [['#b88af0', '#6a48b8'], ['#fff8ec', '#f2c23c'], ['#f08ab8', '#b8407a']]), cx + 5, BASE + 4);
 
   // the alley: a can by the garage, the dumpster, a box and two bags
   plant(b, inked(CAN), 205, BASE + 3);
@@ -910,7 +911,7 @@ export function midLayer(): PixelBuf {
 
   // the front of the yards: mailboxes by the walks, a gnome, a bird bath under the maple
   plant(b, inked(MAILBOX), ax + 22, FRONT);
-  plant(b, inked(MAILBOX, { '5': '#4c4a62', W: '#6e6c88', '4': '#3c3a50', '3': '#2e2c40' }), cx + 23, FRONT);
+  plant(b, inked(MAILBOX, { '5': '#4c4a62', W: '#6e6c88', '4': '#3c3a50', '3': '#2e2c40' }), cx + 23, FRONT + 2);
   plant(b, inked(GNOME), bx + 29, BASE + 3);
   plant(b, inked(BIRD_BATH, { '5': STONE.lit, '4': STONE.mid, '3': STONE.dark, C: '#a2d2ed', c: '#5c93c8' }), 52, BASE + 4);
   return b;

@@ -568,20 +568,20 @@
   position: absolute;
   top: calc(-3 * var(--px));
   height: var(--px);
-  width: calc(20 * var(--px));
+  width: calc(12 * var(--px));
   background: #ffffff;
   animation: swooshL 0.48s steps(6) both;
 }
 .swoosh i[data-row='2'] {
   top: calc(2 * var(--px));
-  width: calc(12 * var(--px));
+  width: calc(8 * var(--px));
   animation-delay: 0.06s;
 }
 .swoosh i[data-side='l'] {
-  left: calc(-12 * var(--px));
+  left: 0;
 }
 .swoosh i[data-side='r'] {
-  right: calc(-12 * var(--px));
+  right: 0;
   animation-name: swooshR;
 }
 .swoosh[data-big] i {
@@ -591,12 +591,12 @@
 @keyframes swooshL {
   0% { transform: translateX(0); opacity: 1; }
   60% { opacity: 1; }
-  100% { transform: translateX(calc(24 * var(--px))); opacity: 0; }
+  100% { transform: translateX(var(--travelL)); opacity: 0; }
 }
 @keyframes swooshR {
   0% { transform: translateX(0); opacity: 1; }
   60% { opacity: 1; }
-  100% { transform: translateX(calc(-24 * var(--px))); opacity: 0; }
+  100% { transform: translateX(calc(-1 * var(--travelR))); opacity: 0; }
 }
 /* The battle's four-point sparkle twinkling round a Legendary-or-better result. */
 .twinkle {

@@ -313,6 +313,12 @@ function Confetti({ n }: { n: number }) {
   );
 }
 
+/** How far a swoosh line rushes in from a reel's edge toward the art `d` px away: six steps of whole art pixels. */
+function travel(d: number): number {
+  const step = 6 * UI_PX;
+  return Math.max(1, Math.round((d - 18 * UI_PX) / step)) * step;
+}
+
 /** One landing's effects, centered on the result's art (`x`, `y` in the bank). */
 function Landing({ f, x, y, layout, calm }: { f: Fx; x: number; y: number; layout: ReelLayout; calm: boolean }) {
   const look = landFx(f.tier);
@@ -330,7 +336,19 @@ function Landing({ f, x, y, layout, calm }: { f: Fx; x: number; y: number; layou
         </div>
       )}
       {!calm && f.tier >= 2 && (
-        <div className={s.swoosh} data-big={f.tier >= 4 || undefined} style={{ left: x - layout.reelW / 2, width: layout.reelW, top: y }}>
+        <div
+          className={s.swoosh}
+          data-big={f.tier >= 4 || undefined}
+          style={
+            {
+              left: x - layout.artCx,
+              width: layout.reelW,
+              top: y,
+              ['--travelL' as string]: `${travel(layout.artCx)}px`,
+              ['--travelR' as string]: `${travel(layout.reelW - layout.artCx)}px`,
+            } as CSSProperties
+          }
+        >
           <i data-side="l" />
           <i data-side="l" data-row="2" />
           <i data-side="r" />

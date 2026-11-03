@@ -509,7 +509,7 @@ export function ReelBank() {
           }
         }
         // Ticks climb as the reel slows; a build-up's crawl clicks in finer notches, each a step higher.
-        const crawl = !!plan && plan.reel === i && el >= plan.from && at.reached === st.stops.length - 1;
+        const crawl = !!plan && plan.reel === i && el >= plan.from && at.reached === st.stops.length - 1 && v < 6;
         const notch = Math.floor(at.p * (crawl ? 3 : 1) + 0.5);
         if (notch !== r.notch[i]) {
           r.notch[i] = notch;
@@ -552,7 +552,8 @@ export function ReelBank() {
               r.best = tier;
               bank.style.setProperty('--prize', tierLight(tier));
             }
-            addFx({ kind: 'land', reel: i, tier }, landFx(tier).confetti ? 2400 : landFx(tier).stamp ? 1900 : 900);
+            // Plain results stay light: their thud, drop and flashes are all straight on the DOM.
+            if (tier >= 2) addFx({ kind: 'land', reel: i, tier }, landFx(tier).confetti ? 2400 : landFx(tier).stamp ? 1900 : 900);
             if (landFx(tier).rays && !calm) setRays((m) => ({ ...m, [i]: tier }));
           }
         }
@@ -609,6 +610,7 @@ export function ReelBank() {
       if (bulbs !== r.bulbs) {
         r.bulbs = bulbs;
         bank.dataset.bulbs = bulbs;
+        if (bulbs === 'win') bank.style.setProperty('--prize', tierLight(r.best));
       }
     };
     raf = requestAnimationFrame(frame);

@@ -80,6 +80,13 @@ function buildUpSmall(plan: Tease) {
   if (plan.level >= 2) setTimeout(() => audio.silenceDrop(0.08), Math.max(0, plan.land - 100));
 }
 
+/**
+ * A big roll stays on the "last roll" card while its reveal shows and for this long after it closes
+ * (the reels keep rolling meanwhile), so the player comes back to it and can drag it on.
+ */
+const HOLD_AFTER_REVEAL_MS = 3500;
+let revealClosedAt = -Infinity;
+
 /** The full-screen reveal for a big roll, as its reel lands (RareReveal plays it and its sounds). */
 function celebrate(view: RollView) {
   useUi.setState({ charging: null, celebrate: view });
@@ -88,6 +95,7 @@ function celebrate(view: RollView) {
   revealTimer = setTimeout(() => {
     if (useUi.getState().celebrate?.id === view.id) {
       useUi.setState({ celebrate: null });
+      revealClosedAt = performance.now();
       next();
     }
   }, revealTotalMs(view, getGame().settings.reduceMotion));
@@ -104,7 +112,15 @@ export function skipReveal(): void {
   if (revealTimer) clearTimeout(revealTimer);
   revealTimer = null;
   useUi.setState({ celebrate: null });
+  revealClosedAt = performance.now();
   next();
+}
+
+/** The card is holding a big roll (its reveal is up, queued or just closed) that a lesser roll mustn't replace. */
+function holdingBigRoll(view: RollView): boolean {
+  const cur = useUi.getState().lastRoll;
+  if (!cur?.drama || view.drama) return false;
+  return revealBusy() || queue.length > 0 || performance.now() - revealClosedAt < HOLD_AFTER_REVEAL_MS;
 }
 
 function material(baseId: string): Material {
@@ -163,7 +179,7 @@ export function installRollController(): () => void {
           // The big "last roll" card shows the best result of the spin; every result goes in Recent.
           if (e.reel === 0 || !spinBest || e.odds > spinBest.odds) spinBest = view;
           const shown = spinBest;
-          useUi.setState({ lastRoll: shown });
+          if (!holdingBigRoll(shown)) useUi.setState({ lastRoll: shown });
           const tier = rarityIndex(e.item.rarity);
           // A rare find is saved right away (autosave is every 30 s): a phone that crashes or a
           // tab that closes during the big reveal must never lose it.

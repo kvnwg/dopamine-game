@@ -355,13 +355,14 @@
   font-size: 26px;
   opacity: 0.8;
 }
+/* (Each tile's "1 in X" banner sticks out above it: rows get room for it.) */
 .finds {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: calc(3 * var(--px));
-  margin-top: calc(3 * var(--px));
+  gap: calc(5 * var(--px)) calc(3 * var(--px));
+  margin-top: calc(6 * var(--px));
 }
 .find {
   flex: none;

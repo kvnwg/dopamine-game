@@ -1126,7 +1126,7 @@
       "BOSS_DMG": 1
     },
     "enemies": {
-      "refMargin": 2.8,
+      "refMargin": 4.4,
       "hpMult": 3,
       "atkMult": 1.2,
       "elite": {
@@ -1264,13 +1264,13 @@
         "coins": 600
       },
       "mall": {
-        "difficulty": 1.12,
+        "difficulty": 1.16,
         "bags": 40,
         "gems": 10,
         "coins": 900
       },
       "hotel": {
-        "difficulty": 1.3,
+        "difficulty": 1.4,
         "bags": 60,
         "gems": 15,
         "coins": 1200

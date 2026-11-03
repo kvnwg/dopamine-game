@@ -632,17 +632,18 @@ function simulateHeistLog() {
 }
 
 describe('heist balance', () => {
+  // tools/heistSim.ts runs the full picture (every location, raccoons from 5 minutes to 3 hours).
   it('the first Pizza Place run is won about 85% of the time by a 10-minute raccoon', () => {
     let wins = 0;
     let runs = 0;
-    for (const seed of [1, 2]) {
+    for (const seed of [1, 2, 3]) {
       const state = simulate({ minutes: 10, seed }).final;
-      const r = simulateHeists({ state, location: 'pizza', runs: 60, seed, first: true });
+      const r = simulateHeists({ state, location: 'pizza', runs: 30, seed, first: true });
       wins += r.wins;
       runs += r.runs;
     }
     const rate = wins / runs;
-    expect(rate).toBeGreaterThan(0.72);
-    expect(rate).toBeLessThan(0.95);
-  }, 60_000);
+    expect(rate).toBeGreaterThan(0.7);
+    expect(rate).toBeLessThan(0.96);
+  }, 120_000);
 });

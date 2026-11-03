@@ -1113,15 +1113,17 @@ export class BattleScene extends Phaser.Scene {
    */
   private hitStop(ms: number, minor = false) {
     if (this.reduceMotion || ms <= 0) return;
-    if (minor) {
-      ms = Math.min(ms, this.stopBudget);
-      if (ms < 20) return;
-      this.stopBudget -= ms;
-    }
     const now = performance.now();
-    if (now >= this.stopUntil) this.stopFrom = now;
-    const until = Math.min(Math.max(this.stopUntil, now + ms), this.stopFrom + STOP_MAX);
-    if (until <= this.stopUntil) return;
+    const fresh = now >= this.stopUntil;
+    // The freeze already runs until `base`; this one may only stretch it (and only so far).
+    const base = fresh ? now : this.stopUntil;
+    const from = fresh ? now : this.stopFrom;
+    let until = Math.min(Math.max(base, now + ms), from + STOP_MAX);
+    if (minor) until = Math.min(until, base + this.stopBudget);
+    // Nothing to add, or (out of budget) a new freeze too short to feel.
+    if (until <= base || (fresh && until - now < 20)) return;
+    if (minor) this.stopBudget -= until - base;
+    this.stopFrom = from;
     this.stopUntil = until;
     this.tweens.timeScale = STOP_SPEED;
     this.anims.globalTimeScale = STOP_SPEED;

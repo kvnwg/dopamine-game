@@ -12,7 +12,8 @@ export function CodexPopup({ onClose }: { onClose: () => void }) {
   const theme = useGame((g) => g.dumpster.theme);
   const rebirths = useGame((g) => g.rebirths);
   const found = new Set(entries);
-  const items = DATA.items.filter((i) => i.theme === theme);
+  // What the dumpster can roll (heist-only rings never come out of it).
+  const items = DATA.items.filter((i) => i.theme === theme && !i.heist);
   const total = items.reduce((n, i) => n + (i.unique ? RARITIES.length - 4 : RARITIES.length), 0);
   const per = BAL.codex.entriesPerBonus;
   const nextAt = (Math.floor(entries.length / per) + 1) * per;

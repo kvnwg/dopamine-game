@@ -14,9 +14,9 @@
  * puts a column behind the hero, plain wall where the blows land and the banners and water fountain
  * behind the enemies.
  */
-import { blank, blit, crop, type PixelBuf, type SheetEntry } from '../buf';
+import { blank, blit, crop, fromRows, type PixelBuf, type Rows, type SheetEntry } from '../buf';
 import { fromIndexed, KEYS } from '../indexed';
-import { VIEW, type ScenerySet } from '../sceneryTypes';
+import { VIEW, type LightSpot, type ScenerySet } from '../sceneryTypes';
 import { DUNGEON_PAL, DUNGEON_TILES } from './dungeonTiles';
 
 /** The pack's grid. */
@@ -143,6 +143,43 @@ const INSETS: readonly (readonly [string, number, number, boolean?])[] = [
   ['wall_banner_yellow', 15, WALL_Y, true],
 ];
 
+/**
+ * A wall torch, drawn for the game (the pack has none): an iron cup on a bracket with its flame.
+ * In battle a flickering flame and glow are laid over it (see src/render/ambience.ts).
+ */
+export const TORCH: Rows = [
+  '..Y..',
+  '.yYy.',
+  '.OYO.',
+  '.oOo.',
+  '21112',
+  '.212.',
+  '..2..',
+  '..1..',
+];
+
+/** Torch positions on the back wall (top-left of TORCH, far-layer pixels): clear of banners, holes and the door. */
+export const TORCHES: ReadonlyArray<readonly [number, number]> = [
+  [20, 24],
+  [98, 24],
+  [147, 30],
+  [200, 40],
+];
+
+/** Fountain columns (far-layer x of each gargoyle's 16 px bay). */
+const WATER_X = 3 * T;
+const LAVA_X = 14 * T;
+
+/** What glows on the back wall: the torches' flames, the lava fountain and (faintly) the water one. */
+function farLights(): LightSpot[] {
+  const torches = TORCHES.map(([x, y]): LightSpot => ({ x: x + 1, y, w: 3, h: 4, kind: 'torch', color: '#FFA445', radius: 13, power: 1.15, flicker: true }));
+  const stream = (x: number, color: string, power: number): LightSpot[] => [
+    { x: x + 6, y: WALL_Y + 8, w: 4, h: FLOOR_Y - WALL_Y - 12, kind: 'fire', color, radius: 6, power: power * 0.7 },
+    { x: x + 2, y: FLOOR_Y - 4, w: 12, h: 4, kind: 'fire', color, radius: 9, power },
+  ];
+  return [...torches, ...stream(LAVA_X, '#FF6A2A', 1), ...stream(WATER_X, '#4AB0FF', 0.45)];
+}
+
 function farLayer(): PixelBuf {
   const b = blank(TILE_W, FLOOR_Y);
   BRICKS.forEach(([shift, flip], i) => {
@@ -155,8 +192,10 @@ function farLayer(): PixelBuf {
   // Fountains: the top tile's lip lines up with the wall's, the basin sits on the floor line
   // (the face and basin take 16 of the rows under the lip; the stream falls the other 24).
   const courses = (FLOOR_Y - WALL_Y - 16) / 4;
-  put(b, fountain('blue', 2, courses), 3 * T, LIP_Y - 12);
-  put(b, fountain('red', 3, courses), 14 * T, LIP_Y - 12);
+  put(b, fountain('blue', 2, courses), WATER_X, LIP_Y - 12);
+  put(b, fountain('red', 3, courses), LAVA_X, LIP_Y - 12);
+  const torch = fromRows(TORCH);
+  for (const [x, y] of TORCHES) put(b, torch, x, y);
   stand(b, door(), 10 * T - 4, FLOOR_Y - 1);
   // Engaged columns, 52 rows tall: capital above the lip from row 0, foot on the floor line.
   const col = column(3, 6);
@@ -225,6 +264,7 @@ export const DUNGEON: ScenerySet = {
   mid: midLayer,
   ground: groundLayer,
   fg: fgLayer,
+  lights: () => ({ far: farLights() }),
 };
 
 /** The four layers at full width, for tools/pixelSheet.ts. */

@@ -15,9 +15,8 @@ import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
 import { FOE_SHEETS, sheetFrames } from './pixel/foes';
 import { FX_SHEETS, type FxName } from './pixel/packs/fx';
-import { CLOUDS } from './pixel/scenery';
 import { FX } from './pixel/ui';
-import { gradeBuf, sceneryFor, skyBuf, type SceneryKeys } from './worldLook';
+import { worldArt, type SceneryKeys } from './worldLook';
 
 const S = HERO_SHEET;
 /** The hero frame in battle pixels: feet (ground contact), the weapon paw, the top of the head. */
@@ -228,37 +227,61 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
 // ------------------------------------------------------------------ worlds
 
 export interface WorldKeys extends SceneryKeys {
+  /** The sky (1 texel per art pixel: draw with setScale(P)). */
   sky: string;
+  /** Cloud strips (tiling, pre-scaled), back to front, with their view row and drift (art px/s). */
+  clouds: Array<{ key: string; y: number; speed: number }>;
+  /** The sun, moon or planet with its halo (1x), and where its top-left goes (art px). */
+  glow: { key: string; x: number; y: number } | null;
+  /** Darkened corners (1x). */
+  vignette: string;
 }
 
-/** Sky and scenery tiles for a world (built on first visit). */
-export function worldTextures(scene: Phaser.Scene, world: number, w: number, h: number): WorldKeys {
-  const def = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
-  const { set, bufs } = sceneryFor(def);
+/** Sky, clouds, glow, vignette and lit scenery tiles for a world (built on first visit). */
+export function worldTextures(scene: Phaser.Scene, world: number): WorldKeys {
+  const art = worldArt(world);
+  const w = `w${world}_`;
   const keys: WorldKeys = {
-    sky: `w${world}_sky`, far: `w${world}_far`, mid: `w${world}_mid`, ground: `w${world}_ground`, fg: `w${world}_fg`,
+    sky: `${w}sky`, far: `${w}far`, mid: `${w}mid`, ground: `${w}ground`, fg: `${w}fg`,
+    clouds: art.clouds.map((c, i) => ({ key: `${w}cloud${i}`, y: c.y, speed: c.speed })),
+    glow: art.glow ? { key: `${w}glow`, x: art.glow.x, y: art.glow.y } : null,
+    vignette: `${w}vignette`,
   };
-  if (!scene.textures.exists(keys.sky)) put(scene, keys.sky, toCanvas(skyBuf(Math.ceil(w / P), Math.ceil(h / P), def.look)), { x: 0, y: 0 });
+  const top = { x: 0, y: 0 };
+  if (!scene.textures.exists(keys.sky)) put(scene, keys.sky, toCanvas(art.sky, 1), top);
+  if (!scene.textures.exists(keys.vignette)) put(scene, keys.vignette, toCanvas(art.vignette, 1), top);
+  if (keys.glow && art.glow && !scene.textures.exists(keys.glow.key)) put(scene, keys.glow.key, toCanvas(art.glow.buf, 1), top);
+  art.clouds.forEach((c, i) => {
+    if (!scene.textures.exists(keys.clouds[i].key)) put(scene, keys.clouds[i].key, toCanvas(c.buf), top);
+  });
   for (const layer of ['far', 'mid', 'ground', 'fg'] as const) {
-    if (scene.textures.exists(keys[layer])) continue;
-    const base = bufs[layer];
-    put(scene, keys[layer], toCanvas(set.graded ? gradeBuf(base, def.look) : base), { x: 0, y: 0 });
+    if (!scene.textures.exists(keys[layer])) put(scene, keys[layer], toCanvas(art.layers[layer]), top);
   }
   return keys;
 }
 
-/** Frees every world's scenery and enemy textures (and their animations) except `keep`'s. */
-export function releaseWorlds(scene: Phaser.Scene, keep: number): void {
+/**
+ * Frees every world's scenery and enemy textures (and their animations) except `keep`'s and any
+ * still `inUse` (a foe from the last world finishing its death animation). Returns how many it kept
+ * for being in use, so the caller can try again once they're gone.
+ */
+export function releaseWorlds(scene: Phaser.Scene, keep: number, inUse: ReadonlySet<string> = new Set()): number {
+  let held = 0;
   for (const key of scene.textures.getTextureKeys()) {
     const m = /^w(\d+)_|^foe_(\d+)_/.exec(key);
     if (!m) continue;
     const world = Number(m[1] ?? m[2]);
     if (world === keep) continue;
+    if (inUse.has(key)) {
+      held++;
+      continue;
+    }
     const i = info.get(key) as AnimInfo | undefined;
     if (i?.anims) for (const a of i.anims) scene.anims.remove(`${key}:${a}`);
     scene.textures.remove(key);
     info.delete(key);
   }
+  return held;
 }
 
 // ------------------------------------------------------------------ pack effects
@@ -301,7 +324,6 @@ export function generateTextures(scene: Phaser.Scene, w: number, h: number): voi
     const c = centered(downsample2(fromRows(rows)));
     put(scene, key, c.canvas, c.origin);
   }
-  CLOUDS.forEach((rows, k) => put(scene, `bg_cloud${k}`, toCanvas(fromRows(rows))));
   void w;
   void h;
 }

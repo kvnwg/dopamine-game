@@ -18,6 +18,30 @@ export interface LayerSpot {
 
 export type LayerName = 'far' | 'mid' | 'ground' | 'fg';
 
+/**
+ * Something in a layer that gives off light at dusk and night (src/render/pixel/atmosphere.ts):
+ * its emissive pixels (a rect, in layer pixels) and how its glow spreads.
+ */
+export interface LightSpot {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Windows are lit by chance (a share per world), lamps when a world turns them on, the rest always. */
+  kind: 'window' | 'lamp' | 'torch' | 'fire' | 'water';
+  /** Per pixel of the rect: 'g' lit glass, 'f' frame or muntin (dark against the light), '.' untouched. */
+  mask?: readonly string[];
+  /** A pool of light on the ground under it (ellipse center and radii, layer pixels). */
+  pool?: { x: number; y: number; rx: number; ry: number };
+  /** Light color (default: the world's window light). */
+  color?: string;
+  /** Glow radius in art pixels and strength (defaults by kind). */
+  radius?: number;
+  power?: number;
+  /** Animated: the battle scene adds a flickering glow on top (torches). */
+  flicker?: boolean;
+}
+
 export interface ScenerySet {
   /** Width of every layer; they repeat horizontally without a seam. */
   tileW: number;
@@ -32,4 +56,6 @@ export interface ScenerySet {
   mid(): PixelBuf;
   ground(): PixelBuf;
   fg(): PixelBuf;
+  /** Light spots per layer (in that layer's pixels). */
+  lights(): Readonly<Partial<Record<LayerName, readonly LightSpot[]>>>;
 }

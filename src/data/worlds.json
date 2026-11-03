@@ -30,12 +30,37 @@
       "accent": "#F2C14E"
     },
     "look": {
-      "skyTop": "#2FB8F0",
-      "skyBottom": "#C8F0FF",
       "hue": 0,
       "sat": 1.0,
       "bright": 1.0,
-      "night": false
+      "atmo": {
+        "sky": ["#3C8FE0", "#5CB2F2", "#8DD0FA", "#C6ECFC"],
+        "horizon": 40,
+        "body": {
+          "kind": "sun",
+          "x": 76,
+          "y": 15,
+          "r": 4,
+          "color": "#FFFBE6",
+          "halo": "#FFF4B8",
+          "haloR": 16
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.5,
+          "y": 6,
+          "light": "#FFFFFF",
+          "shade": "#A6CCEE",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.2, "mid": 0.04 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "motes",
+        "vignette": 0.12
+      }
     }
   },
   {
@@ -69,12 +94,39 @@
       "accent": "#C49A6C"
     },
     "look": {
-      "skyTop": "#3CC4F2",
-      "skyBottom": "#DDF7FF",
       "hue": -12,
       "sat": 1.15,
       "bright": 1.03,
-      "night": false
+      "atmo": {
+        "sky": ["#3B3D78", "#69508E", "#C06E89", "#F0A26D", "#FFD889"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 66,
+          "y": 22,
+          "r": 5,
+          "color": "#FFF6CC",
+          "halo": "#FFD27A",
+          "haloR": 28
+        },
+        "stars": 0.15,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.55,
+          "y": 12,
+          "light": "#FFC98A",
+          "shade": "#93679B",
+          "rim": "#FFF0B0"
+        },
+        "haze": { "color": "#8C5C80", "far": 0.5, "mid": 0.1 },
+        "rim": { "color": "#FFB070", "amount": 0.35 },
+        "ambient": "#D49C8C",
+        "windows": 0.35,
+        "lamps": true,
+        "light": "#FFC65C",
+        "particles": "fireflies",
+        "vignette": 0.3
+      }
     }
   },
   {
@@ -108,12 +160,29 @@
       "accent": "#7E57C2"
     },
     "look": {
-      "skyTop": "#7F9BC0",
-      "skyBottom": "#D3DEEB",
       "hue": 8,
       "sat": 0.55,
       "bright": 0.92,
-      "night": false
+      "atmo": {
+        "sky": ["#55627D", "#6E7C96", "#8C98AD", "#A9B3C3"],
+        "horizon": 40,
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.85,
+          "y": 2,
+          "light": "#B5BFCF",
+          "shade": "#5A657E",
+          "rim": "#CCD4E0"
+        },
+        "haze": { "far": 0.4, "mid": 0.12 },
+        "ambient": "#C6CDDD",
+        "windows": 0.6,
+        "lamps": true,
+        "light": "#FFD27A",
+        "weather": "rain",
+        "vignette": 0.35
+      }
     }
   },
   {
@@ -147,12 +216,38 @@
       "accent": "#FFEB3B"
     },
     "look": {
-      "skyTop": "#1FC2FF",
-      "skyBottom": "#FFF1C4",
       "hue": 12,
       "sat": 1.2,
       "bright": 1.06,
-      "night": false
+      "atmo": {
+        "sky": ["#1AA3E8", "#3FC0F2", "#86DCF7", "#DFF6F2", "#FFF0C8"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 15,
+          "y": 16,
+          "r": 5,
+          "color": "#FFFFFF",
+          "halo": "#FFF6C8",
+          "haloR": 20
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.35,
+          "y": 6,
+          "light": "#FFFFFF",
+          "shade": "#9ED0EA",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.22, "mid": 0.04 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "sparkles",
+        "particleColors": ["#FFFFFF", "#FFF6C8"],
+        "vignette": 0.1
+      }
     }
   },
   {
@@ -186,12 +281,39 @@
       "accent": "#E9C46A"
     },
     "look": {
-      "skyTop": "#FFB86B",
-      "skyBottom": "#FFE6B8",
       "hue": -38,
       "sat": 1.15,
       "bright": 1.0,
-      "night": false
+      "atmo": {
+        "sky": ["#5A7FC4", "#8FA5D0", "#E6B38C", "#FFD09A"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 76,
+          "y": 21,
+          "r": 5,
+          "color": "#FFF2C8",
+          "halo": "#FFC070",
+          "haloR": 24
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.45,
+          "y": 6,
+          "light": "#FFE2C0",
+          "shade": "#B08AA0",
+          "rim": "#FFF3D8"
+        },
+        "haze": { "far": 0.3, "mid": 0.06 },
+        "rim": { "color": "#FFB36B", "amount": 0.3 },
+        "ambient": "#F2D2BC",
+        "windows": 0.1,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "leaves",
+        "vignette": 0.22
+      }
     }
   },
   {
@@ -225,12 +347,40 @@
       "accent": "#FF3EA5"
     },
     "look": {
-      "skyTop": "#120F3A",
-      "skyBottom": "#4B2A7A",
       "hue": 18,
       "sat": 1.25,
       "bright": 0.58,
-      "night": true
+      "atmo": {
+        "sky": ["#0D0B2A", "#1C1446", "#3A1E66", "#6A2A7E"],
+        "horizon": 44,
+        "body": {
+          "kind": "moon",
+          "x": 70,
+          "y": 16,
+          "r": 4,
+          "color": "#F6EEDC",
+          "accent": "#D8CCE8",
+          "halo": "#B48CFF",
+          "haloR": 16
+        },
+        "stars": 0.6,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.3,
+          "y": 8,
+          "light": "#6A4A9E",
+          "shade": "#2A1E52",
+          "rim": "#C08CFF"
+        },
+        "haze": { "far": 0.35, "mid": 0.1 },
+        "ambient": "#6A64B8",
+        "windows": 0.85,
+        "lamps": true,
+        "light": "#FFB86A",
+        "particles": "sparkles",
+        "particleColors": ["#FF6AD5", "#6AF0FF", "#FFE66A"],
+        "vignette": 0.4
+      }
     }
   },
   {
@@ -264,12 +414,38 @@
       "accent": "#E3F2FD"
     },
     "look": {
-      "skyTop": "#9FD8FF",
-      "skyBottom": "#FFFFFF",
       "hue": 0,
       "sat": 0.3,
       "bright": 1.22,
-      "night": false
+      "atmo": {
+        "sky": ["#7FB6E6", "#A8D0F0", "#D4E9F8", "#F2F8FC"],
+        "horizon": 40,
+        "body": {
+          "kind": "sun",
+          "x": 20,
+          "y": 16,
+          "r": 4,
+          "color": "#FFFFFF",
+          "halo": "#F4FBFF",
+          "haloR": 18
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.5,
+          "y": 4,
+          "light": "#FFFFFF",
+          "shade": "#B4C8E0",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.4, "mid": 0.12 },
+        "rim": { "color": "#FFFFFF", "amount": 0.75 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "weather": "snow",
+        "vignette": 0.15
+      }
     }
   },
   {
@@ -309,13 +485,21 @@
       "accent": "#FFD54F"
     },
     "look": {
-      "skyTop": "#1A1326",
-      "skyBottom": "#3A2840",
       "hue": 0,
       "sat": 1,
       "bright": 1,
-      "night": true,
-      "scenery": "dungeon"
+      "scenery": "dungeon",
+      "atmo": {
+        "sky": ["#1A1326", "#3A2840"],
+        "horizon": 40,
+        "stars": 0,
+        "haze": { "far": 0, "mid": 0 },
+        "windows": 0,
+        "lamps": true,
+        "light": "#FFB04A",
+        "particles": "embers",
+        "vignette": 0.55
+      }
     }
   },
   {
@@ -349,12 +533,39 @@
       "accent": "#C6FF00"
     },
     "look": {
-      "skyTop": "#7FD46A",
-      "skyBottom": "#E3FFB0",
       "hue": 55,
       "sat": 1.3,
       "bright": 0.86,
-      "night": false
+      "atmo": {
+        "sky": ["#29392D", "#496A3A", "#88A64A", "#D2E27A"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 60,
+          "y": 21,
+          "r": 5,
+          "color": "#F4FFB0",
+          "halo": "#C8F060",
+          "haloR": 22
+        },
+        "stars": 0.1,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.45,
+          "y": 10,
+          "light": "#C0E080",
+          "shade": "#4A6A40",
+          "rim": "#EAFFA0"
+        },
+        "haze": { "color": "#4A5E3A", "far": 0.45, "mid": 0.1 },
+        "ambient": "#B4C89A",
+        "windows": 0.4,
+        "lamps": true,
+        "light": "#D8FF7A",
+        "particles": "fireflies",
+        "particleColors": ["#C8FF5A", "#9AFF8A"],
+        "vignette": 0.3
+      }
     }
   },
   {
@@ -388,12 +599,39 @@
       "accent": "#FFD54F"
     },
     "look": {
-      "skyTop": "#FF5A3A",
-      "skyBottom": "#FFB36B",
       "hue": -95,
       "sat": 1.3,
       "bright": 0.82,
-      "night": false
+      "atmo": {
+        "sky": ["#2A0D12", "#5A1A1A", "#A8321E", "#F06A2A", "#FFB050"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 72,
+          "y": 22,
+          "r": 6,
+          "color": "#FFF0A0",
+          "halo": "#FF8A3A",
+          "haloR": 22
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.5,
+          "y": 8,
+          "light": "#FF8A4A",
+          "shade": "#4A1A1E",
+          "rim": "#FFD070"
+        },
+        "haze": { "color": "#6A1E26", "far": 0.45, "mid": 0.1 },
+        "rim": { "color": "#FF7A3A", "amount": 0.4 },
+        "ambient": "#FFB090",
+        "windows": 0.5,
+        "lamps": true,
+        "light": "#FFB050",
+        "particles": "embers",
+        "vignette": 0.35
+      }
     }
   },
   {
@@ -427,12 +665,38 @@
       "accent": "#FFEB3B"
     },
     "look": {
-      "skyTop": "#FFB3E6",
-      "skyBottom": "#FFF0FA",
       "hue": 165,
       "sat": 1.1,
       "bright": 1.1,
-      "night": false
+      "atmo": {
+        "sky": ["#FF9FD8", "#FFB8E2", "#FFD6EE", "#FFF0F8"],
+        "horizon": 40,
+        "body": {
+          "kind": "sun",
+          "x": 18,
+          "y": 15,
+          "r": 4,
+          "color": "#FFFFFF",
+          "halo": "#FFE4F4",
+          "haloR": 16
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.55,
+          "y": 5,
+          "light": "#FFFFFF",
+          "shade": "#F2A6D2",
+          "rim": "#FFF6FB"
+        },
+        "haze": { "far": 0.3, "mid": 0.06 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "sparkles",
+        "particleColors": ["#FFFFFF", "#FF9FD8"],
+        "vignette": 0.12
+      }
     }
   },
   {
@@ -466,12 +730,39 @@
       "accent": "#E53935"
     },
     "look": {
-      "skyTop": "#2A1F3A",
-      "skyBottom": "#5C4A7E",
       "hue": 200,
       "sat": 0.6,
       "bright": 0.62,
-      "night": true
+      "atmo": {
+        "sky": ["#120D22", "#241A40", "#3E2C5E", "#5E4A7E"],
+        "horizon": 44,
+        "body": {
+          "kind": "moon",
+          "x": 22,
+          "y": 16,
+          "r": 5,
+          "color": "#E8F0D8",
+          "accent": "#C2CCB0",
+          "halo": "#8AB8A0",
+          "haloR": 20
+        },
+        "stars": 0.4,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.4,
+          "y": 6,
+          "light": "#5A4A7A",
+          "shade": "#1E1634",
+          "rim": "#A8C8B0"
+        },
+        "haze": { "far": 0.4, "mid": 0.15 },
+        "ambient": "#6A6AA0",
+        "windows": 0.35,
+        "lamps": true,
+        "light": "#FFA040",
+        "particles": "wisps",
+        "vignette": 0.5
+      }
     }
   },
   {
@@ -505,12 +796,31 @@
       "accent": "#B3E5FC"
     },
     "look": {
-      "skyTop": "#8FE3FF",
-      "skyBottom": "#EAFBFF",
       "hue": 95,
       "sat": 0.8,
       "bright": 1.15,
-      "night": false
+      "atmo": {
+        "sky": ["#0E1F3A", "#1E3F66", "#3A7AA0", "#8AD6E0"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 16,
+          "y": 22,
+          "r": 4,
+          "color": "#FFFFFF",
+          "halo": "#BFF4FF",
+          "haloR": 18
+        },
+        "stars": 0.3,
+        "haze": { "far": 0.4, "mid": 0.12 },
+        "rim": { "color": "#EAF8FF", "amount": 0.6 },
+        "ambient": "#C8E8FF",
+        "windows": 0.3,
+        "lamps": true,
+        "light": "#FFD27A",
+        "weather": "snow",
+        "vignette": 0.25
+      }
     }
   },
   {
@@ -544,12 +854,39 @@
       "accent": "#D500F9"
     },
     "look": {
-      "skyTop": "#C6A6FF",
-      "skyBottom": "#F3EAFF",
       "hue": 125,
       "sat": 1.2,
       "bright": 1.0,
-      "night": false
+      "atmo": {
+        "sky": ["#3A2A6A", "#6A4A9E", "#A87AC8", "#E6B8E6"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 70,
+          "y": 21,
+          "r": 5,
+          "color": "#FFF0F8",
+          "halo": "#F0A8E0",
+          "haloR": 22
+        },
+        "stars": 0.2,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.4,
+          "y": 10,
+          "light": "#E8B0E0",
+          "shade": "#5A3A8A",
+          "rim": "#FFF0FF"
+        },
+        "haze": { "color": "#6E4C8E", "far": 0.45, "mid": 0.1 },
+        "ambient": "#CDB4DE",
+        "windows": 0.4,
+        "lamps": true,
+        "light": "#9AFFE8",
+        "particles": "spores",
+        "particleColors": ["#7AFFE0", "#FF9AE8"],
+        "vignette": 0.3
+      }
     }
   },
   {
@@ -583,12 +920,32 @@
       "accent": "#18FFFF"
     },
     "look": {
-      "skyTop": "#2E1F66",
-      "skyBottom": "#8A5AD8",
       "hue": 140,
       "sat": 1.35,
       "bright": 0.75,
-      "night": true
+      "atmo": {
+        "sky": ["#0A0820", "#1A1450", "#3A2A8A", "#6A4AC0"],
+        "horizon": 44,
+        "body": {
+          "kind": "moon",
+          "x": 70,
+          "y": 14,
+          "r": 4,
+          "color": "#E8F0FF",
+          "accent": "#C4CCF0",
+          "halo": "#8A7AFF",
+          "haloR": 18
+        },
+        "stars": 0.7,
+        "haze": { "far": 0.35, "mid": 0.12 },
+        "ambient": "#7A70C8",
+        "windows": 0.7,
+        "lamps": true,
+        "light": "#8AE8FF",
+        "particles": "sparkles",
+        "particleColors": ["#8AE8FF", "#D08AFF"],
+        "vignette": 0.45
+      }
     }
   },
   {
@@ -622,12 +979,29 @@
       "accent": "#FFEA00"
     },
     "look": {
-      "skyTop": "#4A5A7A",
-      "skyBottom": "#A5B3CF",
       "hue": 25,
       "sat": 0.7,
       "bright": 0.78,
-      "night": false
+      "atmo": {
+        "sky": ["#1E2434", "#323A50", "#4A556E", "#6A7690"],
+        "horizon": 40,
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.9,
+          "y": 2,
+          "light": "#6A7690",
+          "shade": "#22283A",
+          "rim": "#A8B4CC"
+        },
+        "haze": { "far": 0.45, "mid": 0.15 },
+        "ambient": "#9AA4C0",
+        "windows": 0.6,
+        "lamps": true,
+        "light": "#FFD27A",
+        "weather": "storm",
+        "vignette": 0.45
+      }
     }
   },
   {
@@ -661,12 +1035,39 @@
       "accent": "#7B1FA2"
     },
     "look": {
-      "skyTop": "#FFE08A",
-      "skyBottom": "#FFF9DC",
       "hue": -42,
       "sat": 1.45,
       "bright": 1.12,
-      "night": false
+      "atmo": {
+        "sky": ["#4A5A9A", "#8A7AA8", "#E8A87A", "#FFD88A", "#FFF0B0"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 54,
+          "y": 21,
+          "r": 6,
+          "color": "#FFFBE0",
+          "halo": "#FFE08A",
+          "haloR": 32
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.35,
+          "y": 10,
+          "light": "#FFE0A0",
+          "shade": "#A07A9A",
+          "rim": "#FFF8D0"
+        },
+        "haze": { "color": "#A07C78", "far": 0.45, "mid": 0.08 },
+        "rim": { "color": "#FFD070", "amount": 0.45 },
+        "ambient": "#E6B898",
+        "windows": 0.2,
+        "lamps": true,
+        "light": "#FFC65C",
+        "particles": "petals",
+        "vignette": 0.25
+      }
     }
   },
   {
@@ -700,12 +1101,32 @@
       "accent": "#40C4FF"
     },
     "look": {
-      "skyTop": "#070B1F",
-      "skyBottom": "#262E52",
       "hue": 0,
       "sat": 0.15,
       "bright": 0.85,
-      "night": true
+      "atmo": {
+        "sky": ["#03050F", "#070B1F", "#121A38", "#262E52"],
+        "horizon": 44,
+        "body": {
+          "kind": "planet",
+          "x": 70,
+          "y": 17,
+          "r": 6,
+          "color": "#3A7AE0",
+          "accent": "#5DC14C",
+          "halo": "#6AA8FF",
+          "haloR": 18
+        },
+        "stars": 1,
+        "haze": { "far": 0.3, "mid": 0.06 },
+        "ambient": "#8A90B8",
+        "windows": 0.5,
+        "lamps": true,
+        "light": "#FFE0A0",
+        "particles": "motes",
+        "particleColors": ["#C8D0F0"],
+        "vignette": 0.45
+      }
     }
   },
   {
@@ -739,12 +1160,41 @@
       "accent": "#FFD740"
     },
     "look": {
-      "skyTop": "#1A0A3A",
-      "skyBottom": "#6A1A8A",
       "hue": 185,
       "sat": 1.45,
       "bright": 0.72,
-      "night": true
+      "atmo": {
+        "sky": ["#0A0420", "#1A0A3A", "#3A1260", "#6A1A8A"],
+        "horizon": 44,
+        "body": {
+          "kind": "planet",
+          "x": 22,
+          "y": 17,
+          "r": 5,
+          "color": "#E88AD8",
+          "accent": "#FFD0F0",
+          "halo": "#C060FF",
+          "haloR": 18,
+          "ring": true
+        },
+        "stars": 0.9,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.35,
+          "y": 8,
+          "light": "#A04AD0",
+          "shade": "#3A1260",
+          "rim": "#FF8AE8"
+        },
+        "haze": { "far": 0.35, "mid": 0.08 },
+        "ambient": "#9A7AC8",
+        "windows": 0.6,
+        "lamps": true,
+        "light": "#FF9AE8",
+        "particles": "sparkles",
+        "particleColors": ["#FF8AE8", "#8AE8FF"],
+        "vignette": 0.45
+      }
     }
   },
   {
@@ -778,12 +1228,39 @@
       "accent": "#FF1744"
     },
     "look": {
-      "skyTop": "#FF4FA3",
-      "skyBottom": "#5A3AFF",
       "hue": 250,
       "sat": 1.6,
       "bright": 0.88,
-      "night": false
+      "atmo": {
+        "sky": ["#2A0A5A", "#5A3AFF", "#C04AD8", "#FF4FA3", "#FFB0D0"],
+        "horizon": 42,
+        "body": {
+          "kind": "sun",
+          "x": 45,
+          "y": 20,
+          "r": 6,
+          "color": "#FFFFFF",
+          "halo": "#FF8AF0",
+          "haloR": 26
+        },
+        "stars": 0.5,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.4,
+          "y": 8,
+          "light": "#FF8AD8",
+          "shade": "#3A1A8A",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.35, "mid": 0.1 },
+        "ambient": "#D8B0FF",
+        "windows": 0.5,
+        "lamps": true,
+        "light": "#8AFFEA",
+        "particles": "sparkles",
+        "particleColors": ["#FFFFFF", "#8AFFEA", "#FF8AF0"],
+        "vignette": 0.35
+      }
     }
   }
 ]

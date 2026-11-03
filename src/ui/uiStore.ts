@@ -66,6 +66,8 @@ interface UiState {
   prevTab: Tab;
   /** Where the upgrade map was panned and zoomed to (kept while the app runs). */
   mapView: { x: number; y: number; k: number } | null;
+  /** The dev cheat panel is open (playtest builds; opened from Settings). */
+  devOpen: boolean;
   setBagSort: (s: BagSort) => void;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
@@ -92,6 +94,7 @@ export const useUi = create<UiState>((set) => ({
   upgradeSel: 'luck:1',
   prevTab: 'alley',
   mapView: null,
+  devOpen: false,
   setBagSort: (bagSort) => {
     set({ bagSort });
     try {

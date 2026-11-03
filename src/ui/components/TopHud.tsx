@@ -1,22 +1,18 @@
-import { BAL } from '../../data';
-import { formatDuration, formatNumber, xpToNext } from '../../core';
+import { formatNumber, xpToNext } from '../../core';
 import { useGame } from '../../app/store';
-import { useCountUp, useNow } from '../hooks';
+import { useCountUp } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
-import { CoinIcon, GearIcon, GemIcon, PotionIcon } from './Icons';
+import { CoinIcon, GearIcon, GemIcon } from './Icons';
 import s from './hud.module.css';
 
-/** Overlaid on the top of the battle scene: settings, level/XP, gold, gems, luck potion timer. */
+/** Overlaid on the top of the battle scene: settings, level/XP, gold and gems (the luck potion timer is in the stat strip). */
 export function TopHud() {
   const level = useGame((g) => g.player.level);
   const xp = useGame((g) => g.player.xp);
   const coins = useCountUp(useGame((g) => g.currencies.coins));
   const gems = useCountUp(useGame((g) => g.currencies.gems));
-  const boostEnds = useGame((g) => g.luckBoostEndsAt);
-  const now = useNow(500);
   const need = xpToNext(level);
-  const boostLeft = boostEnds !== null ? (boostEnds - now) / 1000 : 0;
   return (
     <div className={s.hud}>
       <button className={s.gearBtn} aria-label={t('hud.settings')} onClick={() => useUi.getState().openPopup('settings')}>
@@ -41,12 +37,6 @@ export function TopHud() {
             <span>{formatNumber(gems)}</span>
           </div>
         </div>
-        {boostLeft > 0 && (
-          <button className={s.boost} onClick={() => useUi.getState().openPopup('luck')}>
-            <PotionIcon size={52} />
-            {t('hud.luckBoost', { mult: BAL.luck.potion.mult, time: formatDuration(boostLeft) })}
-          </button>
-        )}
       </div>
     </div>
   );

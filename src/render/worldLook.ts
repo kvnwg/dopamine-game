@@ -1,15 +1,19 @@
 /**
- * Per-world look for the pixel scenery: a sky in flat color bands (stars and a pixel moon at
- * night) plus a hue / saturation / brightness grade applied to the street layers (dark outline
- * pixels are left alone so line work stays crisp), or a world's own backdrop (the fantasy
- * dungeon keeps its colors). Used by the battle scene and the Worlds tab (small preview cards).
+ * Per-world look for the battle backdrop: which scenery set a world uses, a hue / saturation /
+ * brightness grade for the street layers (dark outline pixels are left alone so line work stays
+ * crisp; the fantasy dungeon keeps its own colors), and the world's atmosphere (atmosphere.ts:
+ * sky, clouds, sun or moon, haze, lit windows and lamps, vignette). Used by the battle scene, the
+ * Worlds tab (small preview cards) and tools/worldPreview.ts.
  */
-import { DATA, type WorldDef } from '../data';
-import { blank, blit, clone, fill, fromRows, hash01, mix, rgb, toHex, type PixelBuf } from './pixel/buf';
+import { DATA, type Atmo, type WorldDef } from '../data';
+import { clone, crop, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
 import { SUBURBS } from './pixel/scenery';
 import { DUNGEON } from './pixel/packs/dungeon';
-import type { LayerName, ScenerySet } from './pixel/sceneryTypes';
+import {
+  glowOverlay, lightLayer, litSpots, over, paintClouds, paintSky, paintVignette, type CloudStrip,
+} from './pixel/atmosphere';
+import { VIEW, type LayerName, type LightSpot, type ScenerySet } from './pixel/sceneryTypes';
 
 export type Look = WorldDef['look'];
 
@@ -102,69 +106,148 @@ export function gradeBuf(src: PixelBuf, look: Look): PixelBuf {
   return out;
 }
 
-const MOON = [
-  '..kkkk..',
-  '.kWWWWk.',
-  'kWWW5W.k',
-  'kWWWW..k',
-  'kWW5W..k',
-  'kWWWWW.k',
-  '.kWWWWk.',
-  '..kkkk..',
-];
+/** Seed for a world's sky and lights, so each world's stars, clouds and lit windows stay put. */
+export function worldSeed(world: number): number {
+  return world * 7919 + 13;
+}
 
-/** The world's sky in `w` x `h` art pixels: flat bands from top to bottom, with stars and a moon at night. */
-export function skyBuf(w: number, h: number, look: Look): PixelBuf {
-  const b = blank(w, h);
-  const bands = 7;
-  const span = Math.ceil((h * 0.75) / bands);
-  for (let i = 0; i < bands; i++) {
-    const c = mix(look.skyTop, look.skyBottom, i / (bands - 1));
-    fill(b, 0, i * span, w, i === bands - 1 ? h - i * span : span, c);
+/** Everything a world's backdrop is painted from, in art pixels (see atmosphere.ts). */
+export interface WorldArt {
+  set: ScenerySet;
+  atmo: Atmo;
+  /** The sky, VIEW.w x (VIEW.h + 1) so it also fills the canvas' last screen rows. */
+  sky: PixelBuf;
+  clouds: CloudStrip[];
+  /** The sun / moon / planet and its halo, placed at view (x, y). */
+  glow: { buf: PixelBuf; x: number; y: number } | null;
+  /** Scenery layers, graded and lit for the world. */
+  layers: Record<LayerName, PixelBuf>;
+  /** Light spots that flicker (torches), per layer, for the battle scene to animate. */
+  flicker: Array<{ layer: LayerName; spot: LightSpot }>;
+  vignette: PixelBuf;
+}
+
+const arts = new Map<number, WorldArt>();
+
+/** A world's backdrop art (built on first use; the last few are kept). */
+export function worldArt(world: number): WorldArt {
+  const n = Math.max(1, Math.min(world, DATA.worlds.length));
+  const hit = arts.get(n);
+  if (hit) return hit;
+  const def = DATA.worlds[n - 1];
+  const atmo = def.look.atmo;
+  const seed = worldSeed(n);
+  const { set, bufs } = sceneryFor(def);
+  const spots = lightsFor(set);
+  const layers = {} as Record<LayerName, PixelBuf>;
+  for (const name of LAYER_NAMES) {
+    const graded = set.graded ? gradeBuf(bufs[name], def.look) : bufs[name];
+    layers[name] = lightLayer(graded, { atmo, layer: name, lights: spots[name] ?? [], seed, top: set.layers[name].y });
   }
-  if (look.night) {
-    for (let i = 0; i < 46; i++) {
-      const x = Math.floor(hash01(i) * w);
-      const y = Math.floor(hash01(i + 500) * h * 0.55);
-      const bright = hash01(i + 900) > 0.7;
-      fill(b, x, y, 1, 1, bright ? '#ffffff' : mix(look.skyTop, '#ffffff', 0.6));
-      if (bright && hash01(i + 1300) > 0.6) {
-        const [r, g, bl] = rgb(mix(look.skyTop, '#ffffff', 0.35));
-        const dim = toHex(r, g, bl);
-        fill(b, x - 1, y, 1, 1, dim);
-        fill(b, x + 1, y, 1, 1, dim);
-        fill(b, x, y - 1, 1, 1, dim);
-        fill(b, x, y + 1, 1, 1, dim);
-      }
-    }
-    blit(b, fromRows(MOON), Math.floor(w * 0.8), Math.floor(h * 0.1));
+  const flicker = LAYER_NAMES.flatMap((layer) =>
+    litSpots(atmo, spots[layer] ?? [], seed).filter((spot) => spot.flicker).map((spot) => ({ layer, spot })),
+  );
+  const art: WorldArt = {
+    set,
+    atmo,
+    sky: paintSky(atmo, VIEW.w, VIEW.h + 1, seed),
+    clouds: set.sky ? paintClouds(atmo, seed) : [],
+    glow: set.sky ? glowOverlay(atmo, seed) : null,
+    layers,
+    flicker,
+    vignette: paintVignette(VIEW.w, VIEW.h + 1, atmo.vignette, seed),
+  };
+  if (arts.size >= 3) arts.delete(arts.keys().next().value!);
+  arts.set(n, art);
+  return art;
+}
+
+const lightCache = new Map<ScenerySet, Readonly<Partial<Record<LayerName, readonly LightSpot[]>>>>();
+
+function lightsFor(set: ScenerySet): Readonly<Partial<Record<LayerName, readonly LightSpot[]>>> {
+  let l = lightCache.get(set);
+  if (!l) {
+    l = set.lights();
+    lightCache.set(set, l);
   }
-  return b;
+  return l;
+}
+
+/**
+ * A world's whole backdrop as one picture (`w` x `h` view pixels from the top left): sky, clouds,
+ * sun or moon, the four layers at their opening scroll (shifted by `walk` art pixels of walking)
+ * and the vignette. For thumbnails and tools/worldPreview.ts; the battle scene draws the parts itself.
+ */
+export function composeWorld(world: number, opts: { walk?: number; vignette?: boolean; fg?: boolean } = {}): PixelBuf {
+  const art = worldArt(world);
+  const { set } = art;
+  const out = clone(art.sky);
+  const walk = opts.walk ?? 0;
+  const speed: Record<LayerName, number> = { far: 0.18, mid: 0.5, ground: 1, fg: 1.3 };
+  const put = (src: PixelBuf, sx: number, y: number) => {
+    const off = ((Math.round(sx) % src.w) + src.w) % src.w;
+    for (let x = -off; x < out.w; x += src.w) over(out, src, x, y);
+  };
+  if (set.sky) {
+    art.clouds.forEach((c, i) => put(c.buf, 37 + i * 61, c.y));
+    if (art.glow) over(out, art.glow.buf, art.glow.x, art.glow.y);
+  }
+  for (const name of LAYER_NAMES) {
+    if (name === 'fg' && opts.fg === false) continue;
+    put(art.layers[name], set.scroll0[name] + walk * speed[name], set.layers[name].y);
+  }
+  if (opts.vignette !== false) over(out, art.vignette, 0, 0);
+  return out;
 }
 
 const thumbs = new Map<number, string>();
+const waiting = new Map<number, Array<(url: string) => void>>();
+let pumping = false;
 
-/** A preview of a world (sky + its backdrop, graded) as a data URL, cached. Pixel-crisp at 4x. */
+/** A world's thumbnail if it's already made. */
+export function cachedThumb(world: number): string | undefined {
+  return thumbs.get(world);
+}
+
+/**
+ * A world's thumbnail, made in the background: one world per task (each takes a few tens of
+ * milliseconds), so a screen full of them never blocks a frame for long.
+ */
+export function requestThumb(world: number): Promise<string> {
+  const hit = thumbs.get(world);
+  if (hit) return Promise.resolve(hit);
+  return new Promise((resolve) => {
+    const list = waiting.get(world);
+    if (list) list.push(resolve);
+    else waiting.set(world, [resolve]);
+    if (!pumping) {
+      pumping = true;
+      setTimeout(pump, 0);
+    }
+  });
+}
+
+function pump(): void {
+  const next = waiting.keys().next();
+  if (next.done) {
+    pumping = false;
+    return;
+  }
+  const world = next.value;
+  const url = worldThumbUrl(world);
+  for (const done of waiting.get(world) ?? []) done(url);
+  waiting.delete(world);
+  setTimeout(pump, 16);
+}
+
+/** A preview of a world (its backdrop as in battle, lit) as a data URL, cached. Pixel-crisp at 4x. */
 export function worldThumbUrl(world: number): string {
   const hit = thumbs.get(world);
   if (hit) return hit;
-  const def = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
-  const { set, bufs } = sceneryFor(def);
   // The band of the battle view with the houses (or the dungeon wall), trees and road.
   const top = 12;
-  const w = 80;
-  const h = 48;
-  const out = skyBuf(w, h + top, def.look);
-  const view = blank(w, h + top);
-  const put = (src: PixelBuf, sx: number, y: number) => {
-    for (let x = -(sx % src.w); x < w; x += src.w) blit(view, src, x, y);
-  };
-  for (const name of ['far', 'mid', 'ground'] as const) {
-    put(set.graded ? gradeBuf(bufs[name], def.look) : bufs[name], set.scroll0[name], set.layers[name].y);
-  }
-  blit(out, view, 0, 0);
-  const cropped = blank(w, h);
-  blit(cropped, out, 0, -top);
+  const full = composeWorld(world, { vignette: false, fg: false });
+  const cropped = crop(full, 5, top, 80, 48);
   const url = toCanvas(cropped, 4).toDataURL('image/png');
   thumbs.set(world, url);
   return url;

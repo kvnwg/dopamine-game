@@ -82,6 +82,32 @@ older still effects).
 Size guide at this scale: the raccoon hero is about 15 x 15, rats and pigeons about 10 to 13, pack
 knights and orcs 16 to 22 tall, humans about 30, bosses 20 to 34.
 
+## Atmosphere and light
+
+Each world's backdrop is lit on the same grid (`src/render/pixel/atmosphere.ts`, settings in
+`look.atmo` of `src/data/worlds.json`), the way you would paint light by hand:
+
+- **Sky**: color bands from the world's sky colors (mixed in OKLab), about 3.5 rows each down to
+  the horizon, their edges wavy and broken into 2 to 4 pixel runs. No smooth gradients.
+- **Sun, moon, planet**: a disc inside a halo of four stepped rings (semi-transparent), drawn over
+  the clouds. Moons get craters and a darker limb, planets land and a ring.
+- **Clouds**: tiling strips (`CLOUD_W` wide), back and front, built from ellipses and shaded on the
+  whole cloud's outline: rim on the edge facing the light, a lit band, a shaded band on the far side.
+- **Scenery light**: ambient multiply (dusk, night), haze toward the sky on the far and mid layers,
+  rim light on the skyline's top edges, then lit windows and lamps. Their glow is summed and cut
+  into three rings: added onto the art, semi-transparent beyond it.
+- **Light spots** (`LightSpot` in `sceneryTypes.ts`) come from the scenery sets: windows are found
+  in house art automatically (glass `c` `C` and muntin `w` pixels closed in by frame `x`), lamps and
+  torches are placed by hand.
+
+Moving parts (stars, particles, weather, torch flicker) are sprites snapped to whole art pixels
+(`src/render/ambience.ts`). Preview every world's backdrop, lit:
+
+```bash
+npx tsx tools/worldPreview.ts /path/to/worlds.png --scale 4
+npx tsx tools/worldPreview.ts /path/to/two.png --worlds 2,6 --scale 8 --walk 40
+```
+
 ## Pack art (sheets with their own palette)
 
 Art from asset packs keeps its own colors. `src/render/pixel/indexed.ts` defines `AnimSheet`: a

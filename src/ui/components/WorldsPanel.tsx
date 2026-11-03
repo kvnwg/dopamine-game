@@ -3,8 +3,8 @@ import { useMemo, type CSSProperties } from 'react';
 import { DATA } from '../../data';
 import { formatNumber, worldRewards, worldThreat, type ThreatLevel } from '../../core';
 import { useGame } from '../../app/store';
-import { worldThumbUrl } from '../../render/worldLook';
 import { haptics } from '../../services';
+import { useWorldThumb } from '../hooks';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
 import { CheckIcon, CoinIcon, SkullIcon } from './Icons';
@@ -24,6 +24,12 @@ export function ThreatChip({ level, big }: { level: ThreatLevel; big?: boolean }
       {t(`worlds.threat.${level}`)}
     </span>
   );
+}
+
+/** A world's preview picture, faded in when it's ready (they're made in the background). */
+function Thumb({ world }: { world: number }) {
+  const url = useWorldThumb(world);
+  return url ? <img className={s.thumbImg} src={url} alt="" draggable={false} /> : <span className={s.thumbWait} />;
 }
 
 export function WorldsPanel() {
@@ -60,7 +66,7 @@ export function WorldsPanel() {
                 }}
               >
                 <div className={s.thumb}>
-                  <img src={worldThumbUrl(n)} alt="" draggable={false} loading="lazy" />
+                  <Thumb world={n} />
                   <span className={s.num}>{n}</span>
                   {isHere ? (
                     <span className={s.here}>{t('worlds.here')}</span>

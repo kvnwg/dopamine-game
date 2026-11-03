@@ -2,7 +2,22 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Kevin's raccoon, asset packs, one pixel size and a fantasy world (Nov 3, latest)
+## Lit skies, atmosphere and a clearer battle view (Nov 3, latest)
+
+Kevin sent two pixel-art pictures (a sunset over a lake with fireflies; a moonlit garden with glowing lamps and string lights) and asked for "nicer shaders on the background and stuff like this", then: "make more space for the top section. it's way too cramped... see which things u can remove and just put somewhere else".
+
+| # | Decision | Why |
+|---|---|---|
+| L1 | Backdrops are lit the way pixel artists paint light, on the art grid (`src/render/pixel/atmosphere.ts`): skies in color bands mixed in OKLab, their edges broken into short runs; a sun, moon or planet inside a halo of stepped rings, drawn over the clouds so they catch its glow; stars; clouds built from ellipses and shaded on the whole cloud's outline (rim, lit band, shaded band), puffy heaps by day and thin streaks lit from below at sunset. The street is lit per world: an ambient multiply (dusk and night darken and tint it), aerial haze on the far and mid layers (dusky silhouettes against a sunset), rim light on the skyline (a white rim gives the snowy worlds snow caps), lit windows and lamps glowing in stepped rings, and a vignette in stepped rings. | The reference pictures: banded gradients, haloed sun and moon, lit cloud edges, warm lights against cool shadows. |
+| L2 | It is painted on the CPU into textures (1 texel per art pixel), not done with GPU shaders. Glow is added to the art and semi-transparent past it; every art pixel has one color and one alpha. | A smooth GPU blur or bloom would break the one-pixel-size rule (P1). This stays crisp, also works on the canvas renderer, and is deterministic and tested in Node. A world's art builds in about 20 ms, once per visit. |
+| L3 | Each world's atmosphere is data: `look.atmo` in `worlds.json` (sky colors and horizon, sun / moon / planet, stars, clouds, haze, rim light, ambient color, share of windows lit, lamps, light color, particles, weather, vignette). The old `skyTop`, `skyBottom` and `night` fields are gone. Day worlds stay bright (Sunny Suburbs, Boardwalk Beach, Candy Corner, Snowy Summit); Pinecone Park, Autumn Avenue, Golden Gardens, Lava Landfill, Toxic Bayou and Mushroom Marsh are sunsets; Drizzle Downtown rains; the rest are night or storm (Moon Junkyard has the Earth in its sky, Cosmic Compactor a ringed planet). | Gives the 19 worlds that share the street their own mood. |
+| L4 | Lights come from the scenery: windows are found in the house art (glass and muntin pixels closed in by frame), plus the far houses' one-pixel windows; two new street lamps stand behind the curb and throw a pool of light on the sidewalk (unlit by day); the dungeon gets four wall torches (drawn for the game) and its two fountains glow. Torches flicker in battle (animated flame and glow). | |
+| L5 | Moving parts (`src/render/ambience.ts`), always on whole art pixels and seeded per world: twinkling and shooting stars, fireflies, leaves, petals, snow, rain (longer streaks in storms), embers, glowing spores, sparkles, wisps and dust motes; storms flash lightning with a bolt. Reduce motion hides the drifting particles and shooting stars; reduce flashing turns lightning off. | |
+| L6 | Worlds tab thumbnails show each world lit as in battle. They are made in the background, one world per task, so the tab opens at once. `tools/worldPreview.ts` renders any worlds' backdrops to a PNG for art direction. | Making all 20 at once would freeze the tab for a moment on a phone. |
+| L7 | The top of the battle view only holds the HUD row now. The world's name shows as a title card when you arrive, then fades. Wave progress moved to the bottom, next to the globe button (both open Worlds). The boss name and HP bar sit right under the HUD (they used to overlap the wave track). The luck potion timer moved into the stat strip's Luck cell, which already glows while boosted. The dev panel opens from Settings instead of a floating button. The "Drag gear onto me!" tip is smaller and sits just above the raccoon. | Kevin's request. |
+| L8 | Leaving a world frees its textures, except that a foe still finishing its death animation keeps its texture until it is gone. | A dying foe could otherwise draw from a freed texture. |
+
+## Kevin's raccoon, asset packs, one pixel size and a fantasy world (Nov 3, after the hex map)
 
 Kevin sent his own raccoon sprite sheet ("here just use this"), then a series of asset packs: pixel clothes ("just make sure the pixel sizes and everything are consistent"), Tiny RPG Soldier & Orc, 0x72 DungeonTileset II, Super Pixel Effects Gigapack, Mucho Pixels Character Animation pack and a cozy UI kit, and asked for the fantasy characters to go in one world ("one of the worlds would be fantasy themed, just throw them in there"). These rows replace X1's pixel size and X2's raccoon. Licenses: `CREDITS.md`.
 
@@ -180,7 +195,7 @@ Kevin asked for a Roblox-style rolling game: the dumpster rolls on its own, item
 | U9 | Fonts (Lilita One, Nunito) are bundled with `@fontsource` so they work offline in the native app. | |
 | U10 | Sound and music are synthesized with the Web Audio API (no audio files) and start on the first tap, as browsers require: a lo-fi loop in C major, rarity-scaled rattle, riser and reveal stings, a silence drop before Legendary+, pitch-stacked coins, button pops. Real recorded audio replaces it in M5. Haptics use Capacitor's presets; custom patterns need a native plugin (playbook note). | Kevin asked for sound before M5. |
 | U12 | *Superseded by R14.* Placeholder art follows the painterly storybook direction (`docs/ART_DIRECTION.md`, Nov 2 update): everything is painted in code on canvases with a brush toolkit, then registered as textures or data URLs. | Kevin's style update. |
-| U11 | The dev cheat panel shows in dev builds, or in any build made with `VITE_CHEATS=true`. Extra helpers beyond the spec: "Last wave" (jump to a stage's boss wave) and "Set dumpster Lv". | |
+| U11 | The dev cheat panel shows in dev builds, or in any build made with `VITE_CHEATS=true` (it opens from Settings, L7). Extra helpers beyond the spec: "Last wave" (jump to a stage's boss wave) and "Set dumpster Lv". | |
 
 ## Balance
 

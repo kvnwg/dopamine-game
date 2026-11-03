@@ -24,7 +24,9 @@ import { P } from './pixel';
 import { SPRITE_SLOTS } from './pixel/hero';
 import { FEET_ROW } from './pixel/sceneryTypes';
 import type { FxName } from './pixel/packs/fx';
-import { layerY, scenerySet, scroll0 } from './worldLook';
+import { layerY, scenerySet, scroll0, worldArt, worldSeed } from './worldLook';
+import { Ambience } from './ambience';
+import type { LayerName } from './pixel/sceneryTypes';
 
 export const BATTLE_W = 1080;
 export const BATTLE_H = 820;
@@ -35,6 +37,8 @@ const HERO_FIGHT_X = 336;
 /** Where the front enemy's leading edge stands while fighting. */
 const ENGAGE_EDGE = 456;
 const COIN_TARGET = { x: 694, y: 58 };
+/** Top of the boss HP bar: just under the HUD row. */
+const BOSS_BAR_Y = 176;
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
 const FONT = '"Pixelify Sans", "Courier New", monospace';
 const INK = '#1A1326';
@@ -108,7 +112,14 @@ export class BattleScene extends Phaser.Scene {
   private mid!: Phaser.GameObjects.TileSprite;
   private ground!: Phaser.GameObjects.TileSprite;
   private fg!: Phaser.GameObjects.TileSprite;
-  private clouds: Array<{ img: Phaser.GameObjects.Image; speed: number }> = [];
+  /** Cloud strips, back to front, and their drift in art pixels per second. */
+  private clouds: Array<{ ts: Phaser.GameObjects.TileSprite; speed: number }> = [];
+  /** The sun, moon or planet and its halo, over the clouds. */
+  private glow!: Phaser.GameObjects.Image;
+  private vignette!: Phaser.GameObjects.Image;
+  private ambience!: Ambience;
+  /** Last world's foe textures still on screen (a dying foe): freed once it's gone. */
+  private releaseLater = false;
   private hero!: Phaser.GameObjects.Container;
   private rig!: Phaser.GameObjects.Container;
   private heroSpr!: Phaser.GameObjects.Sprite;
@@ -167,7 +178,8 @@ export class BattleScene extends Phaser.Scene {
     this.heroBar = this.add.graphics().setDepth(40);
     this.heroNum = this.label(0, 0, 22).setDepth(41);
     this.bossBar = this.add.graphics().setDepth(40);
-    this.bossName = this.label(BATTLE_W / 2, 262, 32).setOrigin(0.5, 1).setDepth(41);
+    // Boss name and HP bar sit right under the HUD (the sky below the HUD is otherwise clear).
+    this.bossName = this.label(BATTLE_W / 2, BOSS_BAR_Y - 6, 32).setOrigin(0.5, 1).setDepth(41);
     this.cover = this.add.rectangle(0, 0, BATTLE_W, BATTLE_H, 0xffffff, 1).setOrigin(0, 0).setDepth(60).setAlpha(0);
     this.shownHeroHp = gameStore.getState().game.battle.playerHp;
     this.unsub = bus.on((events) => this.onEvents(events));
@@ -189,41 +201,64 @@ export class BattleScene extends Phaser.Scene {
   // ------------------------------------------------------------------ scenery
   private buildBackground() {
     const world = gameStore.getState().game.battle.stage;
-    const k = worldTextures(this, world, BATTLE_W, BATTLE_H);
+    const k = worldTextures(this, world);
     this.worldShown = world;
-    this.sky = this.add.image(0, 0, k.sky).setOrigin(0, 0).setDepth(0);
-    const cloudY = [6, 10, 4, 13].map((r) => r * P);
-    for (let i = 0; i < 4; i++) {
-      const img = this.add.image(snap(120 + i * 330), cloudY[i], `bg_cloud${i % 3}`).setDepth(1);
-      this.clouds.push({ img, speed: 6 + i * 3 });
+    // Back to front: sky (0), stars (0.5), clouds (1), the sun or moon and its halo (1.5), lightning
+    // (1.7), the far, mid and ground layers (2 to 4, torches 2.5), particles behind the fighters (5),
+    // fighters, the foreground (30), particles in front (31), the vignette (32), effects and UI.
+    this.sky = this.add.image(0, 0, k.sky).setOrigin(0, 0).setScale(P).setDepth(0);
+    for (let i = 0; i < 2; i++) {
+      const ts = this.add.tileSprite(0, 0, BATTLE_W, P, '__DEFAULT').setOrigin(0, 0).setDepth(1 + i * 0.1).setVisible(false);
+      this.clouds.push({ ts, speed: 0 });
     }
+    this.glow = this.add.image(0, 0, '__DEFAULT').setOrigin(0, 0).setScale(P).setDepth(1.5).setVisible(false);
     this.far = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.far).h, k.far).setOrigin(0, 0).setDepth(2);
     this.mid = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.mid).h, k.mid).setOrigin(0, 0).setDepth(3);
     this.ground = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.ground).h, k.ground).setOrigin(0, 0).setDepth(4);
     this.fg = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.fg).h, k.fg).setOrigin(0, 0).setDepth(30);
+    this.vignette = this.add.image(0, 0, k.vignette).setOrigin(0, 0).setScale(P).setDepth(32);
+    this.ambience = new Ambience(this, { stars: 0.5, bolt: 1.7, torch: 2.5, back: 5, front: 31, flash: 31.5 });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.ambience.destroy());
     this.placeLayers(world, k, true);
   }
 
-  /** Puts each layer at its world's backdrop placement; `reset` restarts the scroll. */
+  private layer(name: LayerName): Phaser.GameObjects.TileSprite {
+    return { far: this.far, mid: this.mid, ground: this.ground, fg: this.fg }[name];
+  }
+
+  /** Puts each layer, the clouds and the sun or moon at the world's placement; `reset` restarts the scroll. */
   private placeLayers(world: number, keys: WorldKeys, reset: boolean) {
     const set = scenerySet(worldDef(world));
     const y = layerY(set);
     const s0 = scroll0(set);
-    const layers = { far: this.far, mid: this.mid, ground: this.ground, fg: this.fg };
-    for (const [name, ts] of Object.entries(layers) as Array<[keyof typeof layers, Phaser.GameObjects.TileSprite]>) {
+    for (const name of ['far', 'mid', 'ground', 'fg'] as const) {
+      const ts = this.layer(name);
       // (A tile sprite's own texture key is internal; the size comes from the world's layer texture.)
       ts.setPosition(0, y[name]);
       ts.setSize(BATTLE_W, texSize(keys[name]).h);
       if (reset) ts.tilePositionX = s0[name];
     }
-    this.sky.setVisible(set.sky);
-    for (const c of this.clouds) c.img.setVisible(set.sky);
-    if (set.sky) this.tintClouds(world);
+    this.clouds.forEach((c, i) => {
+      const strip = keys.clouds[i];
+      c.ts.setVisible(!!strip);
+      // (Hidden layers drop the last world's texture, which is about to be freed.)
+      if (!strip) {
+        c.ts.setTexture('__DEFAULT');
+        return;
+      }
+      c.ts.setTexture(strip.key).setPosition(0, strip.y * P).setSize(BATTLE_W, texSize(strip.key).h);
+      c.speed = strip.speed;
+    });
+    if (keys.glow) this.glow.setTexture(keys.glow.key).setPosition(keys.glow.x * P, keys.glow.y * P).setVisible(true);
+    else this.glow.setTexture('__DEFAULT').setVisible(false);
+    this.vignette.setTexture(keys.vignette);
+    const art = worldArt(world);
+    this.ambience.setWorld({ atmo: art.atmo, seed: worldSeed(world), sky: set.sky, flicker: art.flicker, layerY: y, tileW: set.tileW });
   }
 
-  private tintClouds(world: number) {
-    const night = worldDef(world).look.night;
-    for (const c of this.clouds) c.img.setTint(night ? 0x7d84b8 : 0xffffff).setAlpha(night ? 0.55 : 1);
+  /** Texture keys of the foes on screen. */
+  private foeTextures(): Set<string> {
+    return new Set([...this.foes.values()].map((f) => f.tex.key));
   }
 
   /** Swaps in another world's sky and scenery, revealed from under a sky-colored cover. */
@@ -231,20 +266,21 @@ export class BattleScene extends Phaser.Scene {
     if (world === this.worldShown) return;
     const before = scenerySet(worldDef(this.worldShown));
     this.worldShown = world;
-    const k = worldTextures(this, world, BATTLE_W, BATTLE_H);
+    const k = worldTextures(this, world);
     this.sky.setTexture(k.sky);
     this.far.setTexture(k.far);
     this.mid.setTexture(k.mid);
     this.ground.setTexture(k.ground);
     this.fg.setTexture(k.fg);
     this.placeLayers(world, k, scenerySet(worldDef(world)) !== before);
-    releaseWorlds(this, world);
+    this.releaseLater = releaseWorlds(this, world, this.foeTextures()) > 0;
     this.tweens.killTweensOf(this.cover);
     if (this.reduceMotion || this.reduceFlashing) {
       this.cover.setAlpha(0);
       return;
     }
-    this.cover.setFillStyle(Phaser.Display.Color.HexStringToColor(worldDef(world).look.skyBottom).color, 1).setAlpha(1);
+    const sky = worldDef(world).look.atmo.sky;
+    this.cover.setFillStyle(Phaser.Display.Color.HexStringToColor(sky[sky.length - 1]).color, 1).setAlpha(1);
     this.tweens.add({ targets: this.cover, alpha: 0, duration: 450, ease: 'Quad.easeOut' });
   }
 
@@ -1085,11 +1121,12 @@ export class BattleScene extends Phaser.Scene {
     this.mid.tilePositionX += speed * 0.5 * dt;
     this.ground.tilePositionX += speed * dt;
     this.fg.tilePositionX += speed * 1.3 * dt;
-    for (const c of this.clouds) {
-      c.img.x -= (c.speed + speed * 0.05) * dt;
-      if (c.img.x < -220) c.img.x = BATTLE_W + 220;
-    }
+    for (const c of this.clouds) c.ts.tilePositionX += (c.speed * P + speed * 0.05) * dt;
     if (b.stage !== this.worldShown) this.showWorld(b.stage);
+    this.ambience.update(dt, speed * dt, (name) => this.layer(name).tilePositionX, {
+      reduceMotion: this.reduceMotion,
+      reduceFlashing: this.reduceFlashing,
+    });
 
     const sig = SLOTS.map((s) => `${g.equipped[s]?.uid ?? 0}`).join(',');
     if (sig !== this.gearSig) {
@@ -1107,6 +1144,7 @@ export class BattleScene extends Phaser.Scene {
     void time;
 
     this.syncFoes(g, dt);
+    if (this.releaseLater) this.releaseLater = releaseWorlds(this, this.worldShown, this.foeTextures()) > 0;
 
     // Lifesteal heals are batched into one number.
     this.healTimer -= dt;
@@ -1134,7 +1172,7 @@ export class BattleScene extends Phaser.Scene {
       const f = this.foes.get(boss.uid);
       const shown = f ? f.shownHp : boss.hp;
       const ghost = f ? f.ghostHp : boss.hp;
-      this.drawBar(this.bossBar, BATTLE_W / 2, 272, 640, 30, shown / boss.maxHp, ghost / boss.maxHp, boss.kind === 'boss' ? 0xffb300 : 0xff4d5e);
+      this.drawBar(this.bossBar, BATTLE_W / 2, BOSS_BAR_Y, 600, 28, shown / boss.maxHp, ghost / boss.maxHp, boss.kind === 'boss' ? 0xffb300 : 0xff4d5e);
       this.bossName.setText(`${worldDef(b.stage).boss.name}  ${formatNumber(Math.max(0, Math.ceil(shown)))}`);
     } else {
       this.bossName.setText('');

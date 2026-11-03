@@ -6,7 +6,7 @@ import { FOE_SHAPES, FOE_SHEETS, sheetFrames } from '../src/render/pixel/foes';
 import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf, type GearSlot } from '../src/render/pixel/hero';
 import { checkSheet, frameBuf } from '../src/render/pixel/indexed';
 import { ITEM_SPRITES, WEAPON_GRIP } from '../src/render/pixel/items';
-import { CLOUDS, LAYERS, TILE_W, farLayer, fgLayer, groundLayer, midLayer } from '../src/render/pixel/scenery';
+import { LAYERS, TILE_W, farLayer, fgLayer, groundLayer, midLayer } from '../src/render/pixel/scenery';
 import { FX, UI_SPRITES } from '../src/render/pixel/ui';
 
 const same = (a: { px: Uint8ClampedArray }, b: { px: Uint8ClampedArray }) => Buffer.from(a.px).equals(Buffer.from(b.px));
@@ -105,8 +105,6 @@ describe('pixel art', () => {
       expect(b.w, name).toBe(TILE_W);
       expect(b.h, name).toBe(LAYERS[name as keyof typeof LAYERS].h);
     }
-    expect(CLOUDS.length).toBeGreaterThanOrEqual(3);
-    CLOUDS.forEach((c, i) => checkRows(`cloud ${i}`, c));
   });
 
   it('UI icons are 16x16 and every effect sprite is valid', () => {

@@ -337,22 +337,87 @@ const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'expected a #RRGGBB color');
 const WorldFoeSchema = z.object({ id: z.string().min(1), name: z.string().min(1), color: hex, accent: hex });
 export type WorldFoe = z.infer<typeof WorldFoeSchema>;
 
+const unit = z.number().min(0).max(1);
+
+/** Drifting ambient particles in a world's battle view (see src/render/ambience.ts). */
+export const ParticleKindSchema = z.enum(['fireflies', 'snow', 'rain', 'leaves', 'petals', 'embers', 'spores', 'sparkles', 'wisps', 'motes']);
+export type ParticleKind = z.infer<typeof ParticleKindSchema>;
+
+/**
+ * A world's atmosphere (src/render/pixel/atmosphere.ts): the sky, its sun or moon, clouds, haze and
+ * the lights in the scenery. Positions are art pixels of the 90 x 68 battle view.
+ */
+export const AtmoSchema = z.object({
+  /** Sky colors from the top of the view down to the horizon, painted in bands. */
+  sky: z.array(hex).min(2).max(6),
+  /** View row where the sky reaches its last color. */
+  horizon: z.number().int().min(12).max(60),
+  /** A sun, moon or planet with a glow around it (its halo, painted in stepped rings). */
+  body: z
+    .object({
+      kind: z.enum(['sun', 'moon', 'planet']),
+      x: z.number(),
+      y: z.number(),
+      r: z.number().min(2).max(10),
+      color: hex,
+      /** Craters on a moon, land on a planet. */
+      accent: hex.optional(),
+      halo: hex,
+      haloR: z.number().min(0).max(48),
+      /** A ring around a planet. */
+      ring: z.boolean().optional(),
+    })
+    .optional(),
+  /** Star density, 0 (none) to 1. */
+  stars: unit,
+  clouds: z
+    .object({
+      /** Puffy heaps (cumulus) or long thin streaks lit from below (sunset stratus). */
+      style: z.enum(['puffy', 'streaky']),
+      /** How much of the cloud band they fill, 0 to 1. */
+      cover: unit,
+      /** View row of the top of the cloud band. */
+      y: z.number().int().min(0).max(40),
+      light: hex,
+      shade: hex,
+      rim: hex,
+    })
+    .optional(),
+  /** Aerial perspective: how far the far and mid scenery fade toward `color` (default: the horizon color). */
+  haze: z.object({ color: hex.optional(), far: unit, mid: unit }),
+  /** Light from the sun or moon catching the skyline's top and sun-side edges. */
+  rim: z.object({ color: hex, amount: unit }).optional(),
+  /** Scenery colors are multiplied by this (dusk and night darken and cool the street). */
+  ambient: hex.optional(),
+  /** Share of windows lit, 0 to 1. */
+  windows: unit,
+  /** Street lamps lit. */
+  lamps: z.boolean(),
+  /** Window and lamp light color. */
+  light: hex,
+  particles: ParticleKindSchema.optional(),
+  /** Particle colors (default: the kind's own). */
+  particleColors: z.array(hex).min(1).optional(),
+  weather: z.enum(['rain', 'storm', 'snow']).optional(),
+  /** Darkened corners, 0 (none) to 1. */
+  vignette: unit,
+});
+export type Atmo = z.infer<typeof AtmoSchema>;
+
 export const WorldSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   theme: z.string().min(1),
   enemies: z.array(WorldFoeSchema).min(1),
   boss: WorldFoeSchema,
-  /** Sky gradient plus a hue/saturation/brightness grade applied to the scenery art. */
+  /** A hue / saturation / brightness grade for the street art, and the world's atmosphere (sky, light, weather). */
   look: z.object({
-    skyTop: hex,
-    skyBottom: hex,
     hue: z.number().min(-360).max(360),
     sat: z.number().nonnegative(),
     bright: z.number().positive(),
-    night: z.boolean(),
     /** Which backdrop the battle uses (default: the suburban street). */
     scenery: z.enum(['suburbs', 'dungeon']).optional(),
+    atmo: AtmoSchema,
   }),
 });
 export type WorldDef = z.infer<typeof WorldSchema>;

@@ -51,28 +51,31 @@ export function BattlePanel() {
         </div>
       )}
       <TopHud />
-      <button className={s.stageBox} onClick={() => useUi.getState().setTab('worlds')}>
-        <span className={s.stageName}>{worldLabel(world)}</span>
-        <div className={s.waveTrack}>
-          {Array.from({ length: waves }, (_, i) => {
-            const boss = i === waves - 1;
-            return (
-              <span key={i} className={s.waveSeg}>
-                {i > 0 && <span className={`${s.waveLine} ${i <= wave ? s.waveLineDone : ''}`} />}
-                {boss ? (
-                  <SkullIcon size={i === wave ? 50 : 40} className={i < wave ? s.waveDone : ''} />
-                ) : (
-                  <span className={[s.waveDot, i < wave ? s.waveDotDone : '', i === wave ? s.waveDotNow : ''].join(' ')} />
-                )}
-              </span>
-            );
-          })}
-        </div>
-        {mode === 'farm' && world <= highest && <span className={s.farmTag}>{t('battle.farming')}</span>}
-      </button>
+      {/* The world's name shows as a title card on arrival, then leaves the sky clear. */}
+      <div key={world} className={s.worldCard} aria-hidden>
+        {worldLabel(world)}
+      </div>
       <div className={s.battleActions}>
         <button className={`btn small blue ${s.worldsBtn}`} onClick={() => useUi.getState().setTab('worlds')} aria-label={t('tab.worlds')}>
           <GlobeIcon size={46} />
+        </button>
+        <button className={s.waveBox} onClick={() => useUi.getState().setTab('worlds')} aria-label={worldLabel(world)}>
+          <div className={s.waveTrack}>
+            {Array.from({ length: waves }, (_, i) => {
+              const boss = i === waves - 1;
+              return (
+                <span key={i} className={s.waveSeg}>
+                  {i > 0 && <span className={`${s.waveLine} ${i <= wave ? s.waveLineDone : ''}`} />}
+                  {boss ? (
+                    <SkullIcon size={i === wave ? 40 : 34} className={i < wave ? s.waveDone : ''} />
+                  ) : (
+                    <span className={[s.waveDot, i < wave ? s.waveDotDone : '', i === wave ? s.waveDotNow : ''].join(' ')} />
+                  )}
+                </span>
+              );
+            })}
+          </div>
+          {mode === 'farm' && world <= highest && <span className={s.farmTag}>{t('battle.farming')}</span>}
         </button>
         <span style={{ flex: 1 }} />
         {next !== null && mode === 'farm' && (

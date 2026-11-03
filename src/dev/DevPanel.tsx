@@ -1,27 +1,23 @@
-/** Dev cheat panel (dev builds, or VITE_CHEATS=true). Never shipped in release builds. */
+/** Dev cheat panel (dev builds, or VITE_CHEATS=true), opened from Settings. Never shipped in release builds. */
 import { useState } from 'react';
 import { RARITIES, type Rarity } from '../data';
 import { computeStats, currentLuck, playerPower, type Cheat } from '../core';
 import { clock, dispatch, getGame, useGame } from '../app/store';
 import { resetSave, saveNow, skipTime } from '../app/session';
+import { useUi } from '../ui/uiStore';
 import s from './dev.module.css';
 
 const cheat = (c: Cheat) => dispatch({ type: 'cheat', cheat: c });
 
 export function DevPanel() {
-  const [open, setOpen] = useState(false);
+  const open = useUi((u) => u.devOpen);
+  const setOpen = (devOpen: boolean) => useUi.setState({ devOpen });
   const [stage, setStage] = useState('3');
   const [dl, setDl] = useState('5');
   const [armReset, setArmReset] = useState(false);
   const forced = useGame((g) => g.dumpster.forcedRarity);
   const g = useGame((x) => x);
-  if (!open) {
-    return (
-      <button className={s.fab} onClick={() => setOpen(true)}>
-        DEV
-      </button>
-    );
-  }
+  if (!open) return null;
   const st = computeStats(g);
   return (
     <>

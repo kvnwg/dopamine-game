@@ -2,7 +2,7 @@
 
 Idle RPG roguelite for iOS and Android: a raccoon auto-battles its way through the city's alleys while its dumpster rolls for junk gear on its own, RNG-game style. Every item has a power number and a "1 in X" rarity, and the raccoon visibly wears whatever it equips.
 
-**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked into a Roblox-style rolling game: slot reels that roll on their own, luck from several sources, a bag of power-rated items you equip by dragging them onto the raccoon, a honeycomb upgrade map, rebirths, enchantments, and 20 worlds of rising difficulty, all open from the start. Everything is pixel art on one pixel grid: the hero is Kevin's raccoon sprite sheet, and enemies, effects and World 8's dungeon come from asset packs Kevin supplied (credits in [`CREDITS.md`](CREDITS.md)). The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16, W1 to W11, V1 to V9, H1 to H6, X1 to X7 and P1 to P8). Next up is Milestone 2 (Heists).
+**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked into a Roblox-style rolling game: slot reels that roll on their own, luck from several sources, a bag of power-rated items you equip by dragging them onto the raccoon, a honeycomb upgrade map, rebirths, enchantments, and 20 worlds of rising difficulty, all open from the start. Everything is pixel art on one pixel grid: the hero is Kevin's raccoon sprite sheet, and enemies, effects and World 8's dungeon come from asset packs Kevin supplied (credits in [`CREDITS.md`](CREDITS.md)). Every world has its own lit sky and weather (sunsets, night streets with glowing windows and lamps, rain, snow, fireflies). The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16, W1 to W11, V1 to V9, H1 to H6, X1 to X7, P1 to P8 and L1 to L8). Next up is Milestone 2 (Heists).
 
 ### How it plays
 
@@ -41,7 +41,7 @@ It writes `artifact/dumpster-legend.html` (one self-contained page: fonts and co
 
 ### Dev cheat panel
 
-The red **DEV** tab (right edge of the battle, dev builds only) can add coins, Gems, bags and XP, jump to any world (as if the ones before it were beaten) or straight to a world's boss wave, set the Dumpster Level, force the next roll's rarity, start a Luck Potion, skip time by 30 min to 24 h (to test offline rewards and upgrade timers), and reset the save. It also shows your live stats, luck and roll count.
+The **Dev tools** button in Settings (dev and playtest builds only) opens a cheat panel that can add coins, Gems, bags and XP, jump to any world (as if the ones before it were beaten) or straight to a world's boss wave, set the Dumpster Level, force the next roll's rarity, start a Luck Potion, skip time by 30 min to 24 h (to test offline rewards and upgrade timers), and reset the save. It also shows your live stats, luck and roll count.
 
 ## Tests and balance
 
@@ -49,7 +49,7 @@ The red **DEV** tab (right edge of the battle, dev builds only) can add coins, G
 npm test
 ```
 
-104 Vitest tests: damage and stat formulas; 10,000-roll distribution checks for every random system (rarity odds at luck 1, 3 and 25 within 1% of the exact chances, slots, item levels, substats, enchantment counts and tiers, crits, enemy counts, bag find); bad luck protection; the reels (first spin, spin and rest timing, Spin Speed, turbo spins, Lucky Spins, Extra Reels, keep-the-best bag, no auto-equip, drag-to-equip, scrapping, Scrap All, locks, "1 in X" odds); the upgrade map (layout with no overlaps, tier unlock order, exponential costs, specials, save cleanup), rebirth (what it wipes and keeps, its multipliers and upgrade discount), enchantment effects (burn, chain, explode, thorns) and luck boosts; worlds (scaling, proportional pay, boss waves, travel, one-shots and falling back, item tiers); Dumpster upgrades and speedups; the Codex; offline math and the clock-backward guard; save/load with backups and migrations (v1 through v6); data validation; the pixel art registries (every item, enemy, worn item, icon and scenery layer); and one headless balance run.
+130 Vitest tests: damage and stat formulas; 10,000-roll distribution checks for every random system (rarity odds at luck 1, 3 and 25 within 1% of the exact chances, slots, item levels, substats, enchantment counts and tiers, crits, enemy counts, bag find); bad luck protection; the reels (first spin, spin and rest timing, Spin Speed, turbo spins, Lucky Spins, Extra Reels, keep-the-best bag, no auto-equip, drag-to-equip, scrapping, Scrap All, locks, "1 in X" odds); the upgrade map (layout with no overlaps, tier unlock order, exponential costs, specials, save cleanup), rebirth (what it wipes and keeps, its multipliers and upgrade discount), enchantment effects (burn, chain, explode, thorns) and luck boosts; worlds (scaling, proportional pay, boss waves, travel, one-shots and falling back, item tiers); Dumpster upgrades and speedups; the Codex; offline math and the clock-backward guard; save/load with backups and migrations (v1 through v6); data validation; the pixel art registries (every item, enemy, worn item, icon and scenery layer); the atmosphere (banded skies, halos, tiling clouds, window detection and lighting, vignette, every world's backdrop); and one headless balance run.
 
 ```bash
 npm run sim -- --minutes 120 --seeds 4
@@ -117,7 +117,7 @@ tools/         balance simulator
 - Game logic is pure: `applyAction(state, action, rng, now)` and `tick(state, { ticks }, rng, now)` return `{ state, events }`. Combat runs at 10 ticks per second; rendering only reads state and plays effects from events.
 - Every tuning number is in `src/data/balance.json`, every UI string in `src/data/strings.en.json`, and all content is JSON validated with zod at boot.
 - Randomness only comes from the seeded `Rng`, and its state is saved, so runs are reproducible.
-- Art is pixel art in `src/render/pixel/` (rules in [`docs/PIXEL_ART.md`](docs/PIXEL_ART.md)): drawn in code from one palette, plus pack art and Kevin's raccoon sheet generated into `src/render/pixel/packs/` by `tools/packs/*.py`. Render a set to a PNG sheet with `npx tsx tools/pixelSheet.ts items out.png` (or `ui`, `enemies`, `scenery`, `hero`, `packs/fx`), and every animation of a pack module with `npx tsx tools/animSheet.ts packs/fantasy out.png`. Licenses: [`CREDITS.md`](CREDITS.md).
+- Art is pixel art in `src/render/pixel/` (rules in [`docs/PIXEL_ART.md`](docs/PIXEL_ART.md)): drawn in code from one palette, plus pack art and Kevin's raccoon sheet generated into `src/render/pixel/packs/` by `tools/packs/*.py`. Render a set to a PNG sheet with `npx tsx tools/pixelSheet.ts items out.png` (or `ui`, `enemies`, `scenery`, `hero`, `packs/fx`), every animation of a pack module with `npx tsx tools/animSheet.ts packs/fantasy out.png`, and every world's lit backdrop with `npx tsx tools/worldPreview.ts out.png`. Licenses: [`CREDITS.md`](CREDITS.md).
 
 ## Docs
 

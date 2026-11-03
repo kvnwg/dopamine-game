@@ -2,15 +2,17 @@
  * World 1 battle scenery, "Sunny Suburbs", as pixel art (style rules: docs/PIXEL_ART.md). It is drawn
  * at the battle's pixel size (12 screen px per art pixel), the same size as the raccoon's pixels.
  *
- * Four horizontally tiling parallax layers, each TILE_W art pixels wide, plus three clouds; SUBURBS
- * bundles them as a ScenerySet. Rows below are rows of the 90 x 68 battle view (sceneryTypes.ts):
+ * Four horizontally tiling parallax layers, each TILE_W art pixels wide; SUBURBS bundles them as a
+ * ScenerySet, with the windows and lamps that light up at dusk and night (each world's sky, clouds and
+ * lighting are painted by atmosphere.ts). Rows below are rows of the 90 x 68 battle view (sceneryTypes.ts):
  *  - far (17 to 46): hazy rolling hills, a distant tree line, a few far roofs and a water tower.
  *    Colors are pushed toward the sky (aerial perspective) and nothing is inked, so it reads as distance.
  *  - mid (18 to 49): the street. Three houses, two trees, picket and plank fences, hedges, a mailbox,
  *    a fire hydrant, two metal cans and the green dumpster, all inked in `k`, standing on the lawn
  *    that starts at row 46.
- *  - ground (48 to 67): lawn edge, curb, the sidewalk the fighters stand on (their feet on row 58,
- *    FEET_ROW, mid-slab) and a strip of verge.
+ *  - ground (30 to 67): two street lamps behind the curb (rows 30 to 47 hold only them), then the lawn
+ *    edge, curb, the sidewalk the fighters stand on (their feet on row 58, FEET_ROW, mid-slab) and a
+ *    strip of verge.
  *  - fg (58 to 67): a few grass tufts and flowers along the bottom, in front of the fighters.
  * At this size the houses, trees and props are authored pixel by pixel as rows; hills, the far tree
  * line, fences and the sidewalk are drawn in code. Every layer wraps seamlessly: sprites go down through
@@ -22,15 +24,18 @@ import {
   type PixelBuf, type Rows, type SheetEntry,
 } from './buf';
 import { PAL } from './palette';
-import type { ScenerySet } from './sceneryTypes';
+import type { LightSpot, ScenerySet } from './sceneryTypes';
 
 export const TILE_W = 171;
+
+/** Rows of the ground layer above the lawn edge: room for the street lamps standing behind the curb. */
+const LIFT = 18;
 
 /** Where each layer's top edge sits in the 90 x 68 battle view, and its height. */
 export const LAYERS = {
   far: { y: 17, h: 30 },
   mid: { y: 18, h: 32 },
-  ground: { y: 48, h: 20 },
+  ground: { y: 48 - LIFT, h: 20 + LIFT },
   fg: { y: 58, h: 10 },
 } as const;
 
@@ -174,6 +179,30 @@ const WATER_TOWER: Rows = [
   '2....2',
 ];
 
+/** Far-layer row of the meadow's edge: the tree line and far houses stand on it. */
+const FIELD = 22;
+
+/** The far houses: [rows, x, keys hazed when stamped]. Their 'x' pixels are windows (lit at night). */
+const FAR_HOUSES: ReadonlyArray<readonly [Rows, number, string]> = [
+  [FAR_HOUSE_GABLE, 15, 'eRrWx5'],
+  [FAR_HOUSE_HIP, 48, 'cUuWx5'],
+  [FAR_HOUSE_GABLE, 85, 'eRrWx5'],
+  [FAR_HOUSE_HIP, 143, 'cUuWx5'],
+];
+
+/** The far houses' one-pixel windows. */
+function farLights(): LightSpot[] {
+  const out: LightSpot[] = [];
+  for (const [rows, hx] of FAR_HOUSES) {
+    rows.forEach((row, ry) => {
+      for (let rx = 0; rx < row.length; rx++) {
+        if (row[rx] === 'x') out.push({ x: wrap(hx + rx), y: FIELD - rows.length + 1 + ry, w: 1, h: 1, kind: 'window' });
+      }
+    });
+  }
+  return out;
+}
+
 export function farLayer(): PixelBuf {
   const H = LAYERS.far.h;
   const b = blank(TILE_W, H);
@@ -190,7 +219,7 @@ export function farLayer(): PixelBuf {
   };
   const back = contour(8, [[2.3, 2, 0.8], [1.3, 3, 2.6]]);
   const hill = contour(14, [[1.3, 3, 1.9], [0.8, 5, 4.4]]);
-  const field = 22;
+  const field = FIELD;
 
   // back hills with a lit rim
   for (let x = 0; x < TILE_W; x++) {
@@ -229,16 +258,10 @@ export function farLayer(): PixelBuf {
   blit(b, line, 0, 0);
 
   // a few far houses tucked into the tree line
-  const fh: Array<[Rows, number, string]> = [
-    [FAR_HOUSE_GABLE, 15, 'eRrWx5'],
-    [FAR_HOUSE_HIP, 48, 'cUuWx5'],
-    [FAR_HOUSE_GABLE, 85, 'eRrWx5'],
-    [FAR_HOUSE_HIP, 143, 'cUuWx5'],
-  ];
-  fh.forEach(([rows, hx, keys], i) => {
+  FAR_HOUSES.forEach(([rows, hx, keys], i) => {
     const recolor = hazeMap(keys, 0.42);
     if (i === 2) Object.assign(recolor, { e: hz('t', 0.42), R: hz('N', 0.42), r: hz('n', 0.42) });
-    stamp(b, rows, hx, field - rows.length + 1, { wrapX: true, recolor });
+    stamp(b, rows, hx, FIELD - rows.length + 1, { wrapX: true, recolor });
   });
 
   // the meadow in front
@@ -483,14 +506,73 @@ function lawnShadow(b: PixelBuf, x: number, w: number): void {
   for (let i = 0; i < w; i++) dot(b, x + 1 + i, GROUND + 1, 'G');
 }
 
+/** The street's houses and where they stand (left edge before inking). */
+const HOUSES: ReadonlyArray<readonly [Rows, number]> = [
+  [GABLE_HOUSE, 9],
+  [BUNGALOW, 60],
+  [TWO_STORY, 128],
+];
+
+/**
+ * Windows in house art: groups of glass ('c', 'C') and muntin ('w') pixels closed in by frame ('x')
+ * on every side. Returns their rects in the art's own pixels, with a mask ('g' glass, 'f' muntin).
+ */
+export function windowsOf(rows: Rows): Array<{ x: number; y: number; w: number; h: number; mask: string[] }> {
+  const H = rows.length;
+  const W = rows[0].length;
+  const pane = (x: number, y: number) => y >= 0 && y < H && x >= 0 && x < W && 'cCw'.includes(rows[y][x]);
+  const seen = new Set<number>();
+  const out: Array<{ x: number; y: number; w: number; h: number; mask: string[] }> = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (!pane(x, y) || seen.has(y * W + x)) continue;
+      const cells: Array<[number, number]> = [];
+      const todo: Array<[number, number]> = [[x, y]];
+      seen.add(y * W + x);
+      let closed = true;
+      while (todo.length) {
+        const [cx, cy] = todo.pop()!;
+        cells.push([cx, cy]);
+        for (const [nx, ny] of [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]] as const) {
+          if (pane(nx, ny)) {
+            if (!seen.has(ny * W + nx)) {
+              seen.add(ny * W + nx);
+              todo.push([nx, ny]);
+            }
+          } else if (rows[ny]?.[nx] !== 'x') closed = false;
+        }
+      }
+      if (!closed) continue;
+      const x0 = Math.min(...cells.map((c) => c[0]));
+      const y0 = Math.min(...cells.map((c) => c[1]));
+      const x1 = Math.max(...cells.map((c) => c[0]));
+      const y1 = Math.max(...cells.map((c) => c[1]));
+      const inside = new Set(cells.map(([cx, cy]) => cy * W + cx));
+      const mask: string[] = [];
+      for (let yy = y0; yy <= y1; yy++) {
+        let m = '';
+        for (let xx = x0; xx <= x1; xx++) m += !inside.has(yy * W + xx) ? '.' : rows[yy][xx] === 'w' ? 'f' : 'g';
+        mask.push(m);
+      }
+      out.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, mask });
+    }
+  }
+  return out;
+}
+
+/** The houses' windows in mid-layer pixels (houses are inked, so the art sits 1 px in from the left). */
+function midLights(): LightSpot[] {
+  return HOUSES.flatMap(([rows, hx]) =>
+    windowsOf(rows).map((w): LightSpot => ({ ...w, x: wrap(hx + 1 + w.x), y: GROUND - rows.length + w.y, kind: 'window' })),
+  );
+}
+
 export function midLayer(): PixelBuf {
   const H = LAYERS.mid.h;
   const b = blank(TILE_W, H);
   fill(b, 0, GROUND, TILE_W, H - GROUND, 'l');
 
-  const gable = inked(GABLE_HOUSE);
-  const bung = inked(BUNGALOW);
-  const two = inked(TWO_STORY);
+  const [gable, bung, two] = HOUSES.map(([rows]) => inked(rows));
   const plank = plankFence(8);
   const pickets = picketFence(6);
   const can = inked(CAN);
@@ -508,9 +590,9 @@ export function midLayer(): PixelBuf {
   plant(b, inked(SMALL_TREE), 163);
   plant(b, plank, 96);
   // houses
-  plant(b, gable, 9);
-  plant(b, bung, 60);
-  plant(b, two, 128);
+  plant(b, gable, HOUSES[0][1]);
+  plant(b, bung, HOUSES[1][1]);
+  plant(b, two, HOUSES[2][1]);
   // front props
   plant(b, pickets, 33);
   plant(b, inked(MAILBOX), 51);
@@ -544,8 +626,55 @@ const WALK1 = 16;
 /** Width of one sidewalk slab; TILE_W is a whole number of slabs. */
 const SLAB_W = 19;
 
+/** A street lamp: a lantern (its glass lit at dusk and night) on a post, standing behind the curb. */
+const LAMP: Rows = [
+  '..1..',
+  '.121.',
+  '12221',
+  '.CwC.',
+  '.CCC.',
+  '.CCC.',
+  '.121.',
+  '..2..',
+  '..2..',
+  '..2..',
+  '..2..',
+  '..2..',
+  '..2..',
+  '..2..',
+  '..2..',
+  '.121.',
+  '12221',
+];
+
+/** Lamp positions (left edge before inking), two per tile. */
+const LAMPS = [38, 124] as const;
+
+/** Lamp glass and the pool of light each throws on the sidewalk, in ground-layer pixels. */
+function groundLights(): LightSpot[] {
+  const top = LIFT + 2 - (LAMP.length + 2);
+  return LAMPS.map((lx): LightSpot => ({
+    x: wrap(lx + 2),
+    y: top + 4,
+    w: 3,
+    h: 3,
+    kind: 'lamp',
+    pool: { x: lx + 3.5, y: LIFT + WALK0 + 3.5, rx: 11, ry: 3.2 },
+  }));
+}
+
 export function groundLayer(): PixelBuf {
-  const H = LAYERS.ground.h;
+  const b = blank(TILE_W, LAYERS.ground.h);
+  blit(b, street(), 0, LIFT);
+  const lamp = inked(LAMP);
+  // lamps stand on the lawn strip behind the curb (street row 1)
+  for (const lx of LAMPS) plant(b, lamp, lx, LIFT + 1);
+  return b;
+}
+
+/** The lawn edge, curb, sidewalk and verge (20 rows; the ground layer's bottom part). */
+function street(): PixelBuf {
+  const H = 20;
   const b = blank(TILE_W, H);
   // lawn edge, curb (lit top, face, shadow line), sidewalk, its front edge, the verge
   fill(b, 0, 0, TILE_W, 1, 'l');
@@ -629,35 +758,6 @@ export function fgLayer(): PixelBuf {
   return b;
 }
 
-// ------------------------------------------------------------------ clouds
-
-export const CLOUDS: Rows[] = [
-  [
-    '.....www....',
-    '.ww.wwwww...',
-    'wwwwwwwwwww.',
-    'CwwwwwwwwwwC',
-    '.CCCCCCCCCC.',
-  ],
-  [
-    '......wwww......',
-    '.....wwwwww.....',
-    '..ww.wwwwwwwww..',
-    '.wwwwwwwwwwwwwwC',
-    'CwwwwwwwwwwwwwCC',
-    '.CCCCCCCCCCCCCC.',
-  ],
-  [
-    '.......www..........',
-    '......wwwwww........',
-    '...ww.wwwwwwwwww....',
-    '.wwwwwwwwwwwwwwwww..',
-    'wwwwwwwwwwwwwwwwwwwC',
-    'CCwwwwwwwwwwwwwwwCCC',
-    '.CCCCCCCCCCCCCCCCCC.',
-  ],
-];
-
 // ------------------------------------------------------------------ the set
 
 export const SUBURBS: ScenerySet = {
@@ -670,6 +770,7 @@ export const SUBURBS: ScenerySet = {
   mid: midLayer,
   ground: groundLayer,
   fg: fgLayer,
+  lights: () => ({ far: farLights(), mid: midLights(), ground: groundLights() }),
 };
 
 // ------------------------------------------------------------------ preview sheet
@@ -696,7 +797,7 @@ export function sheet(): SheetEntry[] {
     ['flower', FLOWER], ['pebble', PEBBLE],
     ...CRACKS.map((r, i): [string, Rows] => [`crack${i}`, r]),
     ...TUFTS.map((r, i): [string, Rows] => [`tuft${i}`, r]),
-    ...CLOUDS.map((r, i): [string, Rows] => [`cloud${i}`, r]),
+    ['lamp', LAMP],
   ];
   for (const [name, r] of authored) checkRows(name, r);
 
@@ -705,8 +806,6 @@ export function sheet(): SheetEntry[] {
   const ground = groundLayer();
   const fg = fgLayer();
   const comp = skyBands(TILE_W, 68);
-  const cloudAt: ReadonlyArray<readonly [number, number]> = [[12, 5], [64, 8], [122, 2]];
-  CLOUDS.forEach((c, i) => stamp(comp, c, cloudAt[i][0], cloudAt[i][1]));
   blit(comp, far, 0, LAYERS.far.y);
   blit(comp, mid, 0, LAYERS.mid.y);
   blit(comp, ground, 0, LAYERS.ground.y);
@@ -717,6 +816,5 @@ export function sheet(): SheetEntry[] {
     { name: 'mid', buf: mid },
     { name: 'ground', buf: ground },
     { name: 'fg', buf: fg },
-    ...CLOUDS.map((c, i) => ({ name: `cloud${i}`, buf: fromRows(c) })),
   ];
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { clock } from '../app/store';
+import { cachedThumb, requestThumb } from '../render/worldLook';
 
 /** Re-renders every `ms` and returns the game clock's now. */
 export function useNow(ms = 250): number {
@@ -46,4 +47,22 @@ export function useCountUp(target: number, durationMs = 400): number {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
   return shown;
+}
+
+/** A world's thumbnail (made in the background; null until ready). */
+export function useWorldThumb(world: number): string | null {
+  const [url, setUrl] = useState<string | null>(() => cachedThumb(world) ?? null);
+  useEffect(() => {
+    const hit = cachedThumb(world);
+    if (hit) {
+      setUrl(hit);
+      return;
+    }
+    let alive = true;
+    void requestThumb(world).then((u) => alive && setUrl(u));
+    return () => {
+      alive = false;
+    };
+  }, [world]);
+  return url;
 }

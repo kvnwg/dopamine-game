@@ -14,13 +14,13 @@ import { DragLayer } from './components/DragLayer';
 import { Toasts } from './components/Toasts';
 import { AdOverlay } from './components/AdOverlay';
 import { DevPanel } from '../dev/DevPanel';
+import { SHOW_DEV } from '../dev/flags';
 import { installRollController } from './rollController';
 import { installSound } from './soundController';
 import { useUi } from './uiStore';
 
 const W = 1080;
 const H = 1920;
-const SHOW_DEV = import.meta.env.DEV || import.meta.env.VITE_CHEATS === 'true';
 
 export function App() {
   const frameRef = useRef<HTMLDivElement>(null);

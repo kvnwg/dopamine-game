@@ -1,6 +1,8 @@
 import type { SettingKey } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
+import { SHOW_DEV } from '../../dev/flags';
+import { useUi } from '../uiStore';
 import { t } from '../i18n';
 import { Modal } from './Modal';
 import s from './popups.module.css';
@@ -24,6 +26,18 @@ export function SettingsPopup({ onClose }: { onClose: () => void }) {
           />
         </div>
       ))}
+      {SHOW_DEV && (
+        <button
+          className="btn small red"
+          style={{ marginTop: 20 }}
+          onClick={() => {
+            onClose();
+            useUi.setState({ devOpen: true });
+          }}
+        >
+          {t('settings.devTools')}
+        </button>
+      )}
       <p className={s.note} style={{ marginTop: 24 }}>{t('settings.version', { version: __APP_VERSION__ })}</p>
       <p className={s.note} style={{ marginTop: 8 }}>{t('settings.credits')}</p>
     </Modal>

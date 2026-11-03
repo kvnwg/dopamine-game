@@ -1,4 +1,4 @@
-import { computeStats, currentLuck, formatNumber, playerPower } from '../../core';
+import { computeStats, currentLuck, formatDuration, formatNumber, playerPower } from '../../core';
 import { useGame } from '../../app/store';
 import { useCountUp, useNow } from '../hooks';
 import { t } from '../i18n';
@@ -19,7 +19,9 @@ export function StatStrip() {
   const power = useCountUp(useGame(playerPower));
   const now = useNow(1000);
   const luck = useGame((g) => currentLuck(g, now));
-  const boosted = useGame((g) => g.luckBoostEndsAt !== null && g.luckBoostEndsAt > now);
+  const boostEnds = useGame((g) => g.luckBoostEndsAt);
+  const boostLeft = boostEnds !== null ? Math.max(0, (boostEnds - now) / 1000) : 0;
+  const boosted = boostLeft > 0;
   const pct = Math.max(0, Math.min(1, hp / maxHp));
   return (
     <div className={s.strip}>
@@ -56,7 +58,7 @@ export function StatStrip() {
       <button className={`${s.cell} ${s.luckCell} ${boosted ? s.boosted : ''}`} style={{ width: 170 }} onClick={() => useUi.getState().openPopup('luck')}>
         <CloverIcon size={62} className={s.cellIcon} />
         <div className={s.cellBody}>
-          <span className={s.cellLabel}>{t('strip.luck')}</span>
+          <span className={`${s.cellLabel} ${boosted ? s.boostTime : ''}`}>{boosted ? formatDuration(boostLeft) : t('strip.luck')}</span>
           <span className={`${s.cellValue} ${s.luckValue}`}>×{fmtLuck(luck)}</span>
         </div>
       </button>

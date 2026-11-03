@@ -3,10 +3,12 @@ import { DATA, SLOTS, type Rarity } from '../../data';
 import { formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
+import { uiBitArt } from '../../render/icons';
 import { haptics } from '../../services';
 import { enchantLabel, fmtOdds } from '../components/AlleyPanel';
 import { CheckIcon, LockIcon, PowerIcon, TrashIcon } from '../components/Icons';
 import { enchantColor, ItemIcon } from '../components/ItemIcon';
+import { PixelArt } from '../components/PixelArt';
 import { enchantDesc } from '../components/RevealLayer';
 import { t } from '../i18n';
 import { Modal } from './Modal';
@@ -50,14 +52,14 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
         <b>{fmtOdds(itemOddsOneIn(item))}</b>
       </div>
       <div className={s.itemHead}>
-        <ItemIcon item={item} size={200} equipped={equipped} showPower={false} showOdds={false} />
+        <ItemIcon item={item} size={180} equipped={equipped} showPower={false} showOdds={false} />
         <div className={s.itemHeadText}>
           <span className={s.itemName} style={{ color }}>
             {itemName(item)}
           </span>
           <span className={s.meta}>{t(`slot.${item.slot}`)}</span>
           <div className={s.powerBig}>
-            <PowerIcon size={54} />
+            <PowerIcon size="md" />
             {formatNumber(worn(item))}
             {diff !== null && (
               <span className={diff > 0 ? s.up : diff < 0 ? s.down : s.same}>
@@ -79,7 +81,10 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
         ))}
         {perk && (
           <div className={s.mintPerk}>
-            ✨ {perk.name}: {perk.text}
+            <PixelArt art={uiBitArt('sparkle')} />
+            <span>
+              {perk.name}: {perk.text}
+            </span>
           </div>
         )}
       </div>
@@ -99,7 +104,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
       <div className={s.actions}>
         {equipped ? (
           <span className={s.equippedTag}>
-            <CheckIcon size={48} /> {t('item.equipped')}
+            <CheckIcon size="md" /> {t('item.equipped')}
           </span>
         ) : (
           <>
@@ -110,7 +115,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
                 dispatch({ type: 'toggleLock', uid: item.uid });
               }}
             >
-              <LockIcon size={44} />
+              <LockIcon />
               {item.locked ? t('item.unlock') : t('item.lock')}
             </button>
             <button
@@ -122,7 +127,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
                 onClose();
               }}
             >
-              <TrashIcon size={44} />
+              <TrashIcon />
               {t('item.scrap')} {formatNumber(scrapGold)}
             </button>
           </>

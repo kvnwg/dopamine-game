@@ -301,3 +301,96 @@ export function hash01(i: number): number {
   h ^= h >>> 12;
   return ((h >>> 0) % 100000) / 100000;
 }
+
+/**
+ * Scale2x (EPX): twice the resolution, each pixel becoming 2 x 2 and taking a neighbor's color where
+ * two neighbors agree along a diagonal. Diagonals come out smoother and no new colors appear, so a
+ * big icon keeps the game's pixel size instead of showing doubled pixels. Outside the edge counts
+ * as transparent.
+ */
+export function scale2x(b: PixelBuf): PixelBuf {
+  const out = blank(b.w * 2, b.h * 2);
+  // A pixel's color as one number (every transparent pixel is the same).
+  const at = (x: number, y: number): number => {
+    if (x < 0 || y < 0 || x >= b.w || y >= b.h) return -1;
+    const i = (y * b.w + x) * 4;
+    return b.px[i + 3] === 0 ? -1 : (b.px[i] << 16) | (b.px[i + 1] << 8) | b.px[i + 2];
+  };
+  const put = (x: number, y: number, v: number) => {
+    if (v < 0) return;
+    const i = (y * out.w + x) * 4;
+    out.px[i] = (v >> 16) & 255;
+    out.px[i + 1] = (v >> 8) & 255;
+    out.px[i + 2] = v & 255;
+    out.px[i + 3] = 255;
+  };
+  for (let y = 0; y < b.h; y++) {
+    for (let x = 0; x < b.w; x++) {
+      const p = at(x, y);
+      const a = at(x, y - 1);
+      const r = at(x + 1, y);
+      const l = at(x - 1, y);
+      const d = at(x, y + 1);
+      put(2 * x, 2 * y, l === a && l !== d && a !== r ? a : p);
+      put(2 * x + 1, 2 * y, a === r && a !== l && r !== d ? r : p);
+      put(2 * x, 2 * y + 1, d === l && d !== r && l !== a ? l : p);
+      put(2 * x + 1, 2 * y + 1, r === d && r !== a && d !== l ? d : p);
+    }
+  }
+  return out;
+}
+
+/** Grows a buffer by `n` pixels on every side, repeating its edge pixels outward (for full-view art). */
+export function padEdges(b: PixelBuf, n: number): PixelBuf {
+  const out = blank(b.w + 2 * n, b.h + 2 * n);
+  for (let y = 0; y < out.h; y++) {
+    const sy = Math.max(0, Math.min(b.h - 1, y - n));
+    for (let x = 0; x < out.w; x++) {
+      const sx = Math.max(0, Math.min(b.w - 1, x - n));
+      const si = (sy * b.w + sx) * 4;
+      out.px.set(b.px.subarray(si, si + 4), (y * out.w + x) * 4);
+    }
+  }
+  return out;
+}
+
+/**
+ * The pixels of a line through the given points, in order (Bresenham, 8-connected, each pixel once):
+ * a 1-pixel line on the art grid.
+ */
+export function linePixels(points: ReadonlyArray<readonly [number, number]>): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  const seen = new Set<string>();
+  const add = (x: number, y: number) => {
+    const k = `${x},${y}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push([x, y]);
+  };
+  if (points.length === 1) add(Math.round(points[0][0]), Math.round(points[0][1]));
+  for (let i = 0; i + 1 < points.length; i++) {
+    let x0 = Math.round(points[i][0]);
+    let y0 = Math.round(points[i][1]);
+    const x1 = Math.round(points[i + 1][0]);
+    const y1 = Math.round(points[i + 1][1]);
+    const dx = Math.abs(x1 - x0);
+    const dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      add(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
+  }
+  return out;
+}

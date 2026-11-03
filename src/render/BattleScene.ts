@@ -5,44 +5,53 @@
  * HP bars float over the fighters' heads (the boss's sits under the HUD), and coins arc up to the
  * gold counter. Combat results always come from core; this file only animates them.
  *
- * Everything is drawn on one pixel grid (P screen pixels per art pixel): Kevin's raccoon, the pack
- * characters, the backdrops, the effects and the HP bars. Nothing is scaled or squashed; motion is
- * position, frames and (for weapon swings and knock-outs) rotation.
+ * Everything is drawn on one pixel grid (P screen pixels per art pixel, docs/PIXEL_ART.md "One
+ * grid"): Kevin's raccoon, the pack characters, the backdrops, the effects, the HP bars and the text
+ * (the bitmap font in pixel/font.ts). Nothing is scaled or squashed. Things move in whole art pixels:
+ * positions are snapped, pops step and flash instead of scaling, particles are 1 x 1 and 2 x 2 art
+ * pixel bits, lines are pixel lines, the screen shakes by whole art pixels. Only the weapon's swing
+ * rotates freely; a camera post-pass (gridSnap.ts) puts that, and anything else that slips off the
+ * grid, back on it.
  */
 import Phaser from 'phaser';
-import { BAL, SLOTS, type Rarity } from '../data';
+import { BAL, DATA, SLOTS, type Rarity } from '../data';
 import { computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
-import { rarityColorNum } from './art';
+import { rarityColor, rarityColorNum } from './art';
 import {
-  HERO, WEAPON_TILT, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, releaseWorlds, texSize, weaponTex,
-  worldTextures, type FoeTex, type WorldKeys,
+  AURA, HERO, WEAPON_TILT, auraTex, coinTex, enemyTex, fxTex, gearTex, generateTextures, heroFrameOffset, heroTex, releaseWorlds,
+  shadowTex, texOrigin, texSize, weaponTex, worldTextures, type FoeTex, type WorldKeys,
 } from './textures';
-import { P } from './pixel';
+import { P, toCanvas } from './pixel';
+import { linePixels, mix } from './pixel/buf';
+import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type TextStyle } from './pixel/font';
 import { SPRITE_SLOTS } from './pixel/hero';
 import { CHARACTER_OUTLINE, PAL } from './pixel/palette';
-import { FEET_ROW } from './pixel/sceneryTypes';
+import { FEET_ROW, VIEW, VIEW_MARGIN, type LayerName } from './pixel/sceneryTypes';
 import type { FxName } from './pixel/packs/fx';
 import { layerY, scenerySet, scroll0, worldArt, worldSeed } from './worldLook';
 import { Ambience } from './ambience';
-import type { LayerName } from './pixel/sceneryTypes';
+import { PixelBits, type BitStyle } from './pixelBits';
+import { PixelTexts, type PixelText } from './pixelText';
+import { snapCameraToGrid } from './gridSnap';
 
-export const BATTLE_W = 1080;
-export const BATTLE_H = 820;
+/** The battle view: 120 x 107 art pixels, 1080 x 963 screen pixels. */
+export const BATTLE_W = VIEW.w * P;
+export const BATTLE_H = VIEW.h * P;
 /** The ground line: the bottom edge of the view row fighters stand on. */
 const FEET_Y = (FEET_ROW + 1) * P;
-const HERO_WALK_X = 300;
-const HERO_FIGHT_X = 336;
+/** How far (screen px) the full-view pictures reach past each edge, for the screen shake. */
+const MARGIN = VIEW_MARGIN * P;
+const HERO_WALK_X = 33 * P;
+const HERO_FIGHT_X = 37 * P;
 /** Where the front enemy's leading edge stands while fighting. */
-const ENGAGE_EDGE = 456;
+const ENGAGE_EDGE = 51 * P;
 const COIN_TARGET = { x: 694, y: 58 };
-/** Top of the boss HP bar: just under the HUD row, with the boss's name over it. */
-const BOSS_BAR_Y = 180;
+/** Top of the boss HP bar: under the HUD row, with the boss's name (one or two lines) over it. */
+const BOSS_BAR_Y = 27 * P;
 const BAG_TARGET = { x: 190, y: BATTLE_H + 220 };
-const FONT = '"Dumpster Digits", "Pixelify Sans", "Courier New", monospace';
-const INK = '#1A1326';
 const INK_N = 0x1a1326;
 /** Weapon angles in degrees (0 = pointing up, clockwise positive). */
 const REST = WEAPON_TILT;
@@ -79,6 +88,33 @@ const SKULL_W = 9;
 const BAR_GAP = 2;
 /** Seconds the light part of a fresh hit holds before it drains. */
 const GHOST_HOLD = 0.3;
+
+// ------------------------------------------------------------------ text styles (pixel/font.ts)
+
+/** A fill with a lighter top row over `color`. */
+const litTop = (color: string): readonly string[] => [mix(color, '#ffffff', 0.55), color];
+/** A big-face fill in three flat bands from `top` to `bottom`. */
+const bands = (grad: readonly [string, string]): readonly string[] => gradientRows(grad[0], grad[1], FACES.big.h);
+/** Widest a line of battle text may be (art px), leaving room for the outline and a margin. */
+const TEXT_MAX_W = VIEW.w - 8;
+const BOSS_NAME: TextStyle = { face: 'small', fill: '#ffffff', maxW: TEXT_MAX_W };
+const BOSS_HP: TextStyle = { face: 'small', fill: '#ffffff' };
+const WORLD_CARD: TextStyle = { face: 'small', fill: '#ffffff', shadow: true, maxW: TEXT_MAX_W };
+const GOLD: readonly [string, string] = ['#fff6a8', '#ffa21a'];
+
+/** The "too tough" notice: a cream plate like the toasts', ink text, its first sentence big and red. */
+const NOTICE = { bg: ['#fff0e0', '#ffe0c8', '#ffd0b0'], head: '#c8323a', ms: 2400 } as const;
+
+// ------------------------------------------------------------------ particle styles (pixelBits.ts)
+
+const SPARK: BitStyle = { speed: [240, 520], life: [200, 360], drag: 2, colors: [0xffffff], fade: [0xfff28c], sizes: [2, 1] };
+const BIG_SPARK: BitStyle = {
+  speed: [360, 860], life: [380, 680], drag: 2.5, colors: [0xffe14a, 0xffffff, 0xffb300], fade: [0xffb300], sizes: [2, 2, 1],
+};
+const DUST: BitStyle = { speed: [40, 150], angle: [180, 360], life: [360, 560], colors: [0xe8e0d0], sizes: [2, 1], alpha: [0.85, 0.55, 0.3] };
+const FLAME: BitStyle = { speedX: [-40, 40], speedY: [-220, -120], life: [300, 520], colors: [0xffe14a, 0xffb300], fade: [0xff7043, 0xc8323a], sizes: [2, 1] };
+const CONFETTI_COLORS = [0xff5a7a, 0xffd54f, 0x5bd23a, 0x4fc3f7] as const;
+const CONFETTI: BitStyle = { speed: [320, 760], angle: [200, 340], gravity: 900, drag: 1.2, life: [900, 1500], colors: CONFETTI_COLORS, tumble: 90 };
 
 /** The damage trail behind an HP bar. */
 interface Trail {
@@ -159,9 +195,12 @@ interface Swing {
   riders: Array<() => void>;
 }
 
+type Movable = Phaser.GameObjects.GameObject & { x: number; y: number };
+
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const easeOutQuad = (k: number) => 1 - (1 - k) * (1 - k);
 const easeInQuad = (k: number) => k * k;
+const easeOutCubic = (k: number) => 1 - Math.pow(1 - k, 3);
 const easeOutBack = (k: number) => {
   const c1 = 1.70158;
   const c3 = c1 + 1;
@@ -169,17 +208,80 @@ const easeOutBack = (k: number) => {
 };
 /** Snaps a screen offset to the pixel grid. */
 const snap = (v: number) => Math.round(v / P) * P;
+/** An opacity in `n` flat steps (1 down to 0 as k goes 0 to 1). */
+const stepsDown = (k: number, n = 3) => 1 - Math.min(n, Math.floor(k * (n + 1))) / n;
+
+/** Splits "Too tough! Keep rolling..." into its first sentence and the rest (or no head). */
+function headline(text: string): { head: string | null; rest: string } {
+  const m = /^(.{2,24}?[!?.])\s+(.+)$/.exec(text);
+  if (m && lineWidth(m[1], FACES.big) <= TEXT_MAX_W) return { head: m[1], rest: m[2] };
+  return { head: null, rest: text };
+}
+
+/**
+ * A horizontally tiling layer (scenery, cloud strips) drawn as copies of its texture side by side, each
+ * at a whole art pixel. (Phaser's TileSprite redraws a texture whose size isn't a power of two into one
+ * that is, with smoothing on, which resamples and blurs the art.)
+ */
+class Strip {
+  private imgs: Phaser.GameObjects.Image[] = [];
+  /** Copies in use. */
+  private n = 0;
+  private w = 1;
+  private y = 0;
+  private visible = true;
+
+  constructor(private scene: Phaser.Scene, private depth: number) {}
+
+  /** Shows texture `key`, `w` screen px wide (one tile). */
+  setTexture(key: string, w: number): this {
+    this.w = Math.max(P, w);
+    // Enough copies to cover the view and its margins from any scroll.
+    this.n = Math.ceil((BATTLE_W + 2 * MARGIN) / this.w) + 2;
+    while (this.imgs.length < this.n) this.imgs.push(this.scene.add.image(0, this.y, key).setOrigin(0, 0).setDepth(this.depth));
+    this.imgs.forEach((img, i) => img.setTexture(key).setOrigin(0, 0).setVisible(this.visible && i < this.n));
+    return this;
+  }
+
+  setY(y: number): this {
+    this.y = y;
+    for (const img of this.imgs) img.y = y;
+    return this;
+  }
+
+  setVisible(v: boolean): this {
+    this.visible = v;
+    this.imgs.forEach((img, i) => img.setVisible(v && i < this.n));
+    return this;
+  }
+
+  /** Hides it and lets go of its texture (about to be freed). */
+  clear(): this {
+    for (const img of this.imgs) img.setTexture('__DEFAULT');
+    return this.setVisible(false);
+  }
+
+  /** Puts texture column `s` (screen px) at the view's left edge, at the nearest whole art pixel. */
+  scrollTo(s: number): this {
+    const off = ((snap(s) % this.w) + this.w) % this.w;
+    let x = -off;
+    if (x > -MARGIN) x -= this.w;
+    this.imgs.forEach((img, i) => {
+      img.x = x + i * this.w;
+    });
+    return this;
+  }
+}
 
 export class BattleScene extends Phaser.Scene {
   private sky!: Phaser.GameObjects.Image;
   private cover!: Phaser.GameObjects.Rectangle;
   private worldShown = 0;
-  private far!: Phaser.GameObjects.TileSprite;
-  private mid!: Phaser.GameObjects.TileSprite;
-  private ground!: Phaser.GameObjects.TileSprite;
-  private fg!: Phaser.GameObjects.TileSprite;
-  /** Cloud strips, back to front, and their drift in art pixels per second. */
-  private clouds: Array<{ ts: Phaser.GameObjects.TileSprite; speed: number }> = [];
+  private layers!: Record<LayerName, Strip>;
+  /** Each layer's scroll (screen px, the texture column at the view's left edge); drawn at whole art pixels. */
+  private scroll: Record<LayerName, number> = { far: 0, mid: 0, ground: 0, fg: 0 };
+  /** Cloud strips, back to front, their drift in art pixels per second and their scroll. */
+  private clouds: Array<{ strip: Strip; speed: number; scroll: number }> = [];
   /** The sun, moon or planet and its halo, over the clouds. */
   private glow!: Phaser.GameObjects.Image;
   private vignette!: Phaser.GameObjects.Image;
@@ -195,7 +297,11 @@ export class BattleScene extends Phaser.Scene {
   private weapon!: Phaser.GameObjects.Image;
   /** How far the current weapon's art leans from straight up. */
   private weaponTilt = WEAPON_TILT;
-  private aura!: Phaser.GameObjects.Graphics;
+  /** The Legendary-or-better glow (two breathing frames) and the glints that rise from it. */
+  private aura!: Phaser.GameObjects.Image;
+  private auraColor: string | null = null;
+  private auraT = 0;
+  private glintT = 0;
   private heroBar!: Phaser.GameObjects.Graphics;
   private heart!: Phaser.GameObjects.Image;
   private heroBarSig = '';
@@ -205,14 +311,28 @@ export class BattleScene extends Phaser.Scene {
   /** The boss's bar, skull, name and HP, faded as one. */
   private bossUi!: Phaser.GameObjects.Container;
   private bossBar!: Phaser.GameObjects.Graphics;
-  private bossName!: Phaser.GameObjects.Text;
-  private bossHp!: Phaser.GameObjects.Text;
+  private bossName!: PixelText;
+  private bossHp!: PixelText;
   private bossSig = '';
-  private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private bigSparks!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private dust!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private flames!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private confetti: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+  private texts!: PixelTexts;
+  /** Effect particles: in front of the fighters, dust at their feet, confetti on top, glints by the hero. */
+  private bits!: PixelBits;
+  private dust!: PixelBits;
+  private confetti!: PixelBits;
+  private glints!: PixelBits;
+  /** Objects that move by tween but are drawn at whole art pixels. */
+  private locked = new Set<Movable>();
+  /** Stamps on screen and where they landed (screen px, centers and sizes), so a new one doesn't cover them. */
+  private stamps: Array<{ tx: PixelText; x: number; y: number; w: number; h: number }> = [];
+  /** The world's name as it arrives, and the "too tough" notice. */
+  private worldCard: PixelText | null = null;
+  private notice: Phaser.GameObjects.Image | null = null;
+  private noticeN = 0;
+  private hintWas = false;
+  /** Screen shake: seconds left, reach in art pixels, seconds to the next jolt. */
+  private shakeT = 0;
+  private shakeAmp = 0;
+  private shakeNext = 0;
   private foes = new Map<number, Foe>();
   private kills = new Map<number, { kind: Kind; coins: number }>();
   private swingQueue: Swing[] = [];
@@ -244,58 +364,58 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    generateTextures(this, BATTLE_W, BATTLE_H);
+    generateTextures(this);
+    this.texts = new PixelTexts(this);
     this.buildBackground();
     this.buildHero();
     this.buildEffects();
     this.heroBar = this.add.graphics().setDepth(40);
     this.heart = this.add.image(0, 0, 'bar_heart').setOrigin(0, 0).setDepth(40.5);
     this.buildBossBar();
-    this.cover = this.add.rectangle(0, 0, BATTLE_W, BATTLE_H, 0xffffff, 1).setOrigin(0, 0).setDepth(60).setAlpha(0);
+    this.cover = this.add.rectangle(-MARGIN, -MARGIN, BATTLE_W + 2 * MARGIN, BATTLE_H + 2 * MARGIN, 0xffffff, 1).setOrigin(0, 0).setDepth(60).setAlpha(0);
     this.heroTrail.hp = gameStore.getState().game.battle.playerHp;
+    this.hintWas = gameStore.getState().game.stage.showToughHint;
+    // The camera's origin at its top-left corner: with the default (its middle), an odd view height puts
+    // everything half a pixel off, and rounding then moves it a whole screen pixel off the grid.
+    this.cameras.main.setOrigin(0, 0);
+    snapCameraToGrid(this);
+    // Tweened things land on whole art pixels.
+    this.events.on(Phaser.Scenes.Events.PRE_RENDER, () => {
+      for (const o of this.locked) {
+        o.x = snap(o.x);
+        o.y = snap(o.y);
+      }
+    });
     this.unsub = bus.on((events) => this.onEvents(events));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsub?.());
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.unsub?.());
-    // Canvas text doesn't make the browser fetch a font limited to a few characters (the 2 and 5 of
-    // Dumpster Digits), so ask for both weights before redrawing the labels.
-    const fonts = document.fonts;
-    void Promise.all(
-      fonts ? ['500 20px "Dumpster Digits"', '700 20px "Dumpster Digits"'].map((f) => fonts.load(f, '25').catch(() => [])) : [],
-    )
-      .then(() => fonts?.ready)
-      .then(() => {
-        if (!this.sys.isActive()) return;
-        for (const tx of [this.bossName, this.bossHp]) tx.setFontFamily(FONT);
-        this.fitBossName();
-      });
+    const done = () => {
+      this.unsub?.();
+      this.texts.destroy();
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, done);
+    this.events.once(Phaser.Scenes.Events.DESTROY, done);
+    this.showWorldCard(this.worldShown);
+  }
+
+  /** Keeps a tweened object on whole art pixels (until it's destroyed). */
+  private gridLock<T extends Movable>(o: T): T {
+    this.locked.add(o);
+    o.once(Phaser.GameObjects.Events.DESTROY, () => this.locked.delete(o));
+    return o;
   }
 
   /**
    * The boss bar sits right under the HUD (the sky there is otherwise clear): a wide pixel bar with a
-   * skull at its left end, the boss's name centered over it and its HP to the right, outside the bar.
+   * skull at its left end, the boss's name centered over it (two lines if it's long) and its HP to the
+   * right, outside the bar.
    */
   private buildBossBar() {
     const x = BATTLE_W / 2 - (BOSS_BAR.w * P) / 2;
     this.bossBar = this.add.graphics().setPosition(x, BOSS_BAR_Y);
     // The skull's right column is the bar's left edge; it stands 2 art px over and under the bar.
     const skull = this.add.image(x - (SKULL_W - 1) * P, BOSS_BAR_Y - 2 * P, 'bar_skull').setOrigin(0, 0);
-    this.bossName = this.label(BATTLE_W / 2, BOSS_BAR_Y - 2 * P, 32).setOrigin(0.5, 1);
-    this.bossHp = this.label(x + (BOSS_BAR.w + 2) * P, BOSS_BAR_Y + (BOSS_BAR.h * P) / 2, 28).setOrigin(0, 0.5);
+    this.bossName = this.texts.add('', BOSS_NAME);
+    this.bossHp = this.texts.add('', BOSS_HP);
     this.bossUi = this.add.container(0, 0, [this.bossBar, skull, this.bossName, this.bossHp]).setDepth(40).setAlpha(0).setVisible(false);
-  }
-
-  /** Long boss names shrink to fit the view. */
-  private fitBossName() {
-    const room = BATTLE_W - 6 * P;
-    this.bossName.setFontSize(32);
-    if (this.bossName.width > room) this.bossName.setFontSize(Math.floor((32 * room) / this.bossName.width));
-  }
-
-  private label(x: number, y: number, size: number): Phaser.GameObjects.Text {
-    return this.add
-      .text(x, y, '', { fontFamily: FONT, fontSize: `${size}px`, color: '#ffffff' })
-      .setOrigin(0.5)
-      .setStroke(INK, Math.max(5, size / 4.5));
   }
 
   // ------------------------------------------------------------------ scenery
@@ -306,24 +426,21 @@ export class BattleScene extends Phaser.Scene {
     // Back to front: sky (0), stars (0.5), clouds (1), the sun or moon and its halo (1.5), lightning
     // (1.7), the far, mid and ground layers (2 to 4, torches 2.5), particles behind the fighters (5),
     // fighters, the foreground (30), particles in front (31), the vignette (32), effects and UI.
-    this.sky = this.add.image(0, 0, k.sky).setOrigin(0, 0).setScale(P).setDepth(0);
-    for (let i = 0; i < 2; i++) {
-      const ts = this.add.tileSprite(0, 0, BATTLE_W, P, '__DEFAULT').setOrigin(0, 0).setDepth(1 + i * 0.1).setVisible(false);
-      this.clouds.push({ ts, speed: 0 });
-    }
+    // Full-view pictures reach MARGIN past every edge (the screen shake never shows an edge).
+    this.sky = this.add.image(-MARGIN, -MARGIN, k.sky).setOrigin(0, 0).setScale(P).setDepth(0);
+    for (let i = 0; i < 2; i++) this.clouds.push({ strip: new Strip(this, 1 + i * 0.1), speed: 0, scroll: 37 * P + i * 61 * P });
     this.glow = this.add.image(0, 0, '__DEFAULT').setOrigin(0, 0).setScale(P).setDepth(1.5).setVisible(false);
-    this.far = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.far).h, k.far).setOrigin(0, 0).setDepth(2);
-    this.mid = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.mid).h, k.mid).setOrigin(0, 0).setDepth(3);
-    this.ground = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.ground).h, k.ground).setOrigin(0, 0).setDepth(4);
-    this.fg = this.add.tileSprite(0, 0, BATTLE_W, texSize(k.fg).h, k.fg).setOrigin(0, 0).setDepth(30);
-    this.vignette = this.add.image(0, 0, k.vignette).setOrigin(0, 0).setScale(P).setDepth(32);
+    this.layers = { far: new Strip(this, 2), mid: new Strip(this, 3), ground: new Strip(this, 4), fg: new Strip(this, 30) };
+    this.vignette = this.add.image(-MARGIN, -MARGIN, k.vignette).setOrigin(0, 0).setScale(P).setDepth(32);
     this.ambience = new Ambience(this, { stars: 0.5, bolt: 1.7, torch: 2.5, back: 5, front: 31, flash: 31.5 });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.ambience.destroy());
     this.placeLayers(world, k, true);
   }
 
-  private layer(name: LayerName): Phaser.GameObjects.TileSprite {
-    return { far: this.far, mid: this.mid, ground: this.ground, fg: this.fg }[name];
+  /** Sets a layer's scroll (screen px) and draws it at the nearest whole art pixel. */
+  private scrollLayer(name: LayerName, to: number) {
+    this.scroll[name] = to;
+    this.layers[name].scrollTo(to);
   }
 
   /** Puts each layer, the clouds and the sun or moon at the world's placement; `reset` restarts the scroll. */
@@ -332,21 +449,17 @@ export class BattleScene extends Phaser.Scene {
     const y = layerY(set);
     const s0 = scroll0(set);
     for (const name of ['far', 'mid', 'ground', 'fg'] as const) {
-      const ts = this.layer(name);
-      // (A tile sprite's own texture key is internal; the size comes from the world's layer texture.)
-      ts.setPosition(0, y[name]);
-      ts.setSize(BATTLE_W, texSize(keys[name]).h);
-      if (reset) ts.tilePositionX = s0[name];
+      this.layers[name].setTexture(keys[name], texSize(keys[name]).w).setY(y[name]);
+      this.scrollLayer(name, reset ? s0[name] : this.scroll[name]);
     }
     this.clouds.forEach((c, i) => {
       const strip = keys.clouds[i];
-      c.ts.setVisible(!!strip);
-      // (Hidden layers drop the last world's texture, which is about to be freed.)
+      // (Hidden strips drop the last world's texture, which is about to be freed.)
       if (!strip) {
-        c.ts.setTexture('__DEFAULT');
+        c.strip.clear();
         return;
       }
-      c.ts.setTexture(strip.key).setPosition(0, strip.y * P).setSize(BATTLE_W, texSize(strip.key).h);
+      c.strip.setVisible(true).setTexture(strip.key, texSize(strip.key).w).setY(strip.y * P).scrollTo(c.scroll);
       c.speed = strip.speed;
     });
     if (keys.glow) this.glow.setTexture(keys.glow.key).setPosition(keys.glow.x * P, keys.glow.y * P).setVisible(true);
@@ -368,12 +481,9 @@ export class BattleScene extends Phaser.Scene {
     this.worldShown = world;
     const k = worldTextures(this, world);
     this.sky.setTexture(k.sky);
-    this.far.setTexture(k.far);
-    this.mid.setTexture(k.mid);
-    this.ground.setTexture(k.ground);
-    this.fg.setTexture(k.fg);
     this.placeLayers(world, k, scenerySet(worldDef(world)) !== before);
     this.releaseLater = releaseWorlds(this, world, this.foeTextures()) > 0;
+    this.showWorldCard(world);
     this.tweens.killTweensOf(this.cover);
     if (this.reduceMotion || this.reduceFlashing) {
       this.cover.setAlpha(0);
@@ -381,16 +491,93 @@ export class BattleScene extends Phaser.Scene {
     }
     const sky = worldDef(world).look.atmo.sky;
     this.cover.setFillStyle(Phaser.Display.Color.HexStringToColor(sky[sky.length - 1]).color, 1).setAlpha(1);
-    this.tweens.add({ targets: this.cover, alpha: 0, duration: 450, ease: 'Quad.easeOut' });
+    // The reveal fades in four flat steps.
+    this.tweens.add({ targets: this.cover, alpha: 0, duration: 450, ease: 'Stepped', easeParams: [4] });
+  }
+
+  /**
+   * The world's name as a title card on arrival ("World 1 · Sunny Suburbs"), then the sky is clear
+   * again: up two art pixels into place and in (two steps), held, then up a pixel and out (three
+   * steps), 2.8 seconds in all. With reduce motion it only fades.
+   */
+  private showWorldCard(world: number) {
+    this.worldCard?.destroy();
+    const name = DATA.worlds[world - 1]?.name ?? '';
+    const card = this.texts.add(t('battle.worldLabel', { n: world, name }), WORLD_CARD).setDepth(48);
+    this.worldCard = card;
+    const y = 14 * P;
+    const still = this.reduceMotion;
+    card.place(BATTLE_W / 2, y, 0.5, 0).setAlpha(0);
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 2800,
+      onUpdate: (tw) => {
+        if (!card.active) return;
+        const k = tw.getValue() ?? 0;
+        let dy = 0;
+        let alpha = 1;
+        if (still) {
+          alpha = k < 0.85 ? 1 : stepsDown((k - 0.85) / 0.15);
+        } else if (k < 0.12) {
+          const u = k / 0.12;
+          dy = u < 0.5 ? 2 : u < 0.85 ? 1 : 0;
+          alpha = u < 0.5 ? 0.5 : 1;
+        } else if (k >= 0.78) {
+          const u = (k - 0.78) / 0.22;
+          dy = u < 0.5 ? 0 : -1;
+          alpha = stepsDown(u);
+        }
+        card.place(BATTLE_W / 2, y + dy * P, 0.5, 0).setAlpha(alpha);
+      },
+      onComplete: () => {
+        card.destroy();
+        if (this.worldCard === card) this.worldCard = null;
+      },
+    });
+  }
+
+  /**
+   * "Too tough! Keep rolling for better gear." when the raccoon is beaten back a world: a cream plate
+   * under the world's title, its first sentence big. It drops in by whole art pixels and is gone after
+   * 2.4 seconds, like the toast it replaces.
+   */
+  private showToughNotice() {
+    this.notice?.destroy();
+    const { head, rest } = headline(t('battle.toughHint'));
+    const parts = [
+      ...(head ? [renderText(head, { face: 'big', fill: NOTICE.head, ink: null })] : []),
+      renderText(rest, { face: 'small', fill: TEXT_INK, ink: null, maxW: TEXT_MAX_W - 8 }),
+    ];
+    const plate = renderPlate(parts, NOTICE.bg);
+    const key = `notice_${this.noticeN++}`;
+    this.textures.addCanvas(key, toCanvas(plate, 1));
+    const img = this.add.image(0, 0, key).setOrigin(0, 0).setScale(P).setDepth(55);
+    img.once(Phaser.GameObjects.Events.DESTROY, () => this.time.delayedCall(0, () => this.textures.exists(key) && this.textures.remove(key)));
+    this.notice = img;
+    const x = snap(BATTLE_W / 2 - (plate.w * P) / 2);
+    const y = 23 * P;
+    const drop = this.reduceMotion ? [0] : [-3, -2, -1, 0];
+    drop.forEach((dy, i) => this.time.delayedCall(i * 40, () => img.active && img.setPosition(x, y + dy * P)));
+    img.setPosition(x, y + drop[0] * P);
+    [0.66, 0.33].forEach((a, i) => this.time.delayedCall(NOTICE.ms - 160 + i * 80, () => img.active && img.setAlpha(a)));
+    this.time.delayedCall(NOTICE.ms, () => {
+      img.destroy();
+      if (this.notice === img) this.notice = null;
+    });
   }
 
   // ------------------------------------------------------------------ hero
   private buildHero() {
     const body = heroTex(this);
     this.hero = this.add.container(HERO_WALK_X, FEET_Y).setDepth(20);
-    const shadow = this.add.ellipse(0, 2, 13 * P, 2 * P, INK_N, 0.18);
-    this.aura = this.add.graphics();
-    this.rig = this.add.container(0, 0);
+    // A flat pixel shadow on the feet row and the row under it, centered on the feet column.
+    const sh = shadowTex(this, 13);
+    const shadow = this.add.image(-Math.floor(sh.w / 2) * P, -P, sh.key).setOrigin(0, 0).setAlpha(0.22);
+    this.aura = this.add.image(0, 0, '__DEFAULT').setOrigin(0, 0).setVisible(false);
+    // The body's feet origin is the middle of its anchor column (textures.ts: HERO), so the rig sits half
+    // an art pixel right: then, with the container on a whole art pixel, every pixel is on the grid.
+    this.rig = this.add.container(P / 2, 0);
     this.gearBack = this.add.container(0, 0);
     this.heroSpr = this.add.sprite(0, 0, body.key, String(FRAME.stand)).setOrigin(body.ox, body.oy).setScale(P);
     this.gearFront = this.add.container(0, 0);
@@ -424,22 +611,41 @@ export class BattleScene extends Phaser.Scene {
     this.weapon.setTexture(w.key).setOrigin(w.ox, w.oy);
     this.weaponTilt = w.tilt;
     this.aimWeapon(REST);
-    // A soft aura for Legendary-or-better gear.
+    // A pixel glow for Legendary-or-better gear.
     let best: Rarity | null = null;
     for (const s of SLOTS) {
       const it = g.equipped[s];
       if (it && rarityAtLeast(it.rarity, 'legendary') && (!best || rarityAtLeast(it.rarity, best))) best = it.rarity;
     }
-    this.aura.clear();
-    this.tweens.killTweensOf(this.aura);
-    if (best) {
-      for (let r = 150; r > 40; r -= 22) {
-        this.aura.fillStyle(rarityColorNum(best), 0.06);
-        this.aura.fillEllipse(0, -96, r * 1.4, r * 1.8);
-      }
-      this.aura.setAlpha(0.6);
-      this.tweens.add({ targets: this.aura, alpha: 1, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.auraColor = best ? rarityColor(best) : null;
+    this.auraT = 0;
+    this.drawAura(0);
+  }
+
+  /** Shows aura frame `frame` (0 or 1, a pixel bigger) around the hero's body, or hides it. */
+  private drawAura(frame: 0 | 1) {
+    if (!this.auraColor) {
+      this.aura.setVisible(false);
+      return;
     }
+    const a = auraTex(this, this.auraColor, frame);
+    // Centered on the feet column, its middle row AURA.up rows over the feet row.
+    this.aura.setTexture(a.key).setOrigin(0, 0).setPosition(-a.rx * P, -(AURA.up + 1 + a.ry) * P).setAlpha(frame ? 1 : 0.8).setVisible(true);
+  }
+
+  /** The aura breathes (two frames, a step at a time) and now and then a glint of its color rises. */
+  private updateAura(dt: number) {
+    if (!this.auraColor) return;
+    const before = Math.floor(this.auraT / 0.5);
+    this.auraT += dt;
+    if (Math.floor(this.auraT / 0.5) !== before) this.drawAura((Math.floor(this.auraT / 0.5) % 2) as 0 | 1);
+    this.glintT -= dt;
+    if (this.glintT > 0 || this.dead || this.reduceMotion) return;
+    this.glintT = 0.28 + Math.random() * 0.3;
+    const c = hexNum(this.auraColor);
+    const x = this.hero.x + P / 2 + Phaser.Math.Between(-AURA.rx + 2, AURA.rx - 2) * P;
+    const y = FEET_Y - Phaser.Math.Between(2, AURA.up + AURA.ry - 2) * P;
+    this.glints.burst(1, x, y, { speedX: [-12, 12], speedY: [-70, -35], life: [500, 900], colors: [0xffffff], fade: [c, c], alpha: [1, 1, 0.6] });
   }
 
   /** Points the weapon `angle` degrees from straight up (the art itself is drawn tilted). */
@@ -474,14 +680,14 @@ export class BattleScene extends Phaser.Scene {
     const b = fast ? 0.34 : 0.5;
     if (k < a) {
       const u = easeOutQuad(k / a);
-      return { angle: lerp(REST, WIND, u), dx: lerp(0, -18, u), frame: FRAME.armsOut };
+      return { angle: lerp(REST, WIND, u), dx: lerp(0, -2 * P, u), frame: FRAME.armsOut };
     }
     if (k < b) {
       const u = easeInQuad((k - a) / (b - a));
-      return { angle: lerp(WIND, STRIKE, u), dx: lerp(-18, 62, u), frame: FRAME.dash };
+      return { angle: lerp(WIND, STRIKE, u), dx: lerp(-2 * P, 7 * P, u), frame: FRAME.dash };
     }
     const u = easeOutBack((k - b) / (1 - b));
-    return { angle: lerp(STRIKE, REST, u), dx: lerp(62, 0, u), frame: u < 0.5 ? FRAME.dash : FRAME.stand };
+    return { angle: lerp(STRIKE, REST, u), dx: lerp(7 * P, 0, u), frame: u < 0.5 ? FRAME.dash : FRAME.stand };
   }
 
   private swingMs(): number {
@@ -540,40 +746,13 @@ export class BattleScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ effects
   private buildEffects() {
-    this.sparks = this.add
-      .particles(0, 0, 'px_spark', {
-        emitting: false, lifespan: { min: 200, max: 360 }, speed: { min: 240, max: 520 }, scale: { start: 1, end: 0.34 },
-        maxAliveParticles: 60,
-      })
-      .setDepth(34);
-    this.bigSparks = this.add
-      .particles(0, 0, 'px_spark', {
-        emitting: false, lifespan: { min: 380, max: 680 }, speed: { min: 360, max: 860 }, scale: { start: 1, end: 0.34 },
-        tint: [0xffe14a, 0xffffff, 0xffb300], maxAliveParticles: 60,
-      })
-      .setDepth(34);
-    this.dust = this.add
-      .particles(0, 0, 'px_dust', {
-        emitting: false, lifespan: { min: 360, max: 560 }, speed: { min: 40, max: 150 }, angle: { min: 180, max: 360 },
-        alpha: { start: 0.85, end: 0 }, tint: 0xe8e0d0, maxAliveParticles: 30,
-      })
-      .setDepth(33);
-    this.flames = this.add
-      .particles(0, 0, 'px_spark', {
-        emitting: false, lifespan: { min: 300, max: 520 }, speedY: { min: -220, max: -120 }, speedX: { min: -40, max: 40 },
-        scale: { start: 1, end: 0.34 }, tint: [0xff7043, 0xffb300, 0xffe14a], maxAliveParticles: 50,
-      })
-      .setDepth(34);
-    for (let k = 0; k < 4; k++) {
-      this.confetti.push(
-        this.add
-          .particles(0, 0, `fx_conf${k}`, {
-            emitting: false, lifespan: { min: 900, max: 1500 }, speed: { min: 320, max: 760 }, angle: { min: 200, max: 340 },
-            gravityY: 900, rotate: { start: 0, end: 720 }, maxAliveParticles: 40,
-          })
-          .setDepth(35),
-      );
-    }
+    this.bits = new PixelBits(this, 34);
+    this.dust = new PixelBits(this, 33, 60);
+    this.confetti = new PixelBits(this, 35, 200);
+    this.glints = new PixelBits(this, 21, 24);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const b of [this.bits, this.dust, this.confetti, this.glints]) b.destroy();
+    });
   }
 
   /** Plays a pack effect once at (x, y). Returns null if the effect isn't in the pack. */
@@ -588,71 +767,146 @@ export class BattleScene extends Phaser.Scene {
     return spr;
   }
 
-  /** Pop-up number: bounces in, floats up, fades. */
-  private number(x: number, y: number, text: string, opts: { size?: number; color?: string; grad?: [string, string]; life?: number } = {}) {
-    const size = opts.size ?? 52;
-    const tx = this.add
-      .text(x + Phaser.Math.Between(-22, 22), y, text, { fontFamily: FONT, fontSize: `${size}px`, color: opts.color ?? '#ffffff' })
-      .setOrigin(0.5)
-      .setDepth(45)
-      .setStroke(INK, Math.max(7, size / 5.5))
-      .setScale(0.3);
-    if (opts.grad) {
-      const g = tx.context.createLinearGradient(0, 0, 0, tx.height);
-      g.addColorStop(0.15, opts.grad[0]);
-      g.addColorStop(0.85, opts.grad[1]);
-      tx.setFill(g);
+  /** A still effect image (impact star, puff) at a whole art pixel; it fades out in flat steps. */
+  private still(key: string, x: number, y: number, opts: { depth: number; tint?: number; delay?: number; ms: number }) {
+    const o = texOrigin(key);
+    const img = this.add.image(snap(x), snap(y), key).setOrigin(o.x, o.y).setDepth(opts.depth);
+    if (opts.tint !== undefined) img.setTint(opts.tint);
+    this.tweens.add({ targets: img, alpha: 0, delay: opts.delay ?? 0, duration: opts.ms, ease: 'Stepped', easeParams: [3], onComplete: () => img.destroy() });
+  }
+
+  /** Keeps a text box of `w` screen px centered near `x` inside the view. */
+  private clampX(x: number, w: number): number {
+    return Phaser.Math.Clamp(x, w / 2 + P, BATTLE_W - w / 2 - P);
+  }
+
+  /**
+   * Pop-up number: flashes white for its first frames, floats up by whole art pixels (fast, then
+   * slowing) and steps out.
+   */
+  private number(x: number, y: number, text: string, opts: { big?: boolean; fill?: string | readonly string[]; life?: number } = {}) {
+    const life = opts.life ?? 800;
+    const tx = this.texts.add(text, { face: opts.big ? 'big' : 'small', fill: opts.fill ?? '#ffffff' }).setDepth(45);
+    const cx = this.clampX(x + Phaser.Math.Between(-2, 2) * P, tx.artW * P);
+    tx.place(cx, y);
+    if (!this.reduceFlashing) {
+      tx.setFlash(true);
+      this.time.delayedCall(60, () => tx.active && tx.setFlash(false));
     }
-    this.tweens.add({ targets: tx, scale: 1, duration: 160, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: tx, y: y - 110, duration: opts.life ?? 800, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: tx, alpha: 0, delay: (opts.life ?? 800) * 0.55, duration: (opts.life ?? 800) * 0.45, onComplete: () => tx.destroy() });
-  }
-
-  private stamp(x: number, y: number, text: string, color: string, size = 44) {
-    const tx = this.add
-      .text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, color })
-      .setOrigin(0.5)
-      .setDepth(46)
-      .setStroke(INK, 10)
-      .setAngle(-10)
-      .setScale(2.2);
-    this.tweens.add({ targets: tx, scale: 1, duration: 150, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: tx, alpha: 0, y: y - 30, delay: 420, duration: 240, onComplete: () => tx.destroy() });
-  }
-
-  /** Big title that sweeps in with a smear and sweeps out ("FIGHT!", "BOSS!", "VICTORY!"). */
-  private banner(text: string, grad: [string, string], y = 420) {
-    const make = (alpha: number) => {
-      const tx = this.add
-        .text(-300, y, text, { fontFamily: FONT, fontSize: '128px', color: '#ffffff' })
-        .setOrigin(0.5)
-        .setDepth(50)
-        .setStroke(INK, 18)
-        .setShadow(0, 10, INK, 0, true, false)
-        .setAlpha(alpha)
-        .setAngle(-6);
-      const g = tx.context.createLinearGradient(0, 0, 0, tx.height);
-      g.addColorStop(0.2, grad[0]);
-      g.addColorStop(0.8, grad[1]);
-      tx.setFill(g);
-      return tx;
-    };
-    const smears = this.reduceMotion ? [] : [make(0.25), make(0.45)];
-    const main = make(1);
-    smears.forEach((s, i) => {
-      this.tweens.add({ targets: s, x: BATTLE_W / 2 - 70 + i * 30, duration: 240, ease: 'Cubic.easeOut' });
-      this.tweens.add({ targets: s, alpha: 0, delay: 200, duration: 160, onComplete: () => s.destroy() });
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: life,
+      onUpdate: (tw) => {
+        if (!tx.active) return;
+        const k = tw.getValue() ?? 0;
+        tx.place(cx, y - Math.round(easeOutCubic(k) * 12) * P);
+        tx.setAlpha(k < 0.55 ? 1 : stepsDown((k - 0.55) / 0.45));
+      },
+      onComplete: () => tx.destroy(),
     });
-    this.tweens.add({ targets: main, x: BATTLE_W / 2, duration: 260, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: main, scale: { from: 1.08, to: 1 }, delay: 260, duration: 220, ease: 'Sine.easeOut' });
-    this.tweens.add({
-      targets: main, x: BATTLE_W + 500, alpha: 0, delay: 900, duration: 260, ease: 'Cubic.easeIn',
+  }
+
+  /**
+   * A stamped word (CRIT!, K.O., a boss's special): slams down three art pixels in white, shakes a
+   * pixel, holds, then rises and steps out.
+   */
+  private stamp(x: number, y0: number, text: string, color: string) {
+    const tx = this.texts.add(text, { face: 'big', fill: litTop(color), shadow: true, maxW: TEXT_MAX_W }).setDepth(46);
+    const w = tx.artW * P;
+    const h = tx.artH * P;
+    const cx = this.clampX(x, w);
+    // Stacks over any stamp it would land on (a crit and a knock-out in the same moment).
+    let y = y0;
+    for (let tries = 0; tries < 4; tries++) {
+      const hit = this.stamps.find((o) => o.tx.active && Math.abs(o.x - cx) * 2 < o.w + w && Math.abs(o.y - y) * 2 < o.h + h);
+      if (!hit) break;
+      y = hit.y - (hit.h + h) / 2 - P;
+    }
+    const box = { tx, x: cx, y, w, h };
+    this.stamps.push(box);
+    tx.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.stamps = this.stamps.filter((o) => o !== box);
+    });
+    const at = (dy: number, dx = 0) => tx.active && tx.place(cx + dx * P, y + dy * P);
+    at(-3);
+    if (!this.reduceFlashing) tx.setFlash(true);
+    const slam: Array<[number, number, number]> = [[35, -1, 0], [70, 0, 0], [110, 0, 1], [150, 0, -1], [190, 0, 0]];
+    for (const [ms, dy, dx] of slam) this.time.delayedCall(ms, () => at(dy, this.reduceMotion ? 0 : dx));
+    this.time.delayedCall(70, () => tx.active && tx.setFlash(false));
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      delay: 420,
+      duration: 240,
+      onUpdate: (tw) => {
+        const k = tw.getValue() ?? 0;
+        at(-Math.round(k * 3));
+        if (tx.active) tx.setAlpha(stepsDown(k));
+      },
+      onComplete: () => tx.destroy(),
+    });
+  }
+
+  /** Big title that sweeps in with a smear and sweeps out ("FIGHT!", "BOSS!", "VICTORY!"), in whole art pixels. */
+  private banner(text: string, grad: readonly [string, string], y = FEET_Y - 30 * P) {
+    const style: TextStyle = { face: 'big', fill: bands(grad), shadow: true, maxW: TEXT_MAX_W };
+    const main = this.texts.add(text, style).setDepth(50);
+    const w = main.artW * P;
+    const mid = BATTLE_W / 2;
+    const start = -w;
+    const smears = this.reduceMotion ? [] : [0.25, 0.45].map((a) => this.texts.add(text, style).setDepth(49.5).setAlpha(a));
+    smears.forEach((s, i) => {
+      const to = mid - 8 * P + i * 3 * P;
+      this.tweens.addCounter({
+        from: 0, to: 1, duration: 240, ease: 'Cubic.easeOut',
+        onUpdate: (tw) => s.active && s.place(lerp(start, to, tw.getValue() ?? 0), y),
+      });
+      this.tweens.add({ targets: s, alpha: 0, delay: 200, duration: 160, ease: 'Stepped', easeParams: [2], onComplete: () => s.destroy() });
+    });
+    main.place(start, y);
+    this.tweens.addCounter({
+      from: 0, to: 1, duration: 260, ease: 'Back.easeOut',
+      onUpdate: (tw) => main.active && main.place(lerp(start, mid, tw.getValue() ?? 0), y),
+      onComplete: () => {
+        if (!main.active || this.reduceFlashing) return;
+        // Lands with a white flash (the letters, not the outline) for a few frames.
+        main.setFlash(true);
+        this.time.delayedCall(70, () => main.active && main.setFlash(false));
+      },
+    });
+    this.tweens.addCounter({
+      from: 0, to: 1, delay: 900, duration: 260, ease: 'Cubic.easeIn',
+      onUpdate: (tw) => {
+        const k = tw.getValue() ?? 0;
+        if (!main.active) return;
+        main.place(lerp(mid, BATTLE_W + w, k), y).setAlpha(stepsDown(k));
+      },
       onComplete: () => main.destroy(),
     });
   }
 
+  /** Shakes the view by whole art pixels for `duration` ms (intensity as a share of the view's width, like Phaser's). */
   private shake(duration: number, intensity: number) {
-    if (!this.reduceMotion) this.cameras.main.shake(duration, intensity);
+    if (this.reduceMotion) return;
+    this.shakeT = Math.max(this.shakeT, duration / 1000);
+    this.shakeAmp = Math.max(this.shakeAmp, Phaser.Math.Clamp(Math.round((intensity * BATTLE_W) / P), 1, VIEW_MARGIN));
+  }
+
+  private updateShake(dt: number) {
+    const cam = this.cameras.main;
+    if (this.shakeT <= 0) {
+      this.shakeAmp = 0;
+      if (cam.scrollX !== 0 || cam.scrollY !== 0) cam.setScroll(0, 0);
+      return;
+    }
+    this.shakeT -= dt;
+    this.shakeNext -= dt;
+    if (this.shakeNext > 0) return;
+    this.shakeNext = 0.03;
+    const a = this.shakeAmp;
+    // Sideways both ways, but only down (the art reaches past the top and sides, not the bottom).
+    cam.setScroll(Phaser.Math.Between(-a, a) * P, -Phaser.Math.Between(0, a) * P);
   }
 
   private hitStop(ms: number) {
@@ -697,8 +951,7 @@ export class BattleScene extends Phaser.Scene {
     const p = this.foeHitPoint(f);
     // A small spark on every blow; crits get the big burst and a shock spray.
     if (!this.fx(s.crit ? 'crit' : 'hit', p.x, p.y, { depth: 34, tint: s.echo ? 0xc9a6ff : undefined })) {
-      const star = this.add.image(p.x, p.y, 'fx_impact').setDepth(33);
-      this.tweens.add({ targets: star, alpha: 0, delay: 90, duration: 150, onComplete: () => star.destroy() });
+      this.still('fx_impact', p.x, p.y, { depth: 33, delay: 90, ms: 150 });
     }
     if (s.crit) this.fx('slash', p.x + 2 * P, p.y, { depth: 35 });
     this.flash(f.spr, 0xffffff, 60);
@@ -706,14 +959,14 @@ export class BattleScene extends Phaser.Scene {
     this.foeAct(f, 'hurt');
     f.shownHp = Math.max(0, f.shownHp - s.amount);
     if (s.crit) {
-      this.bigSparks.explode(12, p.x, p.y);
-      this.number(p.x, this.overFoe(f, p.y - 70), formatNumber(s.amount), { size: 76, grad: ['#fff6a8', '#ff9a1a'], life: 950 });
-      this.stamp(p.x + 10, p.y - 160, t('battle.crit'), '#FFD54F', 40);
+      this.bits.burst(12, p.x, p.y, BIG_SPARK);
+      this.number(p.x, this.overFoe(f, p.y - 7 * P), formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950 });
+      this.stamp(p.x + P, p.y - 16 * P, t('battle.crit'), '#FFD54F');
       this.shake(110, 0.006);
       this.hitStop(70);
     } else {
-      this.sparks.explode(6, p.x, p.y);
-      this.number(p.x, this.overFoe(f, p.y - 60), formatNumber(s.amount), { size: s.echo ? 44 : 54, color: s.echo ? '#e2ccff' : '#ffffff' });
+      this.bits.burst(6, p.x, p.y, SPARK);
+      this.number(p.x, this.overFoe(f, p.y - 6 * P), formatNumber(s.amount), { fill: s.echo ? '#e2ccff' : '#ffffff' });
     }
     for (const r of s.riders) r();
     if (s.killed || this.kills.has(f.uid)) this.die(f);
@@ -726,12 +979,12 @@ export class BattleScene extends Phaser.Scene {
     const info = this.kills.get(f.uid);
     this.kills.delete(f.uid);
     const p = this.foeHitPoint(f);
-    this.dust.explode(info && info.kind !== 'regular' ? 10 : 5, p.x, FEET_Y - P);
+    this.dust.burst(info && info.kind !== 'regular' ? 10 : 5, p.x, FEET_Y - P, DUST);
     const coins = info ? (info.kind === 'boss' ? 16 : info.kind === 'miniboss' ? 9 : 3) : 2;
     this.coinBurst(p.x, p.y, coins);
     if (info && info.kind !== 'regular') {
       this.shake(320, 0.014);
-      this.confetti.forEach((em) => em.explode(10, p.x, p.y));
+      this.confetti.burst(40, p.x, p.y, CONFETTI);
       this.fx('boom', p.x, p.y, { depth: 35 });
     }
     this.flash(f.spr, 0xffffff, 90);
@@ -742,24 +995,39 @@ export class BattleScene extends Phaser.Scene {
     };
     this.tweens.killTweensOf(f.spr);
     if (f.tex.anims.has('death')) {
-      // Its own death animation, then it fades into the ground.
+      // Its own death animation, then it fades into the ground (in flat steps).
       f.spr.play(`${f.tex.key}:death`);
-      this.tweens.add({ targets: f.c, alpha: 0, delay: 650, duration: 380, onComplete: remove });
+      this.tweens.add({ targets: f.c, alpha: 0, delay: 650, duration: 380, ease: 'Stepped', easeParams: [3], onComplete: remove });
       return;
     }
-    // Knocked out of the park.
-    this.tweens.add({ targets: f.c, x: f.c.x + 700, y: f.c.y - 380, angle: 540, duration: 650, ease: 'Quad.easeOut', onComplete: remove });
+    // Knocked out of the park, tumbling a quarter turn at a time (quarter turns keep its pixels on the grid).
+    const x0 = f.c.x;
+    const y0 = f.c.y;
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 650,
+      ease: 'Quad.easeOut',
+      onUpdate: (tw) => {
+        const k = tw.getValue() ?? 0;
+        f.c.setPosition(snap(x0 + 700 * k), snap(y0 - 380 * k)).setAngle(Math.round((540 * k) / 90) * 90);
+      },
+      onComplete: remove,
+    });
   }
 
-  /** Coins pop out, bounce once, then fly up to the gold counter. */
+  /** Coins pop out, bounce once, then fly up to the gold counter, turning (frame by frame) all the way. */
   private coinBurst(x: number, y: number, n: number) {
+    const coin = coinTex(this);
     for (let i = 0; i < n && this.coinsFlying < 50; i++) {
       this.coinsFlying++;
-      const c = this.add.image(x, y, 'fx_coin').setDepth(36);
+      const c = this.gridLock(
+        this.add.sprite(x, y, coin.key, String(i % 4)).setOrigin(coin.cx / (coin.w / P), coin.cy / (coin.h / P)).setScale(P).setDepth(36),
+      );
+      c.play({ key: `${coin.key}:spin`, startFrame: i % 4 });
       const vx = Phaser.Math.Between(-260, 260);
       const landX = x + vx * 0.45;
-      const peak = y - Phaser.Math.Between(90, 190);
-      this.tweens.add({ targets: c, scaleX: { from: 1, to: 0.34 }, duration: 110, yoyo: true, repeat: 5, ease: 'Stepped', easeParams: [2] });
+      const peak = y - Phaser.Math.Between(9, 19) * P;
       this.tweens.chain({
         targets: c,
         tweens: [
@@ -777,39 +1045,41 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private bagBurst(count: number) {
-    const from = { x: ENGAGE_EDGE + 80, y: FEET_Y - 120 };
+    const from = { x: ENGAGE_EDGE + 9 * P, y: FEET_Y - 13 * P };
     for (let i = 0; i < Math.min(count, 6); i++) {
-      const bag = this.add.image(from.x + i * 30, from.y, 'fx_bag').setDepth(36);
-      this.tweens.add({ targets: bag, y: from.y - 120, duration: 260, ease: 'Back.easeOut', delay: i * 70 });
+      const o = texOrigin('fx_bag');
+      const bag = this.gridLock(this.add.image(from.x + i * 3 * P, from.y, 'fx_bag').setOrigin(o.x, o.y).setDepth(36));
+      this.tweens.add({ targets: bag, y: from.y - 13 * P, duration: 260, ease: 'Back.easeOut', delay: i * 70 });
       this.tweens.add({
-        targets: bag, x: BAG_TARGET.x, y: BAG_TARGET.y, angle: -40, duration: 520, ease: 'Cubic.easeIn',
+        targets: bag, x: BAG_TARGET.x, y: BAG_TARGET.y, duration: 520, ease: 'Cubic.easeIn',
         delay: 380 + i * 70, onComplete: () => bag.destroy(),
       });
     }
   }
 
+  /** Chain lightning: a jagged 1-art-pixel bolt with an ink edge, drawn pixel by pixel. */
   private lightning(a: { x: number; y: number }, b: { x: number; y: number }) {
     const g = this.add.graphics().setDepth(35);
-    const pts: Phaser.Math.Vector2[] = [];
+    const pts: Array<[number, number]> = [];
     const n = 7;
     for (let i = 0; i <= n; i++) {
       const k = i / n;
-      const jitter = i === 0 || i === n ? 0 : Phaser.Math.Between(-2, 2) * P;
-      pts.push(new Phaser.Math.Vector2(snap(lerp(a.x, b.x, k)), snap(lerp(a.y, b.y, k)) + jitter));
+      const jitter = i === 0 || i === n ? 0 : Phaser.Math.Between(-2, 2);
+      pts.push([Math.round(lerp(a.x, b.x, k) / P), Math.round(lerp(a.y, b.y, k) / P) + jitter]);
     }
-    g.lineStyle(P * 2, INK_N, 1).strokePoints(pts);
-    g.lineStyle(P, 0xffe14a, 1).strokePoints(pts);
-    this.tweens.add({ targets: g, alpha: 0, duration: 220, delay: 60, onComplete: () => g.destroy() });
+    const cells = linePixels(pts);
+    g.fillStyle(INK_N, 1);
+    for (const [x, y] of cells) g.fillRect((x - 1) * P, (y - 1) * P, 3 * P, 3 * P);
+    g.fillStyle(0xffe14a, 1);
+    for (const [x, y] of cells) g.fillRect(x * P, y * P, P, P);
+    this.tweens.add({ targets: g, alpha: 0, duration: 220, delay: 60, ease: 'Stepped', easeParams: [2], onComplete: () => g.destroy() });
     this.fx('lightning', b.x, b.y, { depth: 35 });
   }
 
   private boom(x: number, y: number) {
-    if (!this.fx('boom', x, y, { depth: 35 })) {
-      const ring = this.add.image(x, y, 'fx_puff').setDepth(34).setTint(0xff8a3d);
-      this.tweens.add({ targets: ring, alpha: 0, duration: 380, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
-    }
-    this.bigSparks.explode(8, x, y);
-    this.flames.explode(8, x, y);
+    if (!this.fx('boom', x, y, { depth: 35 })) this.still('fx_puff', x, y, { depth: 34, tint: 0xff8a3d, ms: 380 });
+    this.bits.burst(8, x, y, BIG_SPARK);
+    this.bits.burst(8, x, y, FLAME);
     this.shake(140, 0.008);
   }
 
@@ -821,17 +1091,17 @@ export class BattleScene extends Phaser.Scene {
     }
     if (amount >= this.maxHp(gameStore.getState().game)) {
       // Way out of its league: make it obvious.
-      this.stamp(this.hero.x + 30, FEET_Y - 300, t('battle.oneShot'), '#FF5A5A', 72);
+      this.stamp(this.hero.x + 3 * P, FEET_Y - 30 * P, t('battle.oneShot'), '#FF5A5A');
       this.shake(320, 0.02);
       this.fx('hit', this.hero.x + 2 * P, FEET_Y - 8 * P, { depth: 34, flipX: true });
     }
-    this.heroKnock = this.reduceMotion ? 0 : heavy ? -40 : -18;
-    const p = { x: this.hero.x + 10, y: FEET_Y - 9 * P };
+    this.heroKnock = this.reduceMotion ? 0 : heavy ? -4 * P : -2 * P;
+    const p = { x: this.hero.x + P, y: FEET_Y - 9 * P };
     if (heavy) {
       this.fx('hit', p.x + 3 * P, p.y, { depth: 34, flipX: true });
       this.shake(220, 0.012);
     }
-    this.number(p.x - 30, this.overHero(p.y - 60), `-${formatNumber(amount)}`, { size: heavy ? 58 : 44, color: '#ff8a80' });
+    this.number(p.x - 3 * P, this.overHero(p.y - 6 * P), `-${formatNumber(amount)}`, { big: heavy, fill: '#ff8a80' });
   }
 
   /** Plays a foe's one-shot animation (attack / hurt) if it has one, then its base loop again. */
@@ -851,7 +1121,7 @@ export class BattleScene extends Phaser.Scene {
       contact();
       return;
     }
-    const dist = heavy ? 90 : 56;
+    const dist = heavy ? 10 * P : 6 * P;
     this.tweens.chain({
       targets: f,
       tweens: [
@@ -910,13 +1180,13 @@ export class BattleScene extends Phaser.Scene {
             const a = this.foes.get(e.fromUid);
             const b = this.foes.get(e.toUid);
             if (!b) return;
-            const pa = a ? this.foeHitPoint(a) : { x: this.hero.x + 120, y: FEET_Y - 160 };
+            const pa = a ? this.foeHitPoint(a) : { x: this.hero.x + 13 * P, y: FEET_Y - 18 * P };
             const pb = this.foeHitPoint(b);
             this.lightning(pa, pb);
             this.flash(b.spr, 0xfff3a0, 70);
             b.shownHp = Math.max(0, b.shownHp - e.amount);
             b.knockV += 300;
-            this.number(pb.x, this.overFoe(b, pb.y - 50), formatNumber(e.amount), { size: 42, color: '#ffe14a' });
+            this.number(pb.x, this.overFoe(b, pb.y - 5 * P), formatNumber(e.amount), { fill: '#ffe14a' });
             if (this.kills.has(b.uid)) this.die(b);
           };
           this.attachRider(lastSwing, e.toUid, run);
@@ -932,7 +1202,7 @@ export class BattleScene extends Phaser.Scene {
               const pb = this.foeHitPoint(b);
               b.shownHp = Math.max(0, b.shownHp - e.amount);
               b.knockV += 500;
-              this.number(pb.x, this.overFoe(b, pb.y - 50), formatNumber(e.amount), { size: 46, color: '#ffab70' });
+              this.number(pb.x, this.overFoe(b, pb.y - 5 * P), formatNumber(e.amount), { fill: '#ffab70' });
               if (this.kills.has(b.uid)) this.die(b);
             }
           };
@@ -944,9 +1214,9 @@ export class BattleScene extends Phaser.Scene {
           if (!f) break;
           const p = this.foeHitPoint(f);
           // (The pack's fire is taller than most enemies at this pixel size, so burns stay pixel flames.)
-          this.flames.explode(6, p.x, p.y + 20);
+          this.bits.burst(6, p.x, p.y + 2 * P, FLAME);
           f.shownHp = Math.max(0, f.shownHp - e.amount);
-          this.number(p.x + 30, this.overFoe(f, p.y - 30), formatNumber(e.amount), { size: 34, color: '#ff9e5e', life: 600 });
+          this.number(p.x + 3 * P, this.overFoe(f, p.y - 3 * P), formatNumber(e.amount), { fill: '#ff9e5e', life: 600 });
           if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           break;
         }
@@ -961,9 +1231,9 @@ export class BattleScene extends Phaser.Scene {
           if (!f) break;
           this.time.delayedCall(170, () => {
             const p = this.foeHitPoint(f);
-            this.sparks.explode(5, p.x, p.y);
+            this.bits.burst(5, p.x, p.y, SPARK);
             f.shownHp = Math.max(0, f.shownHp - e.amount);
-            this.number(p.x, this.overFoe(f, p.y - 40), formatNumber(e.amount), { size: 36, color: '#9cff8a' });
+            this.number(p.x, this.overFoe(f, p.y - 4 * P), formatNumber(e.amount), { fill: '#9cff8a' });
             if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
           });
           break;
@@ -971,8 +1241,8 @@ export class BattleScene extends Phaser.Scene {
         case 'playerDodge': {
           const f = this.foes.get(e.enemyUid);
           const dodge = () => {
-            this.heroKnock = this.reduceMotion ? 0 : -46;
-            this.number(this.hero.x, this.overHero(FEET_Y - 260), t('battle.dodge'), { size: 40, color: '#7fe9ff' });
+            this.heroKnock = this.reduceMotion ? 0 : -5 * P;
+            this.number(this.hero.x, this.overHero(FEET_Y - 26 * P), t('battle.dodge'), { fill: '#7fe9ff' });
           };
           if (f) this.lungeAt(f, dodge, false);
           else dodge();
@@ -981,13 +1251,13 @@ export class BattleScene extends Phaser.Scene {
         case 'heal':
           if (e.source === 'lifesteal') this.healAcc += e.amount;
           else {
-            this.number(this.hero.x - 40, this.overHero(FEET_Y - 250), `+${formatNumber(e.amount)}`, { size: 38, color: '#7ef08f' });
+            this.number(this.hero.x - 4 * P, this.overHero(FEET_Y - 25 * P), `+${formatNumber(e.amount)}`, { fill: '#7ef08f' });
             this.fx('sparkle', this.hero.x, FEET_Y - 8 * P, { depth: 34, tint: 0x9dff9a });
           }
           break;
         case 'bossSpecial': {
           const f = this.foes.get(e.enemyUid);
-          if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 40, `${e.name}!`, '#FF9800', 46);
+          if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 4 * P, `${e.name}!`, '#FF9800');
           break;
         }
         case 'kill': {
@@ -1003,45 +1273,43 @@ export class BattleScene extends Phaser.Scene {
           const g = gameStore.getState().game;
           const boss = g.battle.enemies.some((x) => x.kind !== 'regular');
           if (boss) this.time.delayedCall(700, () => this.banner(t('battle.bossIncoming'), ['#ffd0c0', '#ff4d3d']));
-          else if (e.wave === 0) this.time.delayedCall(700, () => this.banner(t('battle.fight'), ['#fff6a8', '#ffa21a']));
+          else if (e.wave === 0) this.time.delayedCall(700, () => this.banner(t('battle.fight'), GOLD));
           break;
         }
         case 'worldFirstClear':
-          this.banner(t('battle.worldCleared'), ['#fff6a8', '#ffa21a'], 400);
-          this.confetti.forEach((em) => em.explode(18, BATTLE_W / 2, 300));
+          this.banner(t('battle.worldCleared'), GOLD, FEET_Y - 34 * P);
+          this.confetti.burst(72, BATTLE_W / 2, FEET_Y - 34 * P, CONFETTI);
           this.cheer(1.6);
           break;
         case 'bossWin':
-          if (!events.some((x) => x.type === 'worldFirstClear')) this.confetti.forEach((em) => em.explode(5, BATTLE_W / 2 + 120, 420));
+          if (!events.some((x) => x.type === 'worldFirstClear')) this.confetti.burst(20, BATTLE_W / 2 + 13 * P, FEET_Y - 29 * P, CONFETTI);
           this.cheer(1.2);
           break;
         case 'levelUp': {
           if (!this.fx('levelUp', this.hero.x, FEET_Y - 8 * P, { depth: 33 })) {
-            const ring = this.add.image(this.hero.x, FEET_Y - 140, 'fx_puff').setDepth(33).setTint(0xffe14a);
-            this.tweens.add({ targets: ring, alpha: 0, duration: 700, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+            this.still('fx_puff', this.hero.x, FEET_Y - 14 * P, { depth: 33, tint: 0xffe14a, ms: 700 });
           }
-          this.bigSparks.explode(14, this.hero.x, FEET_Y - 160);
-          this.number(this.hero.x, this.overHero(FEET_Y - 320), t('battle.levelUp'), { size: 54, grad: ['#fff6a8', '#ffa21a'], life: 1100 });
+          this.bits.burst(14, this.hero.x, FEET_Y - 16 * P, BIG_SPARK);
+          this.number(this.hero.x, this.overHero(FEET_Y - 32 * P), t('battle.levelUp'), { big: true, fill: bands(GOLD), life: 1100 });
           this.cheer(1);
           break;
         }
         case 'equip': {
           const c = rarityColorNum(e.item.rarity);
-          this.sparks.setParticleTint(c);
-          this.sparks.explode(rarityAtLeast(e.item.rarity, 'epic') ? 14 : 6, this.hero.x, FEET_Y - 160);
-          this.time.delayedCall(400, () => this.sparks.setParticleTint(0xffffff));
-          if (rarityAtLeast(e.item.rarity, 'epic')) {
+          const epic = rarityAtLeast(e.item.rarity, 'epic');
+          this.bits.burst(epic ? 14 : 6, this.hero.x, FEET_Y - 16 * P, { ...SPARK, colors: [0xffffff, c], fade: [c] });
+          if (epic) {
             this.fx('sparkle', this.hero.x, FEET_Y - 9 * P, { depth: 34 });
             this.cheer(0.8);
           }
           break;
         }
         case 'luckBoost':
-          this.flames.setParticleTint(0x46d36b);
-          this.flames.explode(20, this.hero.x, FEET_Y - 120);
-          this.time.delayedCall(600, () => this.flames.setParticleTint([0xff7043, 0xffb300, 0xffe14a]));
+          this.bits.burst(20, this.hero.x, FEET_Y - 12 * P, { ...FLAME, colors: [0xd8ffd0, 0x8dff8a], fade: [0x46d36b, 0x2fb150] });
           this.fx('sparkle', this.hero.x, FEET_Y - 9 * P, { depth: 34, tint: 0x8dff8a });
-          this.number(this.hero.x, this.overHero(FEET_Y - 330), t('battle.luckUp', { mult: BAL.luck.potion.mult }), { size: 50, grad: ['#d8ffd0', '#2fb150'], life: 1200 });
+          this.number(this.hero.x, this.overHero(FEET_Y - 33 * P), t('battle.luckUp', { mult: BAL.luck.potion.mult }), {
+            big: true, fill: bands(['#d8ffd0', '#2fb150']), life: 1200,
+          });
           break;
         case 'playerDeath':
           this.dead = true;
@@ -1051,7 +1319,7 @@ export class BattleScene extends Phaser.Scene {
           this.heroSpr.play('hero:lie');
           this.heroSpr.chain('hero:sleep');
           this.aimWeapon(REST);
-          this.stamp(this.hero.x, FEET_Y - 240, t('battle.ko'), '#FF8A80', 64);
+          this.stamp(this.hero.x, FEET_Y - 24 * P, t('battle.ko'), '#FF8A80');
           break;
         case 'stageStart':
           this.clearFoes();
@@ -1073,8 +1341,10 @@ export class BattleScene extends Phaser.Scene {
   // ------------------------------------------------------------------ enemies
   private makeFoe(uid: number, enemyId: string, kind: Kind, hp: number, maxHp: number, startX: number, world: number): Foe {
     const tex = enemyTex(this, enemyId, world);
-    const c = this.add.container(startX, FEET_Y).setDepth(18);
-    const shadow = this.add.ellipse(0, 2, snap(Math.max(8 * P, (tex.front + tex.back) * 0.6)), 2 * P, INK_N, 0.18);
+    const c = this.add.container(snap(startX), FEET_Y).setDepth(18);
+    // A flat pixel shadow about as wide as the foe, centered on its feet column.
+    const sh = shadowTex(this, Math.max(8, Math.round(((tex.front + tex.back) * 0.6) / P)));
+    const shadow = this.add.image(-Math.floor(sh.w / 2) * P, -P, sh.key).setOrigin(0, 0).setAlpha(0.22);
     const rig = this.add.container(0, 0);
     const spr = this.add.sprite(0, 0, tex.key, '0').setOrigin(tex.ox, tex.oy).setScale(P);
     rig.add(spr);
@@ -1104,7 +1374,7 @@ export class BattleScene extends Phaser.Scene {
       alive.add(e.uid);
       let f = this.foes.get(e.uid);
       if (!f) {
-        f = this.makeFoe(e.uid, e.enemyId, e.kind, e.hp, e.maxHp, BATTLE_W + 160 + i * 120, g.battle.stage);
+        f = this.makeFoe(e.uid, e.enemyId, e.kind, e.hp, e.maxHp, BATTLE_W + 18 * P + i * 13 * P, g.battle.stage);
         this.foes.set(e.uid, f);
       }
       const target = edge + f.front;
@@ -1228,7 +1498,7 @@ export class BattleScene extends Phaser.Scene {
       const s = Math.abs(Math.sin(this.walkT));
       this.rig.y = -Math.round(s * 2.4) * P;
       this.heroFrame(s < 0.3 ? FRAME.squash : s > 0.7 ? FRAME.up : FRAME.stand);
-      if (Math.floor(this.walkT / Math.PI) !== Math.floor(before / Math.PI)) this.dust.explode(2, this.hero.x - 3 * P, FEET_Y - P);
+      if (Math.floor(this.walkT / Math.PI) !== Math.floor(before / Math.PI)) this.dust.burst(2, this.hero.x - 3 * P, FEET_Y - P, DUST);
       return;
     }
     this.mode = 'idle';
@@ -1242,15 +1512,18 @@ export class BattleScene extends Phaser.Scene {
     const b = g.battle;
     const walking = b.phase === 'walking' && !this.dead;
 
-    // Parallax while walking; clouds always drift.
+    // Parallax while walking (each layer drawn at whole art pixels); clouds always drift.
     const speed = walking ? 330 : 0;
-    this.far.tilePositionX += speed * 0.18 * dt;
-    this.mid.tilePositionX += speed * 0.5 * dt;
-    this.ground.tilePositionX += speed * dt;
-    this.fg.tilePositionX += speed * 1.3 * dt;
-    for (const c of this.clouds) c.ts.tilePositionX += (c.speed * P + speed * 0.05) * dt;
+    this.scrollLayer('far', this.scroll.far + speed * 0.18 * dt);
+    this.scrollLayer('mid', this.scroll.mid + speed * 0.5 * dt);
+    this.scrollLayer('ground', this.scroll.ground + speed * dt);
+    this.scrollLayer('fg', this.scroll.fg + speed * 1.3 * dt);
+    for (const c of this.clouds) {
+      c.scroll += (c.speed * P + speed * 0.05) * dt;
+      c.strip.scrollTo(c.scroll);
+    }
     if (b.stage !== this.worldShown) this.showWorld(b.stage);
-    this.ambience.update(dt, speed * dt, (name) => this.layer(name).tilePositionX, {
+    this.ambience.update(dt, speed * dt, (name) => snap(this.scroll[name]), {
       reduceMotion: this.reduceMotion,
       reduceFlashing: this.reduceFlashing,
     });
@@ -1268,6 +1541,7 @@ export class BattleScene extends Phaser.Scene {
     this.hero.x = snap(this.heroX + this.heroDx + this.heroKnock);
     this.animateHero(walking, dt);
     this.followBody();
+    this.updateAura(dt);
     void time;
 
     this.syncFoes(g, dt);
@@ -1276,11 +1550,18 @@ export class BattleScene extends Phaser.Scene {
     // Lifesteal heals are batched into one number.
     this.healTimer -= dt;
     if (this.healAcc >= 1 && this.healTimer <= 0) {
-      this.number(this.hero.x - 50, this.overHero(FEET_Y - 250), `+${formatNumber(this.healAcc)}`, { size: 34, color: '#7ef08f', life: 600 });
+      this.number(this.hero.x - 5 * P, this.overHero(FEET_Y - 25 * P), `+${formatNumber(this.healAcc)}`, { fill: '#7ef08f', life: 600 });
       this.healAcc = 0;
       this.healTimer = 0.5;
     }
 
+    // "Too tough!" when the raccoon has just been beaten back (not while it stays up).
+    const hint = g.stage.showToughHint;
+    if (hint && !this.hintWas) this.showToughNotice();
+    this.hintWas = hint;
+
+    for (const bits of [this.bits, this.dust, this.confetti, this.glints]) bits.update(dt);
+    this.updateShake(dt);
     this.updateHeroBar(g, dt);
     this.updateBossBar(g, dt);
   }
@@ -1321,12 +1602,10 @@ export class BattleScene extends Phaser.Scene {
     // A boss that's down shows an empty bar while it fades (its trail drains here: syncFoes skips the dying).
     const hp = f.dying ? 0 : f.shownHp;
     if (f.dying) drainTrail(f.trail, 0, f.maxHp, dt);
-    const name = enemyName(b.stage, f.id, f.kind);
-    if (name !== this.bossName.text) {
-      this.bossName.setText(name);
-      this.fitBossName();
-    }
+    this.bossName.setText(enemyName(b.stage, f.id, f.kind));
+    this.bossName.place(BATTLE_W / 2, BOSS_BAR_Y - P, 0.5, 1);
     this.bossHp.setText(formatNumber(Math.max(0, Math.ceil(hp))));
+    this.bossHp.place(BATTLE_W / 2 + (BOSS_BAR.w / 2 + 2) * P, BOSS_BAR_Y + (BOSS_BAR.h * P) / 2, 0, 0.5);
     const tones = f.kind === 'boss' ? BAR_BOSS : BAR_FOE;
     this.bossSig = this.pixelBar(this.bossBar, this.bossSig, BOSS_BAR.w, BOSS_BAR.h, hp / f.maxHp, f.trail.hp / f.maxHp, tones);
   }

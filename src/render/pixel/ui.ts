@@ -1,5 +1,9 @@
 /**
- * Pixel UI icons (16x16) and battle effects. See docs/PIXEL_ART.md for the style rules.
+ * Pixel UI icons and battle effects. See docs/PIXEL_ART.md for the style rules.
+ *
+ * The UI shows every icon at 9 stage px per art pixel, so each size is drawn on its own: UI_SPRITES
+ * (16 x 16, big spots), UI_NAV (10 x 10, the nav bar), UI_MD (about 7 x 7, HUD and map hexes) and
+ * UI_SM (about 5 x 5, next to text). LUCK_TOKENS are the reels' luck multipliers (16 x 16).
  */
 import { checkRows, fromRows, type Rows, type SheetEntry } from './buf';
 import { REF_COIN } from './reference';
@@ -578,7 +582,15 @@ const TV: Rows = [
 export type UiIcon =
   | 'coin' | 'gem' | 'bag' | 'heart' | 'sword' | 'shield' | 'clover' | 'bolt' | 'power' | 'gear'
   | 'lock' | 'trash' | 'arrowUp' | 'rebirth' | 'dumpster' | 'potion' | 'dice' | 'book' | 'chart' | 'cart'
-  | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target' | 'tv';
+  | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target' | 'tv'
+  | 'arrowRight';
+
+/** Rows turned a quarter turn clockwise (an up arrow points right; light from the left lands on top). */
+function turnRows(rows: Rows): Rows {
+  const h = rows.length;
+  const w = rows[0].length;
+  return Array.from({ length: w }, (_, y) => Array.from({ length: h }, (_, x) => rows[h - 1 - x][y]).join(''));
+}
 
 export const UI_SPRITES: Record<UiIcon, Rows> = {
   coin: REF_COIN,
@@ -612,6 +624,7 @@ export const UI_SPRITES: Record<UiIcon, Rows> = {
   drop: DROP,
   target: TARGET,
   tv: TV,
+  arrowRight: turnRows(ARROW_UP),
 };
 
 /*
@@ -659,12 +672,35 @@ export const UI_SM: Partial<Record<UiIcon, Rows>> = {
     'kWWWk',
     'kkkkk',
   ],
+  clover: [
+    '.k.k..',
+    'kLkLk.',
+    'kllGk.',
+    '.kGkkk',
+    'kLGkGk',
+    '.kk..k',
+  ],
   star: [
+    '..kk..',
+    '.kYyk.',
+    'kYyyOk',
+    '.kyOk.',
+    'kyOkOk',
+    'kk..kk',
+  ],
+  potion: [
+    '.kkk.',
+    '.kCk.',
+    'kLlLk',
+    'kllGk',
+    '.kkk.',
+  ],
+  heart: [
+    'kk.kk',
+    'keRRk',
+    'kRRrk',
+    '.krk.',
     '..k..',
-    '.kYk.',
-    'kYyyk',
-    '.kyk.',
-    '.k.k.',
   ],
   skull: [
     '.kkk.',
@@ -715,9 +751,16 @@ export const UI_SM: Partial<Record<UiIcon, Rows>> = {
     '..k..',
     '.kLk.',
     'kLlGk',
-    'kkLkk',
+    '.kLk.',
     '.kGk.',
     '.kkk.',
+  ],
+  arrowRight: [
+    '...k..',
+    'kkkLk.',
+    'kLlllk',
+    'kkkGk.',
+    '...k..',
   ],
   sword: [
     '...kk',
@@ -744,6 +787,17 @@ export const UI_SM: Partial<Record<UiIcon, Rows>> = {
   ],
 };
 
+const MD_ARROW_UP: Rows = [
+  '...k...',
+  '..kLk..',
+  '.kLlGk.',
+  'kLllGGk',
+  'kkLlGkk',
+  '.kLlGk.',
+  '.kGGGk.',
+  '.kkkkk.',
+];
+
 /** HUD and map icons, about 7 x 7 (63 stage px). */
 export const UI_MD: Partial<Record<UiIcon, Rows>> = {
   coin: [
@@ -764,13 +818,13 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     '...k...',
   ],
   gear: [
-    '..kkk..',
-    'kkk5kkk',
-    'k55443k',
-    'k54.43k',
-    'k54433k',
-    'kkk3kkk',
-    '..kkk..',
+    '.k.k.k.',
+    'kk545kk',
+    '.54k43.',
+    'k4kxk3k',
+    '.43k32.',
+    'kk332kk',
+    '.k.k.k.',
   ],
   bag: [
     '.kk.kk.',
@@ -782,13 +836,14 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     '.kkkkk.',
   ],
   clover: [
-    '.kk.kk.',
-    'kLlklGk',
-    'kllkGgk',
-    '.kkLkk.',
-    'kLlkllk',
-    'kllkGGk',
-    '.kk.kk.',
+    '.kk.kk..',
+    'kLlkLlk.',
+    'kllllGk.',
+    '.kllGkkk',
+    'kLlGGlGk',
+    'kllkGGgk',
+    '.kk.kkGk',
+    '......kk',
   ],
   heart: [
     '.kk.kk.',
@@ -827,22 +882,22 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     '..kkk..',
   ],
   power: [
-    'k..k..k',
+    '...k...',
     '.kkYkk.',
     '.kYyOk.',
     'kYyyyOk',
     '.kyyOk.',
     '.kkOkk.',
-    'k..k..k',
+    '...k...',
   ],
   lock: [
-    '.kkkkk.',
-    '.k5kk3k',
-    '.k4k.k3k',
+    '..kkk..',
+    '.k545k.',
+    '.k5k4k.',
     'kkkkkkk',
     'kYYyyOk',
     'kYyxyOk',
-    'kOOOOOk',
+    'kyOOOOk',
     'kkkkkkk',
   ],
   trash: [
@@ -855,24 +910,16 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     'k4k3k2k',
     '.kkkkk.',
   ],
-  arrowUp: [
-    '...k...',
-    '..kLk..',
-    '.kLlGk.',
-    'kLllGGk',
-    'kkLlGkk',
-    '.kLlGk.',
-    '.kGGGk.',
-    '.kkkkk.',
-  ],
+  arrowUp: MD_ARROW_UP,
+  arrowRight: turnRows(MD_ARROW_UP),
   rebirth: [
-    '.kkkkk.',
-    'kMmmmVk',
-    'kmkkkkk',
-    'kmkYyk.',
-    'kmkyOkk',
-    'kVkkkVk',
-    '.kVVVk.',
+    '...k...',
+    '..kMk..',
+    '.kkmkk.',
+    'kMmYmVk',
+    '.kkmkk.',
+    '..kVk..',
+    '...k...',
   ],
   potion: [
     '..kkk..',
@@ -885,11 +932,11 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
   ],
   dice: [
     '.kkkkk.',
-    'kwwwww5k',
-    'kwxwxw5k',
-    'kwwxww5k',
-    'kwxwxw5k',
-    'k55555k',
+    'kwwwwWk',
+    'kwxwxWk',
+    'kwwxwWk',
+    'kwxwxWk',
+    'kWWWW5k',
     '.kkkkk.',
   ],
   book: [
@@ -931,27 +978,27 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
   skull: [
     '.kkkkk.',
     'kwWWWTk',
-    'kWWWWTk',
-    'kkkWkkk',
-    'kkkWkkk',
-    '.kWkTk.',
+    'kWkWkTk',
+    'kWkWkTk',
+    'kTWkWTk',
+    '.kWTWk.',
     '.kkkkk.',
   ],
   reel: [
     'kkkkkkk',
-    'keeeeRk',
-    'kekkkrk',
-    'kekyOkk',
-    'kekkkrk',
-    'kRrrrrk',
+    'k55554k',
+    'k5RRR3k',
+    'k5WWr3k',
+    'k5WrW3k',
+    'k43332k',
     'kkkkkkk',
   ],
   reelGold: [
     'kkkkkkk',
     'kYYYYyk',
-    'kYkkkOk',
-    'kYkeRkk',
-    'kYkkkOk',
+    'kYRRRyk',
+    'kYWWrOk',
+    'kYWrWOk',
     'kyOOOOk',
     'kkkkkkk',
   ],
@@ -990,10 +1037,10 @@ export const UI_NAV: Partial<Record<UiIcon, Rows>> = {
     '.kkkkkkkk.',
     'keeeeeeeRk',
     'kekkkkkkrk',
-    'kekYyyOkrk',
-    'kekWWyOkrk',
-    'kekWyOWkrk',
-    'kekWyOWkrk',
+    'kekRRRrkrk',
+    'kekWWWRkrk',
+    'kekWWRWkrk',
+    'kekWRWWkrk',
     'kekkkkkkrk',
     'kRrrrrrrrk',
     '.kkkkkkkk.',
@@ -1059,16 +1106,16 @@ export const UI_NAV: Partial<Record<UiIcon, Rows>> = {
     'kkkkkkkkkk',
   ],
   clover: [
-    '..kk..kk..',
-    '.kLlkkLlk.',
-    '.kllkklGk.',
-    'kk.kllk.kk',
-    'kLlkllkLlk',
-    'kllklGkGgk',
-    '.kkkkGkkk.',
-    '.kLlkGkLk.',
-    '.kllk.kk..',
-    '..kk......',
+    '.kkk.kkk..',
+    'kLLlkLllk.',
+    'kLllkllGk.',
+    'kllllllGk.',
+    '.kllGGGkkk',
+    'kLllGlllGk',
+    'kLllkllGGk',
+    'kllGkGGGgk',
+    '.kkk.kkkGk',
+    '.......kkk',
   ],
   coin: [
     '...kkkk...',
@@ -1096,16 +1143,17 @@ const DIGITS: Record<string, readonly string[]> = {
 
 /** Clover leaves above and below the token's plaque. */
 const TOKEN_TOP: Rows = [
-  '...kkk....kkk...',
-  '..kLLlk..kLllk..',
-  '..kLllGkkLllGk..',
-  '...kllGllllGk...',
+  '..kk.kk..kk.kk..',
+  '.kLlkLlkkLlkLlk.',
+  '.kllllGkkllllGk.',
+  '..kllGk..kllGk..',
+  '...kGk....kGk...',
 ];
 const TOKEN_BOTTOM: Rows = [
-  '...kllGllllGk...',
-  '..kLllGkklllGk..',
-  '..kllGk..kGGGk..',
-  '...kkk....kkk...',
+  '..klGGk..klGGk..',
+  '.kllGGGkkllGGGk.',
+  '.kllkGgkkllkGgk.',
+  '..kk.kk..kk.kk..',
 ];
 
 /** A luck token: the clover with a plaque across it reading "×N" (plaque light/mid colors, digit color). */
@@ -1123,14 +1171,9 @@ function luckToken(x: number, light: string, mid: string, digit: string): Rows {
     });
     rows.push(`k${cells.join('')}k`);
   }
-  return [
-    ...TOKEN_TOP,
-    '.kkkkkkkkkkkkkk.',
-    `k${light.repeat(14)}k`,
-    ...rows,
-    '.kkkkkkkkkkkkkk.',
-    ...TOKEN_BOTTOM,
-  ];
+  // The top digit row sits on the plaque's light band.
+  rows[0] = rows[0].replaceAll(mid, light);
+  return [...TOKEN_TOP, '.kkkkkkkkkkkkkk.', ...rows, '.kkkkkkkkkkkkkk.', ...TOKEN_BOTTOM];
 }
 
 /** Luck tokens (16 x 16): a four-leaf clover badge reading its multiplier, keyed by multiplier. */
@@ -1141,16 +1184,32 @@ export const LUCK_TOKENS: Record<2 | 3 | 5 | 10, Rows> = {
   10: luckToken(10, 'y', 'O', 'w'),
 };
 
-/** Small UI pieces: the payline arrows on the reels. */
+/** Small UI pieces: the payline arrows on the reels, the close cross, a sparkle for inline text. */
 export const UI_BITS: Record<string, Rows> = {
+  closeX: [
+    'kk...kk',
+    'kwk.kwk',
+    '.kwkwk.',
+    '..kwk..',
+    '.kwkwk.',
+    'kwk.kwk',
+    'kk...kk',
+  ],
+  sparkle: [
+    '..k..',
+    '.kYk.',
+    'kYwyk',
+    '.kyk.',
+    '..k..',
+  ],
+  /** Points right, on the left end of the payline (flipped for the right end). */
   paylineL: [
-    'kk...',
-    'kYk..',
-    'kyyk.',
-    'kyyOk',
-    'kyOk.',
-    'kOk..',
-    'kk...',
+    'kk..',
+    'kYk.',
+    'kyyk',
+    'kyOk',
+    'kOk.',
+    'kk..',
   ],
 };
 
@@ -1288,6 +1347,11 @@ export const FX = {
 
 export function sheet(): SheetEntry[] {
   const all: [string, Rows][] = Object.entries(UI_SPRITES).map(([name, rows]) => [`ui_${name}`, rows]);
+  for (const [set, icons] of [['nav', UI_NAV], ['md', UI_MD], ['sm', UI_SM]] as const) {
+    for (const [name, rows] of Object.entries(icons)) all.push([`${set}_${name}`, rows as Rows]);
+  }
+  for (const [x, rows] of Object.entries(LUCK_TOKENS)) all.push([`token_x${x}`, rows]);
+  for (const [name, rows] of Object.entries(UI_BITS)) all.push([`bit_${name}`, rows]);
   for (const [name, v] of Object.entries(FX)) {
     if (name === 'confetti') (v as Rows[]).forEach((rows, i) => all.push([`fx_confetti${i}`, rows]));
     else all.push([`fx_${name}`, v as Rows]);

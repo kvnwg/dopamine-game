@@ -1,17 +1,32 @@
-/* Shared layout for the Bag, Upgrades and Rebirth tabs. */
+/* Shared layout for the Bag and Rebirth tabs. Pixel-ish sizes are art pixels (var(--px) = 9 stage px). */
 .panel {
   position: absolute;
   inset: 0;
-  padding: 16px 24px 14px;
+  padding: calc(2 * var(--px)) 24px calc(3 * var(--px));
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: calc(2 * var(--px));
+}
+/* A tab that scrolls as one list (its pieces keep their size). */
+.scrollPanel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.scrollPanel::-webkit-scrollbar {
+  display: none;
+}
+.scrollPanel > * {
+  flex: none;
+}
+.grow {
+  flex: 1;
 }
 .headRow {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 64px;
+  gap: calc(2 * var(--px));
+  min-height: calc(8 * var(--px));
 }
 .headTitle {
   font-family: var(--font-display);
@@ -21,45 +36,30 @@
   paint-order: stroke fill;
   text-shadow: 0 5px 0 var(--ink);
 }
-.headSub {
-  font-size: 22px;
-  color: #a9aed0;
-  max-width: 420px;
-  line-height: 1.15;
-}
-.coinTag,
 .powerTag {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 20px 4px 8px;
-  border-radius: 999px;
+  gap: var(--px);
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px)) 0 var(--px);
   background: rgba(0, 0, 0, 0.35);
   font-family: var(--font-display);
-  font-size: 36px;
-  color: #fff;
+  font-size: 32px;
+  color: #ffd23f;
   -webkit-text-stroke: 6px var(--ink);
   paint-order: stroke fill;
 }
-.powerTag {
-  font-size: 32px;
-  color: #ffd23f;
-}
 /* Power grew (Equip best, or a drag): the number swells while it ticks up. */
 .powerPop {
+  display: inline-block;
   animation: powerPop 900ms cubic-bezier(0.3, 1.6, 0.5, 1);
-  transform-origin: 30% 50%;
+  transform-origin: 20% 50%;
 }
 @keyframes powerPop {
   0% { transform: scale(1); }
-  18% { transform: scale(1.6); color: #fff6b0; box-shadow: 0 0 34px rgba(255, 210, 63, 0.9); }
+  18% { transform: scale(1.6); color: #fff6b0; }
   70% { transform: scale(1.25); }
   100% { transform: scale(1); }
-}
-.footNote {
-  text-align: center;
-  font-size: 22px;
-  color: #7d82a8;
 }
 .cardLabel {
   font-family: var(--font-display);
@@ -70,113 +70,67 @@
 
 /* ------------------------------------------------------------ bag */
 .gearCard {
-  padding: 8px 14px 14px;
-  border-radius: 26px;
+  padding: var(--px) calc(2 * var(--px)) calc(2 * var(--px));
   background: rgba(0, 0, 0, 0.22);
-  border: 4px solid rgba(0, 0, 0, 0.35);
-}
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 60px;
-  padding: 0 22px 0 8px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
-  background: #4f557c;
-  font-size: 28px;
-  color: #fff;
-  -webkit-text-stroke: 4px var(--ink);
-  paint-order: stroke fill;
-}
-.knob {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 4px solid var(--ink);
-  background: #c9ced9;
-  transition: transform 160ms;
-}
-.toggleOn {
-  background: #5bc236;
-}
-.toggleOn .knob {
-  background: #fff;
-  box-shadow: 0 0 12px #c6ff9e;
+  border: var(--px) solid rgba(0, 0, 0, 0.35);
 }
 .capTrack {
   position: relative;
   flex: 1;
-  height: 46px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
+  min-width: calc(18 * var(--px));
+  height: calc(7 * var(--px));
+  border: var(--px) solid var(--ink);
   background: #15172a;
   overflow: hidden;
 }
 .capFill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(180deg, #8fd0ff, #42a5f5 50%, #2569b8);
-  transition: width 200ms;
+  background: linear-gradient(180deg, #8fd0ff 0 var(--px), #42a5f5 var(--px) calc(100% - var(--px)), #2569b8 calc(100% - var(--px)));
+  transition: width 200ms steps(4);
 }
 .capFull {
-  background: linear-gradient(180deg, #ffb3a8, #ef5350 50%, #b52f35);
+  background: linear-gradient(180deg, #ffb3a8 0 var(--px), #ef5350 var(--px) calc(100% - var(--px)), #b52f35 calc(100% - var(--px)));
+}
+/* More space: the bag bar's end cap. */
+.capPlus {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: calc(5 * var(--px));
+  display: grid;
+  place-items: center;
+  border-left: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #b0ec6c 0 var(--px), #5bc236 var(--px) calc(100% - var(--px)), #2f8a45 calc(100% - var(--px)) 100%);
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: #fff;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+}
+.capTrack:active {
+  transform: translateY(var(--px));
 }
 .capText {
   position: absolute;
-  inset: 0;
+  inset: 0 calc(5 * var(--px)) 0 0;
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 26px;
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
 }
 .warn {
-  padding: 8px 18px;
-  border-radius: 16px;
+  padding: var(--px) calc(2 * var(--px));
   background: rgba(239, 83, 80, 0.2);
-  border: 3px solid #ef5350;
+  border: var(--px) solid #ef5350;
   color: #ffb3a8;
   font-size: 24px;
   text-align: center;
 }
-.scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  margin: 0 -10px;
-  padding: 6px 10px 12px;
-  scrollbar-width: none;
-}
-.scroll::-webkit-scrollbar {
-  display: none;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(6, 146px);
-  justify-content: space-between;
-  row-gap: 40px;
-  padding-top: 22px;
-}
-.slotEmpty {
-  width: 146px;
-  height: 146px;
-  border-radius: 30px;
-  border: 4px dashed rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-.emptyNote {
-  margin: 60px 40px;
-  text-align: center;
-  font-size: 28px;
-  line-height: 1.4;
-  color: #a9aed0;
-}
-
-/* ------------------------------------------------------------ bag tools */
 .dragNote {
   font-size: 20px;
   color: #a9aed0;
@@ -187,154 +141,74 @@
 .tools {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: calc(3 * var(--px));
+  padding: var(--px) var(--px) calc(2 * var(--px));
 }
-.segmented {
-  display: flex;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
-  background: #15172a;
-  overflow: hidden;
-}
-.segBtn {
-  padding: 8px 26px;
-  font-family: var(--font-display);
-  font-size: 28px;
-  color: #8f95bd;
-}
-.segOn {
-  background: linear-gradient(180deg, #8fd0ff, #42a5f5 55%, #2569b8);
-  color: #fff;
-  -webkit-text-stroke: 5px var(--ink);
-  paint-order: stroke fill;
+.tools > :global(.btn) {
+  flex: none;
+  white-space: nowrap;
 }
 .scrapAll {
-  gap: 8px;
+  gap: var(--px);
 }
 .scrapGold {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-left: 4px;
-  padding: 0 12px 0 4px;
-  border-radius: 999px;
+  gap: var(--px);
+  height: calc(6 * var(--px));
+  margin-left: var(--px);
+  padding: 0 var(--px);
   background: rgba(0, 0, 0, 0.25);
   font-size: 26px;
 }
-
-/* ------------------------------------------------------------ upgrades */
-.upGrid {
-  flex: 1;
+/* Bag tiles: six across, room above each for its "1 in X" banner. */
+.grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 1fr;
-  gap: 14px;
-}
-.upTile {
-  --uc: #fff;
-  position: relative;
-  padding: 12px 14px 12px;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(6, calc(18 * var(--px)));
   justify-content: space-between;
-  border-radius: 26px;
-  border: 5px solid var(--ink);
-  background: linear-gradient(180deg, #fffaf0, #f2e3c4);
-  box-shadow: 0 7px 0 var(--ink);
-  color: var(--ink);
+  row-gap: calc(4 * var(--px));
+  padding-top: calc(3 * var(--px));
 }
-.upReady {
-  box-shadow: 0 7px 0 var(--ink), 0 0 0 4px rgba(91, 194, 54, 0.6);
+.slotEmpty {
+  width: calc(18 * var(--px));
+  height: calc(18 * var(--px));
+  border: var(--px) solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
 }
-.upHead {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.upIcon {
-  width: 84px;
-  height: 84px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 22px;
-  border: 4px solid var(--ink);
-  background: radial-gradient(circle at 40% 35%, #fff, color-mix(in srgb, var(--uc) 45%, #fff) 70%);
-}
-.upTitles {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.upName {
-  font-family: var(--font-display);
-  font-size: 32px;
-  line-height: 1.05;
-}
-.upLevel {
-  font-size: 22px;
-  color: #8b7d72;
-}
-.upPips {
-  height: 14px;
-  border-radius: 999px;
-  border: 3px solid var(--ink);
-  background: #d8cbb0;
-  overflow: hidden;
-}
-.upPipFill {
-  height: 100%;
-  background: linear-gradient(90deg, #5bc236, #a5ef5a);
-}
-.upFx {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 22px;
-  white-space: nowrap;
-}
-.upNow {
-  color: #7a6a60;
-}
-.upArrow {
-  color: #5bc236;
-  font-size: 16px;
-}
-.upNext {
-  color: #2f8a1c;
-  font-weight: 900;
-}
-.upBuy {
-  width: 100%;
-  min-height: 64px;
-  font-size: 32px;
-  touch-action: none;
+.emptyNote {
+  margin: 54px 36px;
+  text-align: center;
+  font-size: 28px;
+  line-height: 1.4;
+  color: #a9aed0;
 }
 
 /* ------------------------------------------------------------ rebirth */
 .rbPanel {
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .rbPanel::-webkit-scrollbar {
   display: none;
 }
+.rbPanel > * {
+  flex: none;
+}
 .rbHero {
   position: relative;
-  height: 116px;
-  flex: none;
+  min-height: calc(16 * var(--px));
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 0 26px;
-  background: linear-gradient(180deg, #f6ecff, #e2c9ff);
+  gap: calc(2 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  background: linear-gradient(180deg, #f6ecff 0 50%, #e2c9ff 50% 100%);
 }
 .rbIcon {
-  animation: rbSpin 6s linear infinite;
+  animation: rbBob 1.2s steps(2) infinite;
 }
-@keyframes rbSpin {
-  to { transform: rotate(360deg); }
+@keyframes rbBob {
+  50% { transform: translateY(calc(-1 * var(--px))); }
 }
 .rbTitles {
   display: flex;
@@ -351,23 +225,21 @@
   color: #6d5f78;
 }
 .rbCard {
-  flex: none;
-  padding: 10px 24px 14px;
+  padding: var(--px) calc(3 * var(--px)) calc(2 * var(--px));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--px);
 }
 .req {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: calc(2 * var(--px));
 }
 .reqDot {
-  width: 52px;
-  height: 52px;
+  width: calc(7 * var(--px));
+  height: calc(7 * var(--px));
   flex: none;
-  border-radius: 50%;
-  border: 5px solid var(--ink);
+  border: var(--px) solid var(--ink);
   background: #d8cbb0;
 }
 .reqBody {
@@ -382,33 +254,31 @@
   color: var(--ink);
 }
 .reqTrack {
-  height: 26px;
-  border-radius: 999px;
-  border: 4px solid var(--ink);
+  height: calc(3 * var(--px));
+  border: var(--px) solid var(--ink);
   background: #d8cbb0;
   overflow: hidden;
 }
 .reqFill {
   height: 100%;
-  background: linear-gradient(90deg, #ffc233, #ffdb6e);
-  transition: width 300ms;
+  background: #ffc233;
+  transition: width 300ms steps(4);
 }
 .reqDone {
-  background: linear-gradient(90deg, #5bc236, #a5ef5a);
+  background: #5bc236;
 }
 .rbRewards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: calc(2 * var(--px));
 }
 .rbReward {
   --rc: #fff;
-  padding: 6px 14px;
+  padding: var(--px);
   display: flex;
   align-items: center;
-  gap: 14px;
-  border-radius: 22px;
-  border: 4px solid var(--ink);
+  gap: calc(2 * var(--px));
+  border: var(--px) solid var(--ink);
   background: color-mix(in srgb, var(--rc) 22%, #fff);
 }
 .rbRewardText {
@@ -441,8 +311,12 @@
   text-align: center;
 }
 .rbGo {
-  flex: none;
-  min-height: 100px;
+  min-height: calc(11 * var(--px));
   font-size: 52px;
-  margin: 2px 60px 0;
+  margin: 0 calc(6 * var(--px)) var(--px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rbIcon {
+    animation: none;
+  }
 }

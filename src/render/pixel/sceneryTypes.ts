@@ -22,6 +22,11 @@ export const SCENE_Y = VIEW.h - SCENE_H;
  * It leaves the bottom 14 rows for HP bars, the wave track and the foreground.
  */
 export const FEET_ROW = SCENE_FEET_ROW + SCENE_Y;
+/**
+ * Art pixels the full-view pictures (sky, layers, vignette, flashes) reach past each edge of the view,
+ * so a screen shake (whole art pixels, at most this far) never shows an edge.
+ */
+export const VIEW_MARGIN = 2;
 
 export interface LayerSpot {
   /** Top edge in scene rows (view row SCENE_Y + y; negative for art that reaches above the scene). */

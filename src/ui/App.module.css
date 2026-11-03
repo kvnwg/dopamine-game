@@ -33,7 +33,8 @@
   flex-direction: column;
 }
 
-.battle { height: 820px; flex: none; position: relative; }
+/* The battle canvas: 120 x 107 art pixels of 9 px (src/render/BattleScene.ts BATTLE_H). */
+.battle { height: 963px; flex: none; position: relative; }
 .lower {
   flex: 1;
   min-height: 0;

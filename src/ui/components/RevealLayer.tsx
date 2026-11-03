@@ -8,6 +8,7 @@ import { DATA, RARITIES, type Rarity } from '../../data';
 import { currentLuck, formatNumber, itemName, RARITY_ODDS, rarityAtLeast, rarityIndex, rebirthGoldMult, rebirthLuckMult } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
+import { sparkleArt } from '../../render/icons';
 import { audio } from '../../services/audio';
 import { revealLanded, skipReveal } from '../rollController';
 import { DRAMA_LEVEL, revealPhases } from '../revealTiming';
@@ -18,6 +19,7 @@ import { enchantLabel, fmtOdds } from './AlleyPanel';
 import { Chunky, type Grad } from './Chunky';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { CoinIcon } from './Icons';
+import { PixelArt } from './PixelArt';
 import s from './overlays.module.css';
 
 const GRAD: Partial<Record<string, Grad>> = {
@@ -34,8 +36,9 @@ function Confetti({ n }: { n: number }) {
         delay: (i * 53) % 900,
         dur: 1500 + ((i * 97) % 1100),
         color: CONFETTI[i % CONFETTI.length],
-        rot: (i * 47) % 360,
-        w: 14 + ((i * 7) % 12),
+        // Pieces are 2 x 1 or 1 x 2 art pixels and flip between the two as they fall.
+        tall: i % 2 === 0,
+        flip: 180 + ((i * 41) % 260),
       })),
     [n],
   );
@@ -44,14 +47,12 @@ function Confetti({ n }: { n: number }) {
       {bits.map((b, i) => (
         <span
           key={i}
+          data-tall={b.tall || undefined}
           style={{
-            left: `${b.left}%`,
-            width: b.w,
-            height: b.w * 0.6,
+            left: `${Math.round((b.left / 100) * 120) * 9}px`,
             background: b.color,
-            animationDelay: `${b.delay}ms`,
-            animationDuration: `${b.dur}ms`,
-            ['--rot' as string]: `${b.rot}deg`,
+            animationDelay: `${b.delay}ms, ${b.delay}ms`,
+            animationDuration: `${b.dur}ms, ${b.flip}ms`,
           } as CSSProperties}
         />
       ))}
@@ -80,7 +81,7 @@ function Motes({ n, ms }: { n: number; ms: number }) {
       Array.from({ length: n }, (_, i) => {
         const a = i * 2.39996;
         const r = 380 + ((i * 97) % 260);
-        return { x: Math.cos(a) * r, y: Math.sin(a) * r, d: ms * (0.55 + ((i * 37) % 40) / 100), delay: (i * 61) % Math.max(1, ms * 0.4) };
+        return { x: Math.round((Math.cos(a) * r) / 9) * 9, y: Math.round((Math.sin(a) * r) / 9) * 9, d: ms * (0.55 + ((i * 37) % 40) / 100), delay: (i * 61) % Math.max(1, ms * 0.4) };
       }),
     [n, ms],
   );
@@ -97,18 +98,23 @@ function Motes({ n, ms }: { n: number; ms: number }) {
   );
 }
 
-/** Four-point stars twinkling around the item. */
+/** The battle's four-point sparkle (7 x 7 art pixels) twinkling on and off around the item. */
 function Sparkles({ n }: { n: number }) {
+  const art = sparkleArt();
   return (
     <>
       {Array.from({ length: n }, (_, i) => {
         const a = (i / n) * Math.PI * 2 + 0.4;
-        const r = 170 + ((i * 53) % 70);
+        const r = 190 + ((i * 53) % 70);
+        // Whole art pixels from the item's center (the sprite is 63 px: its center is 31 px in, near enough).
+        const x = Math.round((Math.cos(a) * r) / 9) * 9 - 27;
+        const y = Math.round((Math.sin(a) * r) / 9) * 9 - 27;
         return (
-          <span
+          <PixelArt
             key={i}
+            art={art}
             className={s.sparkle}
-            style={{ left: `calc(50% + ${Math.cos(a) * r}px)`, top: `calc(50% + ${Math.sin(a) * r}px)`, animationDelay: `${(i * 173) % 1100}ms` }}
+            style={{ left: `calc(50% + ${x}px)`, top: `calc(50% + ${y}px)`, animationDelay: `${(i * 173) % 1100}ms` }}
           />
         );
       })}
@@ -234,7 +240,7 @@ function RareReveal({ view }: { view: RollView }) {
         </div>
         {risen && (
           <div className={`${s.rareItem} ${lit ? s.rareLit : ''}`}>
-            <ItemIcon item={it} size={300} showOdds={false} />
+            <ItemIcon item={it} hd size={306} showOdds={false} />
             {lit && <span className={s.glint} />}
             {lit && !calm && <Sparkles n={[6, 9, 12][lvl]} />}
           </div>
@@ -321,14 +327,15 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
     const el = document.querySelector('[data-gold-target]');
     const r = el?.getBoundingClientRect();
     const target = r ? stagePoint(r.left + r.width * 0.2, r.top + r.height / 2) : { x: 880, y: 60 };
+    // The burst point (stage px, matching .haulCoin in overlays.module.css).
     const cx = 540;
-    const cy = 1920 * 0.42;
+    const cy = 806;
     const n = [22, 36, 56][lvl];
     return Array.from({ length: n }, (_, i) => {
       const a = i * 2.39996;
       const r2 = 120 + ((i * 89) % 260);
       return {
-        bx: Math.cos(a) * r2, by: Math.sin(a) * r2 * 0.8, tx: target.x - cx, ty: target.y - cy,
+        bx: Math.round(Math.cos(a) * r2), by: Math.round(Math.sin(a) * r2 * 0.8), tx: Math.round(target.x - cx), ty: Math.round(target.y - cy),
         delay: (i * 37) % 420, d: 1000 + ((i * 53) % 500),
       };
     });
@@ -344,7 +351,7 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
           <Chunky text={t(`haul.${haul.size}`)} size={[100, 112, 128][lvl]} grad="gold" />
         </div>
         <span className={s.haulAmount}>
-          <CoinIcon size={86} />+{formatNumber(Math.round(shown))}
+          <CoinIcon size="nav" />+{formatNumber(Math.round(shown))}
         </span>
         <span className={s.haulSub}>{worth}</span>
         <span className={s.haulCount}>{t('haul.items', { n: haul.count })}</span>
@@ -359,7 +366,7 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
               animationDelay: `${c.delay}ms`, animationDuration: `${c.d}ms`,
             } as CSSProperties}
           >
-            <CoinIcon size={56} />
+            <CoinIcon size="md" />
           </span>
         ))}
     </div>

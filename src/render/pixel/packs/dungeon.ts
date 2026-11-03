@@ -215,44 +215,65 @@ function farLayer(): PixelBuf {
 
 /** Chain links hanging in the dark: a ring seen face-on, then one edge-on (6 rows a link pair). */
 const CHAIN: Rows = [
-  '.d.',
-  'd.8',
+  '.k.',
+  'd.d',
   'd.8',
   '.8.',
-  '.d.',
+  '.k.',
   '.8.',
 ];
 /** A chain's end: a hook. */
 const HOOK: Rows = [
+  '.k.',
   '.d.',
-  '.8.',
-  'd.8',
-  '.88',
-];
-/** Chains hanging from the dark (far-layer x and how many link pairs). */
-const CHAINS: ReadonlyArray<readonly [number, number]> = [
-  [28, 1],
-  [71, 2],
-  [104, 1],
-  [163, 2],
-  [187, 1],
-  [236, 2],
+  'd.d',
+  '.d8',
 ];
 
+/** The vault's ribs arch from capital to capital (the columns' middles, bays 0 and 8): [left foot, right foot]. */
+const ARCHES: ReadonlyArray<readonly [number, number]> = [
+  [8, 8 * T + 8],
+  [8 * T + 8, TILE_W + 8],
+];
+/** Chains hanging from the ribs: far-layer x and how many link pairs. */
+const CHAINS: ReadonlyArray<readonly [number, number]> = [
+  [43, 1],
+  [71, 2],
+  [99, 1],
+  [171, 1],
+  [199, 2],
+  [227, 1],
+];
+/** Rib stone, top to bottom: lit edge, face, underside. */
+const RIB = ['#775c55', '#775c55', '#483b3a'] as const;
+
 /**
- * The UP rows above the scene: the hall rises into darkness. A stone beam (the wall's lip over one
- * course of bricks) rests on the column capitals along its bottom, and chains hang out of the dark
- * above it.
+ * The UP rows above the scene: the hall rises into darkness under a vault. Its ribs arch from capital
+ * to capital over the back wall, and chains hang from them into the dark.
  */
 function upperDark(): PixelBuf {
   const b = blank(TILE_W, UP);
   put(b, solid(TILE_W, UP, VOID), 0, 0);
-  const beam = stack([rowsOf('wall_top_mid', 12, 16), rowsOf('wall_mid', 0, 4)]);
-  for (let x = 0; x < TILE_W; x += T) put(b, beam, x, UP - beam.h - 1, (x / T) % 2 === 1);
+  const dot = RIB.map((c) => solid(1, 1, c));
+  /** The rib's top row at column x (wrapped into the tile). */
+  const ribTop = new Map<number, number>();
+  for (const [x0, x1] of ARCHES) {
+    const cx = (x0 + x1) / 2;
+    const rx = (x1 - x0) / 2;
+    const ry = UP - 5;
+    const top = (x: number) => Math.round(UP - 1 - ry * Math.sqrt(Math.max(0, 1 - ((x + 0.5 - cx) / rx) ** 2)));
+    for (let x = x0; x < x1; x++) {
+      const y = top(x);
+      // Down to the lower neighbor's edge, so the steep feet stay one connected band.
+      const low = Math.max(y, Math.min(top(x - 1), top(x + 1)));
+      for (let yy = y; yy <= low + 2; yy++) put(b, dot[Math.min(2, Math.max(0, yy - low))], x, yy);
+      ribTop.set(((x % TILE_W) + TILE_W) % TILE_W, low + 3);
+    }
+  }
   const link = fromIndexed(CHAIN, DUNGEON_PAL);
   const hook = fromIndexed(HOOK, DUNGEON_PAL);
   for (const [x, pairs] of CHAINS) {
-    let y = 0;
+    let y = ribTop.get(x + 1) ?? 0;
     for (let k = 0; k < pairs; k++, y += link.h) put(b, link, x, y);
     put(b, hook, x, y);
   }

@@ -4,11 +4,17 @@
  * price, the ones just past those show "?", and everything further out stays hidden until you get
  * close. Gold hexes are one-off specials. Drag to pan, pinch or scroll to zoom, tap a hex for its
  * details, and hold Buy to keep buying up a line.
+ *
+ * Zooming scales the map (hex shapes, lines and words) but never the pixel art: the hexes' icons live
+ * in their own layer on top that only moves, by whole stage px, so they stay 9 px per art pixel at
+ * every zoom (and hide when the map is zoomed far out).
  */
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { BAL, DATA, nodeKey, type HexNode } from '../../data';
 import { computeStats, drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
 import { dispatch, getGame, useGame } from '../../app/store';
+import { uiIcon } from '../../render/icons';
+import type { UiIcon } from '../../render/pixel/ui';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { useCountUp } from '../hooks';
@@ -16,10 +22,8 @@ import { t } from '../i18n';
 import { stagePoint } from '../drag';
 import { useUi } from '../uiStore';
 import { Chunky } from './Chunky';
-import {
-  BackpackIcon, BagIcon, BoltIcon, BookIcon, CheckIcon, ClockIcon, CloverIcon, CoinIcon, DiceIcon, DropIcon, GemIcon,
-  HeartIcon, LockIcon, PotionIcon, PowerIcon, ShieldIcon, SkullIcon, StarIcon, SwordIcon, TargetIcon, TrashIcon, ReelIcon,
-} from './Icons';
+import { CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
+import { PixelArt } from './PixelArt';
 import s from './hexmap.module.css';
 
 /* ---------------------------------------------------------------- geometry */
@@ -62,39 +66,56 @@ export function roman(n: number): string {
   return out;
 }
 
-const ICONS: Record<string, (n: number) => ReactNode> = {
-  luck: (n) => <CloverIcon size={n} />,
-  clover: (n) => <CloverIcon size={n} />,
-  extraReel: (n) => <ReelIcon size={n} gold />,
-  rollSpeed: (n) => <ReelIcon size={n} />,
-  bagFind: (n) => <BagIcon size={n} />,
-  luckyRoll: (n) => <DiceIcon size={n} />,
-  luckyMult: (n) => <StarIcon size={n} />,
-  goldenWheel: (n) => <ReelIcon size={n} gold />,
-  goldenSpin: (n) => <ReelIcon size={n} gold />,
-  turboPower: (n) => <BoltIcon size={n} />,
-  enchant: (n) => <StarIcon size={n} />,
-  enchantTier: (n) => <GemIcon size={n} />,
-  pity: (n) => <ShieldIcon size={n} />,
-  arcaneAltar: (n) => <GemIcon size={n} />,
-  gold: (n) => <CoinIcon size={n} />,
-  scrapPct: (n) => <TrashIcon size={n} />,
-  xpPct: (n) => <BookIcon size={n} />,
-  potionTime: (n) => <PotionIcon size={n} />,
-  offlinePct: (n) => <ClockIcon size={n} />,
-  coinVault: (n) => <CoinIcon size={n} />,
-  bagSpace: (n) => <BackpackIcon size={n} />,
-  megaBackpack: (n) => <BackpackIcon size={n} />,
-  strength: (n) => <SwordIcon size={n} />,
-  critChance: (n) => <TargetIcon size={n} />,
-  critDmg: (n) => <PowerIcon size={n} />,
-  bossDmg: (n) => <SkullIcon size={n} />,
-  champion: (n) => <SwordIcon size={n} />,
-  toughness: (n) => <HeartIcon size={n} />,
-  lifesteal: (n) => <DropIcon size={n} />,
-  titan: (n) => <HeartIcon size={n} />,
+/** Each upgrade line's icon. */
+const ICONS: Record<string, UiIcon> = {
+  luck: 'clover',
+  clover: 'clover',
+  extraReel: 'reelGold',
+  rollSpeed: 'reel',
+  bagFind: 'bag',
+  luckyRoll: 'dice',
+  luckyMult: 'star',
+  goldenWheel: 'reelGold',
+  goldenSpin: 'reelGold',
+  turboPower: 'bolt',
+  enchant: 'star',
+  enchantTier: 'gem',
+  pity: 'shield',
+  arcaneAltar: 'gem',
+  gold: 'coin',
+  scrapPct: 'trash',
+  xpPct: 'book',
+  potionTime: 'potion',
+  offlinePct: 'clock',
+  coinVault: 'coin',
+  bagSpace: 'backpack',
+  megaBackpack: 'backpack',
+  strength: 'sword',
+  critChance: 'target',
+  critDmg: 'power',
+  bossDmg: 'skull',
+  champion: 'sword',
+  toughness: 'heart',
+  lifesteal: 'drop',
+  titan: 'heart',
 };
-const icon = (id: string, size: number) => ICONS[id]?.(size) ?? <StarIcon size={size} />;
+const iconOf = (id: string): UiIcon => ICONS[id] ?? 'star';
+
+/**
+ * What the hexes show at a zoom: 'near' everything (tier, icon, name or price), 'mid' only their icons
+ * (the words would be too small to read), 'far' only their colors (too small for the icons, which
+ * never shrink).
+ */
+type Zoom = 'near' | 'mid' | 'far';
+const zoomOf = (k: number): Zoom => (k >= 0.85 ? 'near' : k >= 0.45 ? 'mid' : 'far');
+/** Up close, a hex's icon sits this far above its center (map px), between the tier and the name or price. */
+const iconLift = (view: HexView) => (view === 'open' ? 9 : 13);
+
+/** Where a hex's icon goes in the icon layer at zoom `k` (whole stage px). */
+function iconSpot(n: HexNode, view: HexView, k: number): string {
+  const lift = zoomOf(k) === 'near' ? iconLift(view) : 0;
+  return `translate3d(${Math.round(nodeX(n) * k)}px, ${Math.round((nodeY(n) - lift) * k)}px, 0)`;
+}
 
 export function nodeName(n: HexNode): string {
   const name = t(`upgrade.${n.id}`);
@@ -195,18 +216,31 @@ const Hex = memo(function Hex({ node, view, afford, selected, price, fresh, calm
         ) : (
           <>
             {def.max > 1 && <span className={s.tier}>{roman(node.tier)}</span>}
-            <span className={s.icon}>{icon(node.id, view === 'open' ? 52 : 62)}</span>
+            {/* The icon is drawn in the map's icon layer (HexIcon), so zooming never scales it. */}
             <span className={s.name}>{t(`upgrade.${node.id}`)}</span>
-            {view === 'open' && (
-              <span className={s.price}>
-                <CoinIcon size={26} />
-                {formatNumber(price)}
-              </span>
-            )}
+            {view === 'open' && <span className={s.price}>{formatNumber(price)}</span>}
             {view === 'open' && afford && <span className={s.bang}>!</span>}
           </>
         )}
       </div>
+    </div>
+  );
+});
+
+/** A hex's icon in the icon layer: 7 x 7 art pixels at 9 px each, placed (and re-placed on zoom) by the map. */
+const HexIcon = memo(function HexIcon({ node, view, k, fresh, calm }: { node: HexNode; view: HexView; k: number; fresh: boolean; calm: boolean }) {
+  // Decided once, when it mounts (like its hex): the opening fade, or the buy/reveal flash.
+  const mode = useRef(calm ? 'calm' : fresh ? 'fresh' : 'intro').current;
+  const delay = mode === 'intro' ? `${Math.min(420, ring(node) * 22)}ms` : undefined;
+  return (
+    <div
+      className={s.hexIcon}
+      data-node={node.key}
+      data-view={view}
+      data-mode={mode}
+      style={{ transform: iconSpot(node, view, k), animationDelay: delay } as CSSProperties}
+    >
+      <PixelArt art={uiIcon(iconOf(node.id), 'md')} />
     </div>
   );
 });
@@ -260,7 +294,7 @@ function BuyCard({ node }: { node: HexNode }) {
   if (view === 'mystery') {
     return (
       <div className={`${s.card} card`} data-view="mystery">
-        <span className={s.cardHex} data-view="mystery">
+        <span className={s.cardTile} data-view="mystery">
           <span className={s.cardQ}>?</span>
         </span>
         <div className={s.cardBody}>
@@ -268,7 +302,7 @@ function BuyCard({ node }: { node: HexNode }) {
           <span className={s.cardDesc}>{t('upgrades.reveal', { name: prev ? nodeName(prev) : '' })}</span>
         </div>
         <button className={`btn gray ${s.buy}`} disabled>
-          <LockIcon size={44} />
+          <LockIcon />
           {t('upgrades.locked')}
         </button>
       </div>
@@ -276,8 +310,8 @@ function BuyCard({ node }: { node: HexNode }) {
   }
   return (
     <div className={`${s.card} card`} data-view={view}>
-      <span className={s.cardHex} data-view={view} data-special={node.special || undefined}>
-        {icon(node.id, 92)}
+      <span className={s.cardTile} data-view={view} data-special={node.special || undefined}>
+        <PixelArt art={uiIcon(iconOf(node.id), 'lg')} />
       </span>
       <div className={s.cardBody}>
         <span className={s.cardName}>
@@ -298,12 +332,12 @@ function BuyCard({ node }: { node: HexNode }) {
       </div>
       {view === 'owned' ? (
         <button className={`btn gold ${s.buy}`} disabled>
-          <CheckIcon size={44} />
+          <CheckIcon />
           {t('upgrades.owned')}
         </button>
       ) : (
         <button className={`btn ${afford ? '' : 'gray'} ${s.buy}`} {...hold}>
-          <CoinIcon size={46} />
+          <CoinIcon />
           {formatNumber(cost)}
         </button>
       )}
@@ -378,10 +412,25 @@ export function UpgradeMap() {
     v.x = Math.min(FOCUS.x - b.minX * v.k, Math.max(FOCUS.x - b.maxX * v.k, v.x));
     v.y = Math.min(FOCUS.y - b.minY * v.k, Math.max(FOCUS.y - b.maxY * v.k, v.y));
   };
+  const iconsRef = useRef<HTMLDivElement>(null);
+  const iconsK = useRef(-1);
   const apply = () => {
     const v = viewRef.current;
     clamp(v);
     if (contentRef.current) contentRef.current.style.transform = `translate3d(${v.x}px, ${v.y}px, 0) scale(${v.k})`;
+    // The icons only move, by whole px; on a zoom each one moves to its hex's new spot.
+    const layer = iconsRef.current;
+    if (!layer) return;
+    layer.style.transform = `translate3d(${Math.round(v.x)}px, ${Math.round(v.y)}px, 0)`;
+    if (v.k === iconsK.current) return;
+    iconsK.current = v.k;
+    const zoom = zoomOf(v.k);
+    layer.dataset.zoom = zoom;
+    if (contentRef.current) contentRef.current.dataset.zoom = zoom;
+    for (const el of Array.from(layer.children) as HTMLElement[]) {
+      const n = BY_KEY.get(el.dataset.node ?? '');
+      if (n) el.style.transform = iconSpot(n, el.dataset.view as HexView, v.k);
+    }
   };
   const save = () => useUi.setState({ mapView: { ...viewRef.current } });
   const stopAnim = () => {
@@ -406,6 +455,12 @@ export function UpgradeMap() {
   };
 
   useLayoutEffect(apply, [bounds]);
+  // New or changed hexes: place their icons for the current zoom.
+  useLayoutEffect(() => {
+    iconsK.current = -1;
+    apply();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hexes]);
   useEffect(() => () => stopAnim(), []);
 
   // Pointer gestures: one finger pans (with a little glide on release), two fingers pinch, a still tap selects.
@@ -628,6 +683,13 @@ export function UpgradeMap() {
             />
           ))}
         </div>
+        <div className={s.icons} ref={iconsRef}>
+          {hexes.map(({ node, view }) =>
+            view === 'mystery' ? null : (
+              <HexIcon key={`${node.key}:${view}`} node={node} view={view} k={viewRef.current.k} fresh={introDone} calm={calm} />
+            ),
+          )}
+        </div>
       </div>
 
       <div className={s.head}>
@@ -639,7 +701,7 @@ export function UpgradeMap() {
           <span className={s.hint}>{t('upgrades.hint')}</span>
         </div>
         <button className={`btn small blue ${s.centerBtn}`} data-ui onClick={center} aria-label={t('upgrades.center')}>
-          <TargetIcon size={54} />
+          <TargetIcon size="md" />
         </button>
       </div>
 
@@ -651,7 +713,7 @@ export function UpgradeMap() {
         )}
         <div className={s.bar}>
           <span className={s.coins} data-ui>
-            <CoinIcon size={64} />
+            <CoinIcon size="md" />
             {formatNumber(shownCoins)}
           </span>
           <button className={`btn red ${s.close}`} data-ui onClick={close}>
@@ -659,11 +721,11 @@ export function UpgradeMap() {
           </button>
           <span className={s.barRight} data-ui>
             <span className={s.stat} title={t('strip.atk')}>
-              <SwordIcon size={50} />
+              <SwordIcon />
               {formatNumber(atk)}
             </span>
             <span className={s.stat} title={t('strip.def')}>
-              <ShieldIcon size={48} />
+              <ShieldIcon />
               {formatNumber(def)}
             </span>
           </span>

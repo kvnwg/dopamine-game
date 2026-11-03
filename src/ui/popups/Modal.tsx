@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
+import { uiBitArt } from '../../render/icons';
+import { PixelArt } from '../components/PixelArt';
 import { t } from '../i18n';
 import s from './popups.module.css';
 
-/** Popup card: colored title ribbon, cream body, round red close button. */
+/** Popup card: colored title ribbon, cream body, red close button. */
 export function Modal({
   title, subtitle, onClose, children, tone = 'blue', wide,
 }: {
@@ -23,7 +25,7 @@ export function Modal({
         )}
         {onClose && (
           <button className={s.close} onClick={onClose} aria-label={t('common.close')}>
-            ✕
+            <PixelArt art={uiBitArt('closeX')} />
           </button>
         )}
         <div className={s.body}>

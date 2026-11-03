@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { alphaAt } from '../src/render/pixel/buf';
 import { FARM, sheet } from '../src/render/pixel/farm';
-import { FEET_ROW, VIEW, type LayerName } from '../src/render/pixel/sceneryTypes';
+import { SCENE_FEET_ROW, SCENE_H, VIEW, type LayerName } from '../src/render/pixel/sceneryTypes';
 
 const NAMES: readonly LayerName[] = ['far', 'mid', 'ground', 'fg'];
 
@@ -12,13 +12,13 @@ function opaqueRows(b: { w: number; h: number; px: Uint8ClampedArray }, y0: numb
 }
 
 describe('farm backdrop (Funky Farmland)', () => {
-  it('every layer is tileW wide and its declared height, inside the view, and comes back as a fresh buffer', () => {
+  it('every layer is tileW wide and its declared height, inside the scene frame, and comes back as a fresh buffer', () => {
     expect(FARM.tileW).toBeGreaterThanOrEqual(VIEW.w);
     for (const name of NAMES) {
       const b = FARM[name]();
       const { y, h } = FARM.layers[name];
       expect([b.w, b.h], name).toEqual([FARM.tileW, h]);
-      expect(y >= 0 && y + h <= VIEW.h, `${name} is inside the view`).toBe(true);
+      expect(y >= 0 && y + h <= SCENE_H, `${name} is inside the scene frame`).toBe(true);
       expect(FARM[name]().px, `${name} is rebuilt each call`).not.toBe(b.px);
       const s = FARM.scroll0[name];
       expect(Number.isInteger(s) && s >= 0 && s < FARM.tileW, `${name} scroll0`).toBe(true);
@@ -28,13 +28,14 @@ describe('farm backdrop (Funky Farmland)', () => {
     expect(FARM.graded).toBe(false);
   });
 
-  it('the road runs to the bottom of the view and the fighters stand on it, clear of the foreground', () => {
+  it('the road runs to the bottom of the scene and the fighters stand on it, clear of the foreground', () => {
     const { ground, fg } = FARM.layers;
-    expect(ground.y + ground.h).toBe(VIEW.h);
+    expect(ground.y + ground.h).toBe(SCENE_H);
+    expect(fg.y + fg.h).toBe(SCENE_H);
     const g = FARM.ground();
-    const feet = FEET_ROW - ground.y;
+    const feet = SCENE_FEET_ROW - ground.y;
     expect(opaqueRows(g, feet - 2, ground.h), 'solid ground under and around the feet').toBe(true);
-    expect(fg.y, 'the fg strip stays below the feet').toBeGreaterThan(FEET_ROW);
+    expect(fg.y, 'the fg strip stays below the feet').toBeGreaterThan(SCENE_FEET_ROW);
   });
 
   it('lights are on their layers: barn windows and the lamp in mid, farmhouse windows in far', () => {

@@ -71,16 +71,62 @@ clean outline, three-tone shading, one highlight, no stray pixels.
 
 ## One pixel size in battle
 
-Every pixel in the battle is the same size: `P = 10` screen pixels per art pixel
-(`src/render/pixel/index.ts`), so the 1080 x 820 view is 108 x 82 art pixels
-(`src/render/pixel/sceneryTypes.ts`: `VIEW`, and `FEET_ROW` = 67, the row fighters stand on).
-Nothing in battle is scaled or squashed: sprites move, change frames, and only weapon swings and
-knock-outs rotate. Art drawn for a finer grid is either redrawn (the street, rats, pigeons, raccoon
-bosses) or shown at half resolution with `downsample2` (item icons worn by the hero, the older still
-effects, the icon-pack props).
+Every pixel in the battle is the same size: `P = 9` screen pixels per art pixel
+(`src/render/pixel/index.ts`), so the 1080 x 963 view is 120 x 107 art pixels
+(`src/render/pixel/sceneryTypes.ts`: `VIEW`). Nothing in battle is scaled or squashed: sprites move
+and change frames, and only the weapon's swing rotates freely. Art drawn for a finer grid is either
+redrawn (the street, rats, pigeons, raccoon bosses) or shown at half resolution with `downsample2`
+(the older still effects, the icon-pack props).
+
+**The scene frame.** Every scenery set is drawn for an 82-row scene (`SCENE_H`) with the fighters'
+feet on row 67 (`SCENE_FEET_ROW`). The battle shows that frame `SCENE_Y` = 25 rows down the view, so
+the fighters stand on view row 92 (`FEET_ROW`, the ground line at y 837). Layer spots
+(`ScenerySet.layers`), light spots and the rows in each scenery module are scene rows; add `SCENE_Y`
+for view rows (`layerRow` in `src/render/worldLook.ts`). The 25 rows above the scene are more sky
+for sets with a sky; the dungeon draws its far layer up into them (a vault and hanging chains).
+A world's `look.atmo` (horizon, sun or moon, clouds) is also given in scene rows; `viewAtmo` shifts
+it when the world is composed. Particle bands in `src/render/ambience.ts` are view rows.
 
 Size guide at this scale: the raccoon hero is about 15 x 17, rats, pigeons, hens, ducks and rabbits
 10 to 15, pack knights, orcs, pigs and rams 16 to 30, humans about 30, bosses 20 to 34.
+
+## One grid
+
+Every pixel in the battle canvas sits on one 9 x 9 screen-pixel grid that starts at the canvas's
+top-left corner: each 9 x 9 block is one flat color. That is guaranteed by how the battle is built,
+in two layers:
+
+1. **A camera post-pass** (`src/render/gridSnap.ts`, WebGL). It samples only the center texel of
+   each block, so anything that reaches the frame off the grid (the swinging weapon, a sub-pixel
+   position, a stray alpha edge) lands on it as whole art pixels. Blocks are counted from the top
+   even though the WebGL framebuffer's origin is its bottom-left corner. (Phaser's Pixelate FX blends
+   neighboring blocks' corners, so it can't do this.) The canvas renderer runs without it.
+2. **Everything is drawn on the grid in the first place**, so the snap never has to mangle anything:
+   - **Text** is the bitmap font in `src/render/pixel/font.ts`: a 3 x 5 face (numbers, the boss's
+     name and HP, the world's title, notices) and a 5 x 7 face (banners, stamps, big numbers), with a
+     1 art pixel outline in the ink and fill colors per row (a lighter top row, stepped gradients).
+     Long lines wrap, evenly. No vector fonts and no `this.add.text` in the battle.
+   - **Pops** move and flash in whole art pixels: numbers flash white and float up a pixel at a
+     time, stamps slam down and shake a pixel, banners slide in snapped positions. Fades step.
+   - **Particles** (`src/render/pixelBits.ts`) are 1 x 1 and 2 x 2 art-pixel bits that step through
+     sizes, colors and opacities; confetti tumbles by turning between 2 x 1 and 1 x 2.
+   - **Shadows** are flat pixel ellipses two rows tall; the Legendary **aura** is three flat rings of
+     the rarity's color that breathe a pixel at a time, with glints rising from it.
+   - **Lines** (chain lightning) are 1-pixel lines on the grid (`linePixels` in `buf.ts`) with an
+     ink edge.
+   - **Layers** scroll in whole art pixels, parallax included, drawn as copies of their tile side by
+     side (Phaser's TileSprite resamples textures whose size isn't a power of two). Sprites' origins
+     are corners of art pixels; the hero's rig sits half a pixel over to match his sheet's
+     mid-column origin.
+   - **The screen shake** moves the camera by whole art pixels; the sky, layers and vignette reach
+     `VIEW_MARGIN` pixels past the edges so it never shows one.
+   - The camera's origin is its top-left corner: with the default (its middle) the odd height puts
+     everything half a pixel off.
+   - Even a quarter-turn tumble is exact; only free rotation (the weapon) relies on the post-pass.
+
+Check it: load the dev build with `?nosnap` to turn the post-pass off and count the 9 x 9 blocks of a
+battle screenshot that are not one flat color. With the pass, the count is 0; without it, only the
+swinging weapon's blocks show up.
 
 ## Atmosphere and light
 
@@ -146,14 +192,56 @@ Licenses and the in-game credit line: `CREDITS.md`.
 ## The hero
 
 The hero is Kevin's raccoon sheet (`art-src/raccoon_sheet.png`, 6 x 6 frames of 24 x 24): idle,
-look-around, cheer, dash, sit, lie down, sleep and wake. `src/render/pixel/hero.ts` dresses it:
+look-around, cheer, dash, sit, lie down, sleep and wake. `src/render/pixel/hero.ts` dresses it in
+worn gear drawn for his shape (next section). `composeHero(frame, outfit)` draws the whole outfit
+into one buffer for previews.
 
-- Hats, masks, shields and backpacks are their item icons at half resolution, placed on landmarks
-  of the reference pose (frame 0): `HERO_POINTS`.
-- Jackets, gloves, shoes and necklaces recolor the fur in that part of the body, baked into every
-  frame, so they follow each pose exactly.
-- Gear follows the body from frame to frame by an offset found by matching the head's silhouette
-  (`frameOffsets()`); curled-up frames carry no gear.
-- Weapons are their icons at half resolution, held at `HERO_POINTS.hand`.
+## Worn gear
 
-`composeHero(frame, outfit)` draws the whole outfit into one buffer for previews.
+Every wearable item has worn art drawn for the raccoon himself, at his pixel size (1 art pixel = 1
+battle pixel, never a shrunk icon), in `src/render/pixel/worn/`. Each item is rows of its own palette
+keys (`.` clear, `#` the characters' outline `#32282b`), two or three tones lit from the top left as
+the sheet is drawn (facing left), in the item's icon colors so it reads as the same thing.
+
+`worn/body.ts` measures his body by hand in every frame: which part each pixel is (head, neck,
+torso, front arm and paw, back arm and paw, tail, hips, feet, effects such as the dash's swing
+trail) and where his landmarks are (head and eyes relative to frame 0, squashed faces, each paw and
+which way its arm points, the feet, the neck). `worn/dress.ts` fits each slot to a frame:
+
+- **Hats** (`hats.ts`) are drawn on frame 0's head and move with it. His ears poke out through them
+  (`ears`), or a hat is pulled down over them (the paint bucket). A hat reaches up to row 1 at most:
+  his head rises a row in the idle loop.
+- **Masks and glasses** (`masks.ts`) are drawn on frame 0's face, anchored on his left eye, and move
+  with his eyes; a `squash` variant fits squashed faces (eyes and nose on one row). They're clipped
+  to his head; `free` parts (a snorkel's tube) may leave it.
+- **Jackets, sweaters, vests and coats** (`jackets.ts`) are painted pixel by pixel over his torso
+  and arms (`cut`: jacket, vest or coat), so they wrap every pose. Each pixel's shade comes from the
+  shape and his fur's creases; collars, cuffs, hems and details are placed by torso coordinates from
+  the neck. Painting `''` leaves his fur (an open jacket shows his light belly). `back` pieces hang
+  behind him (the tarp cape). Curled up asleep, a garment covers his back.
+- **Gloves** (`gloves.ts`) sit on each paw, drawn for an arm hanging down, reaching out and raised;
+  the back paw wears the glove mirrored or its own (`back`: odd mittens, a catcher's mitt).
+- **Shoes** (`sneakers.ts`) sit on each foot. Nothing worn goes below the ground row.
+- **Bling** (`bling.ts`) hangs at the neck, clipped to his neck and chest; bracelets go on the front
+  wrist.
+- **Shields** (`shields.ts`) are strapped to his back arm, low at his side so his tail curls up above
+  them; `raised` keeps them off his face when the arm is up. Umbrellas are held up like parasols and
+  pass behind his head.
+- **Packs** (`backpacks.ts`) sit on his back, peeking out over his back shoulder above the curl of
+  his tail (hidden wherever his dressed body covers them), straps over his chest.
+- **Weapons** (`weapons.ts`) are redrawn at his size on the 45 degree diagonal the scene expects,
+  held at `grip` in his front paw; the paw is tracked frame by frame (`handOffsets()`).
+
+In battle (`src/render/textures.ts`) clothes, gloves, shoes and bling are painted into the body
+frames (`heroTex`); hats, masks, shields and packs are their own sprites, repainted for each frame
+as the scene places them (`gearTex`, `heroFrameOffset`), and the weapon follows the front paw. Keep
+the raccoon readable: ears out where a hat allows, eyes visible under everything but masks, the tail
+curl free between pack and shield. Every piece must stay inside the 24 x 24 frame in every pose;
+`tests/worn.test.ts` checks that, the palettes, and that every item shows wherever its body part
+does. To add an item, draw it in its slot's file under the item's id.
+
+Preview every item worn, then sample outfits:
+
+```bash
+npx tsx tools/pixelSheet.ts hero /path/to/hero.png --scale 12
+```

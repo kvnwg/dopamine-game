@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { mockAds } from '../../services';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
+import { TvIcon } from './Icons';
 import s from './overlays.module.css';
 
 /** Shown while the mock rewarded ad "plays" (dev builds and until AdMob is wired in M4). */
@@ -11,7 +12,8 @@ export function AdOverlay() {
   if (!playing) return null;
   return (
     <div className={s.ad}>
-      📺 {t('ads.mockPlaying')}
+      <TvIcon size="nav" />
+      {t('ads.mockPlaying')}
       <span className={s.adSub}>{t('ads.mockPlacement', { placement: playing })}</span>
     </div>
   );

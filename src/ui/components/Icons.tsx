@@ -1,30 +1,28 @@
 /**
- * UI icons: pixel art (src/render/pixel/ui.ts) shown as crisp images. Each component keeps the
- * same props as before (size in stage px, style, className).
+ * UI icons: pixel art (src/render/pixel/ui.ts) at 9 stage px per art pixel. `size` picks one of the
+ * sizes each icon is drawn at: 'sm' (about 5 x 5, next to text), 'md' (about 7 x 7, HUD and map),
+ * 'nav' (10 x 10) or 'lg' (16 x 16). A number (the old stage px sizes) picks the nearest of those.
+ * An icon is never stretched to a size: it shows at its own size, 9 px per pixel.
  */
 import type { CSSProperties } from 'react';
-import { uiIconUrl } from '../../render/icons';
+import { uiIcon, type IconTier } from '../../render/icons';
 import type { UiIcon } from '../../render/pixel/ui';
+import { PixelArt } from './PixelArt';
 
 interface P {
-  size?: number;
+  size?: IconTier | number;
   style?: CSSProperties;
   className?: string;
 }
 
-function Pix({ name, size = 46, style, className }: P & { name: UiIcon }) {
-  return (
-    <img
-      className={className}
-      src={uiIconUrl(name)}
-      width={size}
-      height={size}
-      alt=""
-      aria-hidden
-      draggable={false}
-      style={{ flex: 'none', display: 'block', imageRendering: 'pixelated', ...style }}
-    />
-  );
+function tierOf(size: IconTier | number | undefined): IconTier {
+  if (typeof size === 'string') return size;
+  if (size === undefined || size <= 50) return 'sm';
+  return size <= 75 ? 'md' : size <= 120 ? 'nav' : 'lg';
+}
+
+function Pix({ name, size, style, className }: P & { name: UiIcon }) {
+  return <PixelArt art={uiIcon(name, tierOf(size))} className={className} style={style} />;
 }
 
 export const CoinIcon = (p: P) => <Pix name="coin" {...p} />;
@@ -55,5 +53,9 @@ export const GlobeIcon = (p: P) => <Pix name="globe" {...p} />;
 export const BackpackIcon = (p: P) => <Pix name="backpack" {...p} />;
 export const DropIcon = (p: P) => <Pix name="drop" {...p} />;
 export const TargetIcon = (p: P) => <Pix name="target" {...p} />;
+/** A little CRT: the Watch tab, and watching an ad. */
+export const TvIcon = (p: P) => <Pix name="tv" {...p} />;
 /** The slot-reel icon (the Roll tab, Extra Reel); gold for golden spins. */
-export const ReelIcon = (p: P & { gold?: boolean }) => <Pix name={p.gold ? 'reelGold' : 'reel'} size={p.size} style={p.style} className={p.className} />;
+export const ReelIcon = ({ gold, ...p }: P & { gold?: boolean }) => <Pix name={gold ? 'reelGold' : 'reel'} {...p} />;
+/** Points right (Next, onward): drawn that way, so nothing has to rotate an arrow. */
+export const ArrowRightIcon = (p: P) => <Pix name="arrowRight" {...p} />;

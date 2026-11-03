@@ -4,10 +4,11 @@ import { DATA } from '../../data';
 import { formatNumber, worldRewards, worldThreat, type ThreatLevel } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
-import { useWorldThumb } from '../hooks';
 import { t } from '../i18n';
+import { useWorldThumb } from '../worldThumbs';
 import { useUi } from '../uiStore';
 import { CheckIcon, CoinIcon, SkullIcon } from './Icons';
+import { PixelArt } from './PixelArt';
 import s from './worlds.module.css';
 
 export const THREAT_COLOR: Record<ThreatLevel, string> = {
@@ -20,16 +21,16 @@ export const THREAT_COLOR: Record<ThreatLevel, string> = {
 export function ThreatChip({ level, big }: { level: ThreatLevel; big?: boolean }) {
   return (
     <span className={`${s.threat} ${big ? s.threatBig : ''} ${level === 'oneShot' ? s.threatOneShot : ''}`} style={{ background: THREAT_COLOR[level] }}>
-      {level === 'oneShot' && <SkullIcon size={big ? 44 : 30} />}
+      {level === 'oneShot' && <SkullIcon />}
       {t(`worlds.threat.${level}`)}
     </span>
   );
 }
 
-/** A world's preview picture, faded in when it's ready (they're made in the background). */
+/** A world's preview picture (9 px per art pixel, like the battle), faded in when it's ready. */
 function Thumb({ world }: { world: number }) {
-  const url = useWorldThumb(world);
-  return url ? <img className={s.thumbImg} src={url} alt="" draggable={false} /> : <span className={s.thumbWait} />;
+  const art = useWorldThumb(world, 'card');
+  return art ? <PixelArt art={art} className={s.thumbImg} /> : <span className={s.thumbWait} />;
 }
 
 export function WorldsPanel() {
@@ -71,7 +72,7 @@ export function WorldsPanel() {
                   {isHere ? (
                     <span className={s.here}>{t('worlds.here')}</span>
                   ) : n <= best ? (
-                    <CheckIcon size={52} className={s.done} />
+                    <CheckIcon size="md" className={s.done} />
                   ) : null}
                 </div>
                 <div className={s.info}>
@@ -79,7 +80,7 @@ export function WorldsPanel() {
                   <div className={s.row}>
                     <ThreatChip level={level} />
                     <span className={s.gold}>
-                      <CoinIcon size={32} />×{formatNumber(worldRewards(n).gold)}
+                      <CoinIcon />×{formatNumber(worldRewards(n).gold)}
                     </span>
                   </div>
                 </div>

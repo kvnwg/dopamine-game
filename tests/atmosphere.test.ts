@@ -116,7 +116,7 @@ describe('atmosphere', () => {
     expect(torches.every((t) => t.flicker)).toBe(true);
     const v = paintVignette(VIEW.w, VIEW.h, 0.5);
     const at = (x: number, y: number) => v.px[(y * v.w + x) * 4 + 3];
-    expect(at(45, 34)).toBe(0);
+    expect(at(Math.floor(VIEW.w / 2), Math.floor(VIEW.h / 2))).toBe(0);
     expect(at(0, 0)).toBeGreaterThan(0);
     expect(at(0, 0)).toBeGreaterThan(at(8, 6));
     expect([...alphas(paintVignette(VIEW.w, VIEW.h, 0).px)]).toEqual([0]);

@@ -70,13 +70,8 @@ export function BattlePanel() {
 
   const world = useGame((g) => g.battle.stage);
   const wave = useGame((g) => g.battle.wave);
-  const hint = useGame((g) => g.stage.showToughHint);
-  // "Too tough!" is a passing notice when the raccoon is beaten (not a sign that stays up while farming).
-  const hintWas = useRef(hint);
-  useEffect(() => {
-    if (hint && !hintWas.current) useUi.getState().toast(t('battle.toughHint'), 'warn');
-    hintWas.current = hint;
-  }, [hint]);
+  // (The world's title card on arrival and the "Too tough!" notice are drawn in the battle canvas, in
+  // its pixel font: src/render/BattleScene.ts.)
   const waves = BAL.stages.wavesPerStage;
   const drag = useUi((u) => u.drag);
   // First-time nudge: nothing worn yet but gear waiting in the bag.
@@ -98,10 +93,6 @@ export function BattlePanel() {
       )}
       <TopHud />
       <BossChoice />
-      {/* The world's name shows as a title card on arrival, then leaves the sky clear. */}
-      <div key={world} className={s.worldCard} aria-hidden>
-        {worldLabel(world)}
-      </div>
       <div className={s.battleActions}>
         <button className={s.waveBox} onClick={() => useUi.getState().setTab('worlds')} aria-label={worldLabel(world)}>
           <div className={s.waveTrack}>

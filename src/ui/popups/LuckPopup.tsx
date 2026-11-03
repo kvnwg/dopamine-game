@@ -31,7 +31,7 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={t('luck.title')} tone="green" onClose={onClose}>
       <div className={s.luckHero}>
-        <CloverIcon size={96} />
+        <CloverIcon size="nav" />
         <span className={s.luckTotal}>{t('luck.total', { luck: fmtLuck(b.total) })}</span>
       </div>
       <div className={s.inset}>

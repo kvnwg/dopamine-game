@@ -3,7 +3,8 @@ import { adSpeedupsLeft, formatDuration, formatNumber, gemSpeedupCost, upgradeCo
 import { dispatch, useGame } from '../../app/store';
 import { dumpsterArt } from '../../render/icons';
 import { ads, haptics } from '../../services';
-import { ClockIcon, CloverIcon, CoinIcon, GemIcon } from '../components/Icons';
+import { ClockIcon, CloverIcon, CoinIcon, GemIcon, TvIcon } from '../components/Icons';
+import { PixelArt } from '../components/PixelArt';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { Modal } from './Modal';
@@ -26,11 +27,11 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={t('dumpster.title', { level })} tone="green" onClose={onClose}>
       <div className={s.binHero}>
-        <img src={art.body} alt="" className={s.binHeroBody} draggable={false} />
-        <img src={art.lid} alt="" className={s.binHeroLid} draggable={false} />
+        <PixelArt art={art.body} className={s.binHeroBody} />
+        <PixelArt art={art.lid} className={s.binHeroLid} />
       </div>
       <div className={s.luckLine}>
-        <CloverIcon size={56} />
+        <CloverIcon size="md" />
         {maxed
           ? t('luck.dumpster', { level })
           : t('dumpster.luckLine', { now: formatPct((level - 1) * per), next: formatPct(level * per) })}
@@ -41,7 +42,7 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
       ) : endsAt !== null ? (
         <>
           <div className={s.timer}>
-            <ClockIcon size={64} />
+            <ClockIcon size="md" />
             {formatDuration(remaining / 1000)}
           </div>
           <div className={s.actions}>
@@ -53,7 +54,8 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
                 if (r.rewarded) dispatch({ type: 'speedupDumpsterAd' });
               }}
             >
-              📺 {t('dumpster.adSpeedup', { minutes: BAL.dumpster.adSpeedup.minutes, left: adsLeft, max: BAL.dumpster.adSpeedup.perDay })}
+              <TvIcon />
+              {t('dumpster.adSpeedup', { minutes: BAL.dumpster.adSpeedup.minutes, left: adsLeft, max: BAL.dumpster.adSpeedup.perDay })}
             </button>
             <button
               className="btn gold"
@@ -63,7 +65,7 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
                 dispatch({ type: 'speedupDumpsterGems' });
               }}
             >
-              {t('dumpster.finishNow')} <GemIcon size={44} /> {gemCost}
+              {t('dumpster.finishNow')} <GemIcon /> {gemCost}
             </button>
           </div>
         </>
@@ -79,7 +81,7 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
                 dispatch({ type: 'startDumpsterUpgrade' });
               }}
             >
-              {t('dumpster.start')} <CoinIcon size={46} /> {formatNumber(cost)}
+              {t('dumpster.start')} <CoinIcon /> {formatNumber(cost)}
             </button>
           </div>
         </>

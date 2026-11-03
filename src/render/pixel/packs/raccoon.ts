@@ -5,7 +5,7 @@ export const RACCOON: AnimSheet = {
   w: 24,
   h: 24,
   anchor: { x: 11, y: 19 },
-  faces: 'right',
+  faces: 'left',
   pal: ['#0b0b22', '#32282b', '#671919', '#483429', '#992626', '#806657', '#cf6262', '#b29d8e', '#b2a9a5', '#f1ecd2'],
   frames: [
     [

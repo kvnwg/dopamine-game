@@ -110,6 +110,7 @@
   "roll.auto": "AUTO",
   "roll.next": "Next roll",
   "roll.every": "{s}s per spin",
+  "roll.everyShort": "{s}s",
   "roll.luckyIn": "Lucky spin in {n}",
   "roll.luckyNext": "Next spin is LUCKY!",
   "roll.luck": "×{luck}",

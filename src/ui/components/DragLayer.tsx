@@ -9,8 +9,9 @@ export function DragLayer() {
   if (!drag) return null;
   return (
     <div className={s.dragLayer}>
-      <div className={s.ghost} style={{ left: drag.x, top: drag.y }}>
-        <ItemIcon item={drag.item} size={150} />
+      {/* Whole stage px, upright and at its real size: the art stays on the pixel grid while it follows the finger. */}
+      <div className={s.ghost} style={{ left: Math.round(drag.x) - 243, top: Math.round(drag.y) - 117 }}>
+        <ItemIcon item={drag.item} />
         <span className={`${s.dragHint} ${drag.over ? s.dragHintOn : ''}`}>{drag.over ? t('drag.release') : t('drag.dropOn')}</span>
       </div>
     </div>

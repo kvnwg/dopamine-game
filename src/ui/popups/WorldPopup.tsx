@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { DATA } from '../../data';
 import { formatNumber, itemTierFor, worldRewards, worldThreat } from '../../core';
 import { dispatch, useGame } from '../../app/store';
-import { worldThumbUrl } from '../../render/worldLook';
 import { haptics } from '../../services';
+import { PixelArt } from '../components/PixelArt';
 import { ThreatChip } from '../components/WorldsPanel';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
+import { useWorldThumb } from '../worldThumbs';
 import { Modal } from './Modal';
 import s from './popups.module.css';
 
@@ -14,6 +15,7 @@ import s from './popups.module.css';
 export function WorldPopup({ world, onClose }: { world: number; onClose: () => void }) {
   const g = useGame((x) => x);
   const [armed, setArmed] = useState(false);
+  const thumb = useWorldThumb(world, 'popup');
   const def = DATA.worlds[world - 1];
   if (!def) return null;
   const threat = worldThreat(g, world);
@@ -37,7 +39,7 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
   const tone = threat.level === 'easy' ? 'green' : threat.level === 'tough' ? 'gold' : 'red';
   return (
     <Modal title={t('battle.worldLabel', { n: world, name: def.name })} tone={tone} onClose={onClose}>
-      <img className={s.worldThumb} src={worldThumbUrl(world)} alt="" draggable={false} />
+      <div className={s.worldThumb}>{thumb && <PixelArt art={thumb} />}</div>
       <div className={s.threatRow}>
         <ThreatChip level={threat.level} big />
         <span className={s.threatText}>{t(`worlds.margin${threat.level[0].toUpperCase()}${threat.level.slice(1)}`)}</span>

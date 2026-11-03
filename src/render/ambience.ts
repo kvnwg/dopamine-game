@@ -13,7 +13,7 @@ import type { Atmo, ParticleKind } from '../data';
 import { P, toCanvas } from './pixel';
 import { blank, fromRows, setPx, type PixelBuf } from './pixel/buf';
 import { twinkleSpots } from './pixel/atmosphere';
-import { VIEW, type LayerName, type LightSpot } from './pixel/sceneryTypes';
+import { SCENE_Y, VIEW, VIEW_MARGIN, type LayerName, type LightSpot } from './pixel/sceneryTypes';
 
 /** Seeded 0..1 generator (mulberry32). */
 function rng(seed: number): () => number {
@@ -89,7 +89,7 @@ interface KindDef {
   add?: boolean;
   /** Where particles appear: anywhere in the band, at the top edge (falling) or the bottom (rising). */
   spawn: 'band' | 'top' | 'bottom';
-  /** View rows the particles live in. */
+  /** View rows the particles live in (scene rows plus S; falling kinds start at the top of the view). */
   rows: readonly [number, number];
   vx: readonly [number, number];
   vy: readonly [number, number];
@@ -110,45 +110,48 @@ interface KindDef {
   parallax: number;
 }
 
+/** The scene frame's top row in the view (sceneryTypes.ts): bands below are scene rows shifted by it. */
+const S = SCENE_Y;
+
 const KINDS: Record<ParticleKind, KindDef> = {
   fireflies: {
-    count: 10, tex: ['amb_glow'], colors: ['#E8FF7A', '#FFE66A'], add: true, spawn: 'band', rows: [30, 62],
+    count: 10, tex: ['amb_glow'], colors: ['#E8FF7A', '#FFE66A'], add: true, spawn: 'band', rows: [S + 30, S + 62],
     vx: [-2, 2], vy: [-1.5, 1.5], wander: 3, pulse: [1.6, 3.2], alpha: [0.9, 1], front: 0.3, parallax: 0.6,
   },
   snow: {
-    count: 46, tex: ['amb_flake'], colors: ['#FFFFFF', '#EAF4FF'], spawn: 'top', rows: [0, 69],
+    count: 52, tex: ['amb_flake'], colors: ['#FFFFFF', '#EAF4FF'], spawn: 'top', rows: [0, S + 69],
     vx: [-3, -1], vy: [5, 10], sway: [1.2, 1.6], alpha: [0.75, 1], front: 0.35, parallax: 0.7,
   },
   rain: {
-    count: 70, tex: ['amb_drop'], colors: ['#BFD4F0', '#9FB6D8'], spawn: 'top', rows: [0, 69],
+    count: 80, tex: ['amb_drop'], colors: ['#BFD4F0', '#9FB6D8'], spawn: 'top', rows: [0, S + 69],
     vx: [-16, -12], vy: [80, 100], alpha: [0.45, 0.7], front: 0.4, parallax: 0.6,
   },
   leaves: {
     count: 10, tex: ['amb_leaf0', 'amb_leaf1', 'amb_leaf2', 'amb_leaf1'], colors: ['#E8742A', '#C8402A', '#F2B03A', '#B85A1E'],
-    spawn: 'top', rows: [0, 66], vx: [-9, -4], vy: [7, 12], sway: [2, 2.2], tumble: 0.22, alpha: [1, 1], front: 0.4, parallax: 0.8,
+    spawn: 'top', rows: [0, S + 66], vx: [-9, -4], vy: [7, 12], sway: [2, 2.2], tumble: 0.22, alpha: [1, 1], front: 0.4, parallax: 0.8,
   },
   petals: {
-    count: 12, tex: ['amb_petal', 'amb_flake'], colors: ['#FFD0E0', '#FFFFFF', '#FFB0C8'], spawn: 'top', rows: [0, 66],
+    count: 12, tex: ['amb_petal', 'amb_flake'], colors: ['#FFD0E0', '#FFFFFF', '#FFB0C8'], spawn: 'top', rows: [0, S + 66],
     vx: [-9, -5], vy: [4, 8], sway: [1.6, 2], tumble: 0.3, alpha: [0.9, 1], front: 0.4, parallax: 0.8,
   },
   embers: {
-    count: 16, tex: ['amb_px'], colors: ['#FFB04A', '#FF6A2A', '#FFE08A'], add: true, spawn: 'bottom', rows: [20, 68],
+    count: 16, tex: ['amb_px'], colors: ['#FFB04A', '#FF6A2A', '#FFE08A'], add: true, spawn: 'bottom', rows: [S + 20, S + 68],
     vx: [-2, 2], vy: [-14, -7], sway: [1, 2.6], pulse: [0.5, 1.2], alpha: [0.8, 1], front: 0.35, parallax: 0.7,
   },
   spores: {
-    count: 14, tex: ['amb_glow', 'amb_px'], colors: ['#7AFFE0', '#FF9AE8'], add: true, spawn: 'bottom', rows: [24, 66],
+    count: 14, tex: ['amb_glow', 'amb_px'], colors: ['#7AFFE0', '#FF9AE8'], add: true, spawn: 'bottom', rows: [S + 24, S + 66],
     vx: [-1.5, 1.5], vy: [-4, -2], wander: 1.5, pulse: [2, 4], alpha: [0.8, 1], front: 0.3, parallax: 0.6,
   },
   sparkles: {
-    count: 9, tex: ['amb_px', 'amb_star'], colors: ['#FFFFFF'], add: true, spawn: 'band', rows: [6, 62],
+    count: 11, tex: ['amb_px', 'amb_star'], colors: ['#FFFFFF'], add: true, spawn: 'band', rows: [14, S + 62],
     vx: [0, 0], vy: [0, 0], glint: true, alpha: [1, 1], front: 0.3, parallax: 0.5,
   },
   wisps: {
-    count: 5, tex: ['amb_glow'], colors: ['#9AF0D0', '#B8C8FF'], add: true, spawn: 'band', rows: [32, 60],
+    count: 5, tex: ['amb_glow'], colors: ['#9AF0D0', '#B8C8FF'], add: true, spawn: 'band', rows: [S + 32, S + 60],
     vx: [-3, 3], vy: [-1, 1], wander: 2, sway: [1.5, 0.8], pulse: [2.5, 4], alpha: [0.7, 0.9], front: 0.2, parallax: 0.5,
   },
   motes: {
-    count: 12, tex: ['amb_px'], colors: ['#FFF8D8'], spawn: 'band', rows: [18, 60],
+    count: 12, tex: ['amb_px'], colors: ['#FFF8D8'], spawn: 'band', rows: [S + 18, S + 60],
     vx: [0.5, 2.5], vy: [-1, 0.6], wander: 0.8, pulse: [3, 6], alpha: [0.35, 0.6], front: 0.3, parallax: 0.6,
   },
 };
@@ -222,7 +225,8 @@ export class Ambience {
 
   constructor(private scene: Phaser.Scene, private depth: AmbienceDepths) {
     ensureTextures(scene);
-    this.flash = scene.add.image(0, 0, 'amb_flash').setOrigin(0, 0).setDisplaySize(VIEW.w * P, (VIEW.h + 1) * P)
+    const m = VIEW_MARGIN;
+    this.flash = scene.add.image(-m * P, -m * P, 'amb_flash').setOrigin(0, 0).setDisplaySize((VIEW.w + 2 * m) * P, (VIEW.h + 1 + 2 * m) * P)
       .setDepth(depth.flash).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0).setVisible(false);
     this.bolt = scene.add.graphics().setDepth(depth.bolt).setVisible(false);
     for (let k = 0; k < 6; k++) {

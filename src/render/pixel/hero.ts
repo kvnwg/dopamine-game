@@ -1,22 +1,23 @@
 /**
  * The hero: Kevin's raccoon (art-src/raccoon_sheet.png, generated into packs/raccoon.ts by
- * tools/packs/chars.py), drawn 1:1 like every other battle sprite.
+ * tools/packs/chars.py), drawn 1:1 like every other battle sprite, and dressed in his gear.
  *
- * Gear is drawn at the same pixel size, in two ways:
- *  - Hats, masks, shields, backpacks and weapons are separate sprites: their item icons at half
- *    resolution (16 x 16 icons become 8 x 8), placed on landmarks of the reference pose (frame 0).
- *  - Jackets, gloves, shoes and necklaces are baked into the body frames: the fur in that part of
- *    the body takes the item's colors, so they follow every pose exactly.
- * Each frame's offset from the reference pose is found by matching the head's silhouette; frames
- * where the head is hidden (curled up asleep) carry no gear.
+ * Every wearable item has worn art drawn for the raccoon's own shape at his pixel size (worn/), fitted
+ * to each frame of the sheet by landmarks measured by hand (worn/body.ts): hats ride his head with his
+ * ears poking through, masks sit on his face (a squashed version for squashed faces), garments are
+ * painted over his torso and arms pixel by pixel so they wrap every pose, gloves go on his paws, shoes
+ * on his feet, bling at his neck, a shield on his back paw, packs on his back with straps in front.
+ * The weapon is redrawn at his size and held in his front paw. Rings are too small to show.
  *
  * The sheet faces left (tail on the right). The battle mirrors the body and the worn gear so he faces
- * the enemies on the right (textures.ts); everything here is in the sheet's own, unmirrored pixels.
+ * the enemies on the right (textures.ts); everything here is in the sheet's own, unmirrored pixels,
+ * except the weapon, which is drawn the way the battle shows it.
  */
-import { alphaAt, blank, color, downsample2, flipX, fromRows, rampOf, rgb, type PixelBuf, type SheetEntry } from './buf';
+import { blank, blit, flipX, setPx, type PixelBuf, type SheetEntry } from './buf';
 import { frameBuf } from './indexed';
-import { DEFAULT_WEAPON_TILT, ITEM_SPRITES, WEAPON_ART_TILT, WEAPON_GRIP } from './items';
-import { RACCOON, RACCOON_FUR } from './packs/raccoon';
+import { RACCOON } from './packs/raccoon';
+import { pose } from './worn/body';
+import { WEAPONS, WORN, WORN_SLOTS, dress, keyColor, wornOver, type Outfit as WornOutfit } from './worn/dress';
 
 export const HERO_SHEET = RACCOON;
 
@@ -25,9 +26,9 @@ export const HERO_POINTS = {
   /** Ground contact (the bottom edge of this row). */
   feet: RACCOON.anchor,
   /** The front paw (left as drawn, toward the enemies once mirrored): it holds the weapon. */
-  hand: { x: 6, y: 15 },
+  hand: { x: pose(0).hand!.x, y: pose(0).hand!.y },
   /** The back paw, by the tail: shields. */
-  offHand: { x: 15, y: 15 },
+  offHand: { x: pose(0).offHand!.x, y: pose(0).offHand!.y },
   /** Top of the head between the ears: hats sit here. */
   head: { x: 11, y: 6 },
   /** Between the eyes: masks center here. */
@@ -35,195 +36,96 @@ export const HERO_POINTS = {
 } as const;
 
 export type GearSlot = 'hat' | 'mask' | 'jacket' | 'gloves' | 'sneakers' | 'bling' | 'shield' | 'backpack' | 'ring';
-/** Slots drawn as their own sprites (the rest are baked into the body). */
+/** Slots the battle draws as their own sprites over the body (gearTex); the rest are painted into the body frames. */
 export const SPRITE_SLOTS = ['hat', 'mask', 'shield', 'backpack'] as const;
 export type SpriteSlot = (typeof SPRITE_SLOTS)[number];
 
 export interface FrameOffset {
   dx: number;
   dy: number;
-  /** False when the head isn't visible (curled up): no gear is drawn on this frame. */
+  /** False when the head isn't visible (curled up): no head gear, shield, pack or weapon on this frame. */
   head: boolean;
 }
 
-/** The head box in the reference pose, used to track the body from frame to frame. */
-const HEAD_BOX = { x0: 7, y0: 5, x1: 16, y1: 12 };
+let headOffsets: FrameOffset[] | null = null;
 
-let offsets: FrameOffset[] | null = null;
-
-/** Every frame's offset from the reference pose. */
+/** Every frame's head offset from the reference pose (measured by hand, worn/body.ts). */
 export function frameOffsets(): readonly FrameOffset[] {
-  if (offsets) return offsets;
-  const ref = frameBuf(RACCOON, 0);
-  let total = 0;
-  for (let y = HEAD_BOX.y0; y <= HEAD_BOX.y1; y++) for (let x = HEAD_BOX.x0; x <= HEAD_BOX.x1; x++) if (alphaAt(ref, x, y)) total++;
-  offsets = RACCOON.frames.map((_, f) => {
-    const b = frameBuf(RACCOON, f);
-    let best = { dx: 0, dy: 0, score: -Infinity };
-    for (let dy = -3; dy <= 8; dy++) {
-      for (let dx = -3; dx <= 3; dx++) {
-        let score = 0;
-        for (let y = HEAD_BOX.y0; y <= HEAD_BOX.y1; y++) {
-          for (let x = HEAD_BOX.x0; x <= HEAD_BOX.x1; x++) {
-            const a = alphaAt(ref, x, y) > 0;
-            const c = alphaAt(b, x + dx, y + dy) > 0;
-            if (a && c) score++;
-            else if (a !== c) score--;
-          }
-        }
-        // Prefer the smallest shift among equal scores.
-        if (score > best.score || (score === best.score && Math.abs(dx) + Math.abs(dy) < Math.abs(best.dx) + Math.abs(best.dy))) {
-          best = { dx, dy, score };
-        }
-      }
-    }
-    return { dx: best.dx, dy: best.dy, head: best.score >= total * 0.8 };
+  headOffsets ??= RACCOON.frames.map((_, f) => {
+    const h = pose(f).head;
+    return h ? { dx: h.x, dy: h.y, head: true } : { dx: 0, dy: 0, head: false };
   });
-  return offsets;
+  return headOffsets;
 }
 
-// ------------------------------------------------------------------ item colors and icons
+let pawOffsets: FrameOffset[] | null = null;
 
-const halves = new Map<string, PixelBuf>();
-
-/** An item's icon at half resolution (how it looks worn by the small raccoon). */
-export function halfIcon(baseId: string): PixelBuf | null {
-  const rows = ITEM_SPRITES[baseId];
-  if (!rows) return null;
-  let h = halves.get(baseId);
-  if (!h) {
-    h = downsample2(fromRows(rows));
-    halves.set(baseId, h);
-  }
-  return h;
-}
-
-const OUTLINE_KEYS = new Set(['k', 'x', '.']);
-
-/** dark / mid / light colors built around an item icon's most used (non-outline) color. */
-export function itemRamp(baseId: string): [string, string, string] {
-  const rows = ITEM_SPRITES[baseId];
-  const counts = new Map<string, number>();
-  for (const row of rows ?? []) for (const ch of row) if (!OUTLINE_KEYS.has(ch)) counts.set(ch, (counts.get(ch) ?? 0) + 1);
-  let best = '5';
-  let n = -1;
-  for (const [ch, c] of counts) if (c > n) [best, n] = [ch, c];
-  return rampOf(color(best));
+/**
+ * Every frame's front paw offset from the reference pose: the weapon stays in his paw as he raises his
+ * arms, ducks into a dash or squats. `head` as in frameOffsets.
+ */
+export function handOffsets(): readonly FrameOffset[] {
+  pawOffsets ??= RACCOON.frames.map((_, f) => {
+    const p = pose(f);
+    return p.hand && p.head ? { dx: p.hand.x - HERO_POINTS.hand.x, dy: p.hand.y - HERO_POINTS.hand.y, head: true } : { dx: 0, dy: 0, head: false };
+  });
+  return pawOffsets;
 }
 
 // ------------------------------------------------------------------ body frames with clothes
 
+/** What the body frames wear: clothes always; hats, masks, shields and packs too when given (baked in). */
 export interface BodyGear {
   jacket?: string | null;
   gloves?: string | null;
   sneakers?: string | null;
   bling?: string | null;
+  hat?: string | null;
+  mask?: string | null;
+  shield?: string | null;
+  backpack?: string | null;
 }
 
-const FUR = RACCOON_FUR.map((k) => RACCOON.pal[k]);
+const bodyCache = new Map<string, PixelBuf>();
 
-function furTone(b: PixelBuf, x: number, y: number): number {
-  if (!alphaAt(b, x, y)) return -1;
-  const i = (y * b.w + x) * 4;
-  for (let k = 0; k < FUR.length; k++) {
-    const [r, g, bl] = rgb(FUR[k]);
-    if (b.px[i] === r && b.px[i + 1] === g && b.px[i + 2] === bl) return k;
-  }
-  return -1;
-}
-
-function paint(b: PixelBuf, x: number, y: number, hex: string): void {
-  const [r, g, bl] = rgb(hex);
-  b.px.set([r, g, bl, 255], (y * b.w + x) * 4);
-}
-
-/** Recolors fur inside a box (reference-pose coordinates, shifted by the frame's offset). */
-function recolorBox(b: PixelBuf, o: FrameOffset, x0: number, y0: number, x1: number, y1: number, ramp: readonly string[]): void {
-  for (let y = y0 + o.dy; y <= y1 + o.dy; y++) {
-    for (let x = x0 + o.dx; x <= x1 + o.dx; x++) {
-      const k = furTone(b, x, y);
-      if (k >= 0) paint(b, x, y, ramp[k]);
-    }
-  }
-}
-
-/** One body frame in the given clothes. */
+/** One body frame in the given gear (as drawn, facing left). */
 export function heroFrame(f: number, gear: BodyGear = {}): PixelBuf {
-  const b = frameBuf(RACCOON, f);
-  const o = frameOffsets()[f];
-  if (!o.head) return b;
-  if (gear.jacket) {
-    // Torso and arms, up to the tail on the right.
-    recolorBox(b, o, 4, 13, 15, 17, itemRamp(gear.jacket));
+  const slots = WORN_SLOTS.filter((s) => gear[s as keyof BodyGear]);
+  if (!slots.length) return frameBuf(RACCOON, f);
+  const key = `${f}|${slots.map((s) => `${s}:${gear[s as keyof BodyGear]}`).join('|')}`;
+  let b = bodyCache.get(key);
+  if (!b) {
+    b = dress(f, gear as WornOutfit, slots);
+    if (bodyCache.size > 400) bodyCache.clear();
+    bodyCache.set(key, b);
   }
-  if (gear.gloves) {
-    const r = itemRamp(gear.gloves);
-    recolorBox(b, o, 4, 14, 7, 16, [r[0], r[1], r[2]]);
-    recolorBox(b, o, 14, 14, 15, 16, [r[0], r[1], r[2]]);
-  }
-  if (gear.sneakers) {
-    const r = itemRamp(gear.sneakers);
-    recolorBox(b, o, 8, 18, 10, 19, [r[1], r[1], r[2]]);
-    recolorBox(b, o, 13, 18, 15, 19, [r[1], r[1], r[2]]);
-  }
-  if (gear.bling) {
-    const r = itemRamp(gear.bling);
-    for (let x = 9; x <= 14; x++) if (furTone(b, x + o.dx, 13 + o.dy) >= 0) paint(b, x + o.dx, 13 + o.dy, r[0]);
-    paint(b, 11 + o.dx, 14 + o.dy, r[2]);
-    paint(b, 12 + o.dx, 14 + o.dy, r[1]);
-  }
-  return b;
+  return { w: b.w, h: b.h, px: new Uint8ClampedArray(b.px) };
 }
 
 // ------------------------------------------------------------------ separate gear sprites
 
 export interface GearSprite {
   buf: PixelBuf;
-  /** Top-left corner in reference-pose frame pixels. */
+  /** Top-left corner in frame pixels (worn art is frame-sized, so 0, 0). */
   x: number;
   y: number;
-  /** Behind the body (backpacks) or in front. */
+  /** Behind the body or in front (worn art handles its own depth: always in front). */
   behind: boolean;
 }
 
-function opaqueBounds(b: PixelBuf): { x: number; y: number; w: number; h: number } {
-  let x0 = b.w;
-  let y0 = b.h;
-  let x1 = -1;
-  let y1 = -1;
-  for (let y = 0; y < b.h; y++) {
-    for (let x = 0; x < b.w; x++) {
-      if (!alphaAt(b, x, y)) continue;
-      x0 = Math.min(x0, x);
-      y0 = Math.min(y0, y);
-      x1 = Math.max(x1, x);
-      y1 = Math.max(y1, y);
-    }
-  }
-  return x1 < 0 ? { x: 0, y: 0, w: 0, h: 0 } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+/** The body clothes in a BodyGear. */
+export function clothesOf(gear: BodyGear): BodyGear {
+  return { jacket: gear.jacket ?? null, gloves: gear.gloves ?? null, sneakers: gear.sneakers ?? null, bling: gear.bling ?? null };
 }
 
-/** A worn item drawn as its own sprite, or null (baked slots, rings, unknown items). */
-export function gearSprite(slot: GearSlot, baseId: string): GearSprite | null {
-  if (!(SPRITE_SLOTS as readonly string[]).includes(slot)) return null;
-  const buf = halfIcon(baseId);
-  if (!buf) return null;
-  const bb = opaqueBounds(buf);
-  const P = HERO_POINTS;
-  switch (slot) {
-    case 'hat':
-      // Bottom of the hat covers the top row of the head, centered between the ears.
-      return { buf, x: P.head.x + 1 - Math.round(bb.x + bb.w / 2), y: P.head.y + 1 - (bb.y + bb.h - 1), behind: false };
-    case 'mask':
-      return { buf, x: P.eyes.x + 1 - Math.round(bb.x + bb.w / 2), y: P.eyes.y - Math.floor(bb.y + bb.h / 2), behind: false };
-    case 'shield':
-      return { buf, x: P.offHand.x - Math.round(bb.x + bb.w / 2), y: P.offHand.y - Math.round(bb.y + bb.h / 2), behind: false };
-    case 'backpack':
-      // Peeks out behind his back: over the tail's shoulder (the right one as drawn).
-      return { buf, x: 21 - bb.x - bb.w, y: 9 - bb.y, behind: true };
-    default:
-      return null;
-  }
+/**
+ * A hat, mask, shield or pack as its own frame-sized sprite for one frame, to lie over the body frame
+ * dressed in `clothes`: a pack's bag shows only where the dressed body doesn't cover it. Null for the
+ * other slots, rings and unknown items.
+ */
+export function gearSprite(slot: GearSlot, baseId: string, frame = 0, clothes: BodyGear = {}): GearSprite | null {
+  if (!(SPRITE_SLOTS as readonly string[]).includes(slot) || !WORN[slot as SpriteSlot][baseId]) return null;
+  return { buf: wornOver(slot as SpriteSlot, baseId, frame, heroFrame(frame, clothesOf(clothes))), x: 0, y: 0, behind: false };
 }
 
 export interface WeaponSprite {
@@ -234,25 +136,20 @@ export interface WeaponSprite {
   tilt: number;
 }
 
-/** A weapon at half resolution with its grip, or null if the item has no art. */
+const weapons = new Map<string, WeaponSprite>();
+
+/** A weapon at the raccoon's size with its grip, or null if the item has no art. */
 export function weaponBuf(baseId: string): WeaponSprite | null {
-  const buf = halfIcon(baseId);
-  const g = WEAPON_GRIP[baseId];
-  if (!buf || !g) return null;
-  // The grip at half resolution, moved to the nearest opaque pixel if the halving cleared it.
-  let grip = { x: Math.floor(g.x / 2), y: Math.floor(g.y / 2) };
-  if (!alphaAt(buf, grip.x, grip.y)) {
-    let best = { x: grip.x, y: grip.y, d: Infinity };
-    for (let y = 0; y < buf.h; y++) {
-      for (let x = 0; x < buf.w; x++) {
-        if (!alphaAt(buf, x, y)) continue;
-        const d = (x - grip.x) ** 2 + (y - grip.y) ** 2;
-        if (d < best.d) best = { x, y, d };
-      }
-    }
-    grip = { x: best.x, y: best.y };
+  const a = WEAPONS[baseId];
+  if (!a) return null;
+  let w = weapons.get(baseId);
+  if (!w) {
+    const buf = blank(a.rows[0].length, a.rows.length);
+    a.rows.forEach((row, y) => [...row].forEach((k, x) => k !== '.' && setPx(buf, x, y, keyColor(a.pal, k))));
+    w = { buf, grip: { ...a.grip }, tilt: a.tilt };
+    weapons.set(baseId, w);
   }
-  return { buf, grip, tilt: WEAPON_ART_TILT[baseId] ?? DEFAULT_WEAPON_TILT };
+  return w;
 }
 
 export type Outfit = Partial<Record<GearSlot | 'weapon', string>>;
@@ -263,34 +160,20 @@ export type Outfit = Partial<Record<GearSlot | 'weapon', string>>;
  * battle draws the parts as separate sprites so the weapon can swing. PAD pixels of room on every side.
  */
 export function composeHero(f: number, outfit: Outfit, pad = 10): PixelBuf {
-  const o = frameOffsets()[f];
-  let out = blank(RACCOON.w + pad * 2, RACCOON.h + pad * 2);
-  const put = (b: PixelBuf, x: number, y: number) => {
-    for (let yy = 0; yy < b.h; yy++) {
-      for (let xx = 0; xx < b.w; xx++) {
-        if (!alphaAt(b, xx, yy)) continue;
-        const tx = x + xx + pad;
-        const ty = y + yy + pad;
-        if (tx < 0 || ty < 0 || tx >= out.w || ty >= out.h) continue;
-        const i = (yy * b.w + xx) * 4;
-        out.px.set(b.px.subarray(i, i + 4), (ty * out.w + tx) * 4);
-      }
-    }
-  };
-  const sprites = SPRITE_SLOTS.map((s) => (outfit[s] && o.head ? gearSprite(s, outfit[s]!) : null)).filter((g): g is GearSprite => !!g);
-  for (const g of sprites) if (g.behind) put(g.buf, g.x + o.dx, g.y + o.dy);
-  put(heroFrame(f, outfit), 0, 0);
-  for (const g of sprites) if (!g.behind) put(g.buf, g.x + o.dx, g.y + o.dy);
-  // (The pad is the same on both sides, so this mirrors about the frame's center line.)
-  out = flipX(out);
+  const o = handOffsets()[f];
+  const body = flipX(dress(f, outfit as WornOutfit));
+  const out = blank(RACCOON.w + pad * 2, RACCOON.h + pad * 2);
+  blit(out, body, pad, pad);
   const w = outfit.weapon && o.head ? weaponBuf(outfit.weapon) : null;
-  if (w) put(w.buf, RACCOON.w - 1 - (HERO_POINTS.hand.x + o.dx) - w.grip.x, HERO_POINTS.hand.y + o.dy - w.grip.y);
+  if (w) blit(out, w.buf, pad + RACCOON.w - 1 - (HERO_POINTS.hand.x + o.dx) - w.grip.x, pad + HERO_POINTS.hand.y + o.dy - w.grip.y);
   return out;
 }
 
-/** Preview: every frame, then a few frames in two sample outfits. */
+/** Preview: every frame, every worn item on frame 0, then a few frames in sample outfits. */
 export function sheet(): SheetEntry[] {
   const out: SheetEntry[] = RACCOON.frames.map((_, f) => ({ name: `frame ${f}`, buf: frameBuf(RACCOON, f) }));
+  for (const slot of WORN_SLOTS) for (const id of Object.keys(WORN[slot])) out.push({ name: id, buf: dress(0, { [slot]: id }) });
+  for (const id of Object.keys(WEAPONS)) out.push({ name: id, buf: composeHero(0, { weapon: id }, 4) });
   const a: Outfit = {
     hat: 'hat_traffic_cone', mask: 'mask_gas_station_shades', jacket: 'jacket_blue_tarp', gloves: 'gloves_oven_mitts',
     sneakers: 'sneakers_crocs', bling: 'bling_dog_tag', shield: 'shield_trash_lid', backpack: 'backpack_lunchbox', weapon: 'weapon_broken_rake',

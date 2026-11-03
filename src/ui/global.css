@@ -67,8 +67,11 @@
 
   --font-display: 'Dumpster Digits', 'Pixelify Sans', 'Courier New', monospace;
   --font-body: 'Dumpster Digits', 'Pixelify Sans', 'Courier New', monospace;
-  /* One art pixel at the stage's scale (sprites are drawn at 6x). */
-  --px: 6px;
+  /*
+   * One art pixel in stage px: the battle's pixel size, and every sprite, border, notch and drop
+   * shadow in the UI. Keep pixel-ish sizes in CSS to multiples of it.
+   */
+  --px: 9px;
   --pixel-edge: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink);
   --pixel-text: 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 4px 4px 0 var(--ink), -4px 4px 0 var(--ink),
     4px -4px 0 var(--ink), -4px -4px 0 var(--ink), 0 8px 0 var(--ink);
@@ -129,7 +132,10 @@ button {
   text-shadow: 0 4px 0 var(--ink);
 }
 
-/* ---------------------------------------------------------------- buttons: flat bands, pixel border, press = drop */
+/*
+ * ---------------------------------------------------------------- buttons: flat bands, pixel border, press = drop
+ * A one-pixel light band on top and a two-pixel dark band at the bottom (art pixels: var(--px)).
+ */
 .btn {
   --b: #5dc14c;
   --bd: #2f8a45;
@@ -137,9 +143,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 92px;
-  padding: 0 32px;
+  gap: 18px;
+  min-height: 90px;
+  padding: 0 36px;
   border: none;
   font-family: var(--font-display);
   font-weight: 700;
@@ -147,13 +153,18 @@ button {
   color: #fff;
   -webkit-text-stroke: 0;
   text-shadow: var(--pixel-text);
-  background: linear-gradient(180deg, var(--bl) 0 14%, var(--b) 14% 76%, var(--bd) 76% 100%);
+  background: linear-gradient(
+    180deg,
+    var(--bl) 0 var(--px),
+    var(--b) var(--px) calc(100% - 2 * var(--px)),
+    var(--bd) calc(100% - 2 * var(--px)) 100%
+  );
   box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
   transition: transform 70ms steps(2);
 }
 .btn:active {
   transform: translateY(var(--px));
-  box-shadow: var(--pixel-edge);
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 rgba(10, 6, 20, 0.55);
 }
 .btn:disabled {
   filter: grayscale(0.85) brightness(0.72);
@@ -180,14 +191,15 @@ button {
   --bl: #a7a5b8;
 }
 .btn.small {
+  gap: 9px;
   min-height: 72px;
   font-size: 32px;
-  padding: 0 22px;
+  padding: 0 27px;
 }
 
 @keyframes breathe {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50% { transform: translateY(calc(-1 * var(--px))); }
 }
 .breathe {
   animation: breathe 0.9s steps(2) infinite;
@@ -202,54 +214,6 @@ button {
   color: var(--text-dark);
   border: none;
   box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
-}
-
-/* Currency icons. */
-.ico {
-  display: inline-block;
-  flex: none;
-  width: 46px;
-  height: 46px;
-  vertical-align: middle;
-  position: relative;
-}
-.ico-coin {
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #fff3b0, #ffc233 46%, #d48a12);
-  border: 4px solid var(--ink);
-  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
-}
-.ico-coin::after {
-  content: '';
-  position: absolute;
-  left: 28%;
-  top: 22%;
-  width: 22%;
-  height: 52%;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
-}
-.ico-gem {
-  border-radius: 38% 62% 44% 56% / 52% 40% 60% 48%;
-  background: radial-gradient(circle at 32% 28%, #e9fffb, #5fe0d0 40%, #1f9c8e 85%);
-  border: 4px solid var(--ink);
-}
-.ico-bag {
-  border-radius: 46% 46% 44% 44% / 38% 38% 56% 56%;
-  background: radial-gradient(circle at 36% 40%, #5a5a6a, #26232e 60%);
-  border: 4px solid var(--ink);
-}
-.ico-bag::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -4px;
-  width: 22px;
-  height: 8px;
-  transform: translateX(-50%) rotate(-8deg);
-  border-radius: 3px;
-  background: var(--gold);
-  border: 2px solid var(--ink);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,19 +1,30 @@
 import type { CSSProperties } from 'react';
 import { DATA, type Slot } from '../../data';
 import { formatNumber, itemOddsOneIn, rarityAtLeast, type Item, gearPowerMult } from '../../core';
-import { emptyIconUrl, itemArtUrl } from '../../render/icons';
+import { emptyItemArt, itemArt, itemArtHd, UI_PX } from '../../render/icons';
 import { rarityColor } from '../../render/art';
 import { useGame } from '../../app/store';
 import { useItemDrag } from '../drag';
-import { CheckIcon, LockIcon } from './Icons';
+import { ArrowUpIcon, CheckIcon, LockIcon } from './Icons';
+import { PixelArt } from './PixelArt';
 import s from './ItemIcon.module.css';
+
+/** Tile size in stage px for the usual 16 x 16 art: the art (144) plus a one-pixel border all round. */
+export const TILE = 16 * UI_PX + 2 * UI_PX;
 
 interface Props {
   item: Item | null;
   slot?: Slot;
+  /**
+   * Tile size in stage px (TILE by default). The art inside is always 16 x 16 at 9 px per pixel
+   * (144 px), or its 32 x 32 Scale2x version with `hd`; a bigger tile only adds room around it.
+   * Keep (size - art) even so the art lands on whole pixels.
+   */
   size?: number;
+  /** Show the art at twice the resolution (Scale2x, 288 px), for the big reveal. */
+  hd?: boolean;
   showPower?: boolean;
-  /** The big "1 in X" banner (on by default for every item). */
+  /** The "1 in X" banner (on by default for every item). */
   showOdds?: boolean;
   equipped?: boolean;
   /** Better than what is equipped in its slot: green arrow. */
@@ -36,18 +47,21 @@ export function oddsShort(x: number): string {
 
 /** An item tile: rarity card, art, power, enchant gems, a loud "1 in X" banner, and badges. */
 export function ItemIcon({
-  item, slot, size = 150, showPower = true, showOdds = true, equipped, upgrade, draggable, onTap, className, style,
+  item, slot, size = TILE, hd, showPower = true, showOdds = true, equipped, upgrade, draggable, onTap, className, style,
 }: Props) {
   const drag = useItemDrag(draggable && item ? item : null, onTap);
   // Power as worn by this raccoon (rarity power x its level and world scale), so tiles add up to its Power.
   const gearMult = useGame(gearPowerMult);
   const theSlot = item?.slot ?? slot ?? 'hat';
-  const vars = { ['--s' as string]: `${size}px`, ...style } as CSSProperties;
+  const art = !item ? emptyItemArt(theSlot) : hd ? itemArtHd(item.baseId) : itemArt(item.baseId);
+  // The art's top left inside the tile, on whole pixels.
+  const inset = Math.round((size - art.w * UI_PX) / 2);
+  const vars = { ['--s' as string]: `${size}px`, ['--inset' as string]: `${inset}px`, ...style } as CSSProperties;
   if (!item) {
     return (
       <div className={`${s.wrap} ${className ?? ''}`} style={vars} onClick={onTap} data-slot={theSlot}>
         <div className={`${s.tile} ${s.empty}`}>
-          <img className={s.ghost} src={emptyIconUrl(theSlot)} alt="" draggable={false} />
+          <PixelArt art={art} className={s.ghost} />
         </div>
       </div>
     );
@@ -65,8 +79,7 @@ export function ItemIcon({
       {...handlers}
     >
       <div className={[s.tile, s[r] ?? '', rare ? s.shine : ''].join(' ')}>
-        <span className={s.glow} />
-        <img className={s.art} src={itemArtUrl(item.baseId)} alt="" draggable={false} />
+        <PixelArt art={art} className={s.art} />
         {item.enchants.length > 0 && (
           <span className={s.pips}>
             {item.enchants.map((en) => (
@@ -74,8 +87,8 @@ export function ItemIcon({
             ))}
           </span>
         )}
-        {equipped && <CheckIcon className={s.corner} size={Math.round(size * 0.27)} />}
-        {!equipped && item.locked && <LockIcon className={s.corner} size={Math.round(size * 0.25)} />}
+        {equipped && <CheckIcon className={s.corner} />}
+        {!equipped && item.locked && <LockIcon className={s.corner} />}
         {showPower && <span className={s.power}>{formatNumber(Math.round(item.power * gearMult))}</span>}
       </div>
       {showOdds && (
@@ -84,7 +97,7 @@ export function ItemIcon({
           <b>{oddsShort(itemOddsOneIn(item))}</b>
         </span>
       )}
-      {upgrade && !equipped && <span className={s.upgrade}>▲</span>}
+      {upgrade && !equipped && <ArrowUpIcon className={s.upgrade} />}
     </div>
   );
 }

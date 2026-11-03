@@ -44,14 +44,17 @@ export function CodexPopup({ onClose }: { onClose: () => void }) {
                 <span className={s.codexName} style={{ color: any ? 'var(--ink)' : '#b5a68d' }}>
                   {any ? (i.unique ? `★ ${i.name}` : i.name) : '???'}
                 </span>
-                {rarities.map((r) => (
-                  <span
-                    key={r}
-                    className={s.pip}
-                    title={t(`rarity.${r}`)}
-                    style={found.has(codexKey(i.id, r)) ? { background: rarityColor(r) } : undefined}
-                  />
-                ))}
+                {rarities.map((r) => {
+                  const got = found.has(codexKey(i.id, r));
+                  return (
+                    <span
+                      key={r}
+                      className={`${s.pip} ${got ? s.pipFound : ''}`}
+                      title={t(`rarity.${r}`)}
+                      style={got ? { background: rarityColor(r) } : undefined}
+                    />
+                  );
+                })}
               </div>
             );
           })}

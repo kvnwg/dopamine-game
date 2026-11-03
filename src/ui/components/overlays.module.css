@@ -1,72 +1,10 @@
-/* ------------------------------------------------------------ build-up before a big roll */
-.charge {
-  --c: #ffb300;
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  background: rgba(10, 12, 24, 0.55);
-  animation: fadeIn 200ms ease-out;
-}
-.chargeGlow {
-  position: absolute;
-  width: 900px;
-  height: 900px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--c) 70%, transparent), transparent 62%);
-  animation: grow 900ms ease-in forwards;
-}
-@keyframes grow {
-  from { transform: scale(0.3); opacity: 0.4; }
-  to { transform: scale(1.1); opacity: 1; }
-}
-.chargeBin {
-  position: relative;
-  width: 560px;
-  height: 420px;
-  animation: bigShake 70ms linear infinite;
-}
-.chargeBody {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 560px;
-  filter: drop-shadow(0 0 30px var(--c));
-}
-.chargeLid {
-  position: absolute;
-  left: -16px;
-  bottom: 312px;
-  width: 592px;
-  transform-origin: 10% 90%;
-  animation: lidRattle 140ms linear infinite alternate;
-}
-@keyframes lidRattle {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-7deg) translateY(-12px); }
-}
-@keyframes bigShake {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-9px, 3px) rotate(-1deg); }
-  50% { transform: translate(8px, -3px) rotate(1deg); }
-  75% { transform: translate(-5px, -2px); }
-}
-.chargeBang {
-  position: absolute;
-  top: 620px;
-  font-family: var(--font-display);
-  font-size: 140px;
-  color: #fff;
-  -webkit-text-stroke: 14px var(--ink);
-  paint-order: stroke fill;
-  animation: bang 300ms ease-in-out infinite alternate;
-}
-@keyframes bang {
-  to { transform: scale(1.18); color: var(--c); }
-}
+/*
+ * Full-screen moments, toasts and the drag ghost. Pixel-ish sizes are art pixels (var(--px) = 9
+ * stage px). Nothing that shows pixel art is rotated or scaled: it moves by translation, flashes and
+ * fades.
+ */
 
-/* ------------------------------------------------------------ reveal */
+/* ------------------------------------------------------------ rebirth celebration */
 .reveal {
   --c: #ffb300;
   position: absolute;
@@ -107,29 +45,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: calc(2 * var(--px));
   padding: 0 60px;
   text-align: center;
 }
+/* Big outlined words slam in (text only). */
 .title {
   animation: titleIn 520ms cubic-bezier(0.34, 1.7, 0.5, 1) both;
 }
 @keyframes titleIn {
-  0% { transform: scale(2.4) rotate(-8deg); opacity: 0; }
-  60% { transform: scale(0.92) rotate(2deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0deg); }
-}
-.itemWrap {
-  margin: 10px 0 6px;
-  animation: itemIn 620ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both, float 2.4s ease-in-out 800ms infinite;
-  filter: drop-shadow(0 0 40px var(--c));
-}
-@keyframes itemIn {
-  0% { transform: scale(0) rotate(-30deg); }
-  100% { transform: scale(1) rotate(0deg); }
+  0% { transform: scale(2.4); opacity: 0; }
+  60% { transform: scale(0.92); opacity: 1; }
+  100% { transform: scale(1); }
 }
 @keyframes float {
-  50% { transform: translateY(-14px); }
+  0%, 100% { transform: none; }
+  50% { transform: translateY(calc(-1 * var(--px))); }
 }
 .name {
   font-family: var(--font-display);
@@ -141,22 +72,19 @@
   text-shadow: 0 6px 0 var(--ink);
   animation: fadeUp 400ms ease-out 260ms both;
 }
+/* The odds plate: square on the grid, it glows instead of growing. */
 .odds {
   display: flex;
   align-items: baseline;
   gap: 14px;
-  padding: 6px 40px 12px;
-  border-radius: 34px;
-  border: 7px solid var(--ink);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(180deg, color-mix(in srgb, var(--c) 60%, #fff), var(--c));
-  box-shadow: 0 9px 0 var(--ink), 0 0 60px var(--c);
+  padding: 0 calc(4 * var(--px)) var(--px);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff) 0 50%, var(--c) 50% 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 var(--ink), 0 0 calc(6 * var(--px)) var(--c);
   font-family: var(--font-display);
   color: #fff;
   -webkit-text-stroke: 10px var(--ink);
   paint-order: stroke fill;
-  animation: oddsIn 520ms cubic-bezier(0.34, 1.7, 0.5, 1) 300ms both, oddsBeat 0.8s ease-in-out 900ms infinite;
+  animation: oddsIn 300ms steps(3) 300ms both, oddsBeat 0.8s steps(2) 900ms infinite;
 }
 .odds i {
   font-style: normal;
@@ -169,70 +97,57 @@
 }
 .odds[data-rarity='legendary'],
 .odds[data-rarity='mint'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
+  background: linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
 }
 .odds[data-rarity='mythic'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
+  background: linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
 }
 .odds[data-rarity='vintage'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
+  background: linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
 }
 .odds[data-rarity='limited'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
+  background: linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
 }
 .odds[data-rarity='prototype'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
+  background: linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
 }
 .odds[data-rarity='gemMint'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
+  background: linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
 }
 .odds[data-rarity='museum'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
+  background: linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
 }
 .odds[data-rarity='grail'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
+  background: linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
 }
 @keyframes oddsIn {
-  0% { transform: scale(0.2) rotate(-10deg); opacity: 0; }
-  100% { transform: scale(1) rotate(-3deg); opacity: 1; }
+  0% { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
+  100% { transform: none; opacity: 1; }
 }
 @keyframes oddsBeat {
-  0%, 100% { transform: scale(1) rotate(-3deg); }
-  50% { transform: scale(1.08) rotate(-3deg); }
+  50% {
+    box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 var(--ink), 0 0 calc(10 * var(--px)) var(--c);
+    filter: brightness(1.15);
+  }
 }
 .tagGold {
-  background: linear-gradient(180deg, #fff3a0, #ffc233);
+  background: linear-gradient(180deg, #fff3a0 0 50%, #ffc233 50% 100%);
 }
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(calc(3 * var(--px))); }
 }
 .tags {
   display: flex;
-  gap: 14px;
-  animation: fadeUp 400ms ease-out 460ms both;
+  gap: calc(3 * var(--px));
+  animation: fadeUp 400ms steps(3) 460ms both;
 }
 .tag {
-  padding: 6px 22px;
-  border-radius: 16px;
-  border: 5px solid var(--ink);
+  height: calc(6 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
   font-size: 34px;
+  line-height: calc(6 * var(--px));
   color: #fff;
   -webkit-text-stroke: 6px var(--ink);
   paint-order: stroke fill;
@@ -242,34 +157,31 @@
 }
 .tagRecord {
   background: #ffc233;
-  animation: recordPulse 600ms ease-in-out infinite alternate;
+  animation: recordBlink 600ms steps(2) infinite;
 }
-@keyframes recordPulse {
-  to { transform: scale(1.1) rotate(-3deg); }
-}
-.tagEquip {
-  background: #42a5f5;
+@keyframes recordBlink {
+  50% { background: #fff3a0; }
 }
 .enchants {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  animation: fadeUp 400ms ease-out 560ms both;
+  gap: var(--px);
+  animation: fadeUp 400ms steps(3) 560ms both;
 }
 .enchant {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 18px 8px 8px;
-  border-radius: 999px;
+  gap: calc(2 * var(--px));
+  padding: var(--px) calc(2 * var(--px)) var(--px) calc(2 * var(--px));
   background: rgba(0, 0, 0, 0.45);
 }
 .enchantName {
-  padding: 2px 16px;
-  border-radius: 999px;
-  border: 4px solid var(--ink);
+  height: calc(4 * var(--px));
+  padding: 0 var(--px);
+  box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
   font-size: 28px;
+  line-height: calc(4 * var(--px));
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -296,6 +208,7 @@
   color: rgba(255, 255, 255, 0.65);
   animation: fadeUp 400ms ease-out 1200ms both;
 }
+/* Confetti: pieces of 2 x 1 art pixels falling straight down, flipping to 1 x 2 and back. */
 .confetti {
   position: absolute;
   inset: 0;
@@ -303,16 +216,23 @@
 }
 .confetti span {
   position: absolute;
-  top: -40px;
-  border: 3px solid var(--ink);
-  border-radius: 4px;
-  animation-name: fall;
-  animation-timing-function: cubic-bezier(0.3, 0.2, 0.6, 1);
-  animation-iteration-count: infinite;
+  top: calc(-4 * var(--px));
+  width: calc(2 * var(--px));
+  height: var(--px);
+  animation-name: fall, flipConfetti;
+  animation-timing-function: linear, steps(1);
+  animation-iteration-count: infinite, infinite;
+}
+.confetti span[data-tall] {
+  width: var(--px);
+  height: calc(2 * var(--px));
 }
 @keyframes fall {
-  0% { transform: translateY(0) rotate(var(--rot)); }
-  100% { transform: translateY(2000px) rotate(calc(var(--rot) + 720deg)); }
+  0% { transform: translateY(0); }
+  100% { transform: translateY(2000px); }
+}
+@keyframes flipConfetti {
+  50% { width: var(--px); height: calc(2 * var(--px)); }
 }
 
 /* ------------------------------------------------------------ the big rare-roll reveal (RareReveal) */
@@ -333,7 +253,7 @@
   background: #000;
   animation: fadeIn 250ms ease-out both;
 }
-/* Light gathering in the dark: motes drift toward the middle, a point of light throbs with the heartbeat. */
+/* Light gathering in the dark: motes (one art pixel each) drift toward the middle, a point of light throbs with the heartbeat. */
 .motes {
   position: absolute;
   inset: 0;
@@ -341,11 +261,10 @@
 }
 .mote {
   position: absolute;
-  left: 50%;
-  top: 40%;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
+  left: 540px;
+  top: 765px;
+  width: var(--px);
+  height: var(--px);
   background: #fff;
   box-shadow: 0 0 12px 3px var(--c);
   opacity: 0;
@@ -354,25 +273,23 @@
   animation-fill-mode: both;
 }
 @keyframes moteIn {
-  0% { transform: translate(var(--x), var(--y)) scale(0.4); opacity: 0; }
+  0% { transform: translate(var(--x), var(--y)); opacity: 0; }
   25% { opacity: 1; }
-  100% { transform: translate(0, 0) scale(1); opacity: 0.1; }
+  100% { transform: translate(0, 0); opacity: 0.1; }
 }
 .rareSpark {
   position: absolute;
-  left: 50%;
-  top: 40%;
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
-  border-radius: 50%;
+  left: 531px;
+  top: 756px;
+  width: calc(2 * var(--px));
+  height: calc(2 * var(--px));
   background: #fff;
   box-shadow: 0 0 50px 20px color-mix(in srgb, var(--c) 80%, #fff);
-  animation: sparkPulse 0.5s ease-in-out infinite alternate;
+  animation: sparkPulse 0.5s steps(2) infinite alternate;
 }
 @keyframes sparkPulse {
-  from { transform: scale(0.45); opacity: 0.55; }
-  to { transform: scale(1.35); opacity: 1; }
+  from { opacity: 0.5; }
+  to { opacity: 1; }
 }
 .rareGlow {
   position: absolute;
@@ -399,65 +316,60 @@
   display: flex;
   align-items: flex-end;
 }
-/* The item rises as a dark silhouette rimmed in its rarity's light... */
+/* The item rises out of the dark as a silhouette rimmed in its rarity's light, one art pixel at a time... */
 .rareItem {
   position: relative;
   margin: 6px 0 4px;
   filter: brightness(0) drop-shadow(0 0 3px #fff) drop-shadow(0 0 22px var(--c));
-  animation: rise var(--appear, 650ms) cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation: rise var(--appear, 650ms) steps(8) both;
 }
 @keyframes rise {
-  from { transform: scale(0.3) translateY(80px); opacity: 0; }
+  from { transform: translateY(calc(8 * var(--px))); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
-/* ...then bursts into color, shining. */
+/* ...then bursts into color with a flash, and bobs. */
 .rareLit {
   filter: drop-shadow(0 0 46px var(--c));
-  animation: litPop 460ms cubic-bezier(0.34, 1.7, 0.5, 1) both, float 2.4s ease-in-out 700ms infinite;
+  animation: litFlash 360ms steps(3) both, float 1.6s steps(1) 700ms infinite;
 }
-@keyframes litPop {
-  0% { transform: scale(1.3); }
-  100% { transform: scale(1); }
+@keyframes litFlash {
+  0% { filter: brightness(2.6) drop-shadow(0 0 46px var(--c)); }
+  100% { filter: drop-shadow(0 0 46px var(--c)); }
 }
 .glint {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border-radius: 60px;
   pointer-events: none;
 }
 .glint::after {
   content: '';
   position: absolute;
-  top: -30%;
-  bottom: -30%;
+  top: 0;
+  bottom: 0;
   left: 0;
-  width: 28%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  transform: translateX(-220%) skewX(-20deg);
-  animation: glint 1.7s ease-in-out 250ms infinite;
+  width: calc(4 * var(--px));
+  background: rgba(255, 255, 255, 0.45);
+  transform: translateX(calc(-5 * var(--px)));
+  animation: glint 1.7s linear 250ms infinite;
 }
 @keyframes glint {
-  0% { transform: translateX(-220%) skewX(-20deg); }
-  55%, 100% { transform: translateX(480%) skewX(-20deg); }
+  0% { transform: translateX(calc(-5 * var(--px))); }
+  55%, 100% { transform: translateX(calc(35 * var(--px))); }
 }
 .sparkle {
   position: absolute;
-  width: 34px;
-  height: 34px;
-  margin: -17px 0 0 -17px;
-  background: #fff;
-  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  opacity: 0;
   filter: drop-shadow(0 0 6px var(--c));
-  animation: twinkle 1.1s ease-in-out infinite both;
+  animation: twinkle 1.1s steps(1) infinite both;
 }
 @keyframes twinkle {
-  0%, 100% { transform: scale(0) rotate(0deg); }
-  50% { transform: scale(1) rotate(45deg); }
+  0%, 100% { opacity: 0; }
+  30%, 70% { opacity: 1; }
 }
 /* The counter: its plate takes each tier's colors as the number climbs past their odds. */
 .rareOdds {
-  animation: oddsIn 380ms cubic-bezier(0.34, 1.7, 0.5, 1) both;
+  animation: oddsIn 300ms steps(3) both;
   transition: box-shadow 200ms;
 }
 .rareOdds b {
@@ -469,12 +381,13 @@
   0% { transform: scale(1.35); }
   100% { transform: scale(1); }
 }
+/* The real odds land: the plate drops into place with a flash. */
 .oddsLanded {
-  animation: slamIn 560ms cubic-bezier(0.2, 1.8, 0.4, 1) both, oddsBeat 0.8s ease-in-out 1s infinite;
+  animation: slamIn 360ms steps(4) both, oddsBeat 0.8s steps(2) 1s infinite;
 }
 @keyframes slamIn {
-  0% { transform: scale(2.1) rotate(-10deg); }
-  100% { transform: scale(1) rotate(-3deg); }
+  0% { transform: translateY(calc(-4 * var(--px))); filter: brightness(2.2); }
+  100% { transform: none; filter: none; }
 }
 .forYou {
   font-family: var(--font-display);
@@ -484,31 +397,28 @@
   paint-order: stroke fill;
   animation: fadeUp 400ms ease-out 300ms both;
 }
+/* A shock wave: a one-pixel square ring growing out from the item. */
 .shock {
   position: absolute;
-  left: 50%;
-  top: 40%;
-  width: 110px;
-  height: 110px;
-  margin: -55px 0 0 -55px;
-  border-radius: 50%;
-  border: 16px solid color-mix(in srgb, var(--c) 70%, #fff);
+  left: 540px;
+  top: 768px;
+  border: var(--px) solid color-mix(in srgb, var(--c) 70%, #fff);
   pointer-events: none;
-  animation: shock 720ms ease-out forwards;
+  animation: shock 720ms steps(16) forwards;
 }
 @keyframes shock {
-  from { transform: scale(0.2); opacity: 1; }
-  to { transform: scale(14); opacity: 0; }
+  from { width: 108px; height: 108px; margin: -54px 0 0 -54px; opacity: 1; }
+  to { width: 1512px; height: 1512px; margin: -756px 0 0 -756px; opacity: 0; }
 }
 .rare[data-phase='landed']:not([data-calm]) .center {
   animation: quake 460ms steps(7) 1;
 }
 @keyframes quake {
   0% { transform: translate(0, 0); }
-  20% { transform: translate(-16px, 7px); }
-  40% { transform: translate(13px, -9px); }
-  60% { transform: translate(-9px, 5px); }
-  80% { transform: translate(6px, -3px); }
+  20% { transform: translate(-18px, 9px); }
+  40% { transform: translate(18px, -9px); }
+  60% { transform: translate(-9px, 9px); }
+  80% { transform: translate(9px, -9px); }
   100% { transform: none; }
 }
 /* White builds up as the item finishes rising, then the bloom fades (unless Reduce flashing is on). */
@@ -567,7 +477,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: calc(2 * var(--px));
   padding: 0 40px;
   text-align: center;
   margin-top: -120px;
@@ -575,7 +485,7 @@
 .haulAmount {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: calc(2 * var(--px));
   font-family: var(--font-display);
   font-size: 96px;
   line-height: 1;
@@ -583,10 +493,10 @@
   -webkit-text-stroke: 12px var(--ink);
   paint-order: stroke fill;
   text-shadow: 0 8px 0 var(--ink);
-  animation: amountIn 520ms cubic-bezier(0.34, 1.7, 0.5, 1) 150ms both;
+  animation: amountIn 360ms steps(4) 150ms both;
 }
 @keyframes amountIn {
-  from { transform: scale(0.3); opacity: 0; }
+  from { transform: translateY(calc(4 * var(--px))); opacity: 0; filter: brightness(2); }
 }
 .haulSub {
   font-family: var(--font-display);
@@ -601,13 +511,12 @@
   color: #d8dcf5;
   animation: fadeUp 400ms ease-out 700ms both;
 }
+/* A coin flying out of the burst and into the gold counter: it only moves (no growing or shrinking). */
 .haulCoin {
   position: absolute;
-  left: 50%;
-  top: 42%;
-  width: 56px;
-  height: 56px;
-  margin: -28px 0 0 -28px;
+  left: 540px;
+  top: 806px;
+  margin: -36px 0 0 -36px;
   opacity: 0;
   animation-name: coinFly;
   animation-timing-function: cubic-bezier(0.3, 0, 0.6, 1);
@@ -615,10 +524,10 @@
   pointer-events: none;
 }
 @keyframes coinFly {
-  0% { transform: translate(0, 0) scale(0.2); opacity: 0; }
+  0% { transform: translate(0, 0); opacity: 0; }
   10% { opacity: 1; }
-  38% { transform: translate(var(--bx), var(--by)) scale(1.1); }
-  100% { transform: translate(var(--tx), var(--ty)) scale(0.5); opacity: 0.85; }
+  38% { transform: translate(var(--bx), var(--by)); }
+  100% { transform: translate(var(--tx), var(--ty)); opacity: 0.85; }
 }
 
 /* ------------------------------------------------------------ toasts */
@@ -631,29 +540,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: calc(3 * var(--px));
   pointer-events: none;
 }
 .toast {
   max-width: 900px;
-  padding: 16px 34px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
+  padding: calc(2 * var(--px)) calc(4 * var(--px));
   background: var(--cream);
-  box-shadow: 0 7px 0 var(--ink);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
   color: var(--ink);
   font-size: 32px;
   text-align: center;
-  animation: toastIn 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: toastIn 240ms steps(3);
 }
 @keyframes toastIn {
-  from { transform: translateY(-40px) scale(0.8); opacity: 0; }
+  from { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
 }
 .toastGood {
-  background: linear-gradient(180deg, #e9ffd9, #c6f5a6);
+  background: #d9f9bf;
 }
 .toastWarn {
-  background: linear-gradient(180deg, #fff0e0, #ffd0b0);
+  background: #ffe0c8;
 }
 
 /* ------------------------------------------------------------ mock ad */
@@ -665,7 +572,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: calc(2 * var(--px));
   background: rgba(0, 0, 0, 0.88);
   font-family: var(--font-display);
   font-size: 52px;
@@ -679,9 +586,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .rays,
-  .confetti,
-  .chargeBin,
-  .chargeLid {
+  .confetti span {
     animation: none;
   }
 }
@@ -693,22 +598,24 @@
   z-index: 80;
   pointer-events: none;
 }
+/* The item following the finger: upright, real size, 486 px wide so the tile sits on whole pixels. */
 .ghost {
   position: absolute;
+  width: calc(54 * var(--px));
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  transform: translate(-50%, -62%) rotate(-6deg) scale(1.12);
+  gap: calc(3 * var(--px));
   filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.45));
 }
 .dragHint {
-  padding: 6px 20px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
+  height: calc(5 * var(--px));
+  padding: 0 calc(2 * var(--px));
   background: var(--cream);
+  box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
   font-size: 28px;
+  line-height: calc(5 * var(--px));
   color: var(--ink);
   white-space: nowrap;
 }

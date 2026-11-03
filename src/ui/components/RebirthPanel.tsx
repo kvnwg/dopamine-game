@@ -32,7 +32,7 @@ function Reward({ icon, color, label, from, to }: { icon: ReactNode; color: stri
 function Req({ label, have, need, done }: { label: string; have: number; need: number; done: boolean }) {
   return (
     <div className={s.req}>
-      {done ? <CheckIcon size={52} /> : <span className={s.reqDot} />}
+      {done ? <CheckIcon size="md" /> : <span className={s.reqDot} />}
       <div className={s.reqBody}>
         <span className={s.reqLabel}>{label}</span>
         <div className={s.reqTrack}>
@@ -64,7 +64,7 @@ export function RebirthPanel() {
   return (
     <div className={`${s.panel} ${s.rbPanel}`}>
       <div className={`${s.rbHero} card`}>
-        <RebirthIcon size={96} className={s.rbIcon} />
+        <RebirthIcon size="nav" className={s.rbIcon} />
         <div className={s.rbTitles}>
           <Chunky text={t('rebirth.title')} size={56} grad="purple" />
           <span className={s.rbCount}>{t('rebirth.count', { n })}</span>
@@ -79,16 +79,16 @@ export function RebirthPanel() {
       <div className={`${s.rbCard} card`}>
         <span className={s.cardLabel}>{t('rebirth.rewards')}</span>
         <div className={s.rbRewards}>
-          <Reward icon={<CloverIcon size={60} />} color="#46d36b" label={t('rebirth.rLuck')} from={`×${rebirthLuckMult(n).toFixed(2)}`} to={`×${rebirthLuckMult(n + 1).toFixed(2)}`} />
-          <Reward icon={<CoinIcon size={56} />} color="#ffc233" label={t('rebirth.rGold')} from={`×${rebirthGoldMult(n).toFixed(1)}`} to={`×${rebirthGoldMult(n + 1).toFixed(1)}`} />
-          <Reward icon={<SwordIcon size={56} />} color="#ef5350" label={t('rebirth.rPower')} from={`+${n * BAL.rebirth.statPctPer}%`} to={`+${(n + 1) * BAL.rebirth.statPctPer}%`} />
-          <Reward icon={<ArrowUpIcon size={54} />} color="#42a5f5" label={t('rebirth.rCost')} from={discount(n) > 0 ? `-${discount(n)}%` : '0%'} to={`-${discount(n + 1)}%`} />
+          <Reward icon={<CloverIcon size="md" />} color="#46d36b" label={t('rebirth.rLuck')} from={`×${rebirthLuckMult(n).toFixed(2)}`} to={`×${rebirthLuckMult(n + 1).toFixed(2)}`} />
+          <Reward icon={<CoinIcon size="md" />} color="#ffc233" label={t('rebirth.rGold')} from={`×${rebirthGoldMult(n).toFixed(1)}`} to={`×${rebirthGoldMult(n + 1).toFixed(1)}`} />
+          <Reward icon={<SwordIcon size="md" />} color="#ef5350" label={t('rebirth.rPower')} from={`+${n * BAL.rebirth.statPctPer}%`} to={`+${(n + 1) * BAL.rebirth.statPctPer}%`} />
+          <Reward icon={<ArrowUpIcon size="md" />} color="#42a5f5" label={t('rebirth.rCost')} from={discount(n) > 0 ? `-${discount(n)}%` : '0%'} to={`-${discount(n + 1)}%`} />
         </div>
         <span className={s.rbNote}>{t('rebirth.resets')}</span>
         <span className={s.rbNote}>{t('rebirth.keeps')}</span>
       </div>
       <button className={`btn ${ready ? 'gold breathe' : 'gray'} ${s.rbGo}`} disabled={!ready} onClick={go}>
-        <RebirthIcon size={64} />
+        <RebirthIcon size="md" />
         {ready ? (armed ? t('rebirth.confirm') : t('rebirth.go')) : t('rebirth.notYet')}
       </button>
     </div>

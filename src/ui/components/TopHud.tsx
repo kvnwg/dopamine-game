@@ -17,7 +17,7 @@ export function TopHud() {
   return (
     <div className={s.hud}>
       <button className={s.gearBtn} aria-label={t('hud.settings')} onClick={() => useUi.getState().openPopup('settings')}>
-        <GearIcon size={56} />
+        <GearIcon size="md" />
       </button>
       <div className={s.levelPill}>
         <span className={s.lvBadge}>{t('hud.level', { level })}</span>
@@ -30,11 +30,11 @@ export function TopHud() {
       <div className={s.rightCol}>
         <div className={s.row}>
           <div key={pulse} className={`${s.money} ${pulse ? s.moneyPulse : ''}`} data-gold-target>
-            <CoinIcon size={62} className={s.moneyIcon} />
+            <CoinIcon size="md" className={s.moneyIcon} />
             <span>{formatNumber(coins)}</span>
           </div>
           <div className={s.money}>
-            <GemIcon size={58} className={s.moneyIcon} />
+            <GemIcon size="md" className={s.moneyIcon} />
             <span>{formatNumber(gems)}</span>
           </div>
         </div>

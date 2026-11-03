@@ -8,15 +8,16 @@
  */
 import Phaser from 'phaser';
 import { DATA } from '../data';
-import { blank, bounds, downsample2, fromRows, setPx, type PixelBuf } from './pixel/buf';
+import { blank, bounds, downsample2, fromRows, padEdges, rgb, setPx, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
 import { frameBuf, type AnimSheet } from './pixel/indexed';
-import { HERO_POINTS, HERO_SHEET, frameOffsets, gearSprite, heroFrame, weaponBuf, type BodyGear, type SpriteSlot } from './pixel/hero';
+import { HERO_POINTS, HERO_SHEET, clothesOf, frameOffsets, gearSprite, handOffsets, heroFrame, weaponBuf, type BodyGear, type SpriteSlot } from './pixel/hero';
 import { ENEMY_ART, recolorEnemy, type EnemyShape } from './pixel/enemies';
 import { FOE_SHEETS, sheetFrames } from './pixel/foes';
 import { FX_SHEETS, type FxName } from './pixel/packs/fx';
 import { CHARACTER_OUTLINE } from './pixel/palette';
 import { FX } from './pixel/ui';
+import { VIEW_MARGIN } from './pixel/sceneryTypes';
 import { worldArt, type SceneryKeys } from './worldLook';
 
 const S = HERO_SHEET;
@@ -26,12 +27,10 @@ const S = HERO_SHEET;
  * about the frame's center line. His head and feet are symmetric about it, so they keep their
  * columns (the feet origin doesn't move) while his face, paws and tail swap sides. The weapon is the
  * exception: its art and swing already point right, so it is never mirrored; it sits in his front paw
- * (HERO_POINTS.hand, mirrored).
+ * (HERO_POINTS.hand, mirrored) and follows that paw from frame to frame (heroFrameOffset).
  */
 const flipCol = (x: number) => S.w - 1 - x;
 const IDLE = S.anims.idle?.frames ?? [0];
-/** How far his head rises above the reference pose during the idle loop (art px). */
-const idleLift = () => Math.max(0, ...IDLE.map((f) => -(frameOffsets()[f]?.dy ?? 0)));
 /** The hero frame in battle pixels: feet (ground contact), the weapon paw, the top of the head. */
 export const HERO = {
   w: S.w * P,
@@ -159,13 +158,22 @@ function mirror(b: PixelBuf): PixelBuf {
 // ------------------------------------------------------------------ hero
 
 let heroGearSig = '';
+/** The clothes painted into the body frames now: a pack's bag tucks behind them. */
+let clothes: BodyGear = {};
+let clothesSig = '';
+
+const SIG_SLOTS = ['jacket', 'gloves', 'sneakers', 'bling', 'hat', 'mask', 'shield', 'backpack'] as const;
+const gearSig = (g: BodyGear) => SIG_SLOTS.map((s) => g[s] ?? '').join('|');
 
 /**
  * The hero's body texture ('hero', with animations 'hero:idle' etc.), mirrored to face the enemies and
- * repainted when clothes change.
+ * repainted when clothes change. Hats, masks, shields and packs are drawn by gearTex, unless `gear`
+ * names them: then they're painted into the body frames too (and gearTex must not be used for them).
  */
 export function heroTex(scene: Phaser.Scene, gear: BodyGear = {}): AnimInfo {
-  const sig = `${gear.jacket ?? ''}|${gear.gloves ?? ''}|${gear.sneakers ?? ''}|${gear.bling ?? ''}`;
+  const sig = gearSig(gear);
+  clothes = clothesOf(gear);
+  clothesSig = gearSig(clothes);
   const bufs = () => S.frames.map((_, f) => mirror(heroFrame(f, gear)));
   const existing = info.get('hero') as AnimInfo | undefined;
   if (!existing || !scene.textures.exists('hero')) {
@@ -182,27 +190,108 @@ export function heroTex(scene: Phaser.Scene, gear: BodyGear = {}): AnimInfo {
   return existing;
 }
 
-/** Each (mirrored) hero frame's gear offset in screen pixels, and whether gear shows on it. */
+/**
+ * Worn hats, masks, shields and packs are fitted to every frame (they're redrawn for each pose, not
+ * just moved), so each one is a live texture: heroFrameOffset, which the scene calls with the frame it
+ * shows, repaints them for that frame. One per slot: the item the scene asked for last.
+ */
+interface LiveGear {
+  key: string;
+  slot: SpriteSlot;
+  id: string;
+  textures: Phaser.Textures.TextureManager;
+  /** The canvas's top-left in mirrored frame pixels, with each frame's paw offset undone. */
+  x0: number;
+  y0: number;
+  /** What the canvas shows (frame and clothes), so it's only repainted when that changes. */
+  shown: string;
+}
+
+const liveGear = new Map<SpriteSlot, LiveGear>();
+let heroShown = 0;
+
+/** The gear container's offset for a frame in art pixels (mirrored): it follows the front paw, which holds the weapon. */
+function pawShift(frame: number): { x: number; y: number } {
+  const o = handOffsets()[frame];
+  return o?.head ? { x: -o.dx, y: o.dy } : { x: 0, y: 0 };
+}
+
+/** Repaints a live gear texture for a frame (and the clothes worn now), if it shows something else. */
+function paintGear(g: LiveGear, frame: number): void {
+  const want = `${frame}|${clothesSig}`;
+  if (g.shown === want || !g.textures.exists(g.key)) return;
+  g.shown = want;
+  const tex = g.textures.get(g.key) as Phaser.Textures.CanvasTexture;
+  const canvas = tex.getSourceImage() as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const sprite = frameOffsets()[frame]?.head ? gearSprite(g.slot, g.id, frame, clothes) : null;
+  if (sprite) {
+    const b = sprite.buf;
+    const shift = pawShift(frame);
+    for (let y = 0; y < b.h; y++) {
+      for (let x = 0; x < b.w; x++) {
+        const i = (y * b.w + x) * 4;
+        if (!b.px[i + 3]) continue;
+        ctx.fillStyle = `rgb(${b.px[i]},${b.px[i + 1]},${b.px[i + 2]})`;
+        ctx.fillRect((flipCol(x) - shift.x - g.x0) * P, (y - shift.y - g.y0) * P, P, P);
+      }
+    }
+  }
+  tex.refresh();
+}
+
+/**
+ * Each (mirrored) hero frame's gear offset in screen pixels, and whether gear shows on it. The gear and
+ * the weapon follow his front paw; worn gear is repainted for the frame (see LiveGear).
+ */
 export function heroFrameOffset(frame: number): { x: number; y: number; head: boolean } {
-  const o = frameOffsets()[frame] ?? { dx: 0, dy: 0, head: true };
+  if (frame !== heroShown) {
+    heroShown = frame;
+    for (const g of liveGear.values()) paintGear(g, frame);
+  }
+  const o = handOffsets()[frame] ?? { dx: 0, dy: 0, head: true };
   // The offsets are measured on the art as drawn; mirrored, a shift to the left is a shift to the right.
   return { x: -o.dx * P, y: o.dy * P, head: o.head };
 }
 
 /**
  * A worn hat / mask / shield / backpack, mirrored with the body and positioned relative to the hero's
- * feet, or null. `top` is how high its art reaches above the ground during his idle loop (screen px).
+ * feet (the same origin as the body), or null. It's fitted to the frame showing and repainted as the
+ * frames change. `top` is how high its art reaches above the ground during his idle loop (screen px).
  */
 export function gearTex(scene: Phaser.Scene, slot: SpriteSlot, baseId: string): (SpriteInfo & { behind: boolean; top: number }) | null {
-  const g = gearSprite(slot, baseId);
-  if (!g) return null;
-  // Mirrored about the frame's center line like the body: the icon flips and its left edge moves.
-  const x = S.w - g.x - g.buf.w;
-  // Origin at the hero's feet point so the image can sit at (0, 0) of the hero rig.
-  const origin = { x: (S.anchor.x + 0.5 - x) * P, y: (S.anchor.y + 1 - g.y) * P };
+  if (!gearSprite(slot, baseId)) return null;
   const key = `gear_${slot}_${baseId}`;
-  const i = lazy(scene, key, () => ({ canvas: toCanvas(mirror(g.buf)), origin }));
-  return { ...i, behind: g.behind, top: (S.anchor.y + 1 - g.y - bounds(g.buf).y + idleLift()) * P };
+  // The canvas covers the item in every frame, each frame's paw offset undone.
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  let top = Infinity;
+  S.frames.forEach((_, f) => {
+    if (!frameOffsets()[f].head) return;
+    const b = bounds(gearSprite(slot, baseId, f)!.buf);
+    if (!b.w) return;
+    const shift = pawShift(f);
+    x0 = Math.min(x0, flipCol(b.x + b.w - 1) - shift.x);
+    x1 = Math.max(x1, flipCol(b.x) - shift.x);
+    y0 = Math.min(y0, b.y - shift.y);
+    y1 = Math.max(y1, b.y + b.h - 1 - shift.y);
+    if (IDLE.includes(f)) top = Math.min(top, b.y);
+  });
+  if (!Number.isFinite(x0)) return null;
+  const i = lazy(scene, key, () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = (x1 - x0 + 1) * P;
+    canvas.height = (y1 - y0 + 1) * P;
+    // Origin at the hero's feet point (the body's origin), so the image can sit at (0, 0) of the hero rig.
+    return { canvas, origin: { x: (S.anchor.x + 0.5 - x0) * P, y: (S.anchor.y + 1 - y0) * P } };
+  });
+  const g: LiveGear = { key, slot, id: baseId, textures: scene.textures, x0, y0, shown: '' };
+  liveGear.set(slot, g);
+  paintGear(g, heroShown);
+  return { ...i, behind: false, top: Number.isFinite(top) ? (S.anchor.y + 1 - top) * P : 0 };
 }
 
 /** A weapon with its grip as origin (empty paw: an invisible 1px texture) and how far its art leans. */
@@ -232,8 +321,10 @@ export type FoeTex = AnimInfo & {
 const foeExtents = new Map<string, { artL: number; artR: number; reach: number }>();
 
 /**
- * An enemy in a world's colors, facing left toward the hero, with its feet as origin. `front` is
- * how far the sprite reaches left of its feet, `back` how far right, `height` how tall its art is.
+ * An enemy in a world's colors, facing left toward the hero, with its feet as origin: the bottom-left
+ * corner of its anchor pixel, so a foe standing on a whole art pixel has every pixel on the grid.
+ * `front` is how far the sprite reaches left of its feet, `back` how far right, `height` how tall its
+ * art is.
  */
 export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): FoeTex {
   const ph = DATA.assets.placeholders.enemies[enemyId] ?? { shape: 'rat', color: '#888888', accent: '#bbbbbb', size: 110 };
@@ -244,6 +335,8 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
   const key = `foe_${world}_${enemyId}`;
   const look = FOE_SHEETS[ph.shape];
   let i: AnimInfo;
+  /** The anchor column as shown (after facing it left). */
+  let ax: number;
   let artTop: number;
   /** The frames it stands and walks in (for its extents). */
   let poses: PixelBuf[];
@@ -252,6 +345,7 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
     const flip = s.faces === 'right';
     const frames = sheetFrames(look, color, accent).map((b) => (flip ? mirror(b) : b));
     i = registerSheet(scene, key, s, frames, flip);
+    ax = flip ? s.w - 1 - s.anchor.x : s.anchor.x;
     artTop = bounds(frames[s.anims.idle?.frames[0] ?? 0]).y;
     const standing = [...(s.anims.idle?.frames ?? [0]), ...(s.anims.walk?.frames ?? [])];
     poses = standing.map((f) => frames[f]).filter((b) => !!b);
@@ -260,15 +354,16 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
     const art = ENEMY_ART[shape] ?? ENEMY_ART.rat;
     const b = recolorEnemy(shape in ENEMY_ART ? shape : 'rat', color, accent);
     i = registerSheet(scene, key, { w: b.w, h: b.h, anchor: art.feet, anims: { idle: { fps: 1, loop: true, frames: [0] } } }, [b], false);
+    ax = art.feet.x;
     artTop = bounds(b).y;
     poses = [b];
   }
-  const front = i.ox * i.w;
+  const ox = ax / (i.w / P);
+  const front = ox * i.w;
   const height = i.oy * i.h - artTop * P;
   let ext = foeExtents.get(key);
   if (!ext) {
-    // Sheet columns relative to the feet origin (the middle of the anchor column), in art pixels.
-    const ox = (i.ox * i.w) / P;
+    // Sheet columns relative to the feet origin (the left edge of the anchor column), in art pixels.
     let x0 = Infinity;
     let x1 = -Infinity;
     let top = Infinity;
@@ -280,17 +375,20 @@ export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): F
       top = Math.min(top, bb.y);
     }
     ext = Number.isFinite(top)
-      ? { artL: (x0 - ox) * P, artR: (x1 - ox) * P, reach: i.oy * i.h - top * P }
-      : { artL: -front, artR: (1 - i.ox) * i.w, reach: height };
+      ? { artL: (x0 - ax) * P, artR: (x1 - ax) * P, reach: i.oy * i.h - top * P }
+      : { artL: -front, artR: (1 - ox) * i.w, reach: height };
     foeExtents.set(key, ext);
   }
-  return { ...i, front, back: (1 - i.ox) * i.w, height, animated: !!look && !look.still, ...ext };
+  return { ...i, ox, front, back: (1 - ox) * i.w, height, animated: !!look && !look.still, ...ext };
 }
 
 // ------------------------------------------------------------------ worlds
 
 export interface WorldKeys extends SceneryKeys {
-  /** The sky (1 texel per art pixel: draw with setScale(P)). */
+  /**
+   * The sky (1 texel per art pixel: draw with setScale(P)), VIEW_MARGIN art pixels bigger than the
+   * view on every side (its edges repeated) so a screen shake never shows an edge; the vignette too.
+   */
   sky: string;
   /** Cloud strips (tiling, pre-scaled), back to front, with their view row and drift (art px/s). */
   clouds: Array<{ key: string; y: number; speed: number }>;
@@ -311,8 +409,8 @@ export function worldTextures(scene: Phaser.Scene, world: number): WorldKeys {
     vignette: `${w}vignette`,
   };
   const top = { x: 0, y: 0 };
-  if (!scene.textures.exists(keys.sky)) put(scene, keys.sky, toCanvas(art.sky, 1), top);
-  if (!scene.textures.exists(keys.vignette)) put(scene, keys.vignette, toCanvas(art.vignette, 1), top);
+  if (!scene.textures.exists(keys.sky)) put(scene, keys.sky, toCanvas(padEdges(art.sky, VIEW_MARGIN), 1), top);
+  if (!scene.textures.exists(keys.vignette)) put(scene, keys.vignette, toCanvas(padEdges(art.vignette, VIEW_MARGIN), 1), top);
   if (keys.glow && art.glow && !scene.textures.exists(keys.glow.key)) put(scene, keys.glow.key, toCanvas(art.glow.buf, 1), top);
   art.clouds.forEach((c, i) => {
     if (!scene.textures.exists(keys.clouds[i].key)) put(scene, keys.clouds[i].key, toCanvas(c.buf), top);
@@ -356,15 +454,12 @@ export function fxTex(scene: Phaser.Scene, name: FxName): (AnimInfo & { anim: st
   if (!s) return null;
   const i = registerSheet(scene, `fx:${name}`, s, s.frames.map((_, f) => frameBuf(s, f)), false);
   const first = Object.keys(s.anims)[0];
-  // An effect's anchor is its center, not a ground line: put the origin on the anchor pixel's middle.
-  return { ...i, oy: (s.anchor.y + 0.5) / s.h, anim: `fx:${name}:${first}` };
+  // An effect's anchor is its center, not a ground line: the origin is the anchor pixel's top-left
+  // corner, so an effect played at a whole art pixel lands on the grid.
+  return { ...i, ox: s.anchor.x / s.w, oy: s.anchor.y / s.h, anim: `fx:${name}:${first}` };
 }
 
 // ------------------------------------------------------------------ small effects
-
-/** Tiny pixel particles: a plus-shaped spark, a dust square and confetti bits, in white (tinted at runtime). */
-const SPARK = ['.W.', 'WWW', '.W.'];
-const DUST = ['WW', 'WW'];
 
 /**
  * HP bar badges, outlined in the characters' brown ('o'): a heart at the end of the hero's bar and a
@@ -390,33 +485,109 @@ const BAR_SKULL = [
   '...ooo...',
 ];
 
-/** A sprite's buffer with its origin at its tight bounds' center (FX art can be any size). */
+/**
+ * A sprite's buffer with its origin on the whole art pixel nearest its tight bounds' center (FX art
+ * can be any size), so it sits on the grid wherever it's placed at a whole art pixel.
+ */
 function centered(b: PixelBuf): { canvas: HTMLCanvasElement; origin: { x: number; y: number } } {
   const bb = bounds(b);
-  return { canvas: toCanvas(b), origin: { x: (bb.x + bb.w / 2) * P, y: (bb.y + bb.h / 2) * P } };
+  return { canvas: toCanvas(b), origin: { x: (bb.x + Math.floor(bb.w / 2)) * P, y: (bb.y + Math.floor(bb.h / 2)) * P } };
 }
 
-export function generateTextures(scene: Phaser.Scene, w: number, h: number): void {
-  heroTex(scene);
-  put(scene, 'px_spark', toCanvas(fromRows(SPARK)));
-  put(scene, 'px_dust', toCanvas(fromRows(DUST)));
-  const confetti = ['#FF5A7A', '#FFD54F', '#5BD23A', '#4FC3F7'];
-  confetti.forEach((c, k) => {
-    const b = blank(2, 1);
-    setPx(b, 0, 0, c);
-    setPx(b, 1, 0, c);
-    put(scene, `fx_conf${k}`, toCanvas(b));
+/** A coin turning: full face, narrower, edge on, narrower (its columns sampled nearest-neighbor). */
+function coinFrames(): PixelBuf[] {
+  const coin = downsample2(fromRows(FX.coin));
+  return [coin.w, Math.max(1, coin.w - 2), 1, Math.max(1, coin.w - 2)].map((w) => {
+    const out = blank(coin.w, coin.h);
+    const x0 = Math.floor((coin.w - w) / 2);
+    for (let y = 0; y < coin.h; y++) {
+      for (let x = 0; x < w; x++) {
+        const sx = Math.min(coin.w - 1, Math.floor(((x + 0.5) * coin.w) / w));
+        const si = (y * coin.w + sx) * 4;
+        out.px.set(coin.px.subarray(si, si + 4), (y * coin.w + x0 + x) * 4);
+      }
+    }
+    return out;
   });
+}
+
+/** The spinning coin (`fx_coin`, animation `fx_coin:spin`; 1x, draw with setScale(P)) and its center pixel. */
+export function coinTex(scene: Phaser.Scene): AnimInfo & { cx: number; cy: number } {
+  const frames = coinFrames();
+  const w = frames[0].w;
+  const h = frames[0].h;
+  const cx = Math.floor(w / 2);
+  const cy = Math.floor(h / 2);
+  const i = registerSheet(scene, 'fx_coin', { w, h, anchor: { x: cx, y: cy }, anims: { spin: { fps: 10, loop: true, frames: [0, 1, 2, 3] } } }, frames, false);
+  return { ...i, cx, cy };
+}
+
+/**
+ * A character's shadow on the ground: a flat pixel ellipse `w` art pixels wide and 2 rows tall (the
+ * lower row narrower), in ink. Draw it with some transparency; its top row is the feet row.
+ */
+export function shadowTex(scene: Phaser.Scene, w: number): { key: string; w: number } {
+  const width = Math.max(4, Math.round(w));
+  const key = `shadow_${width}`;
+  if (!scene.textures.exists(key)) {
+    const b = blank(width, 2);
+    for (let x = 1; x < width - 1; x++) setPx(b, x, 0, CHARACTER_OUTLINE);
+    for (let x = 2; x < width - 2; x++) setPx(b, x, 1, CHARACTER_OUTLINE);
+    scene.textures.addCanvas(key, toCanvas(b));
+  }
+  return { key, w: width };
+}
+
+/** The Legendary aura's half-width and half-height (art px) and how far its middle is above the feet row. */
+export const AURA = { rx: 12, ry: 14, up: 8 } as const;
+
+/**
+ * The glow of Legendary-or-better gear behind the hero: three stepped rings of the rarity's color
+ * (faint outside, stronger in), each a flat semi-transparent color, on the art grid. Frame 1 is a
+ * pixel bigger all round (the glow breathes by switching frames). Its middle pixel is (rx, ry).
+ */
+export function auraTex(scene: Phaser.Scene, color: string, frame: 0 | 1): { key: string; rx: number; ry: number } {
+  const rx = AURA.rx + frame;
+  const ry = AURA.ry + frame;
+  const key = `aura_${color}_${frame}`;
+  if (!scene.textures.exists(key)) {
+    const b = blank(rx * 2 + 1, ry * 2 + 1);
+    const [r, g, bl] = rgb(color);
+    const alphas = [0, 0.1, 0.17, 0.25];
+    for (let y = 0; y < b.h; y++) {
+      for (let x = 0; x < b.w; x++) {
+        const d = ((x - rx) / (rx + 0.5)) ** 2 + ((y - ry) / (ry + 0.5)) ** 2;
+        const lv = d <= 0.3 ? 3 : d <= 0.62 ? 2 : d <= 1 ? 1 : 0;
+        if (!lv) continue;
+        const i = (y * b.w + x) * 4;
+        b.px[i] = r;
+        b.px[i + 1] = g;
+        b.px[i + 2] = bl;
+        b.px[i + 3] = Math.round(alphas[lv] * 255);
+      }
+    }
+    scene.textures.addCanvas(key, toCanvas(b));
+  }
+  return { key, rx, ry };
+}
+
+export function generateTextures(scene: Phaser.Scene): void {
+  heroTex(scene);
+  coinTex(scene);
   // Still effects drawn for the old, finer grid: used at half resolution.
-  for (const [key, rows] of [['fx_impact', FX.impact], ['fx_puff', FX.puff], ['fx_coin', FX.coin], ['fx_bag', FX.bag]] as const) {
+  for (const [key, rows] of [['fx_impact', FX.impact], ['fx_puff', FX.puff], ['fx_bag', FX.bag]] as const) {
     const c = centered(downsample2(fromRows(rows)));
     put(scene, key, c.canvas, c.origin);
   }
   const top = { x: 0, y: 0 };
   put(scene, 'bar_heart', toCanvas(fromRows(BAR_HEART, { o: CHARACTER_OUTLINE })), top);
   put(scene, 'bar_skull', toCanvas(fromRows(BAR_SKULL, { o: CHARACTER_OUTLINE })), top);
-  void w;
-  void h;
+}
+
+/** A still texture's origin (0..1 each way), as registered: its center pixel's corner for the small effects. */
+export function texOrigin(key: string): { x: number; y: number } {
+  const i = info.get(key);
+  return i ? { x: i.ox, y: i.oy } : { x: 0.5, y: 0.5 };
 }
 
 export function texSize(key: string): { w: number; h: number } {

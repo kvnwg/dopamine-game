@@ -7,26 +7,53 @@
  * The items rolling past are a tease, not a sample: they lean much rarer than the real odds, with
  * a near miss next to most results (BAL.feel.reels). Only the landed results come from the real
  * odds, which the Luck popup lists. Every spin is free; a paid spin must never get this tease.
+ *
+ * Pixel sizes: every cell shows its art at 16 x 16 x 9 px (144) under a one-line "1 in X" label; the
+ * strip only ever moves by whole stage px, and the reels' widths keep the art on whole pixels.
+ *
+ * Structure: .bank > .reels > .reel (one per reel) > .strip (moves) > .cell (one per item rolling past:
+ * .odds label + art), plus .curve (the drum's frame and shading) over each strip; .payline marks the
+ * result row across every reel. A cell's look comes from data-rarity / data-revealed.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { BAL, DATA, RARITIES, type Rarity } from '../../data';
 import { formatNumber, rarityAtLeast, rarityChances, rarityIndex, reelCount, type GameState, type Item } from '../../core';
 import { gameStore, useGame } from '../../app/store';
-import { itemArtUrl } from '../../render/icons';
+import { itemArt, uiBitArt, type Art } from '../../render/icons';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
+import { PixelArt } from './PixelArt';
 import s from './reel.module.css';
 
-/** Cell height in stage px. */
-const CELL = 156;
-/** Reel bank width by reel count (1 to 5 reels). */
-const BANK_W = [300, 400, 480, 520, 540];
-const GAP = 8;
+/** Cell height in stage px (20 art px): a 27 px "1 in X" line over the 144 px art. */
+export const CELL = 180;
+
+/**
+ * Width of each reel (stage px) by reel count: wider while there are few, and always the art (144)
+ * plus whole art pixels on each side. Three reels share the card with the info column, so they are
+ * the narrowest: one pixel of drum each side.
+ */
+export function reelWidth(n: number): number {
+  return [216, 198, 162, 180, 180][Math.min(5, Math.max(1, n)) - 1];
+}
+
+/** Space between reels. */
+export function reelGap(n: number): number {
+  return n >= 4 ? 9 : 18;
+}
+
+/** The bank's frame around the reels (each side). */
+export const BANK_PAD = 18;
+
+/** The whole bank's width for `n` reels. */
+export function bankWidth(n: number): number {
+  return n * reelWidth(n) + (n - 1) * reelGap(n) + 2 * BANK_PAD;
+}
 
 interface Cell {
-  art: string;
+  art: Art;
   rarity: Rarity;
   odds: number;
   /** A real roll result (shown in color once landed), not a filler. */
@@ -93,11 +120,11 @@ function filler(seed: number, nearMiss: boolean): Cell {
   const base = DATA.items[Math.floor(hash(seed * 13 + 5) * DATA.items.length)];
   let odds = BASE_ODDS[rarity];
   if (rarityAtLeast(rarity, 'epic') && hash(seed * 17 + 9) < f.flairChance) odds = Math.round(odds * enchantFlair(hash(seed * 19 + 3)));
-  return { art: itemArtUrl(base.id), rarity, odds, real: false };
+  return { art: itemArt(base.id), rarity, odds, real: false };
 }
 
 function resultCell(item: Item, odds: number): Cell {
-  return { art: itemArtUrl(item.baseId), rarity: item.rarity, odds, real: true };
+  return { art: itemArt(item.baseId), rarity: item.rarity, odds, real: true };
 }
 
 /** Builds each reel's strip for a spin: the previous result at the bottom, fillers, the result, two more on top. */
@@ -143,7 +170,12 @@ function travel(k: number, x: number): number {
   return k * (1 - Math.pow(1 - x, 4)) + 0.2 * Math.sin(Math.PI * Math.pow(x, 8));
 }
 
-export function ReelBank() {
+/**
+ * The reels. `win` is the window's height in stage px (even, so the result row sits on whole pixels):
+ * the result row in the middle with part of the cells above and below. `wide` (info rows above and
+ * below the bank) moves the golden / lucky / turbo badges to the bank's bottom edge.
+ */
+export function ReelBank({ win, wide }: { win: number; wide?: boolean }) {
   const spin = useGame((g) => g.roll.current);
   const idleCount = useGame(reelCount);
   const calm = useGame((g) => g.settings.reduceMotion);
@@ -153,7 +185,7 @@ export function ReelBank() {
   const prevRef = useRef<(Cell | undefined)[]>([]);
   const stripRefs = useRef<(HTMLDivElement | null)[]>([]);
   const resultRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const winH = 3 * CELL - 34;
+  const winH = win;
 
   // A new spin: build fresh strips that start from the last results.
   const spinKey = spin ? spin.reels.map((r) => r.item.uid).join(',') : '';
@@ -192,7 +224,8 @@ export function ReelBank() {
         if (!node) return;
         const x = st.stopMs > 0 ? Math.min(1, el / st.stopMs) : 1;
         const p = calm ? (x >= 1 ? st.k : 0) : travel(st.k, x);
-        node.style.transform = `translate3d(0, ${winH / 2 + p * CELL}px, 0)`;
+        // Whole stage px only, so the art never lands between pixels.
+        node.style.transform = `translate3d(0, ${Math.round(winH / 2 + p * CELL)}px, 0)`;
         const idx = Math.round(p);
         if (idx !== r.lastIdx[i]) {
           r.lastIdx[i] = idx;
@@ -211,21 +244,18 @@ export function ReelBank() {
   }, [calm, winH]);
 
   const n = shown.strips.length;
-  const bankW = BANK_W[Math.min(BANK_W.length, n) - 1];
-  const reelW = (bankW - 24 - GAP * (n - 1)) / n;
-  const narrow = n >= 3;
-  const art = Math.min(112, reelW - (narrow ? 40 : 24));
-  const label = n === 1 ? 36 : n === 2 ? 32 : n === 3 ? 28 : 25;
-  const style = { width: bankW, ['--cell' as string]: `${CELL}px`, ['--art' as string]: `${art}px`, ['--label' as string]: `${label}px` } as CSSProperties;
+  const reelW = reelWidth(n);
+  const label = n === 1 ? 30 : n === 2 ? 28 : 26;
+  const style = { width: bankWidth(n), ['--cell' as string]: `${CELL}px`, ['--label' as string]: `${label}px` } as CSSProperties;
   return (
     <div
       className={s.bank}
       style={style}
-      data-narrow={narrow || undefined}
       data-charging={charging ? charging.item.rarity : undefined}
       data-golden={spin?.golden || undefined}
+      data-wide={wide || undefined}
     >
-      <div className={s.reels} style={{ height: winH, gap: GAP }}>
+      <div className={s.reels} style={{ height: winH, gap: reelGap(n) }}>
         {shown.strips.map((st, i) => (
           <div key={`${shown.key}:${i}`} className={s.reel} style={{ width: reelW }}>
             <div
@@ -249,7 +279,7 @@ export function ReelBank() {
                     <i>{t('reel.oneIn')}</i>
                     {formatNumber(c.odds)}
                   </span>
-                  <img className={s.art} src={c.art} alt="" draggable={false} />
+                  <PixelArt art={c.art} className={s.art} />
                 </div>
               ))}
             </div>
@@ -257,7 +287,10 @@ export function ReelBank() {
           </div>
         ))}
       </div>
-      <div className={s.payline} />
+      <div className={s.payline}>
+        <PixelArt art={uiBitArt('paylineL')} className={s.arrowL} />
+        <PixelArt art={uiBitArt('paylineL', true)} className={s.arrowR} />
+      </div>
       {spin && (spin.golden || spin.lucky || spin.turbo) && (
         <div className={s.badges}>
           {spin.golden && <span className={s.badge} data-kind="golden">{t('reel.golden')}</span>}

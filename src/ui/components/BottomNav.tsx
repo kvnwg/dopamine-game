@@ -1,25 +1,25 @@
-import type { ReactNode } from 'react';
 import { DATA } from '../../data';
 import { affordableUpgrades, canRebirth, inventoryCapacity, isUpgrade, worldThreat } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { useUi, type Tab } from '../uiStore';
-import { ArrowUpIcon, BagIcon, GlobeIcon, RebirthIcon, ReelIcon } from './Icons';
+import { ArrowUpIcon, BagIcon, GlobeIcon, RebirthIcon, ReelIcon, TvIcon } from './Icons';
 import s from './nav.module.css';
 
 interface TabDef {
   id: Tab;
-  icon: (size: number) => ReactNode;
+  icon: typeof ReelIcon;
 }
 
+/** Nav icons are all 10 x 10 art pixels (90 px); the open tab rises instead of growing. */
 const TABS: TabDef[] = [
-  { id: 'alley', icon: (n) => <ReelIcon size={n} /> },
-  { id: 'watch', icon: (n) => <ReelIcon gold size={n} /> },
-  { id: 'bag', icon: (n) => <BagIcon size={n} /> },
-  { id: 'upgrades', icon: (n) => <ArrowUpIcon size={n} /> },
-  { id: 'rebirth', icon: (n) => <RebirthIcon size={n} /> },
-  { id: 'worlds', icon: (n) => <GlobeIcon size={n} /> },
+  { id: 'alley', icon: ReelIcon },
+  { id: 'watch', icon: TvIcon },
+  { id: 'bag', icon: BagIcon },
+  { id: 'upgrades', icon: ArrowUpIcon },
+  { id: 'rebirth', icon: RebirthIcon },
+  { id: 'worlds', icon: GlobeIcon },
 ];
 
 export function BottomNav() {
@@ -46,7 +46,9 @@ export function BottomNav() {
               useUi.getState().setTab(d.id);
             }}
           >
-            <span className={`${s.icon} ${d.id === 'alley' ? s.spinIcon : ''}`}>{d.icon(active ? 96 : 76)}</span>
+            <span className={`${s.icon} ${d.id === 'alley' ? s.spinIcon : ''}`}>
+              <d.icon size="nav" />
+            </span>
             <span className={s.label}>{t(`tab.${d.id}`)}</span>
             {badge[d.id] && <span className={s.badge}>!</span>}
           </button>

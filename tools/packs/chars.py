@@ -126,7 +126,9 @@ def raccoon(src, out):
     im = rgba(Image.open(src))
     cell = 24
     frames = [im.crop((c * cell, r * cell, (c + 1) * cell, (r + 1) * cell)) for r in range(6) for c in range(6)]
-    s = Sheet('raccoon')
+    # Kevin's raccoon is drawn facing left (tail on the right), like the hand-drawn enemies: enemy
+    # raccoons are shown as drawn, facing the hero. (The hero is mirrored by his own code.)
+    s = Sheet('raccoon', faces='left')
     s.frames = frames
     s.alias('idle', range(0, 6), 6, True)
     s.alias('look', range(6, 12), 6, True)

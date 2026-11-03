@@ -1,6 +1,6 @@
 /**
  * Drag-to-equip. An item is equipped when it is dragged up toward the top of the screen: dropped
- * anywhere above the menus (the battle view or the stat strip), onto a gear panel
+ * anywhere above the menus (the battle view or just under it), onto a gear panel
  * (`data-drop="equip"`), or after a clear upward drag from wherever it started. Mouse: press and
  * move. Touch: press and hold briefly to pick the item up, so ordinary swipes still scroll the bag.
  * A press without a drag is a tap.
@@ -15,8 +15,11 @@ import { useUi } from './uiStore';
 const STAGE_W = 1080;
 const HOLD_MS = 170;
 const MOVE_PX = 8;
-/** Stage rows above the menus: the battle view (820) and the stat strip (92). Dropping here equips. */
-const UPPER_Y = 912;
+/**
+ * Dropping above this stage row equips: the battle view (963 px, src/render/BattleScene.ts BATTLE_H)
+ * and a strip of the panel under it (92 px), so a drop just short of the raccoon still counts.
+ */
+const UPPER_Y = 963 + 92;
 /** An upward drag this long (stage px) equips wherever it ends. */
 const LIFT_PX = 180;
 

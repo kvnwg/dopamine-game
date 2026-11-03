@@ -1,34 +1,38 @@
+/* The Roll tab. Pixel-ish sizes are art pixels (var(--px) = 9 stage px). */
 .panel {
   position: absolute;
   inset: 0;
-  padding: 14px 24px 12px;
+  padding: calc(2 * var(--px)) 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  /* A card's drop shadow (2 px) and the next card's edge (1 px). */
+  gap: calc(3 * var(--px));
+}
+.grow {
+  flex: 1;
 }
 
-/* ------------------------------------------------------------ wheel card */
+/* ------------------------------------------------------------ the machine: reels and their info */
 .top {
   position: relative;
-  height: 490px;
   flex: none;
-  padding: 16px 18px 16px 20px;
+  padding: calc(2 * var(--px));
   display: flex;
-  gap: 16px;
+  gap: calc(2 * var(--px));
 }
-.mini {
-  width: 60px;
-  height: 60px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  border: 5px solid var(--ink);
-  background: linear-gradient(180deg, #ffffff, #e9dcc0);
-  box-shadow: 0 4px 0 var(--ink);
-  transition: transform 120ms;
+/* 4 or 5 reels: a row of info, the reels, a row of info (468 px in all, like the side layout). */
+.topWide {
+  flex-direction: column;
+  align-items: center;
+  padding: var(--px) calc(2 * var(--px));
+  gap: var(--px);
 }
-.mini:active {
-  transform: scale(0.9);
+.wideRow {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  min-height: calc(8 * var(--px));
 }
 .info {
   flex: 1;
@@ -36,12 +40,15 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: var(--px);
+  padding: var(--px) 0 var(--px) var(--px);
 }
 .infoHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--px) calc(2 * var(--px));
 }
 .binTitle {
   font-family: var(--font-display);
@@ -52,17 +59,21 @@
 .statLine {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--px);
+  min-height: calc(5 * var(--px));
   font-family: var(--font-display);
   font-size: 28px;
   color: var(--ink);
+  white-space: nowrap;
 }
 .autoTag {
-  padding: 2px 12px;
-  border-radius: 12px;
-  border: 4px solid var(--ink);
+  height: calc(4 * var(--px));
+  margin-left: var(--px);
+  padding: 0 var(--px);
   background: #5bc236;
+  box-shadow: var(--pixel-edge);
   font-size: 22px;
+  line-height: calc(4 * var(--px));
   color: #fff;
   -webkit-text-stroke: 4px var(--ink);
   paint-order: stroke fill;
@@ -75,33 +86,37 @@
   font-weight: 900;
   font-size: 22px;
   color: #8b7d72;
+  white-space: normal;
+  line-height: 1.15;
 }
+/* Lucky spin meter: one segment per spin, ink between them. */
 .lucky {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: var(--px) calc(2 * var(--px));
+  padding-left: var(--px);
 }
 .luckySegs {
   display: flex;
-  gap: 4px;
+  gap: var(--px);
+  background: var(--ink);
+  box-shadow: var(--pixel-edge);
 }
 .seg {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  border: 4px solid var(--ink);
+  width: calc(2 * var(--px));
+  height: calc(3 * var(--px));
   background: #d8cbb0;
-  transform: rotate(45deg) scale(0.8);
 }
 .segOn {
   background: #46d36b;
 }
 .segReady {
   background: #ffc233;
-  animation: segPulse 600ms ease-in-out infinite alternate;
+  animation: segBlink 0.6s steps(2) infinite;
 }
-@keyframes segPulse {
-  to { box-shadow: 0 0 14px #ffc233; }
+@keyframes segBlink {
+  50% { background: #fff3a0; }
 }
 .luckyText {
   font-family: var(--font-display);
@@ -114,24 +129,25 @@
 }
 .luckRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: calc(2 * var(--px));
+  padding-left: var(--px);
 }
+/* The luck badge: a green button with the clover, the luck and LUCK (or a potion's time left). */
 .luckBadge {
-  height: 66px;
-  padding: 0 20px 0 8px;
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px)) 0 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  border: 5px solid var(--ink);
-  background: linear-gradient(180deg, #8af59a, #34b553 60%, #23913e);
-  box-shadow: 0 5px 0 var(--ink), inset 0 4px 0 rgba(255, 255, 255, 0.35);
+  gap: var(--px);
+  background: linear-gradient(180deg, #8af59a 0 var(--px), #34b553 var(--px) calc(100% - 2 * var(--px)), #23913e calc(100% - 2 * var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
   color: #fff;
-  transition: transform 130ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: var(--font-display);
 }
 .luckBadge:active {
-  transform: scale(0.93);
+  transform: translateY(var(--px));
 }
 .luckNum {
   font-size: 40px;
@@ -140,35 +156,52 @@
 }
 .luckWord {
   font-size: 22px;
-  margin-top: 8px;
+  margin-top: var(--px);
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
 }
 .luckBoosted {
-  animation: luckGlow 1s ease-in-out infinite;
+  animation: luckGlow 1s steps(2) infinite;
 }
 @keyframes luckGlow {
-  50% { box-shadow: 0 5px 0 var(--ink), 0 0 34px rgba(110, 255, 150, 0.95), inset 0 4px 0 rgba(255, 255, 255, 0.35); }
+  50% {
+    box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 calc(4 * var(--px)) rgba(110, 255, 150, 0.95);
+  }
 }
 .pity {
-  padding: 2px 12px;
-  border-radius: 999px;
+  height: calc(6 * var(--px));
+  padding: 0 var(--px);
+  border: var(--px) solid #a463f2;
   background: #efe1ff;
-  border: 3px solid #a463f2;
   color: #6b2fb8;
   font-size: 20px;
+  line-height: calc(4 * var(--px));
   white-space: nowrap;
+}
+/* The Codex button. */
+.mini {
+  flex: none;
+  width: calc(9 * var(--px));
+  height: calc(9 * var(--px));
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #ffffff 0 50%, #e9dcc0 50% 100%);
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink);
+}
+.mini:active {
+  transform: translateY(var(--px));
+  box-shadow: var(--pixel-edge);
 }
 
 /* ------------------------------------------------------------ last result */
 .last {
   --c: #9e9e9e;
-  height: 196px;
+  height: calc(20 * var(--px));
   flex: none;
-  padding: 10px 14px;
+  padding: var(--px) calc(2 * var(--px));
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: calc(2 * var(--px));
 }
 .waiting {
   flex: 1;
@@ -177,18 +210,18 @@
   font-size: 32px;
   color: #8b7d72;
 }
+/* A new result drops in with a flash. */
 .lastIn {
-  animation: lastIn 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: lastIn 240ms steps(2);
 }
 @keyframes lastIn {
-  0% { transform: scale(0.94); }
-  100% { transform: scale(1); }
+  0% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.5); }
 }
 .lastRare {
-  animation: lastIn 260ms cubic-bezier(0.34, 1.56, 0.64, 1), rareGlow 1.4s ease-in-out infinite;
+  animation: lastIn 240ms steps(2), rareGlow 1.4s steps(2) infinite;
 }
 @keyframes rareGlow {
-  50% { box-shadow: 0 8px 0 var(--ink), 0 0 30px var(--c); }
+  50% { box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 calc(4 * var(--px)) var(--c); }
 }
 .lastBody {
   flex: 1;
@@ -212,21 +245,26 @@
   font-size: 23px;
   color: #7a6a60;
 }
+/* One row of chips (their pixel edges stay inside the clip). */
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  max-height: 76px;
+  gap: calc(2 * var(--px));
+  height: calc(6 * var(--px));
+  margin: 0 calc(-1 * var(--px));
+  padding: var(--px);
   overflow: hidden;
 }
 .chip {
-  padding: 2px 12px;
-  border-radius: 999px;
-  border: 4px solid var(--ink);
+  height: calc(4 * var(--px));
+  padding: 0 var(--px);
+  box-shadow: var(--pixel-edge);
   background: #7c82a8;
   font-family: var(--font-display);
   font-size: 21px;
+  line-height: calc(4 * var(--px));
   color: #fff;
+  white-space: nowrap;
   -webkit-text-stroke: 4px var(--ink);
   paint-order: stroke fill;
 }
@@ -238,47 +276,37 @@
 }
 .chipUpgrade {
   background: #5bc236;
-  animation: hintBob 0.9s ease-in-out infinite;
-}
-@keyframes hintBob {
-  50% { transform: translateY(-4px); }
 }
 .chipGold {
-  background: linear-gradient(180deg, #fff3a0, #ffc233);
+  background: linear-gradient(180deg, #fff3a0 0 50%, #ffc233 50% 100%);
 }
 .chipLucky {
   background: #46d36b;
 }
 .chipRecord {
   background: #ffc233;
-  animation: recordWiggle 700ms ease-in-out infinite alternate;
+  animation: recordBlink 0.7s steps(2) infinite;
 }
-@keyframes recordWiggle {
-  from { transform: rotate(-4deg) scale(1); }
-  to { transform: rotate(4deg) scale(1.08); }
+@keyframes recordBlink {
+  50% { background: #fff3a0; }
 }
 
-/* The result's odds: big, loud, rarity colored. */
+/* The result's odds: big, loud, rarity colored, square on the grid. */
 .lastOdds {
   flex: none;
-  min-width: 176px;
-  height: 136px;
-  padding: 0 12px;
+  min-width: calc(20 * var(--px));
+  height: calc(16 * var(--px));
+  padding: 0 calc(2 * var(--px));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 26px;
-  border: 6px solid var(--ink);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(180deg, color-mix(in srgb, var(--c) 60%, #fff), var(--c));
-  box-shadow: 0 7px 0 var(--ink);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff) 0 50%, var(--c) 50% 100%);
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink);
   font-family: var(--font-display);
   color: #fff;
   -webkit-text-stroke: 7px var(--ink);
   paint-order: stroke fill;
-  transform: rotate(2deg);
 }
 .oddsSmall {
   font-size: 28px;
@@ -290,64 +318,46 @@
   white-space: nowrap;
 }
 .lastOddsRare {
-  animation: oddsThrob 0.9s ease-in-out infinite;
+  animation: oddsGlow 0.9s steps(2) infinite;
 }
-@keyframes oddsThrob {
-  50% { transform: rotate(2deg) scale(1.07); box-shadow: 0 7px 0 var(--ink), 0 0 36px var(--c); }
+@keyframes oddsGlow {
+  50% { box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink), 0 0 calc(4 * var(--px)) var(--c); filter: brightness(1.15); }
 }
 .lastOdds[data-rarity='legendary'],
 .lastOdds[data-rarity='mint'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
+  background: linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
 }
 .lastOdds[data-rarity='mythic'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
+  background: linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
 }
-
 .lastOdds[data-rarity='vintage'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
+  background: linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
 }
 .lastOdds[data-rarity='limited'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
+  background: linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
 }
 .lastOdds[data-rarity='prototype'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
+  background: linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
 }
 .lastOdds[data-rarity='gemMint'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
+  background: linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
 }
 .lastOdds[data-rarity='museum'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
+  background: linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
 }
 .lastOdds[data-rarity='grail'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
+  background: linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
 }
-/* ------------------------------------------------------------ recent results */
 
-/* ------------------------------------------------------------ equipped gear (also a drop target) */
+/* ------------------------------------------------------------ the rarest roll ever */
 .recordLine {
   flex: none;
+  height: calc(7 * var(--px));
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 18px;
-  border-radius: 999px;
+  gap: calc(2 * var(--px));
+  padding: 0 calc(3 * var(--px));
   background: rgba(0, 0, 0, 0.22);
 }
 .record {
@@ -360,27 +370,31 @@
   font-size: 26px;
   color: #ffe08a;
 }
+
+/* ------------------------------------------------------------ equipped gear (the Bag tab; also a drop target) */
 .gear {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 16px;
-  border-radius: 20px;
-  transition: box-shadow 160ms, background 160ms;
+  display: grid;
+  grid-template-columns: repeat(5, calc(18 * var(--px)));
+  justify-content: center;
+  gap: calc(4 * var(--px)) calc(4 * var(--px));
+  padding: calc(3 * var(--px)) 0 var(--px);
 }
 .gearDrop {
   background: rgba(126, 240, 143, 0.12);
-  box-shadow: 0 0 0 4px #7ef08f, 0 0 26px rgba(126, 240, 143, 0.6);
+  box-shadow: 0 0 0 var(--px) #7ef08f, 0 0 calc(3 * var(--px)) rgba(126, 240, 143, 0.6);
 }
 .slotTarget {
-  animation: slotPulse 0.6s ease-in-out infinite alternate;
+  animation: slotPulse 0.6s steps(2) infinite;
 }
 @keyframes slotPulse {
-  to { transform: scale(1.1); filter: brightness(1.3) drop-shadow(0 0 12px #7ef08f); }
+  50% { filter: brightness(1.3) drop-shadow(0 0 var(--px) #7ef08f); }
 }
+/* Just equipped: a flash and a one-pixel drop. */
 .equipPop {
-  animation: equipPop 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: equipPop 480ms steps(4);
 }
 @keyframes equipPop {
-  0% { transform: scale(1.5); filter: brightness(2.2); }
-  100% { transform: scale(1); filter: brightness(1); }
+  0% { transform: translateY(calc(-2 * var(--px))); filter: brightness(2.2); }
+  50% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.5); }
+  100% { transform: none; filter: none; }
 }

@@ -1232,8 +1232,10 @@ export class BattleScene extends Phaser.Scene {
     this.hitSound(f, s.crit);
     if (s.crit) {
       this.bits.burst(12, p.x, p.y, BIG_SPARK);
-      this.number(p.x, p.y - 8 * P, formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950, floor: this.barTop(f) });
-      this.stamp(p.x + P, p.y - 18 * P, t('battle.crit'), '#FFD54F');
+      const num = this.number(p.x, p.y - 8 * P, formatNumber(s.amount), { big: true, fill: bands(['#fff6a8', '#ff9a1a']), life: 950, floor: this.barTop(f), rise: 4 });
+      // CRIT! stamps down right over its number, clear of it as it floats (its top ends 6 px over where it
+      // pops in; the stamp is 12 px tall).
+      this.stamp(p.x + P, num.y - 13 * P, t('battle.crit'), '#FFD54F');
       this.shake(170, 0.011);
       this.hitStop(STOP.crit, true);
       this.buzz('light');

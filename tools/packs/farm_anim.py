@@ -47,8 +47,8 @@ class Pose:
         for part in lifted:
             self.px.update(part)
             placed |= part.keys()
-        # Outline that only bordered a moved part (say, between two legs) goes with it.
-        for (x, y) in {n for (x, y) in gone for n in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))} - placed:
+        # Outline beside a moved part that borders nothing colored any more (between two legs) goes with it.
+        for (x, y) in {n for (x, y) in gone for n in ((x - 1, y), (x + 1, y))} - placed:
             if self.px.get((x, y)) == LINE and not self.colored_next_to((x, y)):
                 del self.px[(x, y)]
         return self.close(gone - self.px.keys())
@@ -308,8 +308,8 @@ def ram(base, extra):
 def pig(base, extra):
     eye = (5, 7)
     tail = base.box(26, 0, 29, 3)
-    fn, bn = base.box(9, 17, 11, 20), base.box(21, 17, 23, 20)
-    ff, bf = base.box(6, 17, 7, 19), base.box(17, 17, 19, 19)
+    fn, bn = base.box(8, 17, 12, 20), base.box(20, 17, 24, 20)   # near legs below the knee, with their outline
+    ff, bf = base.box(6, 17, 7, 19), base.box(17, 17, 19, 19)    # far legs below the knee
     p = poses(
         base,
         low=base.copy().squash(6),

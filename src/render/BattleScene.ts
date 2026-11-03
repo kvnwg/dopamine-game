@@ -65,7 +65,8 @@ const BAR_HERO: BarTones = [hexNum(PAL.L), hexNum(PAL.l)];
 const BAR_FOE: BarTones = [hexNum(PAL.e), hexNum(PAL.R)];
 const BAR_BOSS: BarTones = [hexNum(PAL.y), hexNum(PAL.O)];
 const BAR_GHOST: BarTones = [hexNum(PAL.w), hexNum(PAL.W)];
-const BAR_EMPTY: BarTones = [hexNum(PAL.x), hexNum(PAL['1'])];
+/** The empty part reads as a groove (shadowed top row), light enough to show on night skies. */
+const BAR_EMPTY: BarTones = [hexNum(PAL['1']), hexNum(PAL['2'])];
 /** Bar sizes in art pixels, outline included. Fighters' bars are as wide as their art allows. */
 const BAR_TALL = 4;
 const FOE_BAR_W = { min: 10, max: 16 };
@@ -673,6 +674,16 @@ export class BattleScene extends Phaser.Scene {
 
   private foeHitPoint(f: Foe): { x: number; y: number } {
     return { x: f.c.x - f.front * 0.45, y: FEET_Y - f.height * 0.5 };
+  }
+
+  /** Where a pop-up number over foe `f` starts: no lower than just over its HP bar, so the bar stays readable. */
+  private overFoe(f: Foe, y: number): number {
+    return f.kind === 'regular' ? Math.min(y, FEET_Y + f.barY - 5 * P) : y;
+  }
+
+  /** The same over the hero's bar (its heart stands a pixel taller than the bar). */
+  private overHero(y: number): number {
+    return Math.min(y, FEET_Y - snap(this.heroTop) - (BAR_GAP + BAR_TALL + 1 + 5) * P);
   }
 
   /** The blow lands: pack hit effect, sparks, number, knockback, maybe a kill. */

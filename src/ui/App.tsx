@@ -7,6 +7,7 @@ import { UpgradeMap } from './components/UpgradeMap';
 import { RebirthPanel } from './components/RebirthPanel';
 import { WorldsPanel } from './components/WorldsPanel';
 import { WatchPanel } from './components/WatchPanel';
+import { UnlockedFx } from './components/Unlocks';
 import { BottomNav } from './components/BottomNav';
 import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
@@ -61,6 +62,7 @@ export function App() {
           {tab === 'upgrades' && <UpgradeMap />}
           <DragLayer />
           <RevealLayer />
+          <UnlockedFx />
           <PopupLayer />
           <Toasts />
           <AdOverlay />

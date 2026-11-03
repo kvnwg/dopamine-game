@@ -172,8 +172,8 @@ export function installRollController(): () => void {
           haptics.impact('light');
           break;
         case 'rebirth':
+          // The unlock card (UnlockedFx) follows the burst.
           useUi.setState({ rebirthFx: e.count, tab: 'alley', unlocked: e.unlocked.length ? { count: e.count, ids: e.unlocked } : null });
-          if (e.unlocked.length) setTimeout(() => ui.toast(t('toast.unlocked', { n: e.unlocked.length }), 'good'), 3300);
           setTimeout(() => {
             if (useUi.getState().rebirthFx === e.count) useUi.setState({ rebirthFx: null });
           }, 3200);

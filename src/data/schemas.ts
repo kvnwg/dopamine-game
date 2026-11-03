@@ -15,7 +15,9 @@ export const SlotSchema = z.enum(SLOTS);
 export type Slot = z.infer<typeof SlotSchema>;
 
 /** Ordered from worst to best. Index order is used for comparisons. */
-export const RARITIES = ['junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'mint'] as const;
+export const RARITIES = [
+  'junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'vintage', 'limited', 'prototype', 'mint', 'gemMint', 'museum', 'grail',
+] as const;
 export const RaritySchema = z.enum(RARITIES);
 export type Rarity = z.infer<typeof RaritySchema>;
 
@@ -154,7 +156,10 @@ export const BalanceSchema = z.object({
     goldenLuckMult: positive,
   }),
   /** Base odds as "1 in X" for every rarity above Junk. */
-  rarityOdds: z.object({ decent: positive, shiny: positive, epic: positive, legendary: positive, mythic: positive, mint: positive }),
+  rarityOdds: z.object({
+    decent: positive, shiny: positive, epic: positive, legendary: positive, mythic: positive, vintage: positive, limited: positive,
+    prototype: positive, mint: positive, gemMint: positive, museum: positive, grail: positive,
+  }),
   luck: z.object({
     potion: z.object({ mult: positive, seconds: positive, waveDropChance: z.number().min(0).max(1) }),
   }),

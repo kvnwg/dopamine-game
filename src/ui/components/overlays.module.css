@@ -178,6 +178,36 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 42%, rgba(255, 255, 255, 0) 42%),
     linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
 }
+.odds[data-rarity='vintage'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
+}
+.odds[data-rarity='limited'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
+}
+.odds[data-rarity='prototype'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
+}
+.odds[data-rarity='gemMint'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
+}
+.odds[data-rarity='museum'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
+}
+.odds[data-rarity='grail'] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 42%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
+}
 @keyframes oddsIn {
   0% { transform: scale(0.2) rotate(-10deg); opacity: 0; }
   100% { transform: scale(1) rotate(-3deg); opacity: 1; }

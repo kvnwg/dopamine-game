@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyAction, createItem, enchantPowerMult, gearScale, gemSpeedupCost, itemMods, itemOddsOneIn, mainStatValue, modsScore, powerForOdds,
-  recycleRewards, rollItemLevel, rollSlot, Rng, upgradeCost, upgradeSeconds, codexBonusMods, itemName, tick, type GameState,
+  rarityAtLeast, recycleRewards, rollItemLevel, rollSlot, Rng, upgradeCost, upgradeSeconds, codexBonusMods, itemName, tick, type GameState,
 } from '../src/core';
 import { BAL, DATA, RARITIES, SLOTS } from '../src/data';
 import { freshState, histogram, T0 } from './helpers';
@@ -104,7 +104,7 @@ describe('item rolls', () => {
     for (const r of RARITIES) {
       const it = createItem(base, r, 1, 'curbside', rng, 0);
       expect(it.subs).toHaveLength(BAL.rarities[r].substats);
-      expect(it.mintPerkId !== null).toBe(r === 'mint');
+      expect(it.mintPerkId !== null).toBe(rarityAtLeast(r, 'mint'));
     }
   });
 

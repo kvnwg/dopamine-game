@@ -82,7 +82,9 @@ function pickRarity(u: number, weights: Record<Rarity, number>): Rarity {
   return 'junk';
 }
 
-const NEAR_MISS: Record<Rarity, number> = { junk: 0, decent: 0, shiny: 0, epic: 0, legendary: 50, mythic: 33, mint: 17 };
+const NEAR_MISS: Record<Rarity, number> = {
+  junk: 0, decent: 0, shiny: 0, epic: 0, legendary: 50, mythic: 33, vintage: 30, limited: 26, prototype: 22, mint: 17, gemMint: 12, museum: 8, grail: 5,
+};
 
 /** A made-up item rolling past: rarer than real odds (see the file comment). */
 function filler(seed: number, nearMiss: boolean): Cell {
@@ -242,11 +244,12 @@ export function ReelBank() {
                   ref={j === st.k ? (el) => void (resultRefs.current[i] = el) : undefined}
                   style={{ top: -j * CELL - CELL / 2 }}
                 >
-                  <img className={s.art} src={c.art} alt="" draggable={false} />
+                  {/* The odds sit on top of their own item (like the Bag's badges), so they never read as the next item's. */}
                   <span className={s.odds}>
                     <i>{t('reel.oneIn')}</i>
                     {formatNumber(c.odds)}
                   </span>
+                  <img className={s.art} src={c.art} alt="" draggable={false} />
                 </div>
               ))}
             </div>

@@ -131,11 +131,47 @@
       "recycleXp": 800,
       "recycleCoins": 1400
     },
+    "vintage": {
+      "mult": 9.5,
+      "substats": 4,
+      "recycleXp": 1100,
+      "recycleCoins": 1900
+    },
+    "limited": {
+      "mult": 11.0,
+      "substats": 4,
+      "recycleXp": 1500,
+      "recycleCoins": 2500
+    },
+    "prototype": {
+      "mult": 12.5,
+      "substats": 4,
+      "recycleXp": 2000,
+      "recycleCoins": 3200
+    },
     "mint": {
       "mult": 14.0,
       "substats": 4,
       "recycleXp": 2500,
       "recycleCoins": 4000
+    },
+    "gemMint": {
+      "mult": 18.0,
+      "substats": 4,
+      "recycleXp": 4000,
+      "recycleCoins": 6500
+    },
+    "museum": {
+      "mult": 23.0,
+      "substats": 4,
+      "recycleXp": 6500,
+      "recycleCoins": 10000
+    },
+    "grail": {
+      "mult": 30.0,
+      "substats": 4,
+      "recycleXp": 10000,
+      "recycleCoins": 16000
     }
   },
   "recycle": {
@@ -143,7 +179,10 @@
   },
   "items": {
     "levelScalePerLevel": 0.05,
-    "power": { "base": 30, "oddsExponent": 0.2 },
+    "power": {
+      "base": 30,
+      "oddsExponent": 0.2
+    },
     "levelOffset": {
       "min": -2,
       "max": 1
@@ -396,7 +435,13 @@
       "epic": 4,
       "legendary": 5,
       "mythic": 6,
-      "mint": 6
+      "vintage": 6,
+      "limited": 6,
+      "prototype": 6,
+      "mint": 6,
+      "gemMint": 7,
+      "museum": 7,
+      "grail": 8
     },
     "revealSecondsByRarity": {
       "junk": 0.2,
@@ -405,7 +450,13 @@
       "epic": 1.0,
       "legendary": 2.5,
       "mythic": 3.5,
-      "mint": 5.0
+      "vintage": 3.8,
+      "limited": 4.1,
+      "prototype": 4.5,
+      "mint": 5.0,
+      "gemMint": 5.5,
+      "museum": 6.0,
+      "grail": 7.0
     },
     "hotDumpsterStartPct": 50,
     "maxCatchUpTicksPerFrame": 50,
@@ -417,7 +468,13 @@
         "epic": 20,
         "legendary": 18,
         "mythic": 10,
-        "mint": 6
+        "vintage": 8,
+        "limited": 7,
+        "prototype": 6,
+        "mint": 6,
+        "gemMint": 4,
+        "museum": 3,
+        "grail": 2
       },
       "nearMissChance": 0.65,
       "flairChance": 0.3,
@@ -449,7 +506,13 @@
     "epic": 80,
     "legendary": 1000,
     "mythic": 25000,
-    "mint": 1000000
+    "vintage": 60000,
+    "limited": 150000,
+    "prototype": 400000,
+    "mint": 1000000,
+    "gemMint": 5000000,
+    "museum": 25000000,
+    "grail": 250000000
   },
   "luck": {
     "potion": {

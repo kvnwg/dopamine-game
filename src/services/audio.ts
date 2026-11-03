@@ -5,12 +5,14 @@
  */
 
 export type Material = 'plastic' | 'metal' | 'glass' | 'ceramic' | 'food' | 'cloth' | 'paper' | 'wood' | 'rubber';
-export type Tier = 'junk' | 'decent' | 'shiny' | 'epic' | 'legendary' | 'mythic' | 'mint';
+export type Tier =
+  | 'junk' | 'decent' | 'shiny' | 'epic' | 'legendary' | 'mythic' | 'vintage' | 'limited' | 'prototype' | 'mint' | 'gemMint' | 'museum' | 'grail';
 
 const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12);
 /** C major pentatonic ladder used for pitch stacking and reward notes. */
 const LADDER = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84, 86, 88, 91, 93, 96];
-const TIERS: Tier[] = ['junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'mint'];
+const TIERS: Tier[] = ['junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'vintage', 'limited', 'prototype', 'mint', 'gemMint', 'museum', 'grail'];
+const MINT = TIERS.indexOf('mint');
 
 // Lo-fi loop: Fmaj7 - Em7 - Dm7 - Cmaj7 at 78 BPM, swung eighths.
 const BPM = 78;
@@ -376,27 +378,29 @@ class AudioEngine {
         this.tone(65, at, 0.45, { gain: 0.32, freqEnd: 45 });
         break;
       default: {
-        // Legendary and up: orchestral hit, choir pad, sparkles and a coin cascade.
+        // Legendary and up: orchestral hit, choir pad, sparkles and a coin cascade. Each tier past
+        // Legendary adds a step (`lvl`), so the rarest tiers stay big without dragging on forever.
+        const lvl = Math.min(6, i - 4);
         this.tone(55, at, 0.7, { gain: 0.42, freqEnd: 38 });
         this.noise(at, 0.35, { type: 'lowpass', freq: 1800, gain: 0.2 });
         for (const n of [60, 64, 67, 72]) this.tone(midi(n), at, 0.4, { type: 'sawtooth', gain: 0.035, filter: 2400 });
-        const padLen = 1.6 + (i - 4) * 0.9;
+        const padLen = 1.6 + lvl * 0.5;
         for (const n of [60, 64, 67, 72, 76]) {
           for (const det of [-8, 8]) {
             this.tone(midi(n), at + 0.05, padLen, { type: 'sawtooth', gain: 0.018, attack: 0.2, filter: 1600, detune: det, vibrato: 3 });
           }
         }
-        for (let k = 0; k < 10 + (i - 4) * 6; k++) {
+        for (let k = 0; k < 10 + lvl * 4; k++) {
           this.bell(midi(LADDER[6 + Math.floor(this.rnd() * 9)]), at + 0.15 + k * 0.08, 0.4, 0.04);
         }
-        this.coinCascade(at + 0.3, 8 + (i - 4) * 6);
-        if (i >= 5) {
-          // Mythic and Mint: a crowd cheer swell and a longer rising run.
+        this.coinCascade(at + 0.3, Math.min(15, 8 + lvl * 2));
+        if (lvl >= 1) {
+          // Mythic and up: a crowd cheer swell and a longer rising run.
           this.noise(at + 0.2, 1.8, { freq: 1100, q: 0.6, gain: 0.08, attack: 0.5 });
           [72, 74, 76, 79, 81, 84, 86, 88, 91, 96].forEach((n, k) => this.bell(midi(n), at + 0.4 + k * 0.06, 0.5, 0.05));
         }
-        if (tier === 'mint') {
-          // Fanfare in rhythm.
+        if (i >= MINT) {
+          // Mint in Box and up: a fanfare in rhythm.
           [67, 72, 76, 79].forEach((n, k) =>
             this.tone(midi(n), at + 0.9 + k * 0.16, 0.22, { type: 'sawtooth', gain: 0.06, filter: 2200, attack: 0.02 }),
           );

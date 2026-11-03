@@ -56,6 +56,12 @@
   --r-legendary: #ffb300;
   --r-mythic: #ff4fa3;
   --r-mint: #fff4d6;
+  --r-vintage: #d2884a;
+  --r-limited: #ff3b4e;
+  --r-prototype: #38e8ff;
+  --r-gemMint: #4dffb4;
+  --r-museum: #e9ddff;
+  --r-grail: #fff07a;
   --r-mythic-gradient: linear-gradient(135deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
   --r-mint-gradient: linear-gradient(135deg, #ffffff, #fff4d6, #ffd54f, #ffffff);
 

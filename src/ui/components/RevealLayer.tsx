@@ -16,7 +16,10 @@ import { Chunky, type Grad } from './Chunky';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import s from './overlays.module.css';
 
-const GRAD: Partial<Record<string, Grad>> = { epic: 'purple', legendary: 'gold', mythic: 'rainbow', mint: 'white' };
+const GRAD: Partial<Record<string, Grad>> = {
+  epic: 'purple', legendary: 'gold', mythic: 'rainbow', vintage: 'gold', limited: 'red', prototype: 'blue', mint: 'white', gemMint: 'green',
+  museum: 'purple', grail: 'rainbow',
+};
 const CONFETTI = ['#ff5252', '#ffc233', '#5bc236', '#42a5f5', '#c48bff', '#ffffff'];
 
 function Confetti({ n }: { n: number }) {

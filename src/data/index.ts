@@ -75,7 +75,7 @@ export function buildGameData(raw: {
   const upgradeIds = new Set(balance.upgrades.map((u) => u.id));
   if (upgradeIds.size !== balance.upgrades.length) fail('duplicate upgrade id');
   const odds = balance.rarityOdds;
-  const order = [odds.decent, odds.shiny, odds.epic, odds.legendary, odds.mythic, odds.mint];
+  const order = RARITIES.slice(1).map((r) => (odds as Record<string, number>)[r]);
   for (let i = 1; i < order.length; i++) if (order[i] <= order[i - 1]) fail('rarityOdds must get rarer with each tier');
 
   // Records keyed by enums must be complete.

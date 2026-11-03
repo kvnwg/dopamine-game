@@ -47,12 +47,67 @@
           "#E040FB"
         ]
       },
+      "vintage": {
+        "color": "#D2884A",
+        "gradient": [
+          "#FFE3B8",
+          "#D2884A",
+          "#8A4B23"
+        ]
+      },
+      "limited": {
+        "color": "#FF3B4E",
+        "gradient": [
+          "#FFD1D6",
+          "#FF3B4E",
+          "#FFB300",
+          "#FF3B4E"
+        ]
+      },
+      "prototype": {
+        "color": "#38E8FF",
+        "gradient": [
+          "#E8FDFF",
+          "#38E8FF",
+          "#2A6BFF",
+          "#38E8FF"
+        ]
+      },
       "mint": {
         "color": "#FFF4D6",
         "gradient": [
           "#FFFFFF",
           "#FFF4D6",
           "#FFD54F",
+          "#FFFFFF"
+        ]
+      },
+      "gemMint": {
+        "color": "#4DFFB4",
+        "gradient": [
+          "#FFFFFF",
+          "#4DFFB4",
+          "#38E8FF",
+          "#FFFFFF"
+        ]
+      },
+      "museum": {
+        "color": "#E9DDFF",
+        "gradient": [
+          "#FFFFFF",
+          "#E9DDFF",
+          "#FFD54F",
+          "#B48CFF"
+        ]
+      },
+      "grail": {
+        "color": "#FFF07A",
+        "gradient": [
+          "#FFFFFF",
+          "#FFF07A",
+          "#FF5252",
+          "#40C4FF",
+          "#E040FB",
           "#FFFFFF"
         ]
       }

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { DATA, SLOTS } from '../../data';
+import { DATA, SLOTS, type Rarity } from '../../data';
 import { formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
@@ -17,6 +17,12 @@ function findItem(equipped: Record<string, Item | null>, bag: Item[], uid: numbe
   for (const slot of SLOTS) if (equipped[slot]?.uid === uid) return { item: equipped[slot], equipped: true };
   return { item: bag.find((x) => x.uid === uid) ?? null, equipped: false };
 }
+
+/** The detail popup's color per rarity. */
+const TONE: Partial<Record<Rarity, 'gold' | 'purple' | 'red' | 'green' | 'blue'>> = {
+  decent: 'green', epic: 'purple', legendary: 'gold', mythic: 'red', vintage: 'gold', limited: 'red', prototype: 'blue',
+  mint: 'gold', gemMint: 'green', museum: 'purple', grail: 'gold',
+};
 
 export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => void }) {
   const g = useGame((x) => x);
@@ -38,7 +44,7 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
   const perk = item.mintPerkId ? DATA.mintPerksById.get(item.mintPerkId) : null;
   const scrapGold = scrapValue(g, item).coins;
   return (
-    <Modal title={t(`rarity.${item.rarity}`)} tone={item.rarity === 'legendary' || item.rarity === 'mint' ? 'gold' : item.rarity === 'epic' ? 'purple' : item.rarity === 'mythic' ? 'red' : item.rarity === 'decent' ? 'green' : 'blue'} onClose={onClose}>
+    <Modal title={t(`rarity.${item.rarity}`)} tone={TONE[item.rarity] ?? 'blue'} onClose={onClose}>
       <div className={s.bigOdds} data-rarity={item.rarity} style={{ ['--c' as string]: color } as CSSProperties}>
         <i>1 in</i>
         <b>{fmtOdds(itemOddsOneIn(item))}</b>

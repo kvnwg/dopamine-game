@@ -78,7 +78,7 @@ export function createItem(
     value: round2(mainStatValue(m.base, rarity)),
   }));
   const subs = rollSubstats(BAL.rarities[rarity].substats, themeId, rng);
-  const mintPerkId = rarity === 'mint' ? rng.pick(DATA.mintPerks).id : null;
+  const mintPerkId = rarityAtLeast(rarity, 'mint') ? rng.pick(DATA.mintPerks).id : null;
   // `level` and `tier` record where the item was found (they set its scrap value); its stats come from its power.
   return fitToPower({ uid, baseId: base.id, slot: base.slot, rarity, level, main, subs, bonus: base.bonus ?? [], mintPerkId, enchants, locked: false, tier });
 }

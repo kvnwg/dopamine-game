@@ -42,8 +42,14 @@ describe('luck odds ("1 in X")', () => {
   it('chances at luck 1 follow the base odds, rarest tier first', () => {
     const c = rarityChances(1);
     const odds = BAL.rarityOdds;
-    expect(c.mint).toBeCloseTo(1 / odds.mint);
-    expect(c.mythic).toBeCloseTo((1 - 1 / odds.mint) / odds.mythic);
+    // Tiers are tried rarest first: each one's chance is its own odds times "none rarer hit".
+    expect(c.grail).toBeCloseTo(1 / odds.grail);
+    let none = 1;
+    for (const r of [...RARITIES].reverse()) {
+      if (r === 'junk') break;
+      expect(c[r], r).toBeCloseTo(none / odds[r], 12);
+      none *= 1 - 1 / odds[r];
+    }
     expect(RARITIES.reduce((s, r) => s + c[r], 0)).toBeCloseTo(1);
   });
 
@@ -69,7 +75,7 @@ describe('luck odds ("1 in X")', () => {
   it('a minimum rarity floor never rolls below it (10,000 rolls)', () => {
     const rng = new Rng(4);
     const h = histogram(N, () => rollRarity(1, rng, 'epic'));
-    for (const r of h.keys()) expect(['epic', 'legendary', 'mythic', 'mint']).toContain(r);
+    for (const r of h.keys()) expect(rarityAtLeast(r, 'epic'), r).toBe(true);
   });
 
   it('luck combines upgrades, dumpster level, enchantments, rebirths and boosts', () => {

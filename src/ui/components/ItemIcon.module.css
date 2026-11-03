@@ -160,6 +160,42 @@
     linear-gradient(90deg, #ffffff, #fff1c7, #ffcf4a, #fff1c7, #ffffff);
   background-size: 100% 100%, 200% 100%;
 }
+.wrap[data-rarity='vintage'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
+  background-size: 100% 100%, 200% 100%;
+}
+.wrap[data-rarity='limited'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
+  background-size: 100% 100%, 200% 100%;
+}
+.wrap[data-rarity='prototype'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
+  background-size: 100% 100%, 200% 100%;
+}
+.wrap[data-rarity='gemMint'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
+  background-size: 100% 100%, 200% 100%;
+}
+.wrap[data-rarity='museum'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
+  background-size: 100% 100%, 200% 100%;
+}
+.wrap[data-rarity='grail'] .odds {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 40%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
+  background-size: 100% 100%, 200% 100%;
+}
 .upgrade {
   position: absolute;
   right: calc(var(--s) * -0.06);
@@ -220,6 +256,59 @@
     linear-gradient(160deg, #ffffff, #fff1c7 45%, #ffcf4a);
   box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.2) rgba(255, 236, 160, 0.95);
 }
+/* Past Mythic: Vintage (aged bronze), Limited Edition (red and gold), Prototype (blueprint cyan),
+   Mint in Box, Gem Mint (emerald sparkle), Museum Piece (marble and gold), Holy Grail (radiant rainbow). */
+.vintage {
+  background:
+    linear-gradient(180deg, rgba(255, 240, 210, 0.35) 0 44%, rgba(255, 255, 255, 0) 44%),
+    radial-gradient(circle at 30% 20%, #f3c08a, #c27a3e 55%, #7a4220);
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.14) rgba(230, 150, 80, 0.75);
+}
+.limited {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0 44%, rgba(255, 255, 255, 0) 44%) padding-box,
+    repeating-linear-gradient(135deg, #ff4a5c 0 12%, #d81f36 12% 24%) padding-box,
+    conic-gradient(from var(--spin, 0deg), #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e) border-box;
+  animation: spin 2.6s linear infinite;
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.16) rgba(255, 59, 78, 0.8);
+}
+.prototype {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0 2px, rgba(255, 255, 255, 0) 2px 7px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0 44%, rgba(255, 255, 255, 0) 44%),
+    linear-gradient(160deg, #7ff4ff, #1fb6e8 50%, #1d4fd6);
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.18) rgba(56, 232, 255, 0.85);
+}
+.gemMint {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 44%, rgba(255, 255, 255, 0) 44%) padding-box,
+    linear-gradient(160deg, #ffffff, #a8ffdc 45%, #24d68f) padding-box,
+    conic-gradient(from var(--spin, 0deg), #ffffff, #4dffb4, #38e8ff, #ffffff, #4dffb4, #ffffff) border-box;
+  animation: spin 2.2s linear infinite;
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.22) rgba(77, 255, 180, 0.95);
+}
+.museum {
+  border-color: #ffd54f;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 44%, rgba(255, 255, 255, 0) 44%),
+    radial-gradient(circle at 70% 30%, rgba(180, 140, 255, 0.35), rgba(180, 140, 255, 0) 60%),
+    linear-gradient(160deg, #ffffff, #efe8ff 45%, #c9b6f2);
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 0 calc(var(--s) * 0.02) var(--ink), 0 0 calc(var(--s) * 0.24) rgba(255, 213, 79, 0.95);
+}
+.grail {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 44%, rgba(255, 255, 255, 0) 44%) padding-box,
+    radial-gradient(circle, #ffffff, #fff07a 55%, #ffb300) padding-box,
+    conic-gradient(from var(--spin, 0deg), #ff5252, #ffb300, #fff07a, #69f0ae, #40c4ff, #e040fb, #ff5252) border-box;
+  animation: spin 1.6s linear infinite, grailGlow 1.2s ease-in-out infinite;
+  box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.3) rgba(255, 240, 122, 1);
+}
+@keyframes grailGlow {
+  50% { box-shadow: 0 calc(var(--s) * 0.035) 0 var(--ink), 0 0 calc(var(--s) * 0.45) rgba(255, 255, 255, 1); }
+}
 @property --spin {
   syntax: '<angle>';
   inherits: false;
@@ -248,6 +337,9 @@
 @media (prefers-reduced-motion: reduce) {
   .shine::after,
   .mythic,
+  .limited,
+  .gemMint,
+  .grail,
   .oddsRare,
   .oddsLegend,
   .upgrade {

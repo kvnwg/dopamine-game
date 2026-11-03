@@ -371,6 +371,8 @@ function ranch(): House {
   gable(s, 38, 1, 5, 2, 4);
   s.rect(30, 6, 18, 1, 'A');
   s.set(47, 6, 'a');
+  s.set(30, 7, 'A');
+  s.set(47, 7, '.');
   for (let y = 7; y <= 17; y++) {
     s.set(31, y, 'W');
     s.set(46, y, '5');

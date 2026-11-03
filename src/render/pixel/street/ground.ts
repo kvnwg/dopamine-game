@@ -488,7 +488,7 @@ export function fgLayer(): PixelBuf {
   const b = blank(TILE_W, H);
   const edge = mix(K.grassDeep, 'k', 0.45);
   const near = (rows: Rows, recolor: Partial<Record<string, string>>) => outline(fromRows(rows, recolor), edge);
-  const greens = { L: K.grass, l: K.grassShade, G: K.grassDeep, g: mix(K.grassDeep, 'k', 0.2) };
+  const greens = { L: K.grassTip, l: K.grassLit, G: K.grassShade, g: K.grassDeep };
   const tufts = TUFTS.map((t) => near(t, greens));
   const flowers = [near(FLOWER, { G: K.grassShade }), near(FLOWER, { w: 'P', y: 'y', G: K.grassShade }), near(FLOWER, { w: 'y', y: 'O', G: K.grassShade })];
   const stone = near(STONE, { '5': K.slabLit, '4': K.slabDim, '3': K.groove });

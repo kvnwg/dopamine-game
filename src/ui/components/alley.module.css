@@ -49,18 +49,6 @@
   color: var(--ink);
   white-space: nowrap;
 }
-.autoTag {
-  height: calc(5 * var(--px));
-  margin-left: var(--px);
-  padding: 0 var(--px);
-  background: #5bc236;
-  box-shadow: var(--pixel-edge);
-  font-size: 22px;
-  line-height: calc(5 * var(--px));
-  color: #fff;
-  -webkit-text-stroke: 4px var(--ink);
-  paint-order: stroke fill;
-}
 .bonusOn {
   color: #2569b8;
 }
@@ -258,14 +246,6 @@
   background: linear-gradient(180deg, #ffd1d6 0 50%, #ff3b4e 50% 100%);
   animation: recordBlink 0.7s steps(2) infinite;
 }
-.chipRecord {
-  background: #ffc233;
-  animation: recordBlink 0.7s steps(2) infinite;
-}
-@keyframes recordBlink {
-  50% { background: #fff3a0; }
-}
-
 /* The plates pop in after the card: down past their spot by an art pixel and back, with a flash. */
 @keyframes platePop {
   0% { transform: translateY(calc(-2 * var(--px))); opacity: 0; filter: brightness(2); }
@@ -421,26 +401,6 @@
 }
 
 /* ------------------------------------------------------------ the rarest roll ever */
-.recordLine {
-  flex: none;
-  height: calc(10 * var(--px));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: calc(2 * var(--px));
-  padding: 0 calc(3 * var(--px));
-  background: rgba(0, 0, 0, 0.22);
-}
-.record {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-family: var(--font-body);
-  font-weight: 900;
-  font-size: 28px;
-  color: #ffe08a;
-}
 
 /* ------------------------------------------------------------ equipped gear (the Bag tab; also a drop target) */
 .gear {
@@ -468,4 +428,11 @@
   0% { transform: translateY(calc(-2 * var(--px))); filter: brightness(2.2); }
   50% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.5); }
   100% { transform: none; filter: none; }
+}
+
+/* The reel machine, with the padlock a new game starts under (DumpsterLock) over it. */
+.machine {
+  position: relative;
+  display: flex;
+  justify-content: center;
 }

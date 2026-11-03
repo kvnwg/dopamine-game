@@ -1,7 +1,8 @@
 /**
  * The first-run tutorial (new games only; see BAL.tutorial and dumpster.beginner in core). Quick
  * steps, each paid off with as much fanfare as the game has:
- *  - The dumpster rolls the first item by itself: the Traffic Cone of Destiny, with the big reveal.
+ *  - The dumpster starts padlocked under steel: the hand taps the padlock (DumpsterLock), the metal
+ *    falls off, and it rolls the first item by itself: the Traffic Cone of Destiny, with the big reveal.
  *  1. Put it on: a pointing hand carries a ghost of it from its tile up to the raccoon, over and over,
  *     until you drag it there (then the equip slam and the power count). If it isn't on screen, the
  *     hand points at the Bag tab.
@@ -11,9 +12,13 @@
  *     and a gem gift.
  * A bubble over the bottom of the battle says what to do, with three pips that light up (and chime,
  * a step higher each time) as the steps are done. Everything moves in whole art pixels.
+ *
+ * Everything else starts locked and opens one feature at a time (core/systems/features.ts): when one
+ * opens, a gold NEW bubble says what it is and the hand points at its tab or button until it is
+ * tapped (or its moment passes), then the next one gets its turn (ui/features.ts).
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { bestUpgrades, type CoreEvent, type GameState } from '../../core';
+import { bestUpgrades, type CoreEvent, type Feature, type GameState } from '../../core';
 import { BAL } from '../../data';
 import { bus } from '../../app/eventBus';
 import { useGame } from '../../app/store';
@@ -22,6 +27,7 @@ import { audio } from '../../services/audio';
 import { slamPoint } from '../../render/equipSlam';
 import { itemArt, UI_PX } from '../../render/icons';
 import { equipSourceOf } from '../equipSource';
+import { introFeature, seeFeature } from '../features';
 import { stagePoint } from '../drag';
 import { t } from '../i18n';
 import { raysUrl } from '../rays';
@@ -30,7 +36,7 @@ import { GemIcon, HandIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import s from './tutorial.module.css';
 
-type Step = 'roll' | 'equip' | 'best' | 'fight' | 'lucky';
+type Step = 'open' | 'roll' | 'equip' | 'best' | 'fight' | 'lucky';
 
 const snap = (v: number) => Math.round(v / UI_PX) * UI_PX;
 
@@ -38,6 +44,7 @@ const snap = (v: number) => Math.round(v / UI_PX) * UI_PX;
 function stepOf(g: GameState): { step: Step | null; uid: number | null } {
   const b = g.dumpster.beginner;
   if (b.state === 'done') return { step: null, uid: null };
+  if (!g.features.unlocked.includes('roll')) return { step: 'open', uid: null };
   const worn = g.lifetime.itemsEquipped > 0;
   if (!g.dumpster.firstDiveDone || (!worn && g.inventory.length === 0)) return { step: 'roll', uid: null };
   if (!worn) {
@@ -53,8 +60,26 @@ function stepOf(g: GameState): { step: Step | null; uid: number | null } {
 
 /** How many of the three steps are done. */
 function doneCount(step: Step): number {
-  return step === 'roll' || step === 'equip' ? 0 : step === 'best' ? 1 : 2;
+  return step === 'open' || step === 'roll' || step === 'equip' ? 0 : step === 'best' ? 1 : 2;
 }
+
+/** A nav tab's button. */
+const navTab = (tab: string) => `nav button[aria-label="${t(`tab.${tab}`)}"]`;
+
+/**
+ * Where the hand points to introduce each feature (a button on the Roll tab falls back to the Roll
+ * tab while another tab is open), and how long the introduction waits for a tap before moving on.
+ */
+const INTRO: Record<Exclude<Feature, 'roll'>, { target: string; fallback?: string; ms: number }> = {
+  bag: { target: navTab('bag'), ms: 30_000 },
+  luck: { target: '[data-intro="luck"]', fallback: navTab('alley'), ms: 12_000 },
+  upgrades: { target: navTab('upgrades'), ms: 30_000 },
+  worlds: { target: navTab('worlds'), ms: 30_000 },
+  codex: { target: '[data-intro="codex"]', fallback: navTab('alley'), ms: 12_000 },
+  dumpster: { target: '[data-intro="dumpster"]', fallback: navTab('alley'), ms: 15_000 },
+  rebirth: { target: navTab('rebirth'), ms: 30_000 },
+  heist: { target: navTab('heist'), ms: 30_000 },
+};
 
 /** The middle of the first element matching `sel` that is on screen (stage px), or null. */
 function spot(sel: string, yShare = 0.5): { x: number; y: number } | null {
@@ -75,7 +100,9 @@ function bagButton(): { x: number; y: number } | null {
  * The pointing hand. With `from`, it carries a ghost of item `uid` from there up onto the raccoon and
  * starts over; without, it taps on `at` (the Bag tab).
  */
-function Hand({ uid, baseId, best }: { uid: number | null; baseId: string | null; best?: boolean }) {
+function Hand({
+  uid, baseId, best, target, fallback,
+}: { uid: number | null; baseId: string | null; best?: boolean; target?: string; fallback?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<'drag' | 'tap'>('drag');
@@ -87,7 +114,11 @@ function Hand({ uid, baseId, best }: { uid: number | null; baseId: string | null
     let tap: { x: number; y: number } | null = null;
     const plan = () => {
       from = uid !== null ? equipSourceOf(uid) : null;
-      tap = from ? null : (best ? spot('[data-equip-best]', 0.6) : null) ?? bagButton();
+      tap = from
+        ? null
+        : target
+          ? (spot(target, 0.5) ?? (fallback ? spot(fallback, 0.3) : null))
+          : ((best ? spot('[data-equip-best]', 0.6) : null) ?? bagButton());
       const m = from ? 'drag' : 'tap';
       if (m !== modeRef.current) {
         modeRef.current = m;
@@ -143,7 +174,7 @@ function Hand({ uid, baseId, best }: { uid: number | null; baseId: string | null
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [uid, best]);
+  }, [uid, best, target, fallback]);
   return (
     <div ref={ref} className={s.hand} data-mode={mode}>
       {baseId && mode === 'drag' && (
@@ -157,15 +188,17 @@ function Hand({ uid, baseId, best }: { uid: number | null; baseId: string | null
 }
 
 /** The bubble: what to do now, and three pips for the steps. */
-function Bubble({ text, done, gold }: { text: string; done: number; gold?: boolean }) {
+function Bubble({ text, done, gold }: { text: string; done: number | null; gold?: boolean }) {
   return (
     <div className={s.bubbleWrap}>
       <div key={text} className={`${s.bubble} ${gold ? s.bubbleGold : ''}`}>
-        <div className={s.pips}>
-          {[0, 1, 2].map((i) => (
-            <span key={i} className={i < done ? s.pipOn : s.pip} />
-          ))}
-        </div>
+        {done !== null && (
+          <div className={s.pips}>
+            {[0, 1, 2].map((i) => (
+              <span key={i} className={i < done ? s.pipOn : s.pip} />
+            ))}
+          </div>
+        )}
         <span className={s.text}>{text}</span>
       </div>
     </div>
@@ -214,6 +247,7 @@ function Finale({ gems, onClose }: { gems: number; onClose: () => void }) {
 
 export function TutorialLayer() {
   const step = useGame((g) => stepOf(g).step);
+  const intro = useGame(introFeature);
   const uid = useGame((g) => stepOf(g).uid);
   const baseId = useGame((g) => (uid !== null ? g.inventory.find((x) => x.uid === uid)?.baseId ?? null : null));
   const busyUi = useUi(
@@ -254,9 +288,14 @@ export function TutorialLayer() {
     [],
   );
 
-  let bubble: { text: string; gold?: boolean } | null = null;
+  let bubble: { text: string; gold?: boolean; intro?: boolean } | null = null;
   let hand = false;
-  if (step === 'roll') bubble = { text: t('tut.roll') };
+  let target: { target: string; fallback?: string } | null = null;
+  if (step === 'open') {
+    bubble = { text: t('tut.open') };
+    hand = true;
+    target = { target: '[data-lock-target]' };
+  } else if (step === 'roll') bubble = { text: t('tut.roll') };
   else if (step === 'equip') {
     bubble = { text: t('tut.drag') };
     hand = true;
@@ -268,10 +307,27 @@ export function TutorialLayer() {
     bubble = { text: t('tut.lucky'), gold: true };
     hand = true;
   }
+  // A feature that just opened, once the tutorial's own steps leave room (the Bag also opens during
+  // the Equip best step, whose hand taps the Bag tab anyway).
+  const introducing = intro && (step === null || step === 'fight') ? intro : null;
+  if (introducing && introducing !== 'roll') {
+    bubble = { text: t(`tut.intro.${introducing}`), gold: true, intro: true };
+    hand = true;
+    target = INTRO[introducing];
+  }
+  const showing = !busy && introducing !== null;
+  useEffect(() => {
+    if (!showing || !introducing || introducing === 'roll') return;
+    // Not tapped in time: the next one gets its turn.
+    const id = setTimeout(() => seeFeature(introducing), INTRO[introducing].ms);
+    return () => clearTimeout(id);
+  }, [showing, introducing]);
   return (
     <div className={s.layer}>
-      {!busy && bubble && <Bubble text={bubble.text} done={step ? doneCount(step) : 3} gold={bubble.gold} />}
-      {!busy && hand && <Hand uid={uid} baseId={baseId} best={step === 'best'} />}
+      {!busy && bubble && <Bubble text={bubble.text} done={bubble.intro ? null : step ? doneCount(step) : 3} gold={bubble.gold} />}
+      {!busy && hand && (
+        <Hand uid={target ? null : uid} baseId={target ? null : baseId} best={step === 'best'} target={target?.target} fallback={target?.fallback} />
+      )}
       {finale !== null && <Finale gems={finale} onClose={() => setFinale(null)} />}
     </div>
   );

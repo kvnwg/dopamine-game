@@ -2,7 +2,20 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A lot more items (Nov 3, newest)
+## A locked start, one feature at a time, and a cleaner Roll tab (Nov 3, newest)
+
+Kevin: "get rid of rarest ever, clean up, things that don't need to be there get removed. for the tutorial, have everything locked until the tutorial walks the player through it. when they first start playing, they have to click the spinner for the lock and metal to fall off and then it starts spinning".
+
+| # | Decision | Why |
+|---|---|---|
+| L1 | A new game's dumpster starts padlocked under two riveted steel plates and a strap (CSS on the pixel grid; the padlock is a 24 x 35 sprite, closed and popped open). The tutorial's first bubble says to tap it, and the hand taps the padlock. A tap clanks it; the shackle pops with sparks; the steel and the lock drop off the machine (whole pixels, their own gravity) with a crash; and the reels start, the first spin being the tutorial's Traffic Cone as before. In core the reels don't turn until `openDumpster` (save field `features`). | Kevin's request. |
+| L2 | Everything else starts locked and opens when it becomes useful (core/systems/features.ts): the Bag once the first item is on; Luck (the luck badge, lucky-spin meter and bad-luck counter) and the Codex once the tutorial is over; Upgrades, and the dumpster's own upgrade (with its level and turbo-spin count), once the tutorial is over and one is affordable; Worlds after World 1's boss; Rebirth two worlds before the first rebirth's (World 3); Heists with the first rebirth (K24). "The tutorial is over" also comes after 40 rolls (`tutorial.overAtRolls`), so an unfinished tutorial never holds anything back. Core never blocks an action for a locked feature; the screens just don't offer it. Saves from before this have everything. | "Have everything locked until the tutorial walks the player through it." |
+| L3 | Opened features are introduced one at a time, in that order. A gold "NEW! ..." bubble says what it is, its tab or button blinks a gold outline, and the hand points at it until it is tapped (or after 30 s for a tab, 12 to 15 s for a button), then the next one gets its turn; until its turn a feature stays locked on screen. A locked tab is faded with a lock and shakes its head when tapped ("Keep playing to unlock this!"); when it opens, its lock falls off with a chime. The tutorial's own steps come first (the Bag opens during the Equip best step, whose hand taps the Bag tab anyway). | One new thing at a time, each pointed out. |
+| L4 | The Roll tab loses what it didn't need: the "rarest roll ever" line and the NEW BEST chip, the AUTO and seconds-per-spin label, and the "In your bag" chip (Scrapped still shows). Toasts that repeated what the screen already shows are gone: "Equipped X!" (the item's flight and the power count say it) and "Level up!" (the battle's LEVEL UP and the badge); the Codex bonus toast waits until the Codex has been introduced. | "Get rid of rarest ever, clean up, things that don't need to be there get removed." |
+| L5 | Settings has Start a new game (a second tap confirms; it erases the save and goes back to the title). | Without it an existing save, which has everything open, could never show the new start. |
+| L6 | The balance simulator taps the padlock at once; tests start from an opened dumpster unless they test the lock. | |
+
+## A lot more items (Nov 3)
 
 Kevin: "add a shit ton more types of items".
 

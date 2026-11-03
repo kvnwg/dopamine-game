@@ -38,6 +38,15 @@ export const ItemSchema = z.object({
   power: z.number(),
 });
 
+/**
+ * What a new game opens one by one (src/core/systems/features.ts): the dumpster itself (the player's
+ * tap knocks its padlock off), then the Bag, luck, Upgrades, Worlds, the Codex, the dumpster's own
+ * upgrades, Rebirth and Heists.
+ */
+export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist'] as const;
+export const FeatureSchema = z.enum(FEATURES);
+export type Feature = z.infer<typeof FeatureSchema>;
+
 /** One spin of the reels. Each reel's item is rolled when the spin starts and lands when the spin ends. */
 export const SpinSchema = z.object({
   /**
@@ -336,6 +345,13 @@ export const GameStateSchema = z.object({
     reduceMotion: z.boolean(),
   }),
   heist: HeistStateSchema,
+  /**
+   * Features opened (`unlocked`: they work and show) and introduced (`seen`: the tutorial has pointed
+   * them out). Saves from before this have everything.
+   */
+  features: z
+    .object({ unlocked: z.array(FeatureSchema), seen: z.array(FeatureSchema) })
+    .default(() => ({ unlocked: [...FEATURES], seen: [...FEATURES] })),
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
@@ -415,5 +431,6 @@ export function createInitialState(now: number, seed: number): GameState {
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
+    features: { unlocked: [], seen: [] },
   };
 }

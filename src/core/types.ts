@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { ItemSchema, SubstatSchema, ItemEnchantSchema, HeistRewards } from './state';
+import type { Feature, ItemSchema, SubstatSchema, ItemEnchantSchema, HeistRewards } from './state';
 import type { HeistNodeKind, LocationId, Rarity, Slot, StatId } from '../data';
 
 export type Item = z.infer<typeof ItemSchema>;
@@ -77,6 +77,8 @@ export type CoreEvent =
   | { type: 'equip'; item: Item; replaced: Item | null; auto: boolean }
   /** The beginner's luck item was put on: the tutorial is over (`gems` given for finishing it). */
   | { type: 'tutorialDone'; gems: number }
+  /** A feature opened (src/core/systems/features.ts): the dumpster on the player's tap, the rest as they become useful. */
+  | { type: 'featureUnlocked'; feature: Feature }
   | { type: 'scrap'; item: Item; xp: number; coins: number; auto: boolean }
   | { type: 'scrapAll'; count: number; xp: number; coins: number }
   | { type: 'luckBoost'; endsAt: number; seconds: number }
@@ -112,6 +114,10 @@ export type CoreEvent =
   | { type: 'error'; message: string };
 
 export type GameAction =
+  /** A new game's first tap: the padlock comes off the dumpster and it starts rolling. */
+  | { type: 'openDumpster' }
+  /** The tutorial has introduced a feature that opened (its tab or button was tapped, or its moment passed). */
+  | { type: 'featureSeen'; feature: Feature }
   | { type: 'equipItem'; uid: number }
   /** Equips the biggest upgrade in every slot from the bag. */
   | { type: 'equipBest' }

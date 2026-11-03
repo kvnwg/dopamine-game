@@ -333,6 +333,39 @@ class AudioEngine {
     this.tone(410, at, 0.12, { type: 'square', gain: 0.025, filter: 1400 });
   }
 
+  /** A tap on the padlock a new game's dumpster starts under: a heavy metal clank. */
+  lockHit(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.tone(150, at, 0.22, { gain: 0.3, freqEnd: 70 });
+    this.noise(at, 0.09, { freq: 2600, q: 4, gain: 0.14 });
+    for (const p of [1, 2.41, 3.9]) this.tone(this.vary(610) * p, at, 0.3 / p, { gain: 0.05 / p, attack: 0.001 });
+  }
+
+  /** The padlock pops and the metal falls off the dumpster: a ping, a crash, then clatter. */
+  lockBreak(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.bell(1480, at, 0.5, 0.09);
+    this.tone(70, at + 0.12, 0.6, { gain: 0.5, freqEnd: 38 });
+    this.noise(at + 0.12, 0.3, { type: 'lowpass', freq: 3000, freqEnd: 600, gain: 0.32 });
+    for (let i = 0; i < 6; i++) {
+      const t = at + 0.25 + i * (0.07 + this.rnd() * 0.06);
+      for (const p of [1, 2.63]) this.tone(this.vary(440 + i * 60) * p, t, 0.18 / p, { gain: (0.05 / p) * (1 - i / 7), attack: 0.001 });
+    }
+    this.duckMusic(0.4, 0.5);
+  }
+
+  /** Something new opens up (a tab or a button): a rising sparkle of three notes. */
+  featureOpen(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('featureOpen', 300)) return;
+    const at = ctx.currentTime;
+    [72, 76, 79, 84].forEach((n, i) => this.bell(midi(n), at + i * 0.07, 0.35, 0.07));
+  }
+
   /** One rattle beat: each beat shakes louder and higher than the last. */
   rattle(beat: number, beats: number, heartbeat: boolean): void {
     const ctx = this.live;

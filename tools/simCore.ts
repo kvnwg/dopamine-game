@@ -56,6 +56,8 @@ export function simulate(opts: SimOptions): SimResult {
   let now = opts.startTime ?? Date.UTC(2026, 0, 5, 12, 0, 0);
   let state = createInitialState(now, Rng.hashSeed(opts.seed));
   const rng = new Rng(state.rngState);
+  // The player's first tap knocks the padlock off the dumpster.
+  state = applyAction(state, { type: 'openDumpster' }, rng, now).state;
   const clearedAt: Record<number, number> = {};
   const rebirthAt: number[] = [];
   const samples: SimSample[] = [];

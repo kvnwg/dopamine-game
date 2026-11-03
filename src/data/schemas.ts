@@ -419,6 +419,13 @@ export const BalanceSchema = z.object({
     beginnerTokens: z.array(z.number().positive()),
     rewardGems: nonNeg,
     holdSeconds: positive,
+    /**
+     * Features open one by one in a new game (src/core/systems/features.ts). Those waiting for the
+     * tutorial to end also open after `overAtRolls` rolls, so a tutorial left unfinished never holds
+     * them back; the Rebirth tab opens `rebirthTabWorldsEarly` worlds before the first rebirth's world.
+     */
+    overAtRolls: z.number().int().positive(),
+    rebirthTabWorldsEarly: z.number().int().nonnegative(),
   }),
 });
 export type Balance = z.infer<typeof BalanceSchema>;

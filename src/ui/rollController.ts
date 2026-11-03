@@ -8,7 +8,7 @@
  * boosts, upgrades and rebirths (with the items each rebirth unlocks).
  */
 import { BAL, DATA } from '../data';
-import { currentLuck, formatNumber, haulMinutes, haulSize, itemName, luckOddsOneIn, rarityIndex, rollDrama, type CoreEvent, type Item } from '../core';
+import { currentLuck, formatNumber, haulMinutes, haulSize, luckOddsOneIn, rarityIndex, rollDrama, type CoreEvent, type Item } from '../core';
 import { getGame } from '../app/store';
 import { saveNow } from '../app/session';
 import { bus } from '../app/eventBus';
@@ -147,9 +147,6 @@ export function installRollController(): () => void {
   return bus.on((events: CoreEvent[]) => {
     const ui = useUi.getState();
     popped = null;
-    // Equip best wears several items at once: one toast for the lot.
-    const equips = events.filter((e) => e.type === 'equip' && !e.auto).length;
-    if (equips > 1) ui.toast(t('toast.equippedN', { n: equips }), 'good');
     for (const e of events) {
       switch (e.type) {
         case 'spinStart': {
@@ -198,18 +195,16 @@ export function installRollController(): () => void {
           useUi.setState((u) => ({ newCodexKeys: [...u.newCodexKeys.slice(-50), e.key] }));
           break;
         case 'equip':
+          // (The item's flight and the power count say it all: no toast.)
           useUi.setState({ equipPulse: { slot: e.item.slot, id: e.item.uid } });
-          if (!e.auto && equips === 1) ui.toast(t('toast.equipped', { name: itemName(e.item) }), 'good');
           break;
         case 'levelUp':
-          // One toast for a batch (a big haul can grant many levels at once): the level reached.
-          if (e === lastOf(events, 'levelUp')) {
-            ui.toast(t('toast.levelUp', { level: e.level }), 'good');
-            haptics.impact('medium');
-          }
+          // (The battle's LEVEL UP and the level badge say it: no toast.)
+          if (e === lastOf(events, 'levelUp')) haptics.impact('medium');
           break;
         case 'codexBonus':
-          ui.toast(t('toast.codexBonus', { gems: e.gems }), 'good');
+          // Before the Codex has been introduced its gems just arrive.
+          if (getGame().features.seen.includes('codex')) ui.toast(t('toast.codexBonus', { gems: e.gems }), 'good');
           break;
         case 'dumpsterUpgraded':
           ui.toast(t('toast.dumpsterUpgraded', { level: e.level }), 'good');

@@ -16,6 +16,7 @@ import {
   heistAbandon, heistAdTicket, heistBoot, heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistReroll, heistRevive,
   heistsOpen, heistTick, refreshTickets, startHeist,
 } from './systems/heist';
+import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { addXp } from './systems/progression';
 import { doRebirth } from './systems/rebirth';
@@ -32,6 +33,8 @@ function run(state: GameState, rng: Rng, fn: (d: GameState, ev: CoreEvent[]) => 
   const events: CoreEvent[] = [];
   const next = produce(state, (d) => {
     fn(d, events);
+    // A new game opens its features one by one, as each becomes useful.
+    checkFeatures(d, events);
     d.rngState = rng.state;
   });
   return { state: next, events };
@@ -57,6 +60,12 @@ export function tick(state: GameState, input: { ticks: number }, rng: Rng, now: 
 export function applyAction(state: GameState, action: GameAction, rng: Rng, now: number): StepResult<GameState> {
   return run(state, rng, (d, ev) => {
     switch (action.type) {
+      case 'openDumpster':
+        openDumpster(d, ev);
+        break;
+      case 'featureSeen':
+        markFeatureSeen(d, action.feature);
+        break;
       case 'equipItem':
         equipFromBag(d, action.uid, ev);
         break;

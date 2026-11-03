@@ -36,6 +36,35 @@
   right: calc(-1 * var(--px));
   bottom: 0;
 }
+/* The lock of a tab that just opened falls off (whole pixels, gathering speed) and fades. */
+.lockDrop {
+  animation: lockDrop 0.8s both;
+}
+@keyframes lockDrop {
+  0% { transform: translate(0, 0); animation-timing-function: steps(1, end); }
+  12% { transform: translate(var(--px), calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  24% { transform: translate(calc(2 * var(--px)), calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  36% { transform: translate(calc(3 * var(--px)), 0); animation-timing-function: steps(1, end); }
+  48% { transform: translate(calc(4 * var(--px)), calc(4 * var(--px))); animation-timing-function: steps(1, end); }
+  60% { transform: translate(calc(5 * var(--px)), calc(10 * var(--px))); opacity: 1; animation-timing-function: steps(1, end); }
+  72% { transform: translate(calc(6 * var(--px)), calc(18 * var(--px))); opacity: 0.75; animation-timing-function: steps(1, end); }
+  84% { transform: translate(calc(7 * var(--px)), calc(28 * var(--px))); opacity: 0.5; animation-timing-function: steps(1, end); }
+  100% { transform: translate(calc(8 * var(--px)), calc(40 * var(--px))); opacity: 0; }
+}
+/* A locked tab tapped: a quick head shake. */
+.nope .icon {
+  animation: nope 0.36s both;
+}
+@keyframes nope {
+  0% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  25% { transform: translateX(var(--px)); animation-timing-function: steps(1, end); }
+  50% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  75%, 100% { transform: translateX(0); }
+}
+/* A tab being introduced: its outline blinks gold (global [data-new]) inside the bar. */
+.tab[data-new] {
+  outline-offset: calc(-1 * var(--px));
+}
 .label {
   font-family: var(--font-display);
   font-size: 27px;

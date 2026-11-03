@@ -11,7 +11,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, spinCycle, wornPower,
+  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
 } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
@@ -19,10 +19,12 @@ import { sparkleArt, UI_PX } from '../../render/icons';
 import { haptics } from '../../services';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
+import { seeFeature, useFeatureView } from '../features';
 import { useUi } from '../uiStore';
-import { ArrowDownIcon, ArrowUpIcon, BookIcon, BoltIcon, CheckIcon, CloverIcon, ClockIcon, StarIcon } from './Icons';
+import { ArrowDownIcon, ArrowUpIcon, BookIcon, BoltIcon, CheckIcon, CloverIcon, ClockIcon } from './Icons';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { PixelArt } from './PixelArt';
+import { DumpsterLock } from './DumpsterLock';
 import { ReelBank } from './Reel';
 import s from './alley.module.css';
 
@@ -116,13 +118,12 @@ function LastRoll() {
           {upgrade ? (
             <span className={`${s.chip} ${s.chipUpgrade}`}>{t('roll.dragHint')}</span>
           ) : (
-            <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
+            last.placed !== 'bag' && <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
           )}
           {last.scripted === 'beginner' && <span className={`${s.chip} ${s.chipBeginner}`}>{t('reveal.beginner')}</span>}
           {last.mult > 1 && <span className={`${s.chip} ${s.chipLucky}`}>{t('reel.token', { x: formatNumber(last.mult) })}</span>}
           {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('reel.golden')}</span>}
           {last.lucky && <span className={`${s.chip} ${s.chipLucky}`}>{t('roll.lucky')}</span>}
-          {last.newRecord && <span className={`${s.chip} ${s.chipRecord}`}>{t('roll.newRecord')}</span>}
           {it.enchants.map((en) => (
             <span key={en.id} className={s.chip} style={{ background: enchantColor(en.id) }}>
               {enchantLabel(en.id, en.tier)}
@@ -191,21 +192,29 @@ export function AlleyPanel() {
   const boostEnds = useGame((g) => g.luckBoostEndsAt);
   const boostLeft = boostEnds !== null ? Math.max(0, (boostEnds - now) / 1000) : 0;
   const boosted = boostLeft > 0;
-  const cycle = useGame((g) => spinCycle(g));
-  const record = useGame((g) => g.records);
   const dry = useGame((g) => g.dumpster.dryStreak);
   const spell = useGame(drySpell);
   const bl = BAL.dumpster.badLuck;
   const pityOn = level >= bl.minDumpsterLevel;
   const maxed = level >= BAL.dumpster.maxLevel;
+  // A new game shows these one at a time, as the tutorial introduces them (features.ts).
+  const dumpsterView = useFeatureView('dumpster');
+  const luckView = useFeatureView('luck');
+  const codexView = useFeatureView('codex');
   const open = (p: 'upgrade' | 'luck' | 'codex') => {
     haptics.impact('light');
+    seeFeature(p === 'upgrade' ? 'dumpster' : p);
     useUi.getState().openPopup(p);
   };
 
-  const title = <span className={s.binTitle}>{t('roll.dumpster', { level })}</span>;
-  const upgradeBtn = (
-    <button className={`btn small ${endsAt === null && !maxed ? '' : 'gray'}`} onClick={() => open('upgrade')}>
+  const title = <span className={s.binTitle}>{dumpsterView === 'locked' ? t('roll.dumpsterPlain') : t('roll.dumpster', { level })}</span>;
+  const upgradeBtn = dumpsterView !== 'locked' && (
+    <button
+      className={`btn small ${endsAt === null && !maxed ? '' : 'gray'}`}
+      onClick={() => open('upgrade')}
+      data-intro="dumpster"
+      data-new={dumpsterView === 'intro' || undefined}
+    >
       {endsAt !== null ? (
         <>
           <ClockIcon />
@@ -222,7 +231,12 @@ export function AlleyPanel() {
     </button>
   );
   const luckBadge = (
-    <button className={`${s.luckBadge} ${boosted ? s.luckBoosted : ''}`} onClick={() => open('luck')}>
+    <button
+      className={`${s.luckBadge} ${boosted ? s.luckBoosted : ''}`}
+      onClick={() => open('luck')}
+      data-intro="luck"
+      data-new={luckView === 'intro' || undefined}
+    >
       <CloverIcon size="md" />
       <span className={s.luckNum}>×{fmtLuck(luck)}</span>
       <span className={s.luckWord}>{boosted ? formatDuration(boostLeft) : t('roll.luckLabel')}</span>
@@ -230,7 +244,7 @@ export function AlleyPanel() {
   );
   const pity = pityOn && <span className={s.pity}>{t('roll.pity', { n: Math.max(1, spell - dry) })}</span>;
   const codex = (
-    <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')}>
+    <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')} data-intro="codex" data-new={codexView === 'intro' || undefined}>
       <BookIcon size="md" />
     </button>
   );
@@ -242,33 +256,28 @@ export function AlleyPanel() {
           {title}
           {upgradeBtn}
           <span className={s.grow} />
-          <div className={s.statLine}>
-            <span className={s.autoTag}>{t('roll.auto')}</span>
-            <span>{t(bags > 0 ? 'roll.everyShort' : 'roll.every', { s: cycle.toFixed(1) })}</span>
-          </div>
-          {bags > 0 && (
+          {bags > 0 && dumpsterView !== 'locked' && (
             <div className={s.statLine}>
               <BoltIcon />
               <span className={s.bonusOn}>{t('roll.turbo', { n: formatNumber(bags) })}</span>
             </div>
           )}
         </div>
-        <ReelBank />
-        <div className={s.wideRow}>
-          {luckBadge}
-          {pity}
-          <span className={s.grow} />
-          <LuckyMeter compact={!!pity} />
-          {codex}
+        <div className={s.machine}>
+          <ReelBank />
+          <DumpsterLock />
         </div>
+        {(luckView !== 'locked' || codexView !== 'locked') && (
+          <div className={s.wideRow}>
+            {luckView !== 'locked' && luckBadge}
+            {luckView !== 'locked' && pity}
+            <span className={s.grow} />
+            {luckView !== 'locked' && <LuckyMeter compact={!!pity} />}
+            {codexView !== 'locked' && codex}
+          </div>
+        )}
       </div>
       <LastRoll />
-      <div className={s.recordLine}>
-        <StarIcon size="md" />
-        <span className={s.record}>
-          {record.bestRarity ? t('roll.best', { name: `${record.bestItemName} (1 in ${fmtOdds(record.bestOdds)})` }) : t('roll.bestNone')}
-        </span>
-      </div>
     </div>
   );
 }

@@ -2,11 +2,12 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import type Phaser from "phaser";
 import { BAL, DATA } from "../../data";
 import { worldCount } from "../../core";
-import { dispatch, useGame } from "../../app/store";
+import { dispatch, gameStore, useGame } from "../../app/store";
 import { isHeld, whenStarted } from "../../app/session";
 import { haptics } from "../../services";
 import { createBattleGame } from "../../render/BattleScene";
 import { t } from "../i18n";
+import { featureView, seeFeature } from "../features";
 import { useUi } from "../uiStore";
 import { Chunky } from "./Chunky";
 import { ArrowRightIcon, SkullIcon } from "./Icons";
@@ -144,7 +145,13 @@ export function BattlePanel() {
         <div className={s.battleActions}>
           <button
             className={s.waveBox}
-            onClick={() => useUi.getState().setTab("worlds")}
+            onClick={() => {
+              // (Only once the Worlds tab is open; a new game opens it after World 1.)
+              const view = featureView(gameStore.getState().game, "worlds");
+              if (view === "locked") return;
+              seeFeature("worlds");
+              useUi.getState().setTab("worlds");
+            }}
             aria-label={worldLabel(world)}
           >
             <div className={s.waveTrack}>

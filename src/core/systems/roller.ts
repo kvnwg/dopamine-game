@@ -360,6 +360,8 @@ function nextLanding(cur: NonNullable<GameState['roll']['current']>): number {
 
 /** Advances the reels by `dt` seconds: spin, land (reel by reel), rest, spin again. */
 export function rollTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[], dt: number): void {
+  // A new game's dumpster waits, padlocked, for the player's tap (features.ts openDumpster).
+  if (!d.features.unlocked.includes('roll')) return;
   let t = dt;
   for (let guard = 0; guard < BAL.roll.maxRollsPerTick * (BAL.roll.maxReels + 2) + 2; guard++) {
     if (!d.roll.current) startSpin(d, rng, now, ev);

@@ -15,7 +15,7 @@ export function TopHud() {
   const need = xpToNext(level);
   const pulse = useUi((u) => u.goldPulse);
   return (
-    <div className={s.hud}>
+    <div className={s.hud} data-hud="">
       <button className={s.gearBtn} aria-label={t('hud.settings')} onClick={() => useUi.getState().openPopup('settings')}>
         <GearIcon size="md" />
       </button>

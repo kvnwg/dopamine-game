@@ -92,6 +92,7 @@ function LastRoll() {
           ) : (
             <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
           )}
+          {last.mult > 1 && <span className={`${s.chip} ${s.chipLucky}`}>{t('reel.token', { x: formatNumber(last.mult) })}</span>}
           {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('reel.golden')}</span>}
           {last.lucky && <span className={`${s.chip} ${s.chipLucky}`}>{t('roll.lucky')}</span>}
           {last.newRecord && <span className={`${s.chip} ${s.chipRecord}`}>{t('roll.newRecord')}</span>}

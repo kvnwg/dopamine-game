@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import type Phaser from 'phaser';
 import { BAL, DATA } from '../../data';
 import { worldCount } from '../../core';
@@ -46,7 +46,7 @@ function BossChoice() {
           </button>
           {!last && (
             <button className={`btn breathe ${s.choiceBtn} ${s.choiceNext}`} onClick={() => pick(true)}>
-              <span className={s.choiceFill} style={{ width: `${(1 - left / total) * 100}%` }} />
+              <span className={s.choiceFill} style={{ '--fill': `${(1 - left / total) * 100}%` } as CSSProperties} />
               <span className={s.choiceLabel}>
                 {t('choice.next')}
                 <ArrowRightIcon size="sm" />

@@ -129,39 +129,6 @@
 .moneyIcon {
   flex: none;
 }
-/* The world's name, shown for a moment when you arrive (then the sky is clear). */
-.worldCard {
-  position: absolute;
-  left: 50%;
-  top: 150px;
-  z-index: 4;
-  font-family: var(--font-display);
-  white-space: nowrap;
-  font-size: 54px;
-  color: #fff;
-  -webkit-text-stroke: 9px var(--ink);
-  paint-order: stroke fill;
-  text-shadow: 0 6px 0 var(--ink);
-  pointer-events: none;
-  opacity: 0;
-  transform: translateX(-50%);
-  animation: worldCard 2.8s ease-out forwards;
-}
-@keyframes worldCard {
-  0% { opacity: 0; transform: translate(-50%, 18px); }
-  12% { opacity: 1; transform: translate(-50%, 0); }
-  78% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -12px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .worldCard {
-    animation: worldCardFade 2.8s linear forwards;
-  }
-}
-@keyframes worldCardFade {
-  0%, 85% { opacity: 1; }
-  100% { opacity: 0; }
-}
 /* Wave progress at the bottom left of the view (opens the Worlds tab): one art pixel per dot, the skull for the boss. */
 .waveBox {
   display: flex;
@@ -346,26 +313,32 @@
   z-index: 8;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 52%, rgba(10, 12, 26, 0.35), rgba(10, 12, 26, 0.7));
-  animation: choiceIn 220ms ease-out;
+  /* A flat dim over the battle. */
+  background: rgba(10, 12, 26, 0.55);
+  animation: choiceIn 220ms steps(3);
 }
 @keyframes choiceIn {
   from { opacity: 0; }
 }
+/* A cream card framed in ink, dropping in from four pixels up (no scaling: its pixels stay 9 px). */
 .choiceCard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 30px 44px 34px;
-  border-radius: 34px;
-  border: 6px solid var(--ink);
-  background: linear-gradient(180deg, #fff8e6, #f3e3bf);
-  box-shadow: 0 10px 0 var(--ink), 0 0 60px rgba(255, 200, 80, 0.5);
-  animation: choicePop 420ms cubic-bezier(0.34, 1.6, 0.5, 1);
+  gap: calc(2 * var(--px));
+  padding: calc(3 * var(--px)) calc(5 * var(--px)) calc(4 * var(--px));
+  background: linear-gradient(180deg, #fffaf0 0 var(--px), #fff8e6 var(--px) calc(100% - 2 * var(--px)), #f3e3bf calc(100% - 2 * var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  animation: choicePop 270ms steps(3);
 }
 @keyframes choicePop {
-  from { transform: scale(0.6); }
+  from { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice,
+  .choiceCard {
+    animation: none;
+  }
 }
 .choiceReward {
   font-family: var(--font-display);
@@ -374,40 +347,44 @@
 }
 .choiceBtns {
   display: flex;
-  gap: 24px;
-  margin-top: 6px;
+  gap: calc(3 * var(--px));
+  margin-top: var(--px);
 }
 .choiceBtn {
   position: relative;
-  min-width: 300px;
-  min-height: 132px;
-  padding: 10px 26px 12px;
+  min-width: calc(33 * var(--px));
+  min-height: calc(15 * var(--px));
+  padding: var(--px) calc(3 * var(--px));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
   font-size: 48px;
   overflow: hidden;
 }
 .choiceNext {
-  min-width: 380px;
+  min-width: calc(42 * var(--px));
 }
-/* The countdown fills the Next button from the left; when it is full the raccoon moves on. */
+/*
+ * The countdown fills the Next button from the left (whole art pixels at a time, --fill is a share of
+ * the button); when it is full the raccoon moves on.
+ */
 .choiceFill {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
+  width: var(--fill, 0%);
+  width: round(down, var(--fill, 0%), var(--px));
   background: rgba(255, 255, 255, 0.28);
-  transition: width 100ms linear;
   pointer-events: none;
 }
 .choiceLabel {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--px);
 }
 .choiceAuto {
   position: relative;

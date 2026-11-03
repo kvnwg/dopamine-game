@@ -1,6 +1,6 @@
 /**
  * Atmosphere for the battle backdrops, painted on the art pixel grid (one buffer pixel is one battle
- * pixel, 12 screen pixels), the way a pixel artist paints light:
+ * pixel, P screen pixels), the way a pixel artist paints light:
  *  - skies in color bands whose edges break up into short runs, mixed in OKLab so sunset ramps
  *    (blue, violet, rose, orange, gold) stay clean instead of going gray;
  *  - a sun, moon or planet inside a halo of stepped rings (an overlay drawn over the clouds, so they

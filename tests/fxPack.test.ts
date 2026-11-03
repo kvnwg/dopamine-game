@@ -2,12 +2,11 @@ import { statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { bounds } from '../src/render/pixel/buf';
 import { KEYS, checkSheet, frameBuf, type AnimSheet } from '../src/render/pixel/indexed';
+import { VIEW } from '../src/render/pixel/sceneryTypes';
 import { FX_SHEETS, sheet, type FxName } from '../src/render/pixel/packs/fx';
 
 const NAMES: readonly FxName[] = ['hit', 'crit', 'slash', 'boom', 'sparkle', 'levelUp', 'lightning'];
 
-/** The battle view in art pixels (1080 x 820 screen pixels at 12 per art pixel). */
-const VIEW = { w: 90, h: 68 };
 
 /**
  * The most content (the union of all frames) each effect may have, in art pixels. hit and boom

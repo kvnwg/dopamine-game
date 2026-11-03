@@ -405,7 +405,9 @@ export const BalanceSchema = z.object({
    * reel chaining `beginnerTokens` into a `beginnerRarity` item. It comes once the raccoon has put
    * on `beginnerAfterEquips` items (the tutorial's Equip best) and `beginnerAfterRolls` items have
    * rolled, or at `beginnerAtRolls` regardless. Putting that item on ends the tutorial with
-   * `rewardGems`.
+   * `rewardGems`. The reels rest on each of the tutorial's scripted finds (the first roll, beginner's
+   * luck) while it waits in the bag to be put on, `holdSeconds` at most, so it stays where the
+   * tutorial's hand points.
    */
   tutorial: z.object({
     beginnerAfterRolls: z.number().int().positive(),
@@ -414,6 +416,7 @@ export const BalanceSchema = z.object({
     beginnerRarity: RaritySchema,
     beginnerTokens: z.array(z.number().positive()),
     rewardGems: nonNeg,
+    holdSeconds: positive,
   }),
 });
 export type Balance = z.infer<typeof BalanceSchema>;

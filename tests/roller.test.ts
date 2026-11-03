@@ -133,14 +133,16 @@ describe('luck odds ("1 in X")', () => {
 });
 
 describe('the wheel', () => {
-  it('the first spin is the scripted Legendary Traffic Cone, then spins keep coming without input', () => {
+  it('the first spin is the scripted Legendary Traffic Cone; once it is worn, spins keep coming without input', () => {
     const rng = new Rng(1);
-    const { events } = runTicks(clone(freshState()), 120, rng);
-    const rolls = events.filter((e) => e.type === 'roll');
-    expect(rolls.length).toBeGreaterThanOrEqual(Math.floor(12 / spinCycle(freshState())) - 1);
-    const first = rolls[0];
-    expect(first.type === 'roll' && first.item.baseId).toBe('hat_traffic_cone');
-    expect(first.type === 'roll' && first.item.rarity).toBe('legendary');
+    const a = runTicks(clone(freshState()), 120, rng);
+    const first = a.events.find((e) => e.type === 'roll');
+    expect(first?.type === 'roll' && first.item.baseId).toBe('hat_traffic_cone');
+    expect(first?.type === 'roll' && first.item.rarity).toBe('legendary');
+    // (The reels rest on it until it is put on: tests/tutorial.test.ts.)
+    const worn = act(a.state, { type: 'equipItem', uid: a.state.inventory[0].uid }, rng, T0 + 12_000).state;
+    const { events } = runTicks(worn, 120, rng, T0 + 12_000);
+    expect(events.filter((e) => e.type === 'roll').length).toBeGreaterThanOrEqual(Math.floor(12 / spinCycle(freshState())) - 1);
   });
 
   it('a spin starts with its result already decided, lands after spinSeconds, then rests', () => {

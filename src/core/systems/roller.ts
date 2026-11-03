@@ -244,13 +244,14 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
   const cycle = spinCycle(d, turbo);
   const baseSpinSeconds = cycle * spinShare();
-  const restSeconds = cycle - baseSpinSeconds;
+  // The tutorial scripts two spins: the very first (rollReelItem gives the tutorial item) and, a little
+  // later, beginner's luck: its first reel chains BAL.tutorial's tokens into a rare item. The reels
+  // rest on either find while it waits in the bag to be put on (rollTick ends the rest when it goes).
+  const scripted = !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
+  const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
   const reels: { item: Item; odds: number; mults: number[]; landAt: number; landed: boolean }[] = [];
   let dry = d.dumpster.dryStreak;
-  // The tutorial scripts two spins: the very first (rollReelItem gives the tutorial item) and, a little
-  // later, beginner's luck: its first reel chains BAL.tutorial's tokens into a rare item.
-  const scripted = !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
   for (let i = 0, n = reelCount(d); i < n; i++) {
     // No tokens on the tutorial spin or a forced (debug) roll; dev cheats can force a chain.
     let mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng) : [];
@@ -363,6 +364,10 @@ export function rollTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[], d
   for (let guard = 0; guard < BAL.roll.maxRollsPerTick * (BAL.roll.maxReels + 2) + 2; guard++) {
     if (!d.roll.current) startSpin(d, rng, now, ev);
     const cur = d.roll.current!;
+    // A tutorial find holds the reels (startSpin's long rest) until it leaves the bag: put on or scrapped.
+    if (cur.scripted && cur.landed && !d.inventory.some((x) => x.uid === cur.reels[0].item.uid)) {
+      cur.restSeconds = Math.min(cur.restSeconds, Math.max(0, d.roll.timer - cur.spinSeconds));
+    }
     const total = cur.spinSeconds + cur.restSeconds;
     const land = nextLanding(cur);
     const step = Math.max(0, Math.min(t, Math.min(land, total) - d.roll.timer));

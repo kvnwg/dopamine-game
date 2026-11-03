@@ -507,7 +507,8 @@
     "beginnerAtRolls": 14,
     "beginnerRarity": "limited",
     "beginnerTokens": [3, 5],
-    "rewardGems": 50
+    "rewardGems": 50,
+    "holdSeconds": 30
   },
   "roll": {
     "spinSeconds": 2.6,

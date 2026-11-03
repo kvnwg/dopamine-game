@@ -172,6 +172,10 @@
   align-items: center;
   gap: calc(3 * var(--px));
 }
+/* Nothing scrolls on the Roll tab: a finger on the last roll's tile drags it, never pans the page. */
+.last > [data-uid] {
+  touch-action: none;
+}
 .waiting {
   flex: 1;
   text-align: center;

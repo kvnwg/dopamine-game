@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, beginnerLuckDue, GameStateSchema, performSpin, Rng, type CoreEvent, type GameState } from '../src/core';
+import { applyAction, beginnerLuckDue, GameStateSchema, performSpin, Rng, spinCycle, tick, type CoreEvent, type GameState } from '../src/core';
 import { BAL, DATA } from '../src/data';
 import { freshState, T0 } from './helpers';
 
@@ -103,5 +103,65 @@ describe("tutorial: the first roll and beginner's luck", () => {
     reborn.dumpster.firstDiveDone = true;
     reborn.roll.count = 50;
     expect(beginnerLuckDue(reborn)).toBe(false);
+  });
+});
+
+describe('the tutorial holds the reels on its finds', () => {
+  const t = BAL.tutorial;
+  type RollEv = Extract<CoreEvent, { type: 'roll' }>;
+
+  /** Ticks `seconds` of play 0.1 s at a time from `at`; returns the state, the rolls and the clock. */
+  function play(st: GameState, seconds: number, rng: Rng, at = T0) {
+    const rolls: RollEv[] = [];
+    const events: CoreEvent[] = [];
+    let s = st;
+    for (let i = 0; i < seconds * 10; i++) {
+      const r = tick(s, { ticks: 1 }, rng, at + i * 100);
+      s = r.state;
+      events.push(...r.events);
+      for (const e of r.events) if (e.type === 'roll') rolls.push(e);
+    }
+    return { st: clone(s), rolls, events, at: at + seconds * 1000 };
+  }
+
+  it('the reels rest on the first find while it waits in the bag to be put on, and roll on as soon as it is', () => {
+    const rng = new Rng(4);
+    const a = play(freshState(), 20, rng);
+    // Only the cone in 20 seconds: the hand's target stays put.
+    expect(a.rolls.map((r) => r.item.baseId)).toEqual([BAL.dumpster.tutorialItem.baseId]);
+    expect(a.st.roll.current?.scripted).toBe('first');
+    const worn = clone(applyAction(a.st, { type: 'equipItem', uid: a.st.inventory[0].uid }, rng, a.at).state);
+    const b = play(worn, 2 * spinCycle(worn) + 0.5, rng, a.at);
+    expect(b.rolls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('at most holdSeconds if it is never put on; scrapping it lets them go on at once', () => {
+    const rng = new Rng(5);
+    const cycle = spinCycle(freshState());
+    const waited = play(freshState(), t.holdSeconds + cycle * 2 + 1, rng);
+    expect(waited.rolls.length).toBeGreaterThanOrEqual(2);
+    const a = play(freshState(), 10, new Rng(6));
+    expect(a.rolls).toHaveLength(1);
+    const gone = clone(applyAction(a.st, { type: 'scrapItem', uid: a.st.inventory[0].uid }, new Rng(6), a.at).state);
+    expect(play(gone, cycle + 0.5, new Rng(6), a.at).rolls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("beginner's luck holds them the same way, until it goes on (and the tutorial ends)", () => {
+    const rng = new Rng(8);
+    const st = clone(freshState());
+    st.dumpster.firstDiveDone = true;
+    st.currencies.bags = 0;
+    st.roll.count = t.beginnerAfterRolls;
+    st.lifetime.itemsEquipped = t.beginnerAfterEquips;
+    expect(beginnerLuckDue(st)).toBe(true);
+    // The spin lands (tokens and all), then nothing more for a long while.
+    const a = play(st, 25, rng);
+    const lucky = a.rolls.find((r) => r.scripted === 'beginner');
+    expect(lucky).toBeDefined();
+    expect(a.rolls[a.rolls.length - 1].item.uid).toBe(lucky!.item.uid);
+    expect(a.st.inventory.some((x) => x.uid === lucky!.item.uid)).toBe(true);
+    const worn = applyAction(a.st, { type: 'equipItem', uid: lucky!.item.uid }, rng, a.at);
+    expect(worn.events.some((e) => e.type === 'tutorialDone')).toBe(true);
+    expect(play(clone(worn.state), spinCycle(st) + 0.5, rng, a.at).rolls.length).toBeGreaterThanOrEqual(1);
   });
 });

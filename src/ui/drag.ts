@@ -2,8 +2,9 @@
  * Drag-to-equip. An item is equipped when it is dragged up toward the top of the screen: dropped
  * anywhere above the menus (the battle view or just under it), onto a gear panel
  * (`data-drop="equip"`), or after a clear upward drag from wherever it started. Mouse: press and
- * move. Touch: press and hold briefly to pick the item up, so ordinary swipes still scroll the bag.
- * A press without a drag is a tap.
+ * move. Touch: the same where nothing scrolls (the Roll tab's last roll, a bag that fits on screen);
+ * in a bag long enough to scroll, press and hold briefly to pick the item up, so ordinary swipes
+ * still scroll it. A press without a drag is a tap.
  */
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Item } from '../core';
@@ -28,19 +29,24 @@ const UPPER_Y = Math.max(VIEW.h * P, (FEET_ROW + 1 + 37) * P);
 const LIFT_PX = 180;
 
 /**
- * True while a touch drag is in progress. The blocking touchmove listener must exist before the
- * finger goes down (browsers decide at touchstart whether a gesture can be cancelled), so it is
- * registered once here instead of per press.
+ * The touch press under way, if any. While it drags (or presses where nothing scrolls) its finger's
+ * moves must not scroll the page: the blocking touchmove listener must exist before the finger goes
+ * down (browsers decide at touchstart whether a gesture can be cancelled), so it is registered once
+ * here instead of per press.
  */
-let touchDragging = false;
-if (typeof window !== 'undefined') {
-  window.addEventListener(
-    'touchmove',
-    (ev) => {
-      if (touchDragging && ev.cancelable) ev.preventDefault();
-    },
-    { passive: false },
-  );
+let touchPress: Press | null = null;
+function blockTouch(ev: Event): void {
+  if (touchPress && (touchPress.dragging || touchPress.free) && ev.cancelable) ev.preventDefault();
+}
+if (typeof window !== 'undefined') window.addEventListener('touchmove', blockTouch, { passive: false });
+
+/** The nearest ancestor that can scroll up and down right now (a bag with more than fits), or null. */
+function scrollerOf(el: Element): Element | null {
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    const oy = getComputedStyle(e).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && e.scrollHeight > e.clientHeight + 1) return e;
+  }
+  return null;
 }
 
 /** Client (screen) coordinates to the 1080-wide stage's own coordinates. */
@@ -69,6 +75,8 @@ interface Press {
   sx: number;
   sy: number;
   touch: boolean;
+  /** Nothing to scroll here: a touch drag starts on the first move, as with a mouse. */
+  free: boolean;
   dragging: boolean;
   moved: boolean;
   timer: number | null;
@@ -83,11 +91,21 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
       onTap?.();
       return;
     }
-    const press: Press = { pid: e.pointerId, sx: e.clientX, sy: e.clientY, touch: e.pointerType !== 'mouse', dragging: false, moved: false, timer: null };
+    const touch = e.pointerType !== 'mouse';
+    const press: Press = {
+      pid: e.pointerId, sx: e.clientX, sy: e.clientY, touch, free: touch && !scrollerOf(e.currentTarget), dragging: false, moved: false, timer: null,
+    };
     ref.current = press;
+    // A touch's moves keep going to the element it started on even once that is gone from the page (the
+    // Roll tab's card is redrawn when the next roll lands), out of the window listener's reach: block
+    // them there too, or the browser takes the gesture for a scroll and cancels the drag.
+    const target = e.target as Element;
+    if (touch) {
+      touchPress = press;
+      target.addEventListener('touchmove', blockTouch, { passive: false });
+    }
     const startDrag = (cx: number, cy: number) => {
       press.dragging = true;
-      if (press.touch) touchDragging = true;
       const p = stagePoint(cx, cy);
       useUi.setState({ drag: { item, x: p.x, y: p.y, over: wouldEquip(press.sx, press.sy, cx, cy) } });
       haptics.impact('light');
@@ -98,7 +116,8 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
-      if (press.dragging) touchDragging = false;
+      target.removeEventListener('touchmove', blockTouch);
+      if (touchPress === press) touchPress = null;
       if (ref.current === press) ref.current = null;
     };
     const move = (ev: PointerEvent) => {
@@ -106,7 +125,7 @@ export function useItemDrag(item: Item | null, onTap?: () => void) {
       if (!press.dragging) {
         if (Math.hypot(ev.clientX - press.sx, ev.clientY - press.sy) > MOVE_PX) {
           press.moved = true;
-          if (press.touch) {
+          if (press.touch && !press.free) {
             cleanup(); // a swipe: let it scroll
             return;
           }

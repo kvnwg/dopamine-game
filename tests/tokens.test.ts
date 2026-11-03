@@ -33,9 +33,9 @@ function runTicks(st: GameState, ticks: number, rng: Rng) {
 describe('luck tokens', () => {
   const m = BAL.roll.multiplier;
 
-  it('a reel lands on a token about `chance` of the time, chains rarely, and never past maxSteps (20,000 reels)', () => {
+  it('a reel lands on a token about `chance` of the time, then each re-roll lands another at `chainChance`, never past maxSteps (40,000 reels)', () => {
     const rng = new Rng(5);
-    const n = 20_000;
+    const n = 40_000;
     let withTokens = 0;
     let chains = 0;
     const seen = new Map<number, number>();
@@ -49,8 +49,10 @@ describe('luck tokens', () => {
     const p = withTokens / n;
     const se = Math.sqrt((m.chance * (1 - m.chance)) / n);
     expect(Math.abs(p - m.chance)).toBeLessThan(4 * se);
-    // A second token needs a second success: about chance^2 of reels.
-    expect(chains / n).toBeLessThan(m.chance * m.chance * 2);
+    // Once a token has landed, the next roll lands another with chainChance (50%).
+    const q = chains / withTokens;
+    const seQ = Math.sqrt((m.chainChance * (1 - m.chainChance)) / withTokens);
+    expect(Math.abs(q - m.chainChance)).toBeLessThan(4 * seQ);
     // Every configured value shows up, and the commonest is the most frequent.
     for (const v of m.values) expect(seen.get(v.x) ?? 0).toBeGreaterThan(0);
     const commonest = [...m.values].sort((a, b) => b.weight - a.weight)[0].x;
@@ -118,17 +120,21 @@ describe('luck tokens', () => {
     }
   });
 
-  it('tokens make rare items likelier on average', () => {
+  it('tokens make rare items likelier on average, by a bounded amount', () => {
     const avg = m.values.reduce((s, v) => s + v.x * v.weight, 0) / m.values.reduce((s, v) => s + v.weight, 0);
     expect(avg).toBeGreaterThan(1);
-    // Expected multiplier of a reel: sum over chain lengths (finite, a modest boost).
-    let e = 0;
-    for (let k = 0; k <= m.maxSteps; k++) {
-      const pk = Math.pow(m.chance, k) * (k < m.maxSteps ? 1 - m.chance : 1);
+    // Expected multiplier of a reel: no token, or a first token then each next one at chainChance.
+    let e = 1 - m.chance;
+    for (let k = 1; k <= m.maxSteps; k++) {
+      const pk = m.chance * Math.pow(m.chainChance, k - 1) * (k < m.maxSteps ? 1 - m.chainChance : 1);
       e += pk * Math.pow(avg, k);
     }
-    expect(e).toBeGreaterThan(1.05);
-    expect(e).toBeLessThan(2);
+    expect(e).toBeGreaterThan(1.2);
+    expect(e).toBeLessThan(2.5);
+  });
+
+  it('a re-roll after a token takes as long as the spin itself (it never speeds up)', () => {
+    for (const base of [0.5, 1.3, 2.6]) expect(tokenStepSeconds(base) - m.holdSeconds).toBeCloseTo(base);
   });
 });
 

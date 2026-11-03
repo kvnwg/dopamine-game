@@ -1,33 +1,27 @@
 /**
- * The street's far layer (scene rows 26 to 58): the countryside beyond the street, in depth bands that
- * get hazier with distance. Nothing here is inked, so it reads as far away:
+ * The street's far layer (scene rows 39 to 88 of the street's 123-row frame): the countryside beyond
+ * the street, in depth bands that get hazier with distance. Nothing here is inked, so it reads as far
+ * away:
  *  - a pale far range peeking over a distant ridge, sunlit flanks warmer, shaded flanks cooler;
- *  - back hills of fields and hedgerows, with a small town on one of them (roofs, a church steeple,
- *    a water tower, a main street) whose windows and street lights come on at night;
- *  - near hills with a plowed field, a wheat field, an orchard and a farm (red barn, silo, farmhouse);
+ *  - back hills of fields and hedgerows, with a small town on one of them (gabled roofs with
+ *    chimneys, a church with a tall spire, a water tower on its legs, a main street) whose windows and
+ *    street lights come on at night;
+ *  - near hills with a plowed field, a wheat field, an orchard and a farm (a red barn with a gambrel
+ *    roof, a silo, a farmhouse);
  *  - a loose tree line of round crowns, pines and poplars, in groups with open fields between.
- * Below row 48 (the meadow) it is only filler: the street's lawn covers it.
+ * Below row 72 (the meadow) it is only filler: the street's lawn covers it from row 78.
  * Hills are lit from the top left: flanks facing left catch the light, flanks facing right fall into
  * shade, both fading into the hill's body further down.
  */
-import { blank, blit, clone, hash01, mix, stamp, type PixelBuf, type Rows } from '../buf';
+import { blank, blit, clone, mix, stamp, type PixelBuf, type Rows } from '../buf';
 import type { LightSpot } from '../sceneryTypes';
-import { TILE_W, despeckle, dot, foliage, hz, rgbAt, wrap } from './common';
+import { TILE_W, despeckle, dist, dot, foliage, h2, hexInt, hz, rgbAt, wrap } from './common';
 
 /** Where the far layer sits in the scene frame: top row and height. */
-export const FAR_SPOT = { y: 26, h: 33 } as const;
+export const FAR_SPOT = { y: 39, h: 50 } as const;
 
 /** A scene row as a far-layer row. */
 const fy = (row: number): number => row - FAR_SPOT.y;
-
-/** Deterministic noise for a tile cell (x wraps). */
-const h2 = (x: number, y: number, seed: number): number => hash01(wrap(x) * 131 + y * 7907 + seed * 104729);
-
-/** Distance between two columns across the seam. */
-function dist(a: number, b: number): number {
-  const d = Math.abs(wrap(a) - wrap(b));
-  return Math.min(d, TILE_W - d);
-}
 
 // ------------------------------------------------------------------ colors
 
@@ -43,7 +37,7 @@ function tones(c: string, haze: number, shift = 0.22): Tones {
 }
 
 /** Own haze per depth band (each world hazes the whole layer further toward its sky). */
-const HAZE = { range: 0.56, ridge: 0.44, back: 0.32, town: 0.32, near: 0.24, trees: 0.14 } as const;
+const HAZE = { range: 0.56, ridge: 0.44, back: 0.32, town: 0.3, near: 0.24, trees: 0.14 } as const;
 
 // ------------------------------------------------------------------ hills
 
@@ -72,49 +66,49 @@ function skyline(base: number, humps: readonly Hump[]): number[] {
 
 /** How a column of a skyline faces the light: + lit (rises to the right), - shaded (falls to the right). */
 function facing(crest: readonly number[], x: number): number {
-  return (crest[wrap(x - 3)] - crest[wrap(x + 3)]) / 6;
+  return (crest[wrap(x - 4)] - crest[wrap(x + 4)]) / 8;
 }
 
 /** Light on a hill pixel `d` rows under its crest: 1 lit, 0 mid, -1 shade; edges broken into short runs. */
 function lightAt(crest: readonly number[], x: number, d: number, seed: number, reach: number): number {
   const v = facing(crest, x) * Math.exp(-d / reach);
-  const j = (h2(Math.floor((x + (d % 3)) / 3), d, seed) - 0.5) * 0.06;
+  const j = (h2(Math.floor(wrap(x + (d % 3)) / 3), d, seed) - 0.5) * 0.06;
   return v + j > 0.13 ? 1 : v + j < -0.11 ? -1 : 0;
 }
 
 /** The far range, palest, peeking over the ridge. */
-const RANGE = skyline(fy(36), [
-  [38, 26, 8],
-  [92, 18, 4],
-  [150, 30, 10],
-  [204, 18, 5],
+const RANGE = skyline(fy(54), [
+  [57, 39, 12],
+  [138, 27, 6],
+  [225, 45, 15],
+  [306, 27, 7.5],
 ]);
 /** The distant ridge. */
-const RIDGE = skyline(fy(39), [
-  [8, 30, 8],
-  [62, 22, 5],
-  [116, 34, 8],
-  [172, 24, 6],
-  [214, 14, 3],
+const RIDGE = skyline(fy(59), [
+  [12, 45, 12],
+  [93, 33, 7.5],
+  [174, 51, 12],
+  [258, 36, 9],
+  [321, 21, 4.5],
 ]);
 /** Back hills: fields and the town (on the hill around TOWN_X). */
-const TOWN_X = 100;
-const BACK = skyline(fy(43), [
-  [2, 26, 3.5],
-  [50, 20, 3],
-  [TOWN_X, 26, 7.5],
-  [158, 22, 3],
-  [200, 18, 4],
+const TOWN_X = 150;
+const BACK = skyline(fy(65), [
+  [3, 39, 5.2],
+  [75, 30, 4.5],
+  [TOWN_X, 39, 11.2],
+  [237, 33, 4.5],
+  [300, 27, 6],
 ]);
 /** Near hills: fields, an orchard and the farm (around FARM_X). */
-const FARM_X = 178;
-const NEAR = skyline(fy(47), [
-  [30, 30, 4.5],
-  [120, 16, 1.5],
-  [FARM_X, 28, 5],
+const FARM_X = 267;
+const NEAR = skyline(fy(71), [
+  [45, 45, 6.8],
+  [180, 24, 2.2],
+  [FARM_X, 42, 7.5],
 ]);
-/** The meadow's top edge (the street's lawn covers it); the tree line stands on it. */
-const MEADOW = fy(48);
+/** The meadow's top edge (the street's lawn covers what is under it); the tree line stands on it. */
+const MEADOW = fy(72);
 
 /** The layer, built once (farLights reads it too). */
 let built: PixelBuf | null = null;
@@ -131,13 +125,13 @@ function build(): PixelBuf {
   const b = blank(TILE_W, FAR_SPOT.h);
   detail = new Uint8Array(TILE_W * b.h);
   const distant = blank(TILE_W, b.h);
-  drawPlain(distant, RANGE, HAZE.range, 0.62, 5, false);
-  drawPlain(distant, RIDGE, HAZE.ridge, 0.42, 5, true);
+  drawPlain(distant, RANGE, HAZE.range, 0.62, 7, false);
+  drawPlain(distant, RIDGE, HAZE.ridge, 0.42, 7, true);
   despeckle(distant);
   layer(b, distant, false);
-  drawFields(b, BACK, fy(50), BACK_FIELDS);
+  drawFields(b, BACK, fy(76), BACK_FIELDS);
   drawTown(b);
-  drawFields(b, NEAR, fy(53), NEAR_FIELDS);
+  drawFields(b, NEAR, fy(80), NEAR_FIELDS);
   drawFarm(b);
   drawTrees(b);
   drawMeadow(b);
@@ -176,13 +170,18 @@ function drawPlain(b: PixelBuf, crest: readonly number[], haze: number, blue: nu
   const [shade, mid, lit] = tones(base, haze, 0.16);
   const rim = hz(mix(mix('l', 'U', blue * 0.5), WARM, 0.4), haze);
   const fog = hz(base, haze + 0.14);
+  const fog2 = hz(base, haze + 0.22);
   for (let x = 0; x < TILE_W; x++) {
     for (let y = crest[x]; y < b.h; y++) {
       const d = y - crest[x];
       const l = lightAt(crest, x, d, 1 + reach, reach);
       let c = l > 0 ? lit : l < 0 ? shade : mid;
       if (d === 0) c = l < 0 ? mid : rim;
-      if (mist && y >= fy(41) + (h2(Math.floor(x / 4), 0, 2) < 0.5 ? 0 : 1)) c = fog;
+      if (mist) {
+        const m = fy(61) + (h2(Math.floor(x / 5), 0, 2) < 0.5 ? 0 : 1);
+        if (y >= m + 2 + (h2(Math.floor((x + 2) / 4), 1, 3) < 0.5 ? 0 : 1)) c = fog2;
+        else if (y >= m) c = fog;
+      }
       dot(b, x, y, c);
     }
   }
@@ -217,7 +216,7 @@ const hayB = tones(mix('l', 'y', 0.45), HAZE.back);
 const darkB = tones(mix('G', 'l', 0.2), HAZE.back);
 const BACK_FIELDS: Fields = {
   rows: [0.36, 0.7],
-  cols: [14, 36, 61, 76, 126, 140, 168, 190, 214],
+  cols: [21, 54, 91, 114, 189, 210, 252, 285, 321],
   lean: 0.7,
   crops: [
     [{ tones: grassB }, { tones: hayB }, { tones: darkB }],
@@ -232,7 +231,7 @@ const BACK_FIELDS: Fields = {
   ],
   rim: hz(mix('L', WARM, 0.3), HAZE.back),
   hedge: tones(mix('g', 'G', 0.4), HAZE.back, 0.3),
-  reach: 4,
+  reach: 6,
   seed: 10,
 };
 
@@ -243,7 +242,7 @@ const wheatN = tones(mix('t', 'y', 0.6), HAZE.near);
 const orchardN = tones(mix('l', 'G', 0.25), HAZE.near);
 const NEAR_FIELDS: Fields = {
   rows: [0.42],
-  cols: [6, 44, 70, 104, 138, 160, 204],
+  cols: [9, 66, 105, 156, 207, 240, 306],
   lean: 1,
   crops: [
     [{ tones: grassN }, { tones: paleN }],
@@ -256,7 +255,7 @@ const NEAR_FIELDS: Fields = {
   ],
   rim: hz(mix('L', WARM, 0.3), HAZE.near),
   hedge: tones(mix('g', 'G', 0.4), HAZE.near, 0.3),
-  reach: 4,
+  reach: 6,
   seed: 20,
 };
 
@@ -309,38 +308,45 @@ function drawFields(b: PixelBuf, crest: readonly number[], bottom: number, f: Fi
       dot(det, x, crest[wrap(x)] + d, hm);
     }
   }
-  // little trees along the hedgerows: a lit crown on a shaded side
+  // little trees along the hedgerows: a round crown lit on its top left, shaded on its bottom right
   const tree = (x: number, y: number) => {
-    if (y - 1 <= crest[wrap(x)] || y - 1 <= crest[wrap(x + 1)]) return;
-    dot(det, x, y - 1, hl);
+    if (y - 2 <= crest[wrap(x)] || y - 2 <= crest[wrap(x + 2)]) return;
+    dot(det, x, y - 2, hl);
+    dot(det, x + 1, y - 2, hm);
+    dot(det, x - 1, y - 1, hl);
+    dot(det, x, y - 1, hm);
     dot(det, x + 1, y - 1, hm);
-    dot(det, x, y, hm);
+    dot(det, x + 2, y - 1, hd);
+    dot(det, x, y, hd);
     dot(det, x + 1, y, hd);
   };
   for (let k = 0; k < f.rows.length; k++) {
     for (let x = 0; x < TILE_W; x++) {
-      if (h2(x, k, f.seed + 2) < 0.9 || h2(x - 1, k, f.seed + 2) >= 0.9 || h2(x - 2, k, f.seed + 2) >= 0.9 || h2(x - 3, k, f.seed + 2) >= 0.9) continue;
+      if (h2(x, k, f.seed + 2) < 0.92 || [1, 2, 3, 4, 5].some((i) => h2(x - i, k, f.seed + 2) >= 0.92)) continue;
       tree(x, line(x, k));
     }
   }
   // orchards: rows of little round trees
   for (let x = 0; x < TILE_W; x++) {
     for (let y = 0; y < b.h; y++) {
-      if (y <= crest[x] + 2) continue;
+      if (y <= crest[x] + 3) continue;
       const { crop, top } = cropAt(x, y);
-      if (crop.kind !== 'orchard' || y - top < 2 || (y - top) % 3 !== 2 || wrap(x + (y - top)) % 4 !== 0) continue;
+      if (crop.kind !== 'orchard' || y - top < 3 || (y - top) % 4 !== 3 || wrap(x + (y - top)) % 5 !== 0) continue;
       tree(x, y);
     }
   }
   layer(b, det, true);
 }
 
-/** Filler under the tree line (the street's lawn covers it). */
+/** Filler under the tree line (the street's lawn covers most of it). */
 function drawMeadow(b: PixelBuf): void {
-  const [, mid, lit] = tones(mix('l', 'G', 0.3), HAZE.near);
+  const [shade, mid, lit] = tones(mix('l', 'G', 0.3), HAZE.near);
   const t = blank(TILE_W, b.h);
   for (let x = 0; x < TILE_W; x++) {
-    for (let y = MEADOW; y < b.h; y++) dot(t, x, y, y === MEADOW ? lit : mid);
+    for (let y = MEADOW; y < b.h; y++) {
+      const c = y === MEADOW ? lit : y === MEADOW + 1 && h2(Math.floor(x / 4), 0, 90) < 0.4 ? lit : y > MEADOW + 3 && h2(Math.floor(x / 5), y, 91) < 0.18 ? shade : mid;
+      dot(t, x, y, c);
+    }
   }
   layer(b, t, false);
 }
@@ -349,16 +355,6 @@ function drawMeadow(b: PixelBuf): void {
 
 /** Pines, tier on tier, lit on the left: l lit, G mid, g shade. */
 const PINE_S: Rows = [
-  '..G..',
-  '.lGg.',
-  '.lGg.',
-  'llGgg',
-  '.lGg.',
-  'llGgg',
-  'lGGgg',
-];
-
-const PINE_L: Rows = [
   '...G...',
   '..lGg..',
   '..lGg..',
@@ -366,9 +362,26 @@ const PINE_L: Rows = [
   '..lGg..',
   '.llGgg.',
   'lllGggg',
-  '.llGgg.',
-  'lllGggg',
+  '..lGg..',
+  '.llGggg',
   'llGGGgg',
+];
+
+const PINE_L: Rows = [
+  '....G....',
+  '...lGg...',
+  '...lGg...',
+  '..llGgg..',
+  '...lGg...',
+  '..llGgg..',
+  '.lllGggg.',
+  '..llGgg..',
+  '.lllGggg.',
+  'llllGgggg',
+  '..llGgg..',
+  '.lllGgggg',
+  'llllGgggg',
+  'lllGGGggg',
 ];
 
 function drawTrees(b: PixelBuf): void {
@@ -383,28 +396,29 @@ function drawTrees(b: PixelBuf): void {
   // groups of trees with open fields between: [x, kinds] (r round, R big round, p small pine, P pine, o poplar)
   const groups: ReadonlyArray<readonly [number, string]> = [
     [0, 'RrP'],
-    [33, 'oo'],
-    [62, 'pP'],
-    [128, 'rRp'],
-    [152, 'o'],
-    [198, 'PR'],
+    [50, 'oo'],
+    [93, 'pP'],
+    [192, 'rRp'],
+    [228, 'o'],
+    [297, 'PR'],
   ];
   for (const [gx, kinds] of groups) {
     let x = gx;
     for (let i = 0; i < kinds.length; i++) {
       const k = kinds[i];
-      const lift = Math.floor(h2(gx, i, 40) * 2);
+      const lift = Math.floor(h2(gx, i, 40) * 3);
       if (k === 'p' || k === 'P') {
         const rows = k === 'p' ? PINE_S : PINE_L;
         pine(rows, x);
         x += rows[0].length - 1;
       } else if (k === 'o') {
-        foliage(plot, [[x + 1.5, MEADOW - 4 - lift, 1.7, 4.8]], poplar);
-        x += 3;
+        foliage(plot, [[x + 2.2, MEADOW - 6 - lift, 2.5, 7.2]], poplar);
+        x += 5;
       } else {
-        const r = k === 'R' ? 3.5 : 2.7;
-        foliage(plot, [[x + r, MEADOW + 0.5 - r - lift, r]], i % 2 ? olive : round);
-        x += Math.round(r * 1.6);
+        const r = k === 'R' ? 5.2 : 4;
+        // a crown of two or three clumps, so it reads as leaves rather than a ball
+        foliage(plot, [[x + r, MEADOW + 0.5 - r - lift, r], [x + r * 0.55, MEADOW + 1.5 - r * 0.7 - lift, r * 0.62], [x + r * 1.5, MEADOW + 1.5 - r * 0.65 - lift, r * 0.6]], i % 2 ? olive : round);
+        x += Math.round(r * 1.7);
       }
     }
   }
@@ -415,72 +429,95 @@ function drawTrees(b: PixelBuf): void {
 // ------------------------------------------------------------------ the town and the farm
 
 // Far buildings are authored in plain palette keys and recolored (no ink: they are far away). Roofs use
-// e (lit), R (mid), r (shade); walls W (lit) and 5 (shade); x are windows (lit at night).
+// e (lit), R (mid), r (shade); walls W (lit) and 5 (shade); x are windows (lit at night), w white trim,
+// 2 iron, n doors and chimneys.
 const HOUSE_GABLE: Rows = [
-  '..e..',
-  '.eRr.',
-  'eeRrr',
-  '.WxW5',
-  '.WWx5',
+  '...e.n.',
+  '..eeRn.',
+  '.eeeRr.',
+  'eeeeRrr',
+  '.WxWx5.',
+  '.WWWW5.',
+  '.WxWn5.',
 ];
 
 const HOUSE_LONG: Rows = [
-  '.eeeRr.',
-  'eeeeRRr',
-  '.WxWx55',
-  '.WWWWx5',
+  '..eeeeRrn.',
+  '.eeeeeRRn.',
+  'eeeeeeRRrr',
+  '.WxWWxWx55',
+  '.WWWWWWW55',
+  '.WxWnWWx55',
 ];
 
 const HOUSE_TALL: Rows = [
-  '.eRr.',
-  'eeRrr',
-  '.WxW5',
-  '.WWW5',
-  '.WxW5',
+  '..eRr..',
+  '.eeRrr.',
+  'eeeRrrr',
+  '.WxWx5.',
+  '.WWWW5.',
+  '.WxWx5.',
+  '.WWWW5.',
+  '.WxWn5.',
 ];
 
 const CHURCH: Rows = [
-  '..e.......',
-  '..e.......',
-  '.eRr......',
-  '.WxW......',
-  '.W55.eeRr.',
-  '.WW5eeeRrr',
-  '.WxWW5xWx5',
-  '.WWWW5WWW5',
+  '..w..........',
+  '.www.........',
+  '..R..........',
+  '.eRr.........',
+  '.eRr.........',
+  'eeRrr........',
+  '.WW5.........',
+  '.Wx5.........',
+  '.WW5..eeRRr..',
+  '.WW5.eeeRRrr.',
+  '.Wx5eeeeRRrrr',
+  '.WW5WxWWxWx55',
+  '.WW5WWWWWWW55',
+  '.Wn5WxWWxWx55',
 ];
 
 const WATER_TOWER: Rows = [
-  '..eRr..',
-  '.WWW55.',
-  'WwWW555',
-  'WWWW555',
-  '.WW555.',
-  '.2.2.2.',
-  '.22222.',
-  '.2.2.2.',
-  '2..2..2',
+  '...e....',
+  '..eeRr..',
+  '.eeeRrr.',
+  'WWWWW555',
+  'WwWWW555',
+  'WwWWW555',
+  'WWWWW555',
+  '.2.22.2.',
+  '.2.22.2.',
+  '.222222.',
+  '.2.22.2.',
+  '2..22..2',
+  '2..22..2',
 ];
 
 const BARN: Rows = [
-  '...eRr...',
-  '..eeRRr..',
-  '.eeeRRrr.',
-  'eeeeRRrrr',
-  '.WWwwwW5.',
-  '.WWwxwW5.',
-  '.WWwxwW5.',
+  '.....eRr.....',
+  '...eeeRRrr...',
+  '..eeeeRRrrr..',
+  '.eeeeeRRrrrr.',
+  'eeeeeeRRrrrrr',
+  '.WWWwwwwwW55.',
+  '.WWWwxwxwW55.',
+  '.WWWwwxwwW55.',
+  '.WWWwxwxwW55.',
 ];
 
 const SILO: Rows = [
-  '.eRr.',
-  'eeRrr',
-  'wWW55',
-  'wWW55',
-  'wWW55',
-  'wWW55',
-  'wWW55',
-  'wWW55',
+  '..eRr..',
+  '.eeRrr.',
+  'wWWWW55',
+  'wWWWW55',
+  'w5555r5',
+  'wWWWW55',
+  'wWWWW55',
+  'w5555r5',
+  'wWWWW55',
+  'wWWWW55',
+  'wWWWW55',
 ];
 
 /** Roof colors (lit, mid, shade) for far buildings. */
@@ -503,15 +540,16 @@ const WALLS: ReadonlyArray<readonly [string, string]> = [
 
 /** The town's buildings, back to front: [rows, x, base (scene row), roof, walls]. */
 const TOWN: ReadonlyArray<readonly [Rows, number, number, number, number]> = [
-  [WATER_TOWER, 80, 39, 2, 5],
-  [HOUSE_GABLE, 89, 37, 0, 0],
-  [CHURCH, 96, 37, 2, 1],
-  [HOUSE_TALL, 107, 38, 3, 2],
-  [HOUSE_LONG, 112, 39, 1, 0],
-  [HOUSE_GABLE, 86, 40, 3, 1],
-  [HOUSE_LONG, 92, 41, 0, 2],
-  [HOUSE_GABLE, 101, 41, 4, 0],
-  [HOUSE_GABLE, 120, 42, 0, 1],
+  [WATER_TOWER, 120, 59, 2, 1],
+  [HOUSE_GABLE, 133, 56, 0, 0],
+  [CHURCH, 143, 56, 2, 1],
+  [HOUSE_TALL, 160, 57, 3, 2],
+  [HOUSE_LONG, 168, 59, 1, 0],
+  [HOUSE_GABLE, 128, 60, 3, 1],
+  [HOUSE_LONG, 137, 62, 0, 2],
+  [HOUSE_GABLE, 152, 62, 4, 0],
+  [HOUSE_TALL, 158, 63, 0, 3],
+  [HOUSE_GABLE, 180, 63, 0, 1],
 ];
 
 /** The color of an unlit far window. */
@@ -523,13 +561,13 @@ function buildingMap(roof: number, walls: number, haze: number): Record<string, 
   return {
     e: hz(e, haze), R: hz(R, haze), r: hz(r, haze),
     W: hz(wl, haze), '5': hz(ws, haze), w: hz('w', haze),
-    x: windowColor(haze), '2': hz('2', haze),
+    x: windowColor(haze), '2': hz('2', haze), n: hz(mix('n', 'r', 0.3), haze),
   };
 }
 
 /** The town's main street (scene row) along the foot of its houses, and its street lights (x). */
-const STREET = { row: 43, x0: 79, x1: 126 } as const;
-const STREET_LIGHTS = [81, 89, 97, 105, 113, 121] as const;
+const STREET = { row: 64, x0: 118, x1: 189 } as const;
+const STREET_LIGHTS = [121, 133, 145, 157, 169, 181] as const;
 
 function drawTown(b: PixelBuf): void {
   const d = blank(TILE_W, b.h);
@@ -540,18 +578,19 @@ function drawTown(b: PixelBuf): void {
   // a few round trees among the houses
   const t = tones(mix('G', 'g', 0.2), HAZE.town, 0.3);
   const plot = (x: number, y: number, c: string) => dot(d, x, y, c);
-  foliage(plot, [[85.5, fy(40) - 1, 1.8]], t);
-  foliage(plot, [[118.5, fy(41) - 1.5, 2.2]], t);
+  foliage(plot, [[127.5, fy(60) - 2, 2.7], [125.5, fy(60) - 0.5, 1.8]], t);
+  foliage(plot, [[178, fy(62) - 2.5, 3.2], [180.5, fy(62) - 1, 2]], t);
+  foliage(plot, [[149.5, fy(62) - 2, 2.2]], t);
   layer(b, d, true);
 }
 
 /** The farm on the near hills: barn, silo and farmhouse, as [rows, x offset, roof, walls]. */
 const FARM: ReadonlyArray<readonly [Rows, number, number, number]> = [
-  [SILO, 9, 2, 3],
+  [SILO, 13, 2, 3],
   [BARN, 0, 2, 4],
-  [HOUSE_GABLE, -9, 1, 0],
+  [HOUSE_GABLE, -13, 1, 0],
 ];
-const FARM_BASE = 45;
+const FARM_BASE = 67;
 
 function drawFarm(b: PixelBuf): void {
   const d = blank(TILE_W, b.h);
@@ -559,7 +598,7 @@ function drawFarm(b: PixelBuf): void {
     stamp(d, rows, FARM_X + dx, fy(FARM_BASE) - rows.length + 1, { wrapX: true, recolor: buildingMap(roof, walls, HAZE.near) });
   }
   const t = tones(mix('G', 'g', 0.15), HAZE.near, 0.3);
-  foliage((x, y, c) => dot(d, x, y, c), [[FARM_X - 12.5, fy(FARM_BASE) - 2.5, 3], [FARM_X + 16.5, fy(FARM_BASE) - 2, 2.5]], t);
+  foliage((x, y, c) => dot(d, x, y, c), [[FARM_X - 18.5, fy(FARM_BASE) - 3.5, 4.4], [FARM_X - 21, fy(FARM_BASE) - 1.5, 2.6], [FARM_X + 24.5, fy(FARM_BASE) - 3, 3.6]], t);
   layer(b, d, true);
 }
 
@@ -582,9 +621,9 @@ function windowPixels(): Array<{ x: number; y: number; haze: number }> {
 export function farLights(): LightSpot[] {
   const b = build();
   const windows = windowPixels()
-    .filter(({ x, y, haze }) => rgbAt(b, x, y) === parseInt(windowColor(haze).slice(1), 16))
+    .filter(({ x, y, haze }) => rgbAt(b, x, y) === hexInt(windowColor(haze)))
     .map(({ x, y }): LightSpot => ({ x, y, w: 1, h: 1, kind: 'window' }));
-  const lamps = STREET_LIGHTS.map((x): LightSpot => ({ x, y: fy(STREET.row), w: 1, h: 1, kind: 'lamp', radius: 2.2, power: 0.45 }));
+  const lamps = STREET_LIGHTS.map((x): LightSpot => ({ x, y: fy(STREET.row), w: 1, h: 1, kind: 'lamp', radius: 3.3, power: 0.45 }));
   return [...windows, ...lamps];
 }
 

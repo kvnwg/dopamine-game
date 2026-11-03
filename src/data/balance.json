@@ -509,10 +509,10 @@
     "luckyRollMult": 2,
     "goldenLuckMult": 5,
     "multiplier": {
-      "chance": 0.08,
+      "chance": 0.05,
+      "chainChance": 0.5,
       "maxSteps": 4,
-      "stepSeconds": 0.85,
-      "minStepSeconds": 0.4,
+      "holdSeconds": 0.6,
       "values": [
         { "x": 2, "weight": 60 },
         { "x": 3, "weight": 25 },

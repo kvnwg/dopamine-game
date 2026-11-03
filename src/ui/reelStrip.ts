@@ -9,7 +9,7 @@
  */
 import { BAL, DATA, RARITIES, type Rarity } from '../data';
 import { isItemUnlocked, rarityAtLeast, rarityChances, type Item } from '../core';
-import { reelStops, TOKEN_HOLD, type SpinTiming } from './reelTiming';
+import { reelStops, tokenHoldMs, type SpinTiming } from './reelTiming';
 
 export interface StripCell {
   /** Item art (base item id); unused for a token. */
@@ -131,7 +131,7 @@ export function buildStrip(
   const stops: StripStop[] = [];
   let from = 0;
   timeline.forEach((st, j) => {
-    const startAt = j === 0 ? 0 : timeline[j - 1].at + (st.at - timeline[j - 1].at) * TOKEN_HOLD;
+    const startAt = j === 0 ? 0 : Math.min(st.at, timeline[j - 1].at + tokenHoldMs());
     const secs = (st.at - startAt) / 1000;
     const k = Math.max(j === 0 ? f.minCells : 4, Math.round(secs * cellsPerSecond));
     const last = j === timeline.length - 1;
@@ -160,7 +160,7 @@ export function stripAt(strip: Strip, ms: number, calm = false): { p: number; re
   let prevAt = 0;
   for (let j = 0; j < strip.stops.length; j++) {
     const st = strip.stops[j];
-    const startAt = j === 0 ? 0 : prevAt + (st.at - prevAt) * TOKEN_HOLD;
+    const startAt = j === 0 ? 0 : Math.min(st.at, prevAt + tokenHoldMs());
     if (ms < st.at) {
       if (ms <= startAt) return { p: prevIdx, reached: j };
       const x = Math.min(1, (ms - startAt) / Math.max(1, st.at - startAt));

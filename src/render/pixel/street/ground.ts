@@ -84,42 +84,41 @@ const GRASS = [K.grassDeep, K.grassShade, K.grass, K.grassLit, K.grassTip] as co
 
 /**
  * A cast-iron street lamp, inked by hand so the post stays slender: a finial, a pyramid cap, a lantern
- * (two panes of glass split by a muntin, a highlight on the left pane), a tapered bottom, then the post
- * with its ladder arm and a collar, on a stepped base. Lit on the left; the glass (w, C, c) lights up
- * at dusk and night, the muntin (x) stays dark against it.
+ * of glass (a glint on its upper left), a tray tapering into the post, a ladder arm and a collar, on a
+ * stepped base. Lit on the left; the glass (w, C, c) lights up at dusk and night.
  */
 const LAMP: Rows = [
-  '......k......',
-  '.....k4k.....',
-  '.....k2k.....',
-  '....k432k....',
-  '...k43221k...',
-  '..k4322211k..',
-  '.k432222111k.',
-  'k43322221111k',
-  '.kkkkkkkkkkk.',
-  '..k3wCxCc1k..',
-  '..k3CCxcc1k..',
-  '..k3CCxcc1k..',
-  '..k3Ccxcc1k..',
-  '..k3ccxcc1k..',
-  '.kkkkkkkkkkk.',
-  '..k4322211k..',
-  '...k43211k...',
-  '....k321k....',
-  '....k321k....',
-  '.kkkk321kkkk.',
-  '....k321k....',
-  '....k321k....',
-  '...k43211k...',
-  '....k321k....',
-  '....k321k....',
-  '....k321k....',
-  '...k43211k...',
-  '...k32211k...',
-  '..k4322211k..',
-  '.k432222111k.',
-  '.kkkkkkkkkkk.',
+  '.....kk.....',
+  '....k42k....',
+  '....k21k....',
+  '...k4321k...',
+  '..k432211k..',
+  '.k43222111k.',
+  'k4322221111k',
+  '.kkkkkkkkkk.',
+  '..k3wCCc1k..',
+  '..k3CCcc1k..',
+  '..k3CCcc1k..',
+  '..k3Cccc1k..',
+  '..k3cccc1k..',
+  '.kkkkkkkkkk.',
+  '..k432211k..',
+  '...k4321k...',
+  '....k31k....',
+  '....k31k....',
+  '.kkkk31kkkk.',
+  '....k31k....',
+  '....k31k....',
+  '...k4321k...',
+  '....k31k....',
+  '....k31k....',
+  '....k31k....',
+  '....k31k....',
+  '...k4321k...',
+  '...k3221k...',
+  '..k432211k..',
+  '.k43222111k.',
+  '.kkkkkkkkkk.',
 ];
 
 /** Lamp positions (the sprite's left edge), two per tile. */
@@ -249,8 +248,8 @@ function curbStone(b: PixelBuf): void {
   // runs that catch the light (none across a joint, which would cut them short)
   const cut = new Set(CURB_JOINTS.map((jx) => lit[jx]));
   for (let x = 0; x < TILE_W; x++) {
-    dot(b, x, top, h2(lit[x], 0, 2100) < 0.3 && !cut.has(lit[x]) ? K.lip : K.slabLit);
-    dot(b, x, top + 1, K.lip);
+    dot(b, x, top, h2(worn[x], 2, 2200) < 0.2 ? K.slab : K.slabLit);
+    dot(b, x, top + 1, h2(lit[x], 0, 2100) < 0.65 && !cut.has(lit[x]) ? K.lip : K.slabLit);
     dot(b, x, top + 2, h2(worn[x], 0, 2300) < 0.18 ? K.slabDim : K.curbFace);
     dot(b, x, top + 3, h2(worn[x], 1, 2400) < 0.12 ? K.curbFace : K.curbLow);
     dot(b, x, top + 4, K.shadow);
@@ -335,10 +334,12 @@ const PATCHES: ReadonlyArray<readonly [number, number, number, number, number]> 
   [11, 16, 106, 6, 1.4],
 ];
 
-/** One newer, paler slab per tile. */
+/** One newer, paler slab per tile, and one older, weathered one. */
 const NEW_SLAB = 7;
+const OLD_SLAB = 2;
 const SLAB_NEW = mix(K.slab, K.slabLit, 0.5);
 const SLAB_NEW_DIM = mix(K.slab, K.slabDim, 0.3);
+const SLAB_OLD = mix(K.slab, K.slabMid, 0.55);
 
 /**
  * The slabs' faces: the curb's shadow softening off the top rows, wear patches in two tones, and a
@@ -351,12 +352,12 @@ function slabs(b: PixelBuf): void {
     for (let x = 0; x < TILE_W; x++) {
       const { k, u, w } = slabAt(x, row);
       const fresh = k === NEW_SLAB;
-      let c = fresh ? SLAB_NEW : K.slab;
+      let c = fresh ? SLAB_NEW : k === OLD_SLAB ? SLAB_OLD : K.slab;
       if (row === WALK0 || (row === WALK0 + 1 && h2(soft[x], 0, 52) < 0.45)) c = fresh ? SLAB_NEW_DIM : K.slabDim;
       else if (!calm(row) && u >= 3 && u <= w - 3) {
         for (const [pk, px, py, rx, ry] of PATCHES) {
           if (pk !== k) continue;
-          const j = (h2(Math.floor((x + row) / 3), row, 40 + pk) - 0.5) * 0.5;
+          const j = (h2(Math.floor(wrap(x + row) / 3), row, 40 + pk) - 0.5) * 0.5;
           const e = ((u - px) / rx) ** 2 + ((row - py) / ry) ** 2;
           if (e < 0.45 + j * 0.5) c = K.slabDim;
           else if (e < 1 + j) c = K.slabMid;
@@ -391,9 +392,9 @@ function joints(b: PixelBuf): void {
 /** Hairline cracks (a weed in some), stains, fallen leaves: in palette keys, recolored. */
 const CRACKS: readonly Rows[] = [
   // from a joint, forking
-  ['33.....', '.33....', '..3333.', '..x..33', '..3....', '.3.....'],
+  ['33.....', '.333...', '...x333', '..3....'],
   // a long one with a weed in it
-  ['.....lG..', '33...Gl..', '.333.3...', '....33...', '......33.', '.......x3'],
+  ['.....lG..', '33...Gl..', '.3333.33.', '.......x3'],
   // a short one
   ['333..', '...33', '....x'],
   // a corner break
@@ -411,13 +412,13 @@ const JOINT_WEEDS = [1, 4, 6, 9, 11] as const;
 
 const plain = (b: PixelBuf, x: number, row: number): boolean => {
   const c = rgbAt(b, x, gy(row));
-  return c === hexInt(K.slab) || c === hexInt(SLAB_NEW);
+  return c === hexInt(K.slab) || c === hexInt(SLAB_NEW) || c === hexInt(SLAB_OLD);
 };
 
 function sidewalkDetails(b: PixelBuf): void {
   // cracks start from a joint, clear of the rows around the feet
-  stamp(b, CRACKS[0], 45, gy(94), { wrapX: true, recolor: CRACK_COLORS });
-  stamp(b, CRACKS[1], 213, gy(94), { wrapX: true, recolor: CRACK_COLORS });
+  stamp(b, CRACKS[0], 45, gy(93), { wrapX: true, recolor: CRACK_COLORS });
+  stamp(b, CRACKS[1], 213, gy(93), { wrapX: true, recolor: CRACK_COLORS });
   stamp(b, CRACKS[2], 300, gy(105), { wrapX: true, recolor: CRACK_COLORS });
   stamp(b, CRACKS[2], 130, gy(105), { wrapX: true, recolor: CRACK_COLORS, flipX: true });
   stamp(b, CRACKS[3], 157, gy(105), { wrapX: true, recolor: CRACK_COLORS });
@@ -425,10 +426,18 @@ function sidewalkDetails(b: PixelBuf): void {
   stamp(b, GUM, 255, gy(106), { wrapX: true, recolor: { q: mix('3', 'q', 0.2), x: mix('2', 'q', 0.15) } });
   stamp(b, STAIN, 90, gy(105), { wrapX: true, recolor: { s: K.slabMid } });
   stamp(b, STAIN, 326, gy(94), { wrapX: true, recolor: { s: K.slabMid } });
-  stamp(b, LEAF_ROWS, 240, gy(95), { wrapX: true });
+  stamp(b, LEAF_ROWS, 240, gy(94), { wrapX: true });
   stamp(b, LEAF_SMALL, 18, gy(106), { wrapX: true, recolor: { O: 'y', o: 'O' } });
   stamp(b, LEAF_SMALL, 108, gy(94), { wrapX: true, recolor: { O: 'O', o: 'o' } });
   stamp(b, BOTTLE_CAP, 196, gy(106), { wrapX: true });
+  // chipped corners: a notch out of a slab's corner at a joint, its broken face in shade
+  for (const [k, row] of [[3, WALK0 + 1], [8, WALK1], [10, WALK0 + 1], [5, WALK1]] as const) {
+    const x = JOINT0 + SLAB_STARTS[k] - slant(row);
+    const down = row === WALK1 ? -1 : 1;
+    dot(b, x + 1, gy(row), K.groove);
+    dot(b, x + 2, gy(row), K.slabDim);
+    dot(b, x + 1, gy(row + down), K.slabDim);
+  }
   // weeds in a few joints, where they meet the curb
   for (const k of JOINT_WEEDS) {
     const x = JOINT0 + SLAB_STARTS[k];
@@ -454,25 +463,41 @@ function sidewalkDetails(b: PixelBuf): void {
 // ------------------------------------------------------------------ the verge
 
 /**
- * The grass verge: blades. Each column is cut into blades two to five pixels long; a blade's tone
- * follows the light (lit near the top, shade toward the bottom), now and then a step lighter or darker,
- * so the verge reads as blades rather than bands. The first row is the slabs' contact shadow.
+ * The grass verge: under the slabs' contact shadow, bands of grass that darken with depth (their edges
+ * broken into short runs), with blades drawn over them as short strokes: a step lighter where the light
+ * catches them, a step darker lower down, in loose clumps so the verge reads as grass, not stripes.
  */
+const VERGE_BANDS = [VERGE + 4, VERGE + 8, VERGE + 11] as const;
+const VERGE_TONES = [3, 2, 1, 0] as const;
+
+function vergeTone(x: number, row: number): number {
+  let band = 0;
+  VERGE_BANDS.forEach((edge, k) => {
+    const runs = VERGE_RUNS[k];
+    if (row >= edge + (h2(runs[x], k, 86) < 0.5 ? 0 : 1)) band = k + 1;
+  });
+  return VERGE_TONES[band];
+}
+const VERGE_RUNS = VERGE_BANDS.map((_, k) => runIds(85 + k, 2, 4));
+
 function verge(b: PixelBuf): void {
   for (let x = 0; x < TILE_W; x++) {
     dot(b, x, gy(VERGE), h2(x, 0, 79) < 0.25 ? K.grassDeep : K.grassShade);
-    let row = VERGE + 1;
-    for (let k = 0; row <= BOTTOM; k++) {
-      let len = 2 + Math.floor(h2(x, k, 80) * 4);
-      if (BOTTOM - (row + len) + 1 === 1) len++;
-      const t = (row + len / 2 - VERGE - 1) / (BOTTOM - VERGE);
-      let i = t < 0.25 ? 3 : t < 0.52 ? 2 : t < 0.8 ? 1 : 0;
-      const r = h2(x, k, 81);
-      if (r < 0.2) i = Math.min(4, i + 1);
-      else if (r > 0.86) i = Math.max(0, i - 1);
-      for (let j = 0; j < len && row + j <= BOTTOM; j++) dot(b, x, gy(row + j), GRASS[i]);
-      row += len;
-    }
+    for (let row = VERGE + 1; row <= BOTTOM; row++) dot(b, x, gy(row), GRASS[vergeTone(x, row)]);
+  }
+  // blades: strokes two to four pixels long, in clumps (a clump's columns share a seed)
+  const clumps = runIds(88, 2, 5);
+  for (let x = 0; x < TILE_W; x++) {
+    const c = clumps[x];
+    if (h2(c, 0, 89) < 0.25 || h2(x, 1, 87) > 0.55) continue;
+    const len = 2 + Math.floor(h2(x, 2, 87) * 3);
+    const y0 = VERGE + 1 + Math.floor(h2(x, 3, 87) * (BOTTOM - VERGE - len + 1));
+    const top = vergeTone(x, y0);
+    const lighter = y0 < VERGE + 7 ? h2(x, 4, 87) < 0.75 : h2(x, 4, 87) < 0.3;
+    const tone = lighter ? Math.min(4, top + 1) : Math.max(0, vergeTone(x, y0 + len - 1) - 1);
+    for (let j = 0; j < len; j++) dot(b, x, gy(y0 + j), GRASS[tone]);
+    // a lit tip on some of the lighter blades
+    if (lighter && tone < 4 && h2(x, 5, 87) < 0.3) dot(b, x, gy(y0), GRASS[tone + 1]);
   }
 }
 

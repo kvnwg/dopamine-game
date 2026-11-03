@@ -3,9 +3,9 @@
  *
  * Reels stop left to right over the spin's base time (BAL.feel.reels.firstStopShare), except that an
  * Epic-or-better result always stops last. A reel with luck tokens stops on each token first: it holds
- * there while the token bursts, spins up again, and stops one token step (core stepSeconds) later,
- * until it stops on its item. Core lands the item at baseSpinSeconds + tokens x stepSeconds, so the
- * reel never shows a result before core has it.
+ * there while the token bursts (tokenHoldMs), then rolls again for a full spin's length and stops one
+ * token step (core stepSeconds) later, until it stops on its item. Core lands the item at
+ * baseSpinSeconds + tokens x stepSeconds, so the reel never shows a result before core has it.
  */
 import { BAL } from '../data';
 import { rarityAtLeast, rarityIndex, type Item } from '../core';
@@ -24,8 +24,13 @@ export interface ReelStop {
   token: number | null;
 }
 
-/** Share of the hold on a token (the rest of a token step is the spin up to the next stop). */
-export const TOKEN_HOLD = 0.42;
+/**
+ * How long a reel holds on a luck token before rolling again (ms). The re-roll that follows takes the
+ * rest of the token step: as long as the spin itself, so a token never speeds the roll up.
+ */
+export function tokenHoldMs(): number {
+  return BAL.roll.multiplier.holdSeconds * 1000;
+}
 
 /** The order reels stop in: left to right, the rarest last when it's Epic or better. */
 export function stopOrder(spin: SpinTiming): number[] {

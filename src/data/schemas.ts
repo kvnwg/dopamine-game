@@ -154,15 +154,16 @@ export const BalanceSchema = z.object({
     /** Luck multiplier of a Golden Spin (chance bought in the upgrade tree). */
     goldenLuckMult: positive,
     /**
-     * Luck tokens: a reel can land on a clover token instead of an item. The token multiplies that
-     * reel's luck and the reel spins again (stepSeconds more, shorter with Spin Speed), chaining up to
-     * maxSteps tokens until it lands an item rolled at the multiplied luck.
+     * Luck tokens: a reel can land on a clover token instead of an item (`chance`). The token
+     * multiplies that reel's luck, the reel holds on it for holdSeconds, then rolls again as long as a
+     * normal roll (never faster); each re-roll lands another token with `chainChance`, up to maxSteps
+     * tokens, until it lands an item rolled at the multiplied luck.
      */
     multiplier: z.object({
       chance: z.number().min(0).max(0.5),
+      chainChance: z.number().min(0).max(0.9),
       maxSteps: z.number().int().min(0),
-      stepSeconds: positive,
-      minStepSeconds: positive,
+      holdSeconds: nonNeg,
       values: z.array(z.object({ x: z.number().min(1.5), weight: positive })).min(1),
     }),
   }),

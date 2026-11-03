@@ -6,7 +6,8 @@
  * - a Trash Bag from fights makes a spin a faster turbo spin;
  * - every Nth spin is a lucky spin, and a golden spin can strike any spin (both cover every reel);
  * - a reel can land on luck tokens (x2, x3, x5, x10) before its item: each multiplies that reel's
- *   luck and the reel spins again, so a chain of tokens can end on something very rare;
+ *   luck and the reel rolls again at full length, with a 50% chance of another token, so a chain of
+ *   tokens can end on something very rare;
  * - the dumpster only rolls items unlocked by the raccoon's rebirths (unlocks.ts);
  * - new items go to the bag; the player equips by dragging them onto the raccoon;
  * - the bag has limited space and always keeps the highest-power items (the rest are scrapped).
@@ -195,19 +196,24 @@ function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number): Item {
   return createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
 }
 
-/** The luck tokens a reel lands on before its item, in order (usually none). */
+/**
+ * The luck tokens a reel lands on before its item, in order (usually none). The first comes with
+ * `chance`; once one has landed, every re-roll lands another with `chainChance`.
+ */
 export function rollTokens(rng: Rng): number[] {
   const m = BAL.roll.multiplier;
   const pool = m.values.map((v) => [String(v.x), v.weight] as const);
   const out: number[] = [];
-  while (out.length < m.maxSteps && rng.chance(m.chance)) out.push(Number(rng.weighted(pool)));
+  while (out.length < m.maxSteps && rng.chance(out.length === 0 ? m.chance : m.chainChance)) out.push(Number(rng.weighted(pool)));
   return out;
 }
 
-/** Seconds each luck token adds to its reel: shorter on faster spins. */
+/**
+ * Seconds each luck token adds to its reel: the hold on the token, then a full re-roll as long as the
+ * spin itself (a token never speeds the roll up).
+ */
 export function tokenStepSeconds(baseSpinSeconds: number): number {
-  const m = BAL.roll.multiplier;
-  return Math.max(m.minStepSeconds, (m.stepSeconds * baseSpinSeconds) / BAL.roll.spinSeconds);
+  return BAL.roll.multiplier.holdSeconds + baseSpinSeconds;
 }
 
 /** Product of a reel's luck tokens (1 without any). */

@@ -414,6 +414,7 @@
     "rollSlowdown": 10,
     "maxRolls": 1000,
     "keepRarity": "epic",
+    "scrapShare": 0,
     "keepListMax": 30
   },
   "start": {

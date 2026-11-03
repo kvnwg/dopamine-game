@@ -260,11 +260,13 @@ export const BalanceSchema = z.object({
     /**
      * Offline rolls: the dumpster spins once per (spin cycle x rollSlowdown) away (times efficiency
      * and the offline bonus), at most maxRolls items. Finds as rare as a plain `keepRarity` item go to
-     * the bag; the rest are scrapped into the offline reward. The popup lists up to keepListMax finds.
+     * the bag; the rest add `scrapShare` of their scrap value to the offline reward (0: dropped). The
+     * popup lists up to keepListMax finds.
      */
     rollSlowdown: positive,
     maxRolls: z.number().int().nonnegative(),
     keepRarity: RaritySchema,
+    scrapShare: z.number().min(0).max(1),
     keepListMax: z.number().int().positive(),
   }),
   start: z.object({ coins: nonNeg, gems: nonNeg, bags: nonNeg }),

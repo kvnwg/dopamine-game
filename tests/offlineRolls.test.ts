@@ -45,8 +45,9 @@ describe('offline rolls', () => {
     const p = r.state.offline.pending!;
     const rolls = offlineRollCount(st, 6 * MS_PER_HOUR);
     expect(p.rolls).toBe(rolls);
-    // The kills' reward plus the scrapped rolls' coins.
-    expect(p.coins).toBeGreaterThan(offlineReward({ bags: 2, coins: 50, xp: 10 }, 6 * MS_PER_HOUR, 0).coins);
+    // The kills' reward (the rolls that weren't kept are dropped: offline.scrapShare is 0).
+    expect(O.scrapShare).toBe(0);
+    expect(p.coins).toBe(offlineReward({ bags: 2, coins: 50, xp: 10 }, 6 * MS_PER_HOUR, 0).coins);
     const keep = offlineKeepOdds();
     expect(p.foundCount).toBeGreaterThan(0);
     expect(p.found.length).toBe(Math.min(p.foundCount, O.keepListMax));
@@ -78,14 +79,23 @@ describe('offline rolls', () => {
     const keep = offlineKeepOdds();
     for (const it of res.kept) expect(itemOddsOneIn(it)).toBeGreaterThanOrEqual(keep);
     const finds = res.kept.length + res.overflow;
-    // Everything below the bar was scrapped, and so were the finds a full bag had no room for.
-    expect(st.lifetime.itemsRecycled - scrapped).toBe(800 - finds + res.overflow);
+    // Everything below the bar was dropped; the finds a full bag had no room for were scrapped by it.
+    expect(st.lifetime.itemsRecycled - scrapped).toBe(res.overflow);
     expect(st.inventory.length).toBe(res.kept.length);
+    expect(res.coins).toBe(0);
     // At about luck 1 (lucky spins and tokens help), an Epic or better, or an item as rare by its
     // enchantments, is a few percent of the rolls.
     expect(finds / 800).toBeGreaterThan(0.01);
     expect(finds / 800).toBeLessThan(0.12);
-    expect(res.coins).toBeGreaterThan(0);
+    // With a scrap share, the rest pays that share of its scrap value.
+    const share = O.scrapShare;
+    O.scrapShare = 0.5;
+    try {
+      const st2 = away(3);
+      expect(rollOffline(st2, new Rng(8), T0, 200, []).coins).toBeGreaterThan(0);
+    } finally {
+      O.scrapShare = share;
+    }
   });
 
   it('never scripts or triggers the tutorial, and leaves the dev overrides and Golden Dumpster spins alone', () => {

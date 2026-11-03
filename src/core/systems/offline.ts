@@ -131,7 +131,7 @@ export interface OfflineRolls {
   kept: Item[];
   /** Rare finds a full bag had no room for (scrapped by the bag's rules: it keeps the best). */
   overflow: number;
-  /** Scrap value of everything else. */
+  /** offline.scrapShare of the scrap value of everything else (0 by default: it is dropped). */
   coins: number;
   xp: number;
 }
@@ -146,7 +146,7 @@ function bumpRarity(r: Rarity, by: number): Rarity {
  * no spins, no events per roll, never the tutorial's scripted rolls (and the reels' roll count, which
  * times beginner's luck, doesn't move). A Golden Dumpster's spins wait for the reels. Finds at least as
  * rare as a plain offline.keepRarity item go to the bag by the bag's rules, the Codex and the records;
- * the rest are scrapped and their coins and XP returned.
+ * the rest are dropped, or scrapped for offline.scrapShare of their coins and XP (returned).
  */
 export function rollOffline(d: GameState, rng: Rng, now: number, count: number, ev: CoreEvent[]): OfflineRolls {
   const out: OfflineRolls = { rolls: 0, kept: [], overflow: 0, coins: 0, xp: 0 };
@@ -159,6 +159,7 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
   const baseLuck = currentLuck(d, now);
   const keepOdds = offlineKeepOdds();
   const tier = itemTierFor(d);
+  const share = BAL.offline.scrapShare;
   let dry = dz.dryStreak;
   while (out.rolls < count) {
     // One spin's luck, as startSpin rolls it (lucky every Nth spin, the golden chance from upgrades).
@@ -184,10 +185,10 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
       dry = rarityAtLeast(item.rarity, bl.minRarity) ? 0 : dry + 1;
       if (itemOddsOneIn(item) >= keepOdds) {
         finds.push(item);
-      } else {
+      } else if (share > 0) {
         const v = scrapValue(d, item);
-        out.coins += v.coins;
-        out.xp += v.xp;
+        out.coins += Math.floor(v.coins * share);
+        out.xp += Math.floor(v.xp * share);
         d.lifetime.itemsRecycled += 1;
       }
     }

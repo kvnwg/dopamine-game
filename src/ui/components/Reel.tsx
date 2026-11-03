@@ -352,7 +352,7 @@ function Landing({ f, x, y, layout, calm }: { f: Fx; x: number; y: number; layou
           />
         ))}
       {look.stamp && (
-        <div className={s.stamp} data-calm={calm || undefined} style={{ left: stampX - 300, top: FRAME + UI_PX }}>
+        <div className={s.stamp} data-calm={calm || undefined} style={{ left: stampX - 300, top: FRAME - UI_PX }}>
           <Chunky
             text={rarity === 'mint' ? t('reveal.mintStamp') : `${t(`rarity.${rarity}`).toUpperCase()}!`}
             size={layout.n <= 2 ? 54 : layout.n === 3 ? 44 : 36}

@@ -65,7 +65,7 @@
   "offline.collectDouble": "Collect x2",
   "offline.rolled": "Your dumpster rolled {n} times while you were away",
   "offline.finds": "Rare finds, now in your bag:",
-  "offline.noFinds": "Nothing rare this time: it was all scrapped for coins.",
+  "offline.noFinds": "Nothing rare this time.",
   "offline.more": "+{n} more",
   "codex.title": "Trash Codex",
   "codex.short": "Codex",

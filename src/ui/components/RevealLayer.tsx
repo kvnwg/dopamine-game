@@ -231,7 +231,7 @@ function RareReveal({ view }: { view: RollView }) {
       {lit && <div className={s.rareGlow} />}
       {lit && !calm && <div className={s.rays} style={{ backgroundImage: `url(${rays})` }} />}
       {lit && !calm && lvl > 0 && <div className={`${s.rays} ${s.raysBack}`} style={{ backgroundImage: `url(${rays})` }} />}
-      {landed && !calm && <Confetti n={[50, 80, 120][lvl]} />}
+      {landed && !calm && <Confetti n={[30, 44, 60][lvl]} />}
       {landed && !calm && <div className={s.shock} />}
       <div className={s.center}>
         <div className={s.rareTitle}>
@@ -391,7 +391,7 @@ function RebirthFx() {
     <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties}>
       <div className={s.backdrop} />
       <div className={s.rays} style={{ backgroundImage: `url(${raysUrl(['#c48bff'])})` }} />
-      <Confetti n={60} />
+      <Confetti n={40} />
       <div className={s.center}>
         <Chunky text={t('rebirth.done', { n })} size={124} grad="purple" className={s.title} />
         <span className={s.name}>

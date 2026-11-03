@@ -9,6 +9,7 @@
 import { BAL, DATA } from '../data';
 import { currentLuck, formatNumber, haulMinutes, haulSize, itemName, luckOddsOneIn, rarityIndex, rollDrama, type CoreEvent, type Item } from '../core';
 import { getGame } from '../app/store';
+import { saveNow } from '../app/session';
 import { bus } from '../app/eventBus';
 import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
@@ -135,6 +136,9 @@ export function installRollController(): () => void {
           const shown = spinBest;
           useUi.setState({ lastRoll: shown });
           const tier = rarityIndex(e.item.rarity);
+          // A rare find is saved right away (autosave is every 30 s): a phone that crashes or a
+          // tab that closes during the big reveal must never lose it.
+          if (view.drama || tier >= rarityIndex('legendary')) saveSoon();
           if (view.drama) {
             if (!revealBusy()) celebrate(view);
             else if (queue.length < 3) queue.push(view);
@@ -222,4 +226,15 @@ export function installRollController(): () => void {
 function lastOf(events: readonly CoreEvent[], type: CoreEvent['type']): CoreEvent | undefined {
   for (let i = events.length - 1; i >= 0; i--) if (events[i].type === type) return events[i];
   return undefined;
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Saves once, right after this batch of events has been applied to the game state. */
+function saveSoon(): void {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    void saveNow();
+  }, 0);
 }

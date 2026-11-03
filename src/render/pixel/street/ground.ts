@@ -366,20 +366,28 @@ function sidewalkDetails(b: PixelBuf): void {
   }
 }
 
+/** Grass tones, deep to tip. */
+const GRASS = [K.grassDeep, K.grassShade, K.grass, K.grassLit, K.grassTip] as const;
+
 /**
- * The grass verge: a dark line under the slabs' edge, a lit band, a mid band and shade toward the
- * bottom, their edges broken into blades.
+ * The grass verge: a dark line under the slabs' edge, then blades. Each column is cut into blades two to
+ * four pixels long; a blade's tone follows the light (lit near the top, shade toward the bottom), now
+ * and then a step lighter or darker, so the verge reads as blades rather than bands.
  */
 function verge(b: PixelBuf): void {
-  const runsA = runIds(51, 1, 2);
-  const runsB = runIds(52, 1, 2);
   for (let x = 0; x < TILE_W; x++) {
-    const litTo = VERGE + 2 + Math.floor(hash01(runsA[x] + 5100) * 3);
-    const shadeFrom = BOTTOM - 3 + Math.floor(hash01(runsB[x] + 5200) * 3);
-    for (let row = VERGE; row <= BOTTOM; row++) {
-      let c = row < litTo ? K.grassLit : row >= shadeFrom ? K.grassShade : K.grass;
-      if (row === VERGE) c = K.grassShade;
-      dot(b, x, gy(row), c);
+    dot(b, x, gy(VERGE), K.grassShade);
+    let row = VERGE + 1;
+    for (let k = 0; row <= BOTTOM; k++) {
+      let len = 2 + Math.floor(h2(x, k, 80) * 3);
+      if (BOTTOM - (row + len) + 1 === 1) len++;
+      const t = (row + len / 2 - VERGE - 1) / (BOTTOM - VERGE);
+      let i = t < 0.28 ? 3 : t < 0.55 ? 2 : t < 0.82 ? 1 : 0;
+      const r = h2(x, k, 81);
+      if (r < 0.22) i = Math.min(4, i + 1);
+      else if (r > 0.86) i = Math.max(0, i - 1);
+      for (let j = 0; j < len && row + j <= BOTTOM; j++) dot(b, x, gy(row + j), GRASS[i]);
+      row += len;
     }
   }
 }
@@ -394,17 +402,6 @@ function vergeDetails(b: PixelBuf): void {
     if (tip(x) && !tip(x - 1) && !tip(x - 2) && rgbAt(b, x, gy(WALK1 - 1)) !== hexInt(K.slabDim)) {
       dot(b, x, gy(WALK1), K.grassLit);
       dot(b, x, gy(VERGE), K.grassLit);
-    }
-  }
-  // blades on a loose staggered grid: two pixels tall, brighter in the lit band
-  for (let cy = 0; cy < 3; cy++) {
-    for (let cx = 0; cx < TILE_W; cx += 5) {
-      if (h2(cx, cy, 72) < 0.35) continue;
-      const x = cx + (cy % 2) * 2 + Math.floor(h2(cx, cy, 70) * 3);
-      const row = VERGE + 3 + cy * 2 + Math.floor(h2(cx, cy, 71) * 2);
-      const c = rgbAt(b, x, gy(row - 1)) === hexInt(K.grassLit) ? K.grassTip : K.grassLit;
-      dot(b, x, gy(row - 1), c);
-      dot(b, x, gy(row), c);
     }
   }
   // clover: little mounds of a bluer green

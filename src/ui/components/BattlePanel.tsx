@@ -28,6 +28,12 @@ export function BattlePanel() {
   const wave = useGame((g) => g.battle.wave);
   const mode = useGame((g) => g.stage.mode);
   const hint = useGame((g) => g.stage.showToughHint);
+  // "Too tough!" is a passing notice when the raccoon is beaten (not a sign that stays up while farming).
+  const hintWas = useRef(hint);
+  useEffect(() => {
+    if (hint && !hintWas.current) useUi.getState().toast(t('battle.toughHint'), 'warn');
+    hintWas.current = hint;
+  }, [hint]);
   const highest = useGame((g) => g.stage.highestCleared);
   const next = useGame(nextWorldAvailable);
   const nextThreat = useGame((g) => (next !== null ? worldThreat(g, next).level : null));
@@ -90,7 +96,6 @@ export function BattlePanel() {
           </button>
         )}
       </div>
-      {hint && <div className={s.hint}>{t('battle.toughHint')}</div>}
     </div>
   );
 }

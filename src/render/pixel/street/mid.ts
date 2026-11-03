@@ -24,9 +24,11 @@ export const MID_SPOT = { y: 20, h: 40 } as const;
 
 /** A view row as a mid-layer row. */
 const vy = (row: number): number => row - MID_SPOT.y;
-/** The lawn's far edge, behind and between the houses. */
-const LAWN_TOP = vy(50);
-/** The houses' base line: the ink row where their walls meet the lawn. */
+/**
+ * The houses' base line: the ink row where their walls meet the lawn, and the lawn's far edge between
+ * them. It is the layer's first fully opaque row: worldLook's placeProps stands a world's themed props
+ * a few rows in front of it, in the yards.
+ */
 const BASE = vy(52);
 /** The front of the yards (mailboxes stand here; the ground layer's lawn edge is the next row). */
 const FRONT = vy(57);
@@ -48,9 +50,8 @@ const LAWN = {
   /** Strokes of texture, a step either side of the base. */
   dim: mix(GRASS.base, GRASS.shade, 0.4),
   bright: mix(GRASS.base, GRASS.lit, 0.75),
-  /** The backyards, a little hazier with distance, and their lit far edge. */
+  /** The lawn's far edge between the houses: lit, a little hazy with distance. */
   far: mix(mix(GRASS.base, GRASS.lit, 0.4), '#c8f0ff', 0.1),
-  farDim: mix(mix(GRASS.base, GRASS.shade, 0.15), '#c8f0ff', 0.1),
   farRim: mix(GRASS.lit, '#c8f0ff', 0.2),
   /** Cast shadows on the grass: the soft edge and the core. */
   cast: mix(GRASS.shade, GRASS.base, 0.4),
@@ -746,22 +747,21 @@ function runIds(seed: number, min: number, max: number): number[] {
 }
 
 /**
- * The lawn: the backyards (hazier, their far edge lit), then the front yards, all textured with short
- * horizontal strokes a step lighter or darker. Each lot in `lots` (x ranges) is mowed in soft slanted
- * stripes; a few tufts stand nearer the street.
+ * The lawn, from the house line (its far edge between the houses, lit and a little hazy) to the
+ * bottom, textured with short horizontal strokes a step lighter or darker. Each lot in `lots` (x
+ * ranges) is mowed in soft slanted stripes; a few tufts stand nearer the street.
  */
 function lawn(b: PixelBuf, lots: ReadonlyArray<readonly [number, number]>): void {
   const mowed = (x: number): number => {
     for (const [x0, x1] of lots) if (wrap(x - x0) <= x1 - x0) return wrap(x - x0);
     return -1;
   };
-  for (let y = LAWN_TOP; y < b.h; y++) {
+  for (let y = BASE; y < b.h; y++) {
     const runs = runIds(40 + y, 2, 5);
     for (let x = 0; x < TILE_W; x++) {
       const r = hash01(runs[x] * 7 + y * 131);
       let c: string;
-      if (y === LAWN_TOP) c = r < 0.3 ? LAWN.far : LAWN.farRim;
-      else if (y < BASE) c = r < 0.18 ? LAWN.farDim : LAWN.far;
+      if (y === BASE) c = r < 0.3 ? LAWN.far : LAWN.farRim;
       else {
         const m = mowed(x);
         const stripe = m >= 0 && Math.floor((m + Math.floor((y - BASE) / 2)) / 5) % 2 === 1;
@@ -782,7 +782,7 @@ function lawn(b: PixelBuf, lots: ReadonlyArray<readonly [number, number]>): void
 /** A soft shadow on the grass: an ellipse with a darker core. */
 function lawnShadow(b: PixelBuf, cx: number, cy: number, rx: number, ry: number): void {
   for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
-    if (y <= LAWN_TOP || y >= b.h) continue;
+    if (y <= BASE || y >= b.h) continue;
     for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
       const e = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2;
       if (e <= 1) dot(b, x, y, e < 0.4 ? LAWN.core : LAWN.cast);
@@ -793,8 +793,8 @@ function lawnShadow(b: PixelBuf, cx: number, cy: number, rx: number, ry: number)
 /** A house's shadow on the grass to its right: a band along the ground, fading out to the right. */
 function houseShadow(b: PixelBuf, x: number, len: number): void {
   for (let i = 0; i < len; i++) {
-    for (let y = BASE - 2; y <= BASE; y++) {
-      if (y === BASE - 2 && i > len - 4) continue;
+    for (let y = BASE + 1; y <= BASE + 2; y++) {
+      if (y === BASE + 2 && i > len - 4) continue;
       dot(b, x + i, y, i < len / 2 ? LAWN.core : LAWN.cast);
     }
   }

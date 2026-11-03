@@ -4,7 +4,7 @@ Everything below is placeholder writing generated for Milestone 1, in the game's
 
 ## Curbside items (`src/data/items.json`)
 
-60 base items (6 per slot) plus 3 unique Legendaries. `name` shows for Junk to Epic, `legendaryName` for Legendary and up.
+81 base items (6 to 11 per slot) plus 3 unique Legendaries: the original 60 in the first table, and 21 clothes-pack items after the uniques. `name` shows for Junk to Epic, `legendaryName` for Legendary and up.
 
 | Slot | Name | Legendary name | Flavor |
 |---|---|---|---|
@@ -76,6 +76,34 @@ Everything below is placeholder writing generated for Milestone 1, in the game's
 | weapon | The Leaf Blower of Saturday Morning | Wakes the whole street. Defeats the whole street. | ATK_SPD +10% |
 | jacket | Safety Vest of the HOA President | Has opinions about your lawn. | HP +10% |
 | shield | The Mailbox of Many Catalogs | Full of coupons. Full of power. | BAG_FIND +5 |
+
+### Clothes pack items
+
+21 more base items (DECISIONS I13). Their icons come from Kevin's pixel clothes pack ("Modern pixel clothes"), recolored to the game palette; the names and flavor are placeholder writing like the rest.
+
+| Slot | Name | Legendary name | Flavor |
+|---|---|---|---|
+| mask | Nerd Glasses | Lenses of the Science Fair | Looks smart. Still can't read. |
+| mask | 3D Glasses | Visor of the Third Dimension | The trash has never looked so real. |
+| mask | Cat Sleep Mask | Mask of the Nine Naps | Sleeps all day. Raids all night. |
+| jacket | Trench Coat | The Totally Normal Adult | Room for two more raccoons. |
+| jacket | Puffer Jacket | Puffer of the Polar Vortex | Ninety percent air. Ten percent stain. |
+| jacket | Moth-Eaten Fur Coat | Mink of the Country Club | Faux. The raccoon checked. |
+| jacket | Leather Jacket | Jacket of the Garage Band | Worn to one concert in 1987. |
+| jacket | Hooded Parka | Parka of the Endless Snow Day | Hood cinched tight. Vision optional. |
+| weapon | Busted Umbrella | The Commuter's Revenge | Won't open. Will hit. |
+| shield | Golf Umbrella | Canopy of the Back Nine | Fits a foursome. Or one smug raccoon. |
+| shield | Beach Umbrella | Parasol of the Sunburn Lord | Sand included. Forever. |
+| gloves | Leather Work Gloves | Grips of the Half-Built Deck | Broken in by a guy named Hank. |
+| gloves | White Gala Gloves | Gloves of the Silent Auction | Dressed for the gala. Dining behind it. |
+| bling | Clip-On Tie | Tie of Middle Management | Business up top. Dumpster below. |
+| bling | Bow Tie | Bow Tie of the Prom King | Pre-tied. Nobody has to know. |
+| bling | Knit Scarf | The Sweater That Gave Up | Itchy. Warm. Mostly itchy. |
+| bling | Toy Police Badge | Badge of the Neighborhood Watch | Officer Dale is not amused. |
+| bling | Moon Pendant | Amulet of Trash Night | Charged by moonlight. Mostly streetlight. |
+| ring | Mood Ring | Ring of Perpetual Hunger | Always green. Green means hungry. |
+| ring | Gold Band | Band of Second Thoughts | Thrown out mid-argument. Finders keepers. |
+| ring | Plastic Diamond Ring | Rock of the Gumball Machine | Fifty cents. Worth every penny. |
 
 ## Enemies (`src/data/enemies.json`)
 

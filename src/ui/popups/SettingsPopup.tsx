@@ -25,6 +25,7 @@ export function SettingsPopup({ onClose }: { onClose: () => void }) {
         </div>
       ))}
       <p className={s.note} style={{ marginTop: 24 }}>{t('settings.version', { version: __APP_VERSION__ })}</p>
+      <p className={s.note} style={{ marginTop: 8 }}>{t('settings.credits')}</p>
     </Modal>
   );
 }

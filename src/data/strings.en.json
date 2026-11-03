@@ -69,6 +69,7 @@
   "settings.reduceFlashing": "Reduce flashing",
   "settings.reduceMotion": "Reduce motion",
   "settings.version": "Dumpster Legend v{version}",
+  "settings.credits": "Raccoon by Kevin. Characters: Mucho Pixels, Tiny RPG Soldier & Orc, 0x72 Dungeon Tileset II. Effects: Pixel Art Assets - Will Tice / unTied Games. Clothes: Modern Pixel Clothes. Font: Pixelify Sans.",
   "reveal.mintStamp": "MINT IN BOX!",
   "toast.levelUp": "Level up! You are now level {level}",
   "toast.codexBonus": "Codex bonus unlocked! +{gems} Gems",

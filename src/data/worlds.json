@@ -273,42 +273,49 @@
     }
   },
   {
-    "id": "dusty_dunes",
-    "name": "Dusty Dunes",
+    "id": "dungeon_dumps",
+    "name": "Dungeon Dumps",
     "theme": "curbside",
     "enemies": [
       {
-        "id": "alley_rat",
-        "name": "Dune Rat",
-        "color": "#C8A26E",
-        "accent": "#8D6E63"
+        "id": "pumpkin_dude",
+        "name": "Pumpkin Dude",
+        "color": "#E8822A",
+        "accent": "#5A8C2B"
       },
       {
-        "id": "porch_pigeon",
-        "name": "Desert Pigeon",
-        "color": "#D9B98C",
-        "accent": "#26A69A"
+        "id": "plague_doc",
+        "name": "Plague Doc",
+        "color": "#2E3448",
+        "accent": "#C9B48A"
       },
       {
-        "id": "punk_raccoon",
-        "name": "Cactus Punk",
-        "color": "#A68A64",
-        "accent": "#43A047"
+        "id": "tin_soldier",
+        "name": "Tin Soldier",
+        "color": "#9AA7B4",
+        "accent": "#8C2F2F"
+      },
+      {
+        "id": "orc_brute",
+        "name": "Orc Brute",
+        "color": "#6FA24A",
+        "accent": "#8A5A2B"
       }
     ],
     "boss": {
-      "id": "big_earl",
-      "name": "Sultan of Sand",
-      "color": "#B8864B",
+      "id": "demon_king",
+      "name": "Dumpgor the Demon",
+      "color": "#C8323C",
       "accent": "#FFD54F"
     },
     "look": {
-      "skyTop": "#FFC86B",
-      "skyBottom": "#FFF3D1",
-      "hue": -55,
-      "sat": 0.9,
-      "bright": 1.08,
-      "night": false
+      "skyTop": "#1A1326",
+      "skyBottom": "#3A2840",
+      "hue": 0,
+      "sat": 1,
+      "bright": 1,
+      "night": true,
+      "scenery": "dungeon"
     }
   },
   {

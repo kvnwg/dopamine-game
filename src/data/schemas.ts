@@ -327,7 +327,8 @@ export const EnemiesSchema = z.array(EnemySchema).min(1);
 
 export const StringsSchema = z.record(z.string(), z.string());
 
-export const EnemyShapeSchema = z.enum(['rat', 'pigeon', 'raccoon', 'ratKing', 'raccoonBoss', 'officer']);
+/** Enemy art: hand-drawn stills (rat ... raccoonBoss) or animated sheets (raccoon, officer and the pack characters). */
+export const EnemyShapeSchema = z.enum(['rat', 'pigeon', 'raccoon', 'ratKing', 'raccoonBoss', 'officer', 'soldier', 'orc', 'pumpkin', 'doc', 'bigDemon']);
 export type EnemyShape = z.infer<typeof EnemyShapeSchema>;
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'expected a #RRGGBB color');
@@ -350,6 +351,8 @@ export const WorldSchema = z.object({
     sat: z.number().nonnegative(),
     bright: z.number().positive(),
     night: z.boolean(),
+    /** Which backdrop the battle uses (default: the suburban street). */
+    scenery: z.enum(['suburbs', 'dungeon']).optional(),
   }),
 });
 export type WorldDef = z.infer<typeof WorldSchema>;

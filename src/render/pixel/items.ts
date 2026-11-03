@@ -1276,6 +1276,428 @@ const SHIELD_UNIQUE_MAILBOX: Rows = [
   '................',
 ];
 
+// ------------------------------------------------------------------ Clothes pack: Kevin's pixel clothes pack, recolored to the palette
+
+/** Thick black nerd glasses. */
+const MASK_NERD_GLASSES: Rows = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '...k........k...',
+  '..k.k......k.k..',
+  '.k............k.',
+  'kkkkkk....kkkkkk',
+  'kk2242kkkk2242kk',
+  '.k3332k..k3332k.',
+  '.k3332k..k3332k.',
+  '..kkkk....kkkk..',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+/** Red and blue 3D glasses. */
+const MASK_3D_GLASSES: Rows = [
+  '................',
+  '................',
+  '................',
+  '...k........k...',
+  '..kkk......kkk..',
+  '.kk.k......k.kk.',
+  'kk............kk',
+  'kkkkkkk..kkkkkkk',
+  'kkrrPrkkkk22C2kk',
+  '.kRRRrk..kCCC2k.',
+  '.kRRRrk..kCCC2k.',
+  '.kkkkkk..kkkkkk.',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+/** Red sleep mask with cat ears and closed eyes. */
+const MASK_CAT_SLEEP_MASK: Rows = [
+  '................',
+  '..k.........k...',
+  '.krk.......krk..',
+  '.krrk.....krrk..',
+  '.krrkkkkkkkrrk..',
+  '.kkkrrrrrrrkkk..',
+  '.krrrrrrrrrrrk..',
+  '.k4rrrrrrrrr4k..',
+  'krr444rrr444rrk.',
+  'krrrrrkkkrrrrrk.',
+  '.krrrk...krrrk..',
+  '..kkk.....kkk...',
+  '...k.......k....',
+  '....kk...kk.....',
+  '......kkk.......',
+  '................',
+];
+
+/** Long brown trench coat. */
+const JACKET_TRENCH_COAT: Rows = [
+  '......kkkkk.....',
+  '.....kbbbbbkk...',
+  '....kbbxxbbbbk..',
+  '...kbbbxxbbbbbk.',
+  '..kkbbbxxbbbk4k.',
+  '..kbbbbxxbbbb44k',
+  '..kkbbbxxbbbb44k',
+  '.k4kbbbxxbbbk44k',
+  'kb4kbbbxxbbbk44k',
+  '.kbkbbbxxbb4kbbk',
+  '..kk4bbxxbb44kkk',
+  '...k44bxxb444k..',
+  '...kb4kxxk4bbk..',
+  '...kb4kkkk4bbk..',
+  '...k44k..k444k..',
+  '....kkk..kkkk...',
+];
+
+/** Quilted red puffer jacket. */
+const JACKET_PUFFER: Rows = [
+  '.....kkkkk......',
+  '....kRRRRRk.....',
+  '...kRkkkkRRkk...',
+  '..kRkRkkRRkRRk..',
+  '.kRPPPkkkkPPRRk.',
+  'kRPrrrkkrrrrPRrk',
+  'krRRRrkkrRRRRrrk',
+  'kRrRRrkkrRRRrRrk',
+  'kRkrrrkkrrrrkRrk',
+  'krkRRrkkrRRRkrrk',
+  'kRkRRrkkrRRRkRrk',
+  'kRkrrrkkrrrrkRrk',
+  'krkRRrkkrRRRkrrk',
+  'kRkRRrkkrRRRkRrk',
+  'kPkkkk..kkkkkRPk',
+  '.kk..........kk.',
+];
+
+/** Shaggy brown fur coat. */
+const JACKET_FUR_COAT: Rows = [
+  '......kkkkk.....',
+  '.....kbxxbnkk...',
+  '....kbxkkxbnsk..',
+  '...kbbxkkxbbnsk.',
+  '..kkbxxkkxxbnnk.',
+  '..knbxxkkxxbknsk',
+  '..kkbxxkkxxbknsk',
+  '.knkbbxkkxxbknsk',
+  'ksnkbbxkkxxbknsk',
+  '.kskbbxkkxbbkssk',
+  '..kkbbxkkxxbnkkk',
+  '...kbxxkkxxbnk..',
+  '...kbxxkkkxbnk..',
+  '...knbxkkkbnnk..',
+  '...knnk..knnsk..',
+  '....kkk..kkkk...',
+];
+
+/** Black leather jacket. */
+const JACKET_LEATHER: Rows = [
+  '.....kkkkk......',
+  '....k4bbb4k.....',
+  '...k4kkkkbbkk...',
+  '..kkbbkk4bbk1k..',
+  '.k3kkbkkbkkk11k.',
+  'k311kbkkbbk1111k',
+  'k311kbkkbbk1311k',
+  'k311kkkkbk13111k',
+  'k1k1kkkkkk13k11k',
+  'k1kk1kkkk11kk11k',
+  'k3k11kkkk111k11k',
+  'k3kk1kkkk3kkk11k',
+  'k1k11kkkk311k11k',
+  'k1k11kkkk3kkk11k',
+  'k1kkk....kkkk11k',
+  '.kk..........kk.',
+];
+
+/** Red hooded parka, zipped up. */
+const JACKET_HOODED_PARKA: Rows = [
+  '......kkkkkk....',
+  '.....k4bbb4bk...',
+  '....k4bkk4b4bk..',
+  '...kbbkrrkkbkk..',
+  '....kkkrkkkkkRk.',
+  '...kPRkrkPRRRk..',
+  '..kkPPkrkPPkPk..',
+  '..kPPPkrkRPkPRk.',
+  '.kPkPPkrkPPkPRk.',
+  'kPRkPPkrkRPkPRk.',
+  '.kRkRPkrkPRkRRk.',
+  '..kkRPkrkRPRkkk.',
+  '...kRPkrkPPRk...',
+  '...kRPkkkPPRk...',
+  '...kRPk.kRRRk...',
+  '....kkk.kkkk....',
+];
+
+/** Closed black umbrella with a J handle. Drawn upright, not diagonal like the other weapons. */
+const WEAPON_UMBRELLA: Rows = [
+  '......kkk.......',
+  '.....k11kk......',
+  '.....k1k1k......',
+  '.....kk1kk......',
+  '....kkk111k.....',
+  '....k1k1k1k.....',
+  '....k1k1kkk.....',
+  '....kkk1kkk.....',
+  '....k1k111k.....',
+  '.....k1k1k......',
+  '.....kkkkk......',
+  '......k3k.......',
+  '......k3k.k.....',
+  '......k3kk3k....',
+  '......k4443k....',
+  '.......kkkk.....',
+];
+
+/** Open golf umbrella in green and gray panels. */
+const SHIELD_GOLF_UMBRELLA: Rows = [
+  'k..kkkkkkkkk....',
+  '.kkgggggggggkk..',
+  '.k11ggggggggggk.',
+  'k11111gggggggkk.',
+  'k1111111ggggk1k.',
+  'k111111111kk11k.',
+  'k11111111k111k..',
+  'k1111111k111k...',
+  'k111111kkk1k....',
+  'k11111k1kkk.....',
+  'k1111k111k1k....',
+  'k11kk111k.k1k...',
+  'k1k111kk...k3k..',
+  '.k11kk.....kk3k.',
+  '..kk......k333k.',
+  '...........kkk..',
+];
+
+/** Open beach umbrella in tan, green and blue panels. */
+const SHIELD_BEACH_UMBRELLA: Rows = [
+  'k..kkkkkkkkk....',
+  '.kkssssssssskk..',
+  '.kgggsssssssssk.',
+  'kCggggggssssskk.',
+  'kCgggggggggskrk.',
+  'kCCgggggggkkrrk.',
+  'kCCCgggggkrrrk..',
+  'kCCCggggkrrrk...',
+  'kCCCCggkkkrk....',
+  'kCCCCgkrkkk.....',
+  'kCCCCkrrrk1k....',
+  'kCCkk22rk.k1k...',
+  'kCk222kk...k4k..',
+  '.k22kk.....kk3k.',
+  '..kk......k443k.',
+  '...........kkk..',
+];
+
+/** A pair of brown leather work gloves. */
+const GLOVES_LEATHER_WORK: Rows = [
+  '...kkkk.........',
+  '.kkbbkbk........',
+  'kbbkbbkbkkkkk...',
+  '.kbbkbbkk4k4bkk.',
+  'kbkbbkbk4k4bk4bk',
+  'kbbkbbk4k4bk4bk.',
+  '.kbbkk444bk4bk4k',
+  '..kbk4bbb44bk4bk',
+  '...k4bbb4bbk4bk.',
+  '...kbb4bbb44bk..',
+  '..k4b4bbb4bbkk..',
+  '.k444bbb444kkkk.',
+  'k4bbbbbbbbbbbbbk',
+  'k4bbbbbbbbbbbbk.',
+  '.kbbbbkkkkkkkk..',
+  '..kkkk..........',
+];
+
+/** A pair of white gala gloves. */
+const GLOVES_WHITE_GALA: Rows = [
+  '...kkkk.........',
+  '.kk34k4k........',
+  'k34k34k4kkkkk...',
+  '.k34k34kk5k54kk.',
+  'k4k34k3k5k54k54k',
+  'k34k34k5k54k54k.',
+  '.k34kk5554k54k5k',
+  '..k3k5444554k54k',
+  '...k5444544k54k.',
+  '...k445444554k..',
+  '..k545444544kk..',
+  '.k555444555kkkk.',
+  'k54444444444443k',
+  'k5444433333333k.',
+  '.k3333kkkkkkkk..',
+  '..kkkk..........',
+];
+
+/** Gray striped clip-on tie. */
+const BLING_CLIP_ON_TIE: Rows = [
+  '......kkk.......',
+  '.....k342k......',
+  '......k2k.......',
+  '.......k........',
+  '......kkk.......',
+  '......k3k.......',
+  '......k4k.......',
+  '......k2k.......',
+  '......k34k......',
+  '.....k342k......',
+  '.....k423k......',
+  '.....k234k......',
+  '.....k342k......',
+  '.....k422k......',
+  '......k2k.......',
+  '.......k........',
+];
+
+/** Purple bow tie on its neck band. */
+const BLING_BOW_TIE: Rows = [
+  '................',
+  '...k............',
+  '..kkk......kk...',
+  '..kkkk....kkkk..',
+  '.kv1kkk..kk1vk..',
+  '.krv1kkk.k1vvk..',
+  '.kvrvrkkkrrvvk..',
+  '.krvvvkkkvvvvk..',
+  '.krv1kkkkk1rvk..',
+  '.kv1k.....k1rk..',
+  '..kk.......kk...',
+  '..kk......k1k...',
+  '..kkkkkkkkk1k...',
+  '...kkkkkkkkk....',
+  '....kkkkkkk.....',
+  '................',
+];
+
+/** Striped red knit scarf with fringed ends. */
+const BLING_KNIT_SCARF: Rows = [
+  '.....kkkkkk.....',
+  '....kr1r1r1k....',
+  '...kr1kkkkr1k...',
+  '...k1k....krk...',
+  '..k1r1k..kr1rk..',
+  '..kr1rk..k1r1k..',
+  '..k1r1k..kr1rk..',
+  '..kr1rk..k1r1k..',
+  '..k1r1k..kr1rk..',
+  '..kr1rk..k1r1k..',
+  '..k1r1k..kr1rk..',
+  '..kr1rk..k1r1k..',
+  '..k1r1k..kr1rk..',
+  '..kkkkk..kkkkk..',
+  '..k.k.k..k.k.k..',
+  '..k.k.k..k.k.k..',
+];
+
+/** Toy police badge in gold plastic with a blue center. */
+const BLING_TOY_POLICE_BADGE: Rows = [
+  '...k...k...k....',
+  '..knkkknkkknk...',
+  '.knsnbbsnbbsnk..',
+  '..knsssssssnk...',
+  '...kbsssssbk....',
+  '...knsnnnsnk....',
+  '..knsn333nsnk...',
+  '..knsn3uunsnk...',
+  '.knssn3uunssnk..',
+  '.knssn3uunssnk..',
+  '.knTTsnnnsTTnk..',
+  '.knsT5T5T5Tsnk..',
+  '..kbs55555sbk...',
+  '...kbbbsbbbk....',
+  '....kkkbkkk.....',
+  '.......k........',
+];
+
+/** Silver crescent moon pendant on a chain. */
+const BLING_MOON_PENDANT: Rows = [
+  '..kkkkkkkkkkk...',
+  '.kkkkkkkkkkkkk..',
+  'k4k.........k3k.',
+  '.k5k.......k1k..',
+  '..k4k.....k4k...',
+  '...k5kkkkk4k....',
+  '....k55435k.....',
+  '.....kk3kk......',
+  '.......k........',
+  '......kkk.......',
+  '.....k543k......',
+  '....k3k443k.....',
+  '....kk.k53k.....',
+  '....k3k541k.....',
+  '.....k441k......',
+  '......kkk.......',
+];
+
+/** Mood ring, its stone green. */
+const RING_MOOD: Rows = [
+  '................',
+  '......kkk.......',
+  '....kksnbkk.....',
+  '...ksnkkkbbk....',
+  '..kskk...kkxk...',
+  '.ksk.......kxk..',
+  'ksk...kkk...kxk.',
+  'knk..kWggk..kxk.',
+  '.knkkggWggkkxk..',
+  '..knkgggg1kxk...',
+  '...kkggW11kk....',
+  '.....kgggk......',
+  '......kgk.......',
+  '.......k........',
+  '................',
+  '................',
+];
+
+/** Plain gold band. */
+const RING_GOLD_BAND: Rows = [
+  '.......kkkk.....',
+  '.....kknnsskk...',
+  '....kTTsnnsssk..',
+  '...kWWWTsTTTTsk.',
+  '..ksTTWWTkkkksk.',
+  '.kWTsTTkkkkkkksk',
+  '.kTWTsk....kkksk',
+  'ksTWWk......knsk',
+  'knsTWk.....knnsk',
+  'knsTk.....knnsk.',
+  '.knTk....knnnsk.',
+  '.knTkkkkknnnsk..',
+  '.knskkkknnssk...',
+  '..ksskkkkssk....',
+  '...kkTTTskk.....',
+  '.....kkkk.......',
+];
+
+/** Ring with a big plastic diamond. */
+const RING_PLASTIC_DIAMOND: Rows = [
+  '................',
+  '................',
+  '......kkk.......',
+  '....kksnbkk.....',
+  '...ksnkkkbbk....',
+  '..kskk...kkxk...',
+  '.ksk.......kxk..',
+  'ksk...kkk...kxk.',
+  'knk..kC54k..kxk.',
+  '.knkk43C35kkxk..',
+  '..knk35453kxk...',
+  '...kk54C43kk....',
+  '.....k355k......',
+  '......kkk.......',
+  '................',
+  '................',
+];
+
 /** Every item icon by item id, in items.json order (sheet() relies on this order). */
 export const ITEM_SPRITES: Record<string, Rows> = {
   hat_traffic_cone: REF_CONE,
@@ -1341,6 +1763,27 @@ export const ITEM_SPRITES: Record<string, Rows> = {
   weapon_unique_leaf_blower: WEAPON_UNIQUE_LEAF_BLOWER,
   jacket_unique_hoa_vest: JACKET_UNIQUE_HOA_VEST,
   shield_unique_mailbox: SHIELD_UNIQUE_MAILBOX,
+  mask_nerd_glasses: MASK_NERD_GLASSES,
+  mask_3d_glasses: MASK_3D_GLASSES,
+  mask_cat_sleep_mask: MASK_CAT_SLEEP_MASK,
+  jacket_trench_coat: JACKET_TRENCH_COAT,
+  jacket_puffer: JACKET_PUFFER,
+  jacket_fur_coat: JACKET_FUR_COAT,
+  jacket_leather: JACKET_LEATHER,
+  jacket_hooded_parka: JACKET_HOODED_PARKA,
+  weapon_umbrella: WEAPON_UMBRELLA,
+  shield_golf_umbrella: SHIELD_GOLF_UMBRELLA,
+  shield_beach_umbrella: SHIELD_BEACH_UMBRELLA,
+  gloves_leather_work: GLOVES_LEATHER_WORK,
+  gloves_white_gala: GLOVES_WHITE_GALA,
+  bling_clip_on_tie: BLING_CLIP_ON_TIE,
+  bling_bow_tie: BLING_BOW_TIE,
+  bling_knit_scarf: BLING_KNIT_SCARF,
+  bling_toy_police_badge: BLING_TOY_POLICE_BADGE,
+  bling_moon_pendant: BLING_MOON_PENDANT,
+  ring_mood: RING_MOOD,
+  ring_gold_band: RING_GOLD_BAND,
+  ring_plastic_diamond: RING_PLASTIC_DIAMOND,
 };
 
 /** The pixel of each weapon icon where the paw holds it (the weapon is rotated about this point). */
@@ -1352,7 +1795,15 @@ export const WEAPON_GRIP: Record<string, { x: number; y: number }> = {
   weapon_wiffle_bat: { x: 3, y: 12 },
   weapon_tiki_torch: { x: 4, y: 12 },
   weapon_unique_leaf_blower: { x: 4, y: 11 },
+  weapon_umbrella: { x: 7, y: 13 },
 };
+
+/** How far each weapon's art leans clockwise from straight up, in degrees (most are drawn on the 45 degree diagonal). */
+export const WEAPON_ART_TILT: Readonly<Record<string, number>> = {
+  weapon_umbrella: 0,
+};
+export const DEFAULT_WEAPON_TILT = 45;
+
 
 /** Every item icon for the preview sheet (tools/pixelSheet.ts), in items.json order. */
 export function sheet(): SheetEntry[] {

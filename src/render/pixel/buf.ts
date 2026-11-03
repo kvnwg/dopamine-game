@@ -146,6 +146,44 @@ export function scaleUp(b: PixelBuf, n: number): PixelBuf {
   return out;
 }
 
+/**
+ * Half resolution: each 2 x 2 block becomes one pixel. A block is opaque when at least `minOpaque`
+ * of its pixels are; it takes its most common color, ties going to the darker one (keeps outlines).
+ */
+export function downsample2(b: PixelBuf, minOpaque = 2): PixelBuf {
+  const w = Math.ceil(b.w / 2);
+  const h = Math.ceil(b.h / 2);
+  const out = blank(w, h);
+  const lum = (i: number) => b.px[i] * 0.3 + b.px[i + 1] * 0.59 + b.px[i + 2] * 0.11;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx: number[] = [];
+      for (let dy = 0; dy < 2; dy++) {
+        for (let dx = 0; dx < 2; dx++) {
+          const sx = x * 2 + dx;
+          const sy = y * 2 + dy;
+          if (sx >= b.w || sy >= b.h) continue;
+          const i = (sy * b.w + sx) * 4;
+          if (b.px[i + 3]) idx.push(i);
+        }
+      }
+      if (idx.length < minOpaque) continue;
+      let best = idx[0];
+      let bestN = 0;
+      for (const i of idx) {
+        let n = 0;
+        for (const j of idx) if (b.px[i] === b.px[j] && b.px[i + 1] === b.px[j + 1] && b.px[i + 2] === b.px[j + 2]) n++;
+        if (n > bestN || (n === bestN && lum(i) < lum(best))) {
+          best = i;
+          bestN = n;
+        }
+      }
+      out.px.set([b.px[best], b.px[best + 1], b.px[best + 2], 255], (y * w + x) * 4);
+    }
+  }
+  return out;
+}
+
 export function clone(b: PixelBuf): PixelBuf {
   return { w: b.w, h: b.h, px: new Uint8ClampedArray(b.px) };
 }

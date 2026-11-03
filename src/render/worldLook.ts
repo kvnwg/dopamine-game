@@ -1,29 +1,55 @@
 /**
  * Per-world look for the pixel scenery: a sky in flat color bands (stars and a pixel moon at
- * night) plus a hue / saturation / brightness grade applied to the shared scenery layers (dark
- * outline pixels are left alone so line work stays crisp). Used by the battle scene (full-size
- * layers) and the Worlds tab (small preview cards).
+ * night) plus a hue / saturation / brightness grade applied to the street layers (dark outline
+ * pixels are left alone so line work stays crisp), or a world's own backdrop (the fantasy
+ * dungeon keeps its colors). Used by the battle scene and the Worlds tab (small preview cards).
  */
 import { DATA, type WorldDef } from '../data';
 import { blank, blit, clone, fill, fromRows, hash01, mix, rgb, toHex, type PixelBuf } from './pixel/buf';
 import { P, toCanvas } from './pixel';
-import { LAYERS, fgLayer, farLayer, groundLayer, midLayer } from './pixel/scenery';
+import { SUBURBS } from './pixel/scenery';
+import { DUNGEON } from './pixel/packs/dungeon';
+import type { LayerName, ScenerySet } from './pixel/sceneryTypes';
 
 export type Look = WorldDef['look'];
 
-export interface BaseLayers {
-  far: PixelBuf;
-  mid: PixelBuf;
-  ground: PixelBuf;
-  fg: PixelBuf;
+export const LAYER_NAMES: readonly LayerName[] = ['far', 'mid', 'ground', 'fg'];
+
+const SETS: Record<NonNullable<Look['scenery']>, ScenerySet> = { suburbs: SUBURBS, dungeon: DUNGEON };
+
+/** The backdrop a world uses. */
+export function scenerySet(def: WorldDef): ScenerySet {
+  return SETS[def.look.scenery ?? 'suburbs'] ?? SUBURBS;
 }
 
-let base: BaseLayers | null = null;
+export interface SceneryKeys {
+  far: string;
+  mid: string;
+  ground: string;
+  fg: string;
+}
 
-/** The ungraded scenery tiles, built once. */
-export function baseLayers(): BaseLayers {
-  if (!base) base = { far: farLayer(), mid: midLayer(), ground: groundLayer(), fg: fgLayer() };
-  return base;
+const built = new Map<ScenerySet, Record<LayerName, PixelBuf>>();
+
+/** A world's backdrop and its (ungraded) layer tiles, each set built once. */
+export function sceneryFor(def: WorldDef): { set: ScenerySet; bufs: Record<LayerName, PixelBuf> } {
+  const set = scenerySet(def);
+  let bufs = built.get(set);
+  if (!bufs) {
+    bufs = { far: set.far(), mid: set.mid(), ground: set.ground(), fg: set.fg() };
+    built.set(set, bufs);
+  }
+  return { set, bufs };
+}
+
+/** Layer tops in the 1080 x 820 battle view (multiples of the pixel size, so pixels line up). */
+export function layerY(set: ScenerySet): Record<LayerName, number> {
+  return { far: set.layers.far.y * P, mid: set.layers.mid.y * P, ground: set.layers.ground.y * P, fg: set.layers.fg.y * P };
+}
+
+/** Where each layer's tile starts scrolling, in screen pixels. */
+export function scroll0(set: ScenerySet): Record<LayerName, number> {
+  return { far: set.scroll0.far * P, mid: set.scroll0.mid * P, ground: set.scroll0.ground * P, fg: set.scroll0.fg * P };
 }
 
 /** 3x3 color matrix = brightness x saturation x hue rotation (same math as CSS filters). */
@@ -116,35 +142,30 @@ export function skyBuf(w: number, h: number, look: Look): PixelBuf {
   return b;
 }
 
-/** Layer placement in the 1080 x 820 battle view (multiples of the pixel size, so pixels line up). */
-export const LAYER_Y = { far: LAYERS.far.y * P, mid: LAYERS.mid.y * P, ground: LAYERS.ground.y * P, fg: LAYERS.fg.y * P } as const;
-export const SCROLL0 = { far: 43 * P, mid: 7 * P, ground: 83 * P, fg: 117 * P } as const;
-
 const thumbs = new Map<number, string>();
 
-/** A preview of a world (sky + graded scenery) as a data URL, cached. Pixel-crisp at 3x. */
+/** A preview of a world (sky + its backdrop, graded) as a data URL, cached. Pixel-crisp at 4x. */
 export function worldThumbUrl(world: number): string {
   const hit = thumbs.get(world);
   if (hit) return hit;
   const def = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
-  const L = baseLayers();
-  // The band of the battle view with the houses, trees and road.
-  const top = 26;
-  const w = 160;
-  const h = 96;
+  const { set, bufs } = sceneryFor(def);
+  // The band of the battle view with the houses (or the dungeon wall), trees and road.
+  const top = 12;
+  const w = 80;
+  const h = 48;
   const out = skyBuf(w, h + top, def.look);
   const view = blank(w, h + top);
   const put = (src: PixelBuf, sx: number, y: number) => {
-    for (let x = 0; x < w; x += src.w) blit(view, src, x - (sx % src.w), y);
-    blit(view, src, w - (sx % src.w), y);
+    for (let x = -(sx % src.w); x < w; x += src.w) blit(view, src, x, y);
   };
-  put(gradeBuf(L.far, def.look), SCROLL0.far / P, LAYERS.far.y);
-  put(gradeBuf(L.mid, def.look), SCROLL0.mid / P, LAYERS.mid.y);
-  put(gradeBuf(L.ground, def.look), SCROLL0.ground / P, LAYERS.ground.y);
+  for (const name of ['far', 'mid', 'ground'] as const) {
+    put(set.graded ? gradeBuf(bufs[name], def.look) : bufs[name], set.scroll0[name], set.layers[name].y);
+  }
   blit(out, view, 0, 0);
   const cropped = blank(w, h);
   blit(cropped, out, 0, -top);
-  const url = toCanvas(cropped, 3).toDataURL('image/png');
+  const url = toCanvas(cropped, 4).toDataURL('image/png');
   thumbs.set(world, url);
   return url;
 }

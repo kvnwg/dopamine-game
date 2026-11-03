@@ -18,9 +18,10 @@ describe('game data', () => {
     expect(DATA.affixes).toHaveLength(12);
   });
 
-  it('has 6 base items per slot plus 3 unique Legendaries for the curbside theme', () => {
+  it('has at least 6 base items per slot plus 3 unique Legendaries for the curbside theme', () => {
     for (const slot of SLOTS) {
-      expect(DATA.items.filter((i) => i.theme === 'curbside' && i.slot === slot && !i.unique)).toHaveLength(6);
+      const n = DATA.items.filter((i) => i.theme === 'curbside' && i.slot === slot && !i.unique).length;
+      expect(n, slot).toBeGreaterThanOrEqual(6);
     }
     expect(DATA.items.filter((i) => i.unique)).toHaveLength(3);
   });

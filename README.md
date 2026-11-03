@@ -2,7 +2,7 @@
 
 Idle RPG roguelite for iOS and Android: a raccoon auto-battles its way through the city's alleys while its dumpster rolls for junk gear on its own, RNG-game style. Every item has a power number and a "1 in X" rarity, and the raccoon visibly wears whatever it equips.
 
-**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked into a Roblox-style rolling game: slot reels that roll on their own, luck from several sources, a bag of power-rated items you equip by dragging them onto the raccoon, a honeycomb upgrade map, rebirths, enchantments, and 20 worlds of rising difficulty, all open from the start. Everything is pixel art. The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16, W1 to W11, V1 to V9, H1 to H6 and X1 to X7). Next up is Milestone 2 (Heists).
+**Status:** Milestones 0 (setup) and 1 (core idle loop) from [`DUMPSTER_LEGEND_SPEC.md`](DUMPSTER_LEGEND_SPEC.md) are built, then reworked into a Roblox-style rolling game: slot reels that roll on their own, luck from several sources, a bag of power-rated items you equip by dragging them onto the raccoon, a honeycomb upgrade map, rebirths, enchantments, and 20 worlds of rising difficulty, all open from the start. Everything is pixel art on one pixel grid: the hero is Kevin's raccoon sprite sheet, and enemies, effects and World 8's dungeon come from asset packs Kevin supplied (credits in [`CREDITS.md`](CREDITS.md)). The rework is recorded in [`DECISIONS.md`](DECISIONS.md) (rows R1 to R16, W1 to W11, V1 to V9, H1 to H6, X1 to X7 and P1 to P8). Next up is Milestone 2 (Heists).
 
 ### How it plays
 
@@ -11,7 +11,7 @@ Idle RPG roguelite for iOS and Android: a raccoon auto-battles its way through t
 - **Bag tab:** the bag holds your rolls and keeps the best when it fills up. Sort it by Power or Rarity, tap an item to lock or scrap it, or Scrap All (locked items are safe).
 - **Upgrades tab:** opens a full-screen honeycomb map that grows out of Luck I. Every tier is its own hex (Luck I, Luck II, ...): bought hexes are bright, the next ones show their price, and the ones past those are "?" until you get closer. Gold hexes are big specials, including the very expensive Extra Reel line: up to 4 more reels, each one more item per spin. Drag to explore, pinch or scroll to zoom, tap a hex for details, and hold Buy to keep buying up a line. The first tiers are cheap, then each one costs about 10 times the last.
 - **Rebirth tab:** beat the required world and hold enough gold to start over from scratch in World 1 (items, level, gold and upgrades are wiped) with permanently more luck, gold, ATK and HP, and cheaper upgrades.
-- **Worlds tab:** all 20 worlds, each with its own look, enemies and boss, and every one open from the start. Each card shows how a world matches up against you right now (Easy, Tough, Deadly, or ONE-SHOT) and how much more it pays. Harder worlds pay proportionally more gold, and gear rolled there is stronger. Wander too far up and you get one-shot and sent back; roll something lucky and you can jump several worlds ahead.
+- **Worlds tab:** all 20 worlds, each with its own look, enemies and boss, and every one open from the start. World 8, Dungeon Dumps, is a fantasy dungeon with knights, orcs, a pumpkin-head, a plague doctor and a big demon. Each card shows how a world matches up against you right now (Easy, Tough, Deadly, or ONE-SHOT) and how much more it pays. Harder worlds pay proportionally more gold, and gear rolled there is stronger. Wander too far up and you get one-shot and sent back; roll something lucky and you can jump several worlds ahead.
 
 ## Run it
 
@@ -117,7 +117,7 @@ tools/         balance simulator
 - Game logic is pure: `applyAction(state, action, rng, now)` and `tick(state, { ticks }, rng, now)` return `{ state, events }`. Combat runs at 10 ticks per second; rendering only reads state and plays effects from events.
 - Every tuning number is in `src/data/balance.json`, every UI string in `src/data/strings.en.json`, and all content is JSON validated with zod at boot.
 - Randomness only comes from the seeded `Rng`, and its state is saved, so runs are reproducible.
-- Art goes through `src/data/assets.json`. Until real files are listed there, everything is pixel art drawn in code (`src/render/pixel/`, rules in [`docs/PIXEL_ART.md`](docs/PIXEL_ART.md)). Render any set to a PNG sheet with `npx tsx tools/pixelSheet.ts items out.png` (or `ui`, `enemies`, `scenery`, `hero`).
+- Art is pixel art in `src/render/pixel/` (rules in [`docs/PIXEL_ART.md`](docs/PIXEL_ART.md)): drawn in code from one palette, plus pack art and Kevin's raccoon sheet generated into `src/render/pixel/packs/` by `tools/packs/*.py`. Render a set to a PNG sheet with `npx tsx tools/pixelSheet.ts items out.png` (or `ui`, `enemies`, `scenery`, `hero`, `packs/fx`), and every animation of a pack module with `npx tsx tools/animSheet.ts packs/fantasy out.png`. Licenses: [`CREDITS.md`](CREDITS.md).
 
 ## Docs
 

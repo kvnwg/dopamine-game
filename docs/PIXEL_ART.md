@@ -68,3 +68,55 @@ Ready-made ramps (dark, mid, light) are in `RAMPS` in `palette.ts`.
 
 `src/render/pixel/reference.ts` holds the coin and the traffic cone. Match their level of polish:
 clean outline, three-tone shading, one highlight, no stray pixels.
+
+## One pixel size in battle
+
+Every pixel in the battle is the same size: `P = 12` screen pixels per art pixel
+(`src/render/pixel/index.ts`), so the 1080 x 820 view is 90 x 68 art pixels
+(`src/render/pixel/sceneryTypes.ts`: `VIEW`, and `FEET_ROW`, the row fighters stand on).
+Nothing in battle is scaled or squashed: sprites move, change frames, and only weapon swings and
+knock-outs rotate. Art drawn for the old, finer grid is either redrawn (the street, rats, pigeons,
+raccoon bosses) or shown at half resolution with `downsample2` (item icons worn by the hero, the
+older still effects).
+
+Size guide at this scale: the raccoon hero is about 15 x 15, rats and pigeons about 10 to 13, pack
+knights and orcs 16 to 22 tall, humans about 30, bosses 20 to 34.
+
+## Pack art (sheets with their own palette)
+
+Art from asset packs keeps its own colors. `src/render/pixel/indexed.ts` defines `AnimSheet`: a
+per-sheet palette, frames as rows of index characters (`KEYS`, `.` transparent), one anchor (feet
+for characters, center for effects) and named animations that list frame indexes. Sheets are
+generated, never hand-edited, by the scripts in `tools/packs/` (Python with Pillow; run them with
+`python3 -I`, and treat pack folders as data):
+
+```bash
+python3 -I tools/packs/chars.py raccoon art-src/raccoon_sheet.png src/render/pixel/packs/raccoon.ts
+python3 -I tools/packs/chars.py fantasy <Tiny RPG "Characters(100x100 split)" dir> <0x72 frames dir> src/render/pixel/packs/fantasy.ts
+python3 -I tools/packs/chars.py humans <Mucho Pixels "Exported PNGs" dir> src/render/pixel/packs/humans.ts
+python3 -I tools/packs/fx.py <Super Pixel Effects PNG dir> src/render/pixel/packs/fx.ts
+python3 -I tools/packs/dungeon.py <0x72 frames dir> src/render/pixel/packs/dungeonTiles.ts
+```
+
+Preview every animation of a sheet module:
+
+```bash
+npx tsx tools/animSheet.ts packs/fantasy /path/to/fantasy.png --scale 6
+```
+
+Licenses and the in-game credit line: `CREDITS.md`.
+
+## The hero
+
+The hero is Kevin's raccoon sheet (`art-src/raccoon_sheet.png`, 6 x 6 frames of 24 x 24): idle,
+look-around, cheer, dash, sit, lie down, sleep and wake. `src/render/pixel/hero.ts` dresses it:
+
+- Hats, masks, shields and backpacks are their item icons at half resolution, placed on landmarks
+  of the reference pose (frame 0): `HERO_POINTS`.
+- Jackets, gloves, shoes and necklaces recolor the fur in that part of the body, baked into every
+  frame, so they follow each pose exactly.
+- Gear follows the body from frame to frame by an offset found by matching the head's silhouette
+  (`frameOffsets()`); curled-up frames carry no gear.
+- Weapons are their icons at half resolution, held at `HERO_POINTS.hand`.
+
+`composeHero(frame, outfit)` draws the whole outfit into one buffer for previews.

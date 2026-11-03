@@ -99,6 +99,41 @@
         "accent": "#F2C14E",
         "size": 320,
         "label": "ANIMAL CONTROL"
+      },
+      "pumpkin_dude": {
+        "shape": "pumpkin",
+        "color": "#E8822A",
+        "accent": "#5A8C2B",
+        "size": 120,
+        "label": "PUMPKIN"
+      },
+      "plague_doc": {
+        "shape": "doc",
+        "color": "#2E3448",
+        "accent": "#C9B48A",
+        "size": 120,
+        "label": "DOC"
+      },
+      "tin_soldier": {
+        "shape": "soldier",
+        "color": "#9AA7B4",
+        "accent": "#8C2F2F",
+        "size": 130,
+        "label": "SOLDIER"
+      },
+      "orc_brute": {
+        "shape": "orc",
+        "color": "#6FA24A",
+        "accent": "#8A5A2B",
+        "size": 140,
+        "label": "ORC"
+      },
+      "demon_king": {
+        "shape": "bigDemon",
+        "color": "#C8323C",
+        "accent": "#FFD54F",
+        "size": 280,
+        "label": "DUMPGOR"
       }
     },
     "raccoon": {

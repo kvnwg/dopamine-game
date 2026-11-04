@@ -68,6 +68,9 @@ export function App() {
     return () => window.clearTimeout(id);
   }, [moment]);
   const blackout = tab === 'upgrades' || (moment && dark) || undefined;
+  useEffect(() => {
+    if (useUi.getState().blackout !== !!blackout) useUi.setState({ blackout: !!blackout });
+  }, [blackout]);
 
   useLayoutEffect(() => {
     const el = frameRef.current;

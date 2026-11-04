@@ -2,7 +2,17 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Full-screen moments that iPhones can hold (Nov 4, newest)
+## A light Upgrades screen (Nov 4, newest)
+
+Kevin: "isnt upgrades just a web of upgrades?? why is it laggy, i dont understand why this one screen takes so much".
+
+| # | Decision | Why |
+|---|---|---|
+| G1 | The map no longer redraws itself while it sits still. The breathing glows behind affordable hexes have their own canvas under the map's, and only that one redraws as they breathe (a few soft circles, about 30 times a second, and only while one is on screen). The map's own canvas redraws only on a pan, a zoom, a change, the opening ripple, a buy's flash or a reveal's blink. The font is set only when it changes (browsers parse the font text every time), and prices are measured once. | Measured on a late-game save: open and untouched, the map redrew 28 times a second, every hex's words each time (about 280 text draws a redraw, 8,000 a second). Now it is zero; dragging does about a fifth of the drawing it did. |
+| G2 | Only what changes redraws. The gold counting up in the corner, ATK and DEF are their own small pieces, so a gold tick redraws just the number. The map page redraws when the hexes, which ones you can afford (only when the gold crosses a price) or the selection change. The buy card follows its upgrades, rebirths and perks and whether the gold is enough, no longer the whole game. | The gold count-up sat on the map page itself: every gold tick from the battle (several a second) rebuilt the screen and redrew the map. The buy card redrew on every game update. |
+| G3 | The battle stops drawing while a full-screen moment covers it (the map, a big reveal, a haul, a rebirth). It keeps playing, so nothing piles up for later, and draws again the moment the screen closes. | It drew 60 frames a second nobody could see, on the same phone. The Upgrades stress run's longest freeze went from 2 to 3.5 s to about 0.3 s. |
+
+## Full-screen moments that iPhones can hold (Nov 4)
 
 Kevin: "i just got a rare item and the animation crashed my game".
 

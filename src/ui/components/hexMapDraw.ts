@@ -114,11 +114,19 @@ function hexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numbe
 /** The pixel font's "fi" and "fl" draw as one odd glyph: keep the letters apart (as the page does). */
 const plain = (s: string) => s.replace(/f([il])/g, 'f‌$1');
 
+/** Sets the font (and its letter spacing) only when it changes: browsers parse the font text every time. */
+function useFont(ctx: CanvasRenderingContext2D, px: number): void {
+  const c = ctx as CanvasRenderingContext2D & { letterSpacing?: string; __px?: number };
+  if (c.__px === px) return;
+  c.__px = px;
+  c.font = font(px);
+  if ('letterSpacing' in c) c.letterSpacing = `${(px * 0.05).toFixed(2)}px`;
+}
+const widths = new Map<string, number>();
+
 /** Words with the page's dark outline: the outline drawn first, the letters over it. */
 function outlined(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, px: number, stroke: number, fill: string): void {
-  ctx.font = font(px);
-  const spaced = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
-  if ('letterSpacing' in spaced) spaced.letterSpacing = `${(px * 0.05).toFixed(2)}px`;
+  useFont(ctx, px);
   const s = plain(text);
   if (stroke > 0) {
     ctx.lineWidth = stroke;
@@ -131,7 +139,7 @@ function outlined(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
 
 /** Splits `text` into lines no wider than `width` (map px) in the name's font. */
 export function wrapName(ctx: CanvasRenderingContext2D, text: string, width = 164, px = 27): string[] {
-  ctx.font = font(px);
+  useFont(ctx, px);
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = '';
@@ -222,8 +230,12 @@ function drawHex(ctx: CanvasRenderingContext2D, h: DrawHex, zoom: Zoom, selected
     if (h.tier) outlined(ctx, h.tier, cx, boxTop + 9 + 15, 30, 6, h.view === 'open' ? '#ffe58a' : '#fff');
     if (h.view === 'open') {
       // The price in its box: green when you can afford it.
-      ctx.font = font(30);
-      const tw = ctx.measureText(plain(h.price)).width;
+      useFont(ctx, 30);
+      let tw = widths.get(h.price);
+      if (tw === undefined) {
+        tw = ctx.measureText(plain(h.price)).width;
+        widths.set(h.price, tw);
+      }
       const bw = tw + 24 + 8;
       const bh = 46;
       const bx = cx - bw / 2;
@@ -278,9 +290,36 @@ function iconImage(url: string, onReady: () => void): HTMLImageElement | null {
 }
 
 /**
- * Draws the map. `w` x `h` is the canvas in its own pixels, `sx` its pixels per stage px, `stageW` x
- * `stageH` the area it covers in stage px. Returns whether something is still moving (the ripple, a
- * flash, a glow breathing), so the caller keeps drawing frames.
+ * The glows behind the hexes you can afford, on their own canvas under the map's: a steady one, and a
+ * bigger one breathing (1.8 s each way). Only this canvas is redrawn as they breathe, so a map sitting
+ * still costs a few soft circles a frame (it used to redraw every hex and its words, 30 times a second).
+ * Returns whether any is breathing on screen.
+ */
+export function drawGlows(ctx: CanvasRenderingContext2D, w: number, h: number, sx: number, stageW: number, stageH: number, v: View, st: DrawState, now: number): boolean {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.setTransform(sx * v.k, 0, 0, sx * v.k, sx * v.x, sx * v.y);
+  const m = 160;
+  const since = now - st.openedAt;
+  const pulse = st.calm ? 0.6 : 0.5 - 0.5 * Math.cos((since / 1800) * Math.PI);
+  let any = false;
+  for (const hx of st.hexes) {
+    if (hx.view !== 'open' || !hx.afford) continue;
+    const cx = nodeX(hx.node);
+    const cy = nodeY(hx.node);
+    if (cx < -v.x / v.k - m || cx > (stageW - v.x) / v.k + m || cy < -v.y / v.k - m || cy > (stageH - v.y) / v.k + m) continue;
+    if (!st.calm && since < Math.min(420, ring(hx.node) * 22) + 100) continue;
+    drawGlow(ctx, cx, cy, 118, 0.36, 0.16);
+    drawGlow(ctx, cx, cy, 140, 0.54 * pulse, 0.24 * pulse);
+    any = true;
+  }
+  return any && !st.calm;
+}
+
+/**
+ * Draws the map (all but the glows). `w` x `h` is the canvas in its own pixels, `sx` its pixels per
+ * stage px, `stageW` x `stageH` the area it covers in stage px. Returns whether something is still
+ * moving (the opening ripple, a flash or a blink), so the caller keeps drawing frames.
  */
 export function drawMap(
   ctx: CanvasRenderingContext2D,
@@ -334,16 +373,6 @@ export function drawMap(
       ctx.strokeStyle = color;
       ctx.stroke();
     }
-  }
-  // Glows behind the hexes you can afford: a steady one, and a bigger one breathing (1.8 s each way).
-  const pulse = st.calm ? 0.6 : 0.5 - 0.5 * Math.cos((since / 1800) * Math.PI);
-  for (const hx of st.hexes) {
-    if (hx.view !== 'open' || !hx.afford || !onScreen(hx.node) || !shownYet(hx.node)) continue;
-    const cx = nodeX(hx.node);
-    const cy = nodeY(hx.node);
-    drawGlow(ctx, cx, cy, 118, 0.36, 0.16);
-    drawGlow(ctx, cx, cy, 140, 0.54 * pulse, 0.24 * pulse);
-    if (!st.calm) moving = true;
   }
   // Hexes: the selected one and any just bought last, over their neighbors.
   let selected: DrawHex | null = null;

@@ -112,8 +112,15 @@ export function BattlePanel() {
     // Behind the title screen the battle waits too, drawing nothing, and starts on PLAY (world card and all).
     if (isHeld()) game?.pause();
     const off = whenStarted(() => game?.resume());
+    // Under a full-screen moment (the upgrade map, a big reveal...) it can't be seen: it keeps going
+    // (so nothing piles up for later) but stops drawing, leaving the phone's time to what's on screen.
+    const show = (covered: boolean) => game?.scene.getScenes(false).forEach((sc) => sc.sys.setVisible(!covered));
+    const offCover = useUi.subscribe((u, prev) => {
+      if (u.blackout !== prev.blackout) show(u.blackout);
+    });
     return () => {
       off();
+      offCover();
       game?.destroy(true);
     };
   }, []);

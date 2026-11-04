@@ -30,7 +30,7 @@ import { Chunky } from './Chunky';
 import { BreadIcon, CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
 import { PerksPage } from './PerksPage';
 import { PixelArt } from './PixelArt';
-import { drawMap, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
+import { drawGlows, drawMap, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
 import s from './hexmap.module.css';
 
 /* ---------------------------------------------------------------- geometry */
@@ -222,12 +222,17 @@ function buySelected(): boolean {
 }
 
 function BuyCard({ node }: { node: HexNode }) {
-  const g = useGame((x) => x);
+  // Only what it shows: its upgrades, rebirths and perks (its effect lines read them) and whether the
+  // gold is enough. It used to follow the whole game and redraw on every gold tick.
+  useGame((x) => x.upgrades);
+  useGame((x) => x.rebirths);
+  useGame((x) => x.perks);
+  const g = getGame();
   const view = hexView(g, node) ?? 'mystery';
   const def = upgradeDef(node.id)!;
   const level = upgradeLevel(g, def.id);
   const cost = upgradePrice(g, def);
-  const afford = g.currencies.coins >= cost;
+  const afford = useGame((x) => x.currencies.coins >= cost);
   const hold = useHoldRepeat(buySelected);
   const prev = node.prev ? BY_KEY.get(node.prev) : undefined;
   if (view === 'mystery') {
@@ -358,16 +363,25 @@ export function UpgradeMap() {
   return <HexMapPage tabs={tabs} onClose={close} />;
 }
 
+/** The gold in the map's corner, counting up on its own (so a gold tick redraws just this). */
+function MapGold() {
+  const coins = useGame((g) => g.currencies.coins);
+  return <>{formatNumber(useCountUp(coins))}</>;
+}
+
+/** ATK or DEF in the map's corner. */
+function MapStats({ which }: { which: 'ATK' | 'DEF' }) {
+  return <>{formatNumber(useGame((g) => computeStats(g)[which]))}</>;
+}
+
 /* ---------------------------------------------------------------- the map page */
 
 function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void }) {
+  // (The gold, ATK and DEF in the corner follow the game on their own: MapGold, MapStats. This page
+  // redraws only when the hexes, which ones you can afford, or the selection change.)
   const upgrades = useGame((g) => g.upgrades);
-  const coins = useGame((g) => g.currencies.coins);
   const rebirths = useGame((g) => g.rebirths);
   const calm = useGame((g) => g.settings.reduceMotion);
-  const shownCoins = useCountUp(coins);
-  const atk = useGame((g) => computeStats(g).ATK);
-  const def = useGame((g) => computeStats(g).DEF);
   const sel = useUi((u) => u.upgradeSel);
 
   // What every hex shows right now.
@@ -381,6 +395,10 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
     return out;
   }, [upgrades, rebirths]);
   const shown = useMemo(() => new Map(hexes.map((h) => [h.node.key, h.view])), [hexes]);
+  // Which open hexes the gold covers, as text: it changes only when the gold crosses a price.
+  const open = useMemo(() => hexes.filter((h) => h.view === 'open').map((h) => [h.node.key, h.price] as const), [hexes]);
+  const affordKey = useGame((g) => open.filter(([, p]) => g.currencies.coins >= p).map(([k]) => k).join(','));
+  const affordable = useMemo(() => new Set(affordKey ? affordKey.split(',') : []), [affordKey]);
 
   // If the selection is hidden (a fresh map after a rebirth), pick the cheapest open hex.
   useEffect(() => {
@@ -406,6 +424,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   /* ----- the canvas (hexMapDraw.ts): the view lives in a ref, and drawing reads refs, never React */
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const glowRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>(useUi.getState().mapView ?? { x: focusPoint().x, y: focusPoint().y, k: homeZoom() });
   const boundsRef = useRef(bounds);
   boundsRef.current = bounds;
@@ -414,25 +433,35 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const drawRef = useRef<DrawState>({ hexes: [], links: [], sel, calm, openedAt: openedAt.current, fresh: new Map() });
   const views = useRef<Map<string, HexView> | null>(null);
   const frame = useRef(0);
-  const lastDraw = useRef(0);
-  const urgent = useRef(true);
+  /** The map needs drawing (a pan, a zoom, a change), or is animating (the ripple, a flash). */
+  const mapDirty = useRef(true);
+  const mapMoving = useRef(false);
+  /** The glows need drawing now (with the map), or are breathing (about 30 times a second). */
+  const glowDirty = useRef(true);
+  const glowMoving = useRef(false);
+  const lastGlow = useRef(0);
   const loop = (now: number) => {
     frame.current = 0;
-    // A glow breathing alone draws about 30 times a second; a pan, zoom or change draws at once.
-    if (!urgent.current && now - lastDraw.current < 30) {
-      frame.current = requestAnimationFrame(loop);
-      return;
-    }
-    urgent.current = false;
-    lastDraw.current = now;
     const c = canvasRef.current;
-    const ctx = c?.getContext('2d');
-    if (!c || !ctx || !c.offsetWidth) return;
-    const moving = drawMap(ctx, c.width, c.height, c.width / c.offsetWidth, c.offsetWidth, c.offsetHeight, viewRef.current, drawRef.current, now, requestDraw);
-    if (moving) frame.current = requestAnimationFrame(loop);
+    const gc = glowRef.current;
+    if (!c || !gc || !c.offsetWidth) return;
+    const sx = c.width / c.offsetWidth;
+    if (mapDirty.current || mapMoving.current) {
+      mapDirty.current = false;
+      const ctx = c.getContext('2d');
+      if (ctx) mapMoving.current = drawMap(ctx, c.width, c.height, sx, c.offsetWidth, c.offsetHeight, viewRef.current, drawRef.current, now, requestDraw);
+    }
+    if (glowDirty.current || (glowMoving.current && now - lastGlow.current >= 30)) {
+      glowDirty.current = false;
+      lastGlow.current = now;
+      const ctx = gc.getContext('2d');
+      if (ctx) glowMoving.current = drawGlows(ctx, gc.width, gc.height, sx, c.offsetWidth, c.offsetHeight, viewRef.current, drawRef.current, now);
+    }
+    if (mapMoving.current || glowMoving.current) frame.current = requestAnimationFrame(loop);
   };
   function requestDraw() {
-    urgent.current = true;
+    mapDirty.current = true;
+    glowDirty.current = true;
     if (!frame.current) frame.current = requestAnimationFrame(loop);
   }
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
@@ -451,9 +480,11 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
         w = Math.round(w * cap);
         h = Math.round(h * cap);
       }
-      if (c.width !== w || c.height !== h) {
-        c.width = w;
-        c.height = h;
+      for (const el of [c, glowRef.current]) {
+        if (el && (el.width !== w || el.height !== h)) {
+          el.width = w;
+          el.height = h;
+        }
       }
       requestDraw();
     };
@@ -490,7 +521,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
         return {
           node: h.node,
           view: h.view,
-          afford: h.view === 'open' && coins >= h.price,
+          afford: h.view === 'open' && affordable.has(h.node.key),
           tier: def.max > 1 ? roman(h.node.tier) : null,
           name: h.view === 'owned' && ctx ? nameLines(ctx, h.node.id) : [],
           price: h.view === 'open' ? formatNumber(h.price) : '',
@@ -698,6 +729,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
     <div className={s.overlay} data-calm={calm || undefined} data-keep-lit>
       <div className={s.viewport} ref={viewportRef}>
         <div className={s.grid} ref={gridRef} style={{ backgroundImage: GRID_URL }} aria-hidden />
+        <canvas ref={glowRef} className={s.canvas} aria-hidden />
         <canvas ref={canvasRef} className={s.canvas} aria-hidden />
       </div>
 
@@ -723,7 +755,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
         <div className={s.bar}>
           <span className={s.coins} data-ui>
             <CoinIcon size="md" />
-            {formatNumber(shownCoins)}
+            <MapGold />
           </span>
           <button className={`btn red ${s.close}`} data-ui onClick={onClose}>
             {t('upgrades.close')}
@@ -731,11 +763,11 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
           <span className={s.barRight} data-ui>
             <span className={s.stat} title={t('strip.atk')}>
               <SwordIcon />
-              {formatNumber(atk)}
+              <MapStats which="ATK" />
             </span>
             <span className={s.stat} title={t('strip.def')}>
               <ShieldIcon />
-              {formatNumber(def)}
+              <MapStats which="DEF" />
             </span>
           </span>
         </div>

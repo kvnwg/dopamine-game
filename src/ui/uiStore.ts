@@ -92,6 +92,8 @@ interface UiState {
   mapView: { x: number; y: number; k: number } | null;
   /** The dev cheat panel is open (playtest builds; opened from Settings). */
   devOpen: boolean;
+  /** A full-screen moment covers the whole stage (App.tsx): the battle stops drawing (BattlePanel.tsx). */
+  blackout: boolean;
   /** A big Scrap All haul being celebrated. */
   /** `usual`: what a usual haul of the run is worth now (null for the game's first haul). */
   haul: { id: number; coins: number; usual: number | null; count: number; size: HaulSize } | null;
@@ -136,6 +138,7 @@ export const useUi = create<UiState>((set) => ({
   perkSel: '',
   prevTab: 'alley',
   mapView: null,
+  blackout: false,
   haul: null,
   goldPulse: 0,
   afterBoss: null,

@@ -1,0 +1,384 @@
+/**
+ * The upgrade map, drawn on one canvas the size of the screen (UpgradeMap.tsx). It used to be a
+ * page element per hex (an SVG, its words, its icon), hundreds on a late-game map, inside layers as
+ * big as the whole map: Safari on phones ran out of graphics memory opening it and the page went down
+ * (Kevin: "i start the game, click the upgrades tab and it still crashes me"). A canvas costs the same
+ * however big the map grows: one screen of pixels, and only the hexes on screen are drawn.
+ *
+ * It looks as before: flat-top hexes with a rim and a shaded face, tier numerals, names or prices in
+ * the pixel font with a dark outline, links between them, a glow breathing behind the ones you can
+ * afford, a ring round the selected one. Words and shapes scale with the zoom; the icons don't (they
+ * stay at the UI's pixel size, and hide when zoomed far out).
+ */
+import type { HexNode } from '../../data';
+import { UI_PX, type Art } from '../../render/icons';
+
+/* ---------------------------------------------------------------- geometry (map px) */
+
+/** Hex circumradius (flat-top hexes). */
+export const R = 100;
+export const HW = R;
+export const HH = (Math.sqrt(3) / 2) * R;
+const X_STEP = 1.5 * R;
+const Y_STEP = HH;
+/** Drawn hexes are a bit smaller than their cell, leaving a gap the links show through. */
+export const DRAW = 0.93;
+export const nodeX = (n: HexNode) => n.col * X_STEP;
+export const nodeY = (n: HexNode) => n.row * Y_STEP;
+/** Hex distance from the center, for the opening ripple. */
+export const ring = (n: HexNode) => Math.max(Math.abs(n.col), (Math.abs(n.col) + Math.abs(n.row)) / 2);
+
+export type HexView = 'owned' | 'open' | 'mystery';
+export interface View {
+  x: number;
+  y: number;
+  k: number;
+}
+
+/**
+ * What the hexes show at a zoom: 'near' everything (tier, icon, name or price), 'mid' only their icons
+ * (the words would be too small to read), 'far' only their colors (too small for the icons, which
+ * never shrink).
+ */
+export type Zoom = 'near' | 'mid' | 'far';
+export const zoomOf = (k: number): Zoom => (k >= 0.85 ? 'near' : k >= 0.45 ? 'mid' : 'far');
+/** Up close, a hex's icon sits this far above its center (map px), between the tier and the name or price. */
+const iconLift = (view: HexView) => (view === 'open' ? 9 : 13);
+
+/** One hex as the canvas draws it (UpgradeMap.tsx works out the words and the art). */
+export interface DrawHex {
+  node: HexNode;
+  view: HexView;
+  afford: boolean;
+  /** Roman numeral of its tier (null for one-off upgrades). */
+  tier: string | null;
+  /** Its name in lines that fit (owned hexes show it). */
+  name: string[];
+  /** Its price (open hexes show it). */
+  price: string;
+  icon: Art | null;
+}
+
+export interface DrawState {
+  hexes: DrawHex[];
+  /** Keys of the hexes each link joins (the second one's view colors it). */
+  links: Array<[HexNode, HexNode, HexView]>;
+  sel: string;
+  calm: boolean;
+  /** performance.now() when the map opened (the ripple). */
+  openedAt: number;
+  /** Hexes that appeared or changed after it opened: bought (a flash) or revealed (a blink). */
+  fresh: Map<string, number>;
+}
+
+/** The hex under map point (mx, my), if one is shown there. */
+export function hexAt(hexes: readonly DrawHex[], mx: number, my: number): DrawHex | null {
+  for (const h of hexes) {
+    const dx = Math.abs(mx - nodeX(h.node));
+    const dy = Math.abs(my - nodeY(h.node));
+    if (dy <= HH && dx + dy / Math.sqrt(3) <= R) return h;
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------- look */
+
+const INK = '#1a1326';
+/** The display font (global.css --font-display), weight 500 like the page's text. */
+const FONT = '"Dumpster Digits", "Pixelify Sans", "Courier New", monospace';
+const font = (px: number) => `500 ${px}px ${FONT}`;
+const FACE: Record<'open' | 'owned' | 'gold' | 'mystery', [string, string]> = {
+  open: ['#3d4772', '#1c2140'],
+  owned: ['#8be0ff', '#2b86e3'],
+  gold: ['#fff09a', '#f39c12'],
+  mystery: ['#2c3152', '#181b30'],
+};
+const LINK: Record<HexView, string> = { owned: '#9fe3ff', open: '#ffd23f', mystery: '#3d4469' };
+
+function rim(h: DrawHex): string {
+  if (h.view === 'owned') return h.node.special ? '#fff3bf' : '#c4efff';
+  if (h.view === 'mystery') return h.node.special ? '#a8842a' : '#3b4166';
+  if (h.afford) return '#7ef08f';
+  return h.node.special ? '#ffcf4a' : '#5a689e';
+}
+
+function hexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI) / 3;
+    ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+  }
+  ctx.closePath();
+}
+
+/** The pixel font's "fi" and "fl" draw as one odd glyph: keep the letters apart (as the page does). */
+const plain = (s: string) => s.replace(/f([il])/g, 'f‌$1');
+
+/** Words with the page's dark outline: the outline drawn first, the letters over it. */
+function outlined(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, px: number, stroke: number, fill: string): void {
+  ctx.font = font(px);
+  const spaced = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
+  if ('letterSpacing' in spaced) spaced.letterSpacing = `${(px * 0.05).toFixed(2)}px`;
+  const s = plain(text);
+  if (stroke > 0) {
+    ctx.lineWidth = stroke;
+    ctx.strokeStyle = INK;
+    ctx.strokeText(s, x, y);
+  }
+  ctx.fillStyle = fill;
+  ctx.fillText(s, x, y);
+}
+
+/** Splits `text` into lines no wider than `width` (map px) in the name's font. */
+export function wrapName(ctx: CanvasRenderingContext2D, text: string, width = 164, px = 27): string[] {
+  ctx.font = font(px);
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (cur && ctx.measureText(next).width > width) {
+      lines.push(cur);
+      cur = w;
+    } else cur = next;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/** How far through a flash or blink (0 to 1, in `steps` steps like the old CSS), or null when over. */
+function stepped(ms: number, dur: number, steps: number): number | null {
+  if (ms >= dur) return null;
+  return Math.floor((Math.max(0, ms) / dur) * steps) / steps;
+}
+
+function drawHex(ctx: CanvasRenderingContext2D, h: DrawHex, zoom: Zoom, selected: boolean, k: number, sx: number, freshMs: number | null): void {
+  const cx = nodeX(h.node);
+  const cy = nodeY(h.node);
+  const outer = R * DRAW;
+  const inner = R * DRAW - 12;
+  // Bought just now: it lights up and settles. Revealed just now: it blinks in.
+  let alpha = 1;
+  let light = 0;
+  if (freshMs !== null) {
+    if (h.view === 'owned') {
+      const p = stepped(freshMs, 560, 5);
+      if (p !== null) light = p < 0.55 ? 0.62 - (p / 0.55) * 0.32 : 0.3 * (1 - (p - 0.55) / 0.45);
+    } else {
+      const p = stepped(freshMs, 420, 4);
+      if (p !== null) {
+        alpha = p;
+        light = 0.45 * (1 - p);
+      }
+    }
+  }
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // The rim, with its dark outline.
+  hexPath(ctx, cx, cy, outer);
+  ctx.fillStyle = rim(h);
+  ctx.fill();
+  ctx.lineWidth = 8;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  // The face, shaded top to bottom.
+  const [top, bottom] = FACE[h.view === 'owned' ? (h.node.special ? 'gold' : 'owned') : h.view];
+  const fh = (Math.sqrt(3) / 2) * inner;
+  const g = ctx.createLinearGradient(0, cy - fh, 0, cy + fh);
+  g.addColorStop(0, top);
+  g.addColorStop(1, bottom);
+  hexPath(ctx, cx, cy, inner);
+  ctx.fillStyle = g;
+  ctx.fill();
+  // The shine along the top.
+  ctx.beginPath();
+  ctx.moveTo(cx - outer + 40, cy - HH * DRAW + 22);
+  ctx.lineTo(cx + outer - 58, cy - HH * DRAW + 22);
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = h.view === 'open' ? 'rgba(255,255,255,0.28)' : h.view === 'mystery' ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.55)';
+  ctx.stroke();
+  // The selected one: a yellow ring with a glow.
+  if (selected) {
+    hexPath(ctx, cx, cy, outer);
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#fff27a';
+    ctx.shadowColor = '#fff27a';
+    ctx.shadowBlur = 12 * k * sx;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+  }
+  // The words.
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'miter';
+  ctx.miterLimit = 2;
+  const boxTop = cy - HH;
+  if (h.view === 'mystery') {
+    outlined(ctx, '?', cx, cy - 2, 96, 9, h.node.special ? '#ffd23f' : '#fff');
+  } else if (zoom === 'near') {
+    if (h.tier) outlined(ctx, h.tier, cx, boxTop + 9 + 15, 30, 6, h.view === 'open' ? '#ffe58a' : '#fff');
+    if (h.view === 'open') {
+      // The price in its box: green when you can afford it.
+      ctx.font = font(30);
+      const tw = ctx.measureText(plain(h.price)).width;
+      const bw = tw + 24 + 8;
+      const bh = 46;
+      const bx = cx - bw / 2;
+      const by = boxTop + 121;
+      ctx.fillStyle = INK;
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = h.afford ? '#3fae2a' : '#0f1329';
+      ctx.fillRect(bx + 4, by + 4, bw - 8, bh - 8);
+      outlined(ctx, h.price, cx, by + bh / 2, 30, 0, h.afford ? '#fff' : '#ffd23f');
+    } else {
+      h.name.forEach((line, i) => outlined(ctx, line, cx, boxTop + 113 + 13.8 + i * 27.5, 27, 5, '#fff'));
+    }
+  }
+  // "!" when you can buy it: a red square with a dark border (the UI squares every corner).
+  if (h.view === 'open' && h.afford) {
+    const bx = cx + HW - 26 - 42;
+    const by = boxTop + 4;
+    ctx.fillStyle = INK;
+    ctx.fillRect(bx, by, 42, 42);
+    ctx.fillStyle = '#ef5350';
+    ctx.fillRect(bx + 4, by + 4, 34, 34);
+    outlined(ctx, '!', bx + 21, by + 22, 30, 4, '#fff');
+  }
+  if (light > 0) {
+    hexPath(ctx, cx, cy, outer + 4);
+    ctx.fillStyle = `rgba(255,255,255,${light.toFixed(3)})`;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawGlow(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number, a0: number, a1: number): void {
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  g.addColorStop(0, `rgba(126,240,143,${a0.toFixed(3)})`);
+  g.addColorStop(0.55, `rgba(126,240,143,${a1.toFixed(3)})`);
+  g.addColorStop(1, 'rgba(126,240,143,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+}
+
+const icons = new Map<string, HTMLImageElement>();
+/** An icon's picture, decoded once; `onReady` redraws when it arrives. */
+function iconImage(url: string, onReady: () => void): HTMLImageElement | null {
+  let img = icons.get(url);
+  if (!img) {
+    img = new Image();
+    img.onload = onReady;
+    img.src = url;
+    icons.set(url, img);
+  }
+  return img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+/**
+ * Draws the map. `w` x `h` is the canvas in its own pixels, `sx` its pixels per stage px, `stageW` x
+ * `stageH` the area it covers in stage px. Returns whether something is still moving (the ripple, a
+ * flash, a glow breathing), so the caller keeps drawing frames.
+ */
+export function drawMap(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  sx: number,
+  stageW: number,
+  stageH: number,
+  v: View,
+  st: DrawState,
+  now: number,
+  redraw: () => void,
+): boolean {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const zoom = zoomOf(v.k);
+  // The map area on screen (map px), with room for glows and words spilling over.
+  const m = 160;
+  const x0 = -v.x / v.k - m;
+  const x1 = (stageW - v.x) / v.k + m;
+  const y0 = -v.y / v.k - m;
+  const y1 = (stageH - v.y) / v.k + m;
+  const onScreen = (n: HexNode) => {
+    const x = nodeX(n);
+    const y = nodeY(n);
+    return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  };
+  const since = now - st.openedAt;
+  /** Shown yet: the opening ripple pops hexes in ring by ring. */
+  const shownYet = (n: HexNode) => st.calm || since >= Math.min(420, ring(n) * 22) + 100;
+  let moving = !st.calm && since < 900;
+  const freshMs = (key: string): number | null => {
+    if (st.calm) return null;
+    const at = st.fresh.get(key);
+    if (at === undefined || now - at > 600) return null;
+    moving = true;
+    return now - at;
+  };
+
+  ctx.setTransform(sx * v.k, 0, 0, sx * v.k, sx * v.x, sx * v.y);
+  // Links.
+  ctx.lineCap = 'round';
+  for (const [a, b, view] of st.links) {
+    if (!onScreen(a) && !onScreen(b)) continue;
+    if (!shownYet(b)) continue;
+    for (const [lw, color] of [[34, INK], [20, LINK[view]]] as const) {
+      ctx.beginPath();
+      ctx.moveTo(nodeX(a), nodeY(a));
+      ctx.lineTo(nodeX(b), nodeY(b));
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+  }
+  // Glows behind the hexes you can afford: a steady one, and a bigger one breathing (1.8 s each way).
+  const pulse = st.calm ? 0.6 : 0.5 - 0.5 * Math.cos((since / 1800) * Math.PI);
+  for (const hx of st.hexes) {
+    if (hx.view !== 'open' || !hx.afford || !onScreen(hx.node) || !shownYet(hx.node)) continue;
+    const cx = nodeX(hx.node);
+    const cy = nodeY(hx.node);
+    drawGlow(ctx, cx, cy, 118, 0.36, 0.16);
+    drawGlow(ctx, cx, cy, 140, 0.54 * pulse, 0.24 * pulse);
+    if (!st.calm) moving = true;
+  }
+  // Hexes: the selected one and any just bought last, over their neighbors.
+  let selected: DrawHex | null = null;
+  const late: DrawHex[] = [];
+  for (const hx of st.hexes) {
+    if (!onScreen(hx.node) || !shownYet(hx.node)) continue;
+    if (hx.node.key === st.sel) selected = hx;
+    else if (st.fresh.has(hx.node.key) && hx.view === 'owned') late.push(hx);
+    else drawHex(ctx, hx, zoom, false, v.k, sx, freshMs(hx.node.key));
+  }
+  for (const hx of late) drawHex(ctx, hx, zoom, false, v.k, sx, freshMs(hx.node.key));
+  if (selected) drawHex(ctx, selected, zoom, true, v.k, sx, freshMs(selected.node.key));
+  // Icons: they move with the map but never scale (whole stage px, the UI's pixel size); none far out.
+  if (zoom !== 'far') {
+    ctx.setTransform(sx, 0, 0, sx, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    const ox = Math.round(v.x);
+    const oy = Math.round(v.y);
+    for (const hx of st.hexes) {
+      if (!hx.icon || hx.view === 'mystery' || !onScreen(hx.node) || !shownYet(hx.node)) continue;
+      const img = iconImage(hx.icon.url, redraw);
+      if (!img) continue;
+      const lift = zoom === 'near' ? iconLift(hx.view) : 0;
+      const iw = hx.icon.w * UI_PX;
+      const ih = hx.icon.h * UI_PX;
+      const px = ox + Math.round(nodeX(hx.node) * v.k) - iw / 2;
+      const py = oy + Math.round((nodeY(hx.node) - lift) * v.k) - ih / 2;
+      // On whole canvas pixels, so the pixel art stays crisp.
+      const fm = freshMs(hx.node.key);
+      ctx.globalAlpha = fm !== null && hx.view !== 'owned' ? (stepped(fm, 420, 4) ?? 1) : 1;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(img, Math.round(px * sx), Math.round(py * sx), Math.round(iw * sx), Math.round(ih * sx));
+      ctx.setTransform(sx, 0, 0, sx, 0, 0);
+    }
+    ctx.globalAlpha = 1;
+  }
+  return moving;
+}

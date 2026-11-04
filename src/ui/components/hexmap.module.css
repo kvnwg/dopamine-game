@@ -19,11 +19,6 @@
 @keyframes mapIn {
   from { opacity: 0; }
 }
-.defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-}
 .viewport {
   position: absolute;
   inset: 0;
@@ -40,315 +35,21 @@
   pointer-events: none;
   background-repeat: repeat;
 }
-.content {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  transform-origin: 0 0;
-  will-change: transform;
-}
-.links {
-  position: absolute;
-  overflow: visible;
-  pointer-events: none;
-}
-.linkEdge {
-  stroke: var(--ink);
-  stroke-width: 34;
-  stroke-linecap: round;
-}
-.linkFill {
-  stroke: #3d4469;
-  stroke-width: 20;
-  stroke-linecap: round;
-}
-.link[data-view='owned'] .linkFill {
-  stroke: #9fe3ff;
-}
-.link[data-view='open'] .linkFill {
-  stroke: #ffd23f;
-}
-
-/* ------------------------------------------------------------ hexes */
-.hex {
-  position: absolute;
-  width: 200px;
-  height: 173.2px;
-}
-.hex[data-sel] {
-  z-index: 3;
-}
 /*
- * The opening ripple: hexes and their icons pop in ring by ring. Visibility only, and gone once it has
- * played (fill backwards): an opacity fade gave every hex and icon its own GPU layer, hundreds on a
- * late-game map, kept for as long as the map was open, and that crashed phones on opening it
- * (Kevin's tester, "it crashed a few times whenever i pressed upgrade").
+ * The map itself: one canvas the size of the screen (hexMapDraw.ts), its pixels matched to the
+ * screen's. Taps and drags go to the viewport under it.
  */
-.hex[data-mode='intro'],
-.hexIcon[data-mode='intro'] {
-  animation: hexIn 300ms steps(3) backwards;
-}
-.hex[data-mode='fresh'][data-view='owned'],
-.hexIcon[data-mode='fresh'][data-view='owned'] {
-  animation: hexBuy 560ms steps(5);
-}
-.hex[data-mode='fresh'][data-view='owned'] {
-  z-index: 2;
-}
-.hex[data-mode='fresh'][data-view='open'],
-.hex[data-mode='fresh'][data-view='mystery'],
-.hexIcon[data-mode='fresh'][data-view='open'] {
-  animation: hexReveal 420ms steps(4);
-}
-/* Hexes and their icons appear, light up when bought and blink when revealed: no growing or turning. */
-@keyframes hexIn {
-  from { visibility: hidden; }
-}
-@keyframes hexBuy {
-  0% { filter: brightness(2.4); }
-  55% { filter: brightness(1.3); }
-  100% { filter: none; }
-}
-@keyframes hexReveal {
-  0% { opacity: 0; filter: brightness(2); }
-  100% { opacity: 1; filter: none; }
-}
-.body {
+.canvas {
   position: absolute;
   inset: 0;
-}
-/*
- * Affordable hexes glow: a soft green light that breathes smoothly (Kevin: "glowing animation behind
- * upgrades needs to be more smooth"). A steady small glow behind the hexes, and a bigger one around
- * them that fades in and out, cut out where its own hex is, so it looks like light from behind. The
- * breathing ones share one layer, above the hexes so nothing has to be lifted over it: each glow (and
- * each hex over it) used to get a GPU layer of its own, which crashed phones on a late-game map.
- */
-.glows,
-.glowPulse {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-}
-.glow {
-  position: absolute;
-  width: 236px;
-  height: 236px;
-  margin: -118px 0 0 -118px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(126, 240, 143, 0.36), rgba(126, 240, 143, 0.16) 55%, rgba(126, 240, 143, 0) 100%);
-}
-.glowPulse {
-  animation: hexGlow 1.8s ease-in-out infinite alternate;
-}
-.glowPulse .glow {
-  width: 280px;
-  height: 280px;
-  margin: -140px 0 0 -140px;
-  border-radius: 0;
-  background: radial-gradient(closest-side, rgba(126, 240, 143, 0.54), rgba(126, 240, 143, 0.24) 55%, rgba(126, 240, 143, 0) 100%);
-  clip-path: polygon(evenodd, 0 0, 280px 0, 280px 280px, 0 280px, 0 0, 238.0px 140.0px, 189.0px 224.9px, 91.0px 224.9px, 42.0px 140.0px, 91.0px 55.1px, 189.0px 55.1px, 238.0px 140.0px);
-}
-@keyframes hexGlow {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 /* (The bread counter on the Perks tab still pulses: a smooth fade.) */
 @keyframes hexPulse {
   from { filter: brightness(1); }
   to { filter: brightness(1.18); }
-}
-
-/* ------------------------------------------------------------ the icon layer: moves with the map, never scales */
-.icons {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  will-change: transform;
-}
-.icons[data-zoom='far'] {
-  display: none;
-}
-/* Zoomed out, hexes show just their icons; further out, just their colors. */
-.content[data-zoom='mid'] .tier,
-.content[data-zoom='mid'] .name,
-.content[data-zoom='mid'] .price,
-.content[data-zoom='far'] .tier,
-.content[data-zoom='far'] .name,
-.content[data-zoom='far'] .price {
-  display: none;
-}
-/* One hex's icon, centered on its spot. */
-.hexIcon {
-  position: absolute;
-  left: calc(-5 * var(--px));
-  top: calc(-5 * var(--px));
-  width: calc(10 * var(--px));
-  height: calc(10 * var(--px));
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-.shape {
-  position: absolute;
-  left: 0;
-  top: 0;
-  overflow: visible;
-}
-.rim {
-  fill: #5a689e;
-  stroke: var(--ink);
-  stroke-width: 8;
-  stroke-linejoin: round;
-}
-.face {
-  fill: url(#hxOpen);
-}
-.shine {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.55);
-  stroke-width: 7;
-  stroke-linecap: round;
-}
-.ring {
-  fill: none;
-  stroke: none;
-}
-.hex[data-sel] .ring {
-  stroke: #fff27a;
-  stroke-width: 10;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 12px #fff27a);
-}
-.hex[data-view='owned'] .rim {
-  fill: #c4efff;
-}
-.hex[data-view='owned'] .face {
-  fill: url(#hxOwned);
-}
-.hex[data-view='owned'][data-special] .rim {
-  fill: #fff3bf;
-}
-.hex[data-view='owned'][data-special] .face {
-  fill: url(#hxGold);
-}
-.hex[data-view='open'][data-special] .rim {
-  fill: #ffcf4a;
-}
-.hex[data-view='open'][data-afford] .rim {
-  fill: #7ef08f;
-}
-.hex[data-view='open'] .shine {
-  stroke: rgba(255, 255, 255, 0.28);
-}
-.hex[data-view='mystery'] .rim {
-  fill: #3b4166;
-}
-.hex[data-view='mystery'] .face {
-  fill: url(#hxMystery);
-}
-.hex[data-view='mystery'] .shine {
-  stroke: rgba(255, 255, 255, 0.12);
-}
-.hex[data-view='mystery'][data-special] .rim {
-  fill: #a8842a;
-}
-
-.tier {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 9px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 30px;
-  line-height: 1;
-  color: #fff;
-  -webkit-text-stroke: 6px var(--ink);
-  paint-order: stroke fill;
-}
-.hex[data-view='open'] .tier {
-  color: #ffe58a;
-}
-.name {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  top: 113px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 27px;
-  line-height: 1.02;
-  color: #fff;
-  -webkit-text-stroke: 5px var(--ink);
-  paint-order: stroke fill;
-}
-/* A buyable hex shows its price under the icon (its name is on the buy card). */
-.hex[data-view='open'] .name {
-  display: none;
-}
-.price {
-  position: absolute;
-  left: 50%;
-  top: 121px;
-  transform: translateX(-50%);
-  padding: 1px 12px;
-  border: 4px solid var(--ink);
-  background: #0f1329;
-  font-family: var(--font-display);
-  font-size: 30px;
-  color: #ffd23f;
-  white-space: nowrap;
-}
-.hex[data-afford] .price {
-  color: #fff;
-}
-.hex[data-afford] .price {
-  background: #3fae2a;
-}
-.bang {
-  position: absolute;
-  right: 26px;
-  top: 4px;
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 4px solid var(--ink);
-  background: #ef5350;
-  font-family: var(--font-display);
-  font-size: 30px;
-  color: #fff;
-  -webkit-text-stroke: 4px var(--ink);
-  paint-order: stroke fill;
-}
-.q {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding-bottom: 4px;
-  font-family: var(--font-display);
-  font-size: 96px;
-  color: #fff;
-  -webkit-text-stroke: 9px var(--ink);
-  paint-order: stroke fill;
-}
-.hex[data-special] .q {
-  color: #ffd23f;
 }
 
 /* ------------------------------------------------------------ header */
@@ -605,28 +306,14 @@
 }
 
 .overlay[data-calm],
-.overlay[data-calm] .hex,
-.overlay[data-calm] .hexIcon,
-.overlay[data-calm] .body,
-.overlay[data-calm] .glowPulse,
 .overlay[data-calm] .tab,
 .overlay[data-calm] .tabBread {
   animation: none !important;
 }
-.overlay[data-calm] .glowPulse {
-  opacity: 0.6;
-}
 @media (prefers-reduced-motion: reduce) {
-  .hex,
-  .glowPulse,
-  .hexIcon,
-  .body,
   .tab,
   .tabBread {
     animation: none !important;
-  }
-  .glowPulse {
-    opacity: 0.6;
   }
 }
 

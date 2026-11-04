@@ -2,7 +2,17 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Crash tests, the Upgrades screen's memory, sound cutting out, celebrations in proportion (Nov 4, newest)
+## The upgrade map on one canvas (Nov 4, newest)
+
+Kevin, on the version above: "nope, i start the game, click the upgrades tab and it still crashes me".
+
+| # | Decision | Why |
+|---|---|---|
+| U3 | The upgrade map is now drawn on a single canvas the size of the screen (`hexMapDraw.ts`), instead of a page element per hex: an SVG shape, its words and its pixel icon, hundreds of each late in the game, inside layers as big as the whole map. It looks the same: rims, shaded faces, tier numerals, names and prices in the pixel font with their dark outline, the green "!" and price box when affordable, the links, the breathing glow, the yellow ring round the selection, the opening ripple, the flash when bought, the blink when revealed, the icons at the UI's pixel size and the three zoom levels. Only the hexes on screen are drawn. A tap picks the hex under the finger by its shape; every tap tried inside the game area picked the right hex, upright, sideways and on a PC. The top bar, the buy card and Close stay as they were. | However big the map grows, it now costs one screen of pixels (about 11 MB on a phone held sideways) and builds nothing when it opens. With it open, the whole page has 6 drawing layers (it had 284 two versions ago, about 25 in the last one). |
+| U4 | The crash itself still couldn't be reproduced: Safari's engine isn't available here, and in Chromium the map never failed. Everything that could be measured here came out clean: graphics layers, real process memory, live canvas memory (about 16 MB, far under Safari's cap), and Safari-only script features. This takes away everything the map was costing the phone in one go, instead of trimming it again. | |
+| U5 | Selecting a hex on the PC (wide) layout no longer slides the map when the hex is already in view: the check used the phone layout's bounds. | |
+
+## Crash tests, the Upgrades screen's memory, sound cutting out, celebrations in proportion (Nov 4)
 
 Kevin: "perform a number of different crash tests plz"; "game keeps crashing when i click upgrades"; "sound randomly cuts out"; "late game, every single sell is seen as a big haul and gets the animation, early game, i RARELY see one. please find a system to make it proportionate"; "same with the rolling rare items animation".
 

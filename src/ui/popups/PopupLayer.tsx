@@ -6,6 +6,7 @@ import { LuckPopup } from './LuckPopup';
 import { OfflinePopup } from './OfflinePopup';
 import { SettingsPopup } from './SettingsPopup';
 import { UpgradePopup } from './UpgradePopup';
+import { ScrapAllPopup } from './ScrapAllPopup';
 import { WorldPopup } from './WorldPopup';
 
 /** One popup at a time: offline rewards first, then whatever menu is open. */
@@ -30,6 +31,8 @@ export function PopupLayer() {
       return <ItemDetailPopup uid={detailUid ?? -1} onClose={close} />;
     case 'world':
       return <WorldPopup world={detailUid ?? 1} onClose={close} />;
+    case 'scrapAll':
+      return <ScrapAllPopup onClose={close} />;
     default:
       return null;
   }

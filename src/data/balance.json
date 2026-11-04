@@ -352,12 +352,12 @@
     },
     "upgradeCost": {
       "base": 400,
-      "growth": 1.85
+      "growth": 2.2
     },
     "upgradeTime": {
       "baseSeconds": 60,
-      "growth": 1.65,
-      "capSeconds": 86400
+      "growth": 1.4,
+      "capSeconds": 7200
     },
     "gemSpeedup": {
       "minutesPerGem": 2,

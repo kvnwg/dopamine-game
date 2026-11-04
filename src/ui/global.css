@@ -94,7 +94,13 @@ body,
   background: #11131f;
   color: var(--text);
   font-family: var(--font-body);
-  font-weight: 600;
+  /*
+   * Body text in the pixel font's regular weight with a little air between letters: its bold fills in
+   * the small holes of e, a, s, C and 8 at reading sizes (Kevin: "text can be hard to read because it's
+   * pixelated"). Headings, buttons and big numbers set their own bold weight.
+   */
+  font-weight: 500;
+  letter-spacing: 0.05em;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;

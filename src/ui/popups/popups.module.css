@@ -175,7 +175,7 @@
   justify-content: space-between;
   padding: 6px calc(3 * var(--px));
   font-size: 30px;
-  font-weight: 900;
+  font-weight: 500;
 }
 .statRow:nth-child(even) {
   background: rgba(122, 106, 96, 0.08);
@@ -257,7 +257,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 30px;
-  font-weight: 900;
+  font-weight: 500;
 }
 .table th {
   font-family: var(--font-display);

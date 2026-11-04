@@ -46,13 +46,13 @@
 .sub {
   max-width: 760px;
   font-size: 30px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.2;
   color: #e6d9c4;
 }
 .hint {
   font-size: 27px;
-  font-weight: 700;
+  font-weight: 500;
   color: #9a8fb0;
 }
 /* The pocket: loaves to eat. */
@@ -116,7 +116,7 @@
 }
 .treeLine {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.15;
   color: #a79cc0;
 }
@@ -324,7 +324,7 @@
 }
 .cardLine {
   font-size: 30px;
-  font-weight: 800;
+  font-weight: 500;
   font-style: italic;
   line-height: 1.2;
   color: #6b5e57;
@@ -340,7 +340,7 @@
 }
 .cardNeeds {
   font-size: 27px;
-  font-weight: 800;
+  font-weight: 500;
   color: #c0392b;
 }
 .buy {
@@ -383,7 +383,7 @@
 .wipes {
   text-align: center;
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 500;
   color: #8a80a8;
 }
 

@@ -22,7 +22,7 @@ export function upgradeCost(level: number): number {
   return Math.round(c.base * Math.pow(c.growth, level - 1));
 }
 
-/** Seconds to upgrade from `level`: 60 x 1.65^(level - 1), capped at 24 hours. */
+/** Seconds to upgrade from `level`: 60 x 1.4^(level - 1), capped at 2 hours (balance.json dumpster.upgradeTime). */
 export function upgradeSeconds(level: number): number {
   const t = BAL.dumpster.upgradeTime;
   return Math.min(t.capSeconds, Math.round(t.baseSeconds * Math.pow(t.growth, level - 1)));

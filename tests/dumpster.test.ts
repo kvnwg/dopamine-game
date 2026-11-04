@@ -121,10 +121,10 @@ describe('item rolls', () => {
 describe('dumpster upgrades', () => {
   it('cost = 400 x 1.85^(L-1), time = 60s x 1.65^(L-1) capped at 24h', () => {
     expect(upgradeCost(1)).toBe(400);
-    expect(upgradeCost(5)).toBe(Math.round(400 * 1.85 ** 4));
+    expect(upgradeCost(5)).toBe(Math.round(400 * 2.2 ** 4));
     expect(upgradeSeconds(1)).toBe(60);
-    expect(upgradeSeconds(10)).toBe(Math.round(60 * 1.65 ** 9));
-    expect(upgradeSeconds(29)).toBe(86_400);
+    expect(upgradeSeconds(10)).toBe(Math.round(60 * 1.4 ** 9));
+    expect(upgradeSeconds(29)).toBe(7_200);
   });
 
   it('gem speedup costs 1 Gem per 2 minutes remaining, minimum 1', () => {

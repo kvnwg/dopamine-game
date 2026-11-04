@@ -77,7 +77,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         scrapFromBag(d, action.uid, ev);
         break;
       case 'scrapAll':
-        scrapAllFromBag(d, ev);
+        scrapAllFromBag(d, ev, action.keepUpgrades === true);
         break;
       case 'toggleLock':
         toggleLock(d, action.uid);

@@ -137,7 +137,8 @@ export type GameAction =
   | { type: 'equipBest' }
   | { type: 'scrapItem'; uid: number }
   /** Scraps every unlocked item in the bag. */
-  | { type: 'scrapAll' }
+  /** Scraps every unlocked item in the bag; `keepUpgrades` keeps the ones that would make him stronger (isUpgrade). */
+  | { type: 'scrapAll'; keepUpgrades?: boolean }
   | { type: 'toggleLock'; uid: number }
   | { type: 'buyUpgrade'; id: string }
   /** Spends Half-Eaten Bread Loaves on an Alley perk (the Upgrades screen's Perks page). */

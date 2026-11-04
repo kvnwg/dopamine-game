@@ -323,9 +323,10 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     rolled.push({ item, mults });
   }
-  // The finds decide the pace: a build-up (a scripted spin always has one) needs the spin's full length.
+  // The finds decide the pace: a build-up (a scripted spin always has one) needs the spin's full length,
+  // and the warm-up spins roll at their own easy pace (the bags wait).
   const buildsUp = scripted !== null || spinBuildsUp(rolled.map((r) => r.item), currentLuck(d, now));
-  const turbo = d.currencies.bags >= 1 && !buildsUp;
+  const turbo = d.currencies.bags >= 1 && !buildsUp && !warmup;
   if (turbo) d.currencies.bags -= 1;
   const cycle = spinCycle(d, turbo);
   const baseSpinSeconds = cycle * spinShare();
@@ -480,13 +481,13 @@ export function equipBest(d: GameState, ev: CoreEvent[]): number {
 }
 
 /** Scraps every unlocked item in the bag at once (one event, one XP grant). */
-export function scrapAllFromBag(d: GameState, ev: CoreEvent[]): number {
+export function scrapAllFromBag(d: GameState, ev: CoreEvent[], keepUpgrades = false): number {
   let coins = 0;
   let xp = 0;
   const keep: Item[] = [];
   let count = 0;
   for (const it of d.inventory) {
-    if (it.locked) {
+    if (it.locked || (keepUpgrades && isUpgrade(d, it))) {
       keep.push(it);
       continue;
     }

@@ -330,6 +330,22 @@ describe('the wheel', () => {
     expect(ev?.type === 'scrapAll' && ev.count).toBe(1);
     expect(r.state.currencies.coins).toBeGreaterThan(coins);
   });
+
+  it('Scrap All can keep the upgrades (the bag asks first when it holds any)', () => {
+    const rng = new Rng(9);
+    const st = rollingState();
+    st.equipped.hat = makeItem({ uid: 1, slot: 'hat', power: 20 });
+    st.inventory = [
+      makeItem({ uid: 2, slot: 'hat', power: 50 }), // better than the worn hat: an upgrade
+      makeItem({ uid: 3, slot: 'hat', power: 5 }), // worse
+      makeItem({ uid: 4, slot: 'ring', power: 3 }), // an empty slot: an upgrade
+    ];
+    const kept = act(st, { type: 'scrapAll', keepUpgrades: true }, rng);
+    expect(kept.state.inventory.map((x) => x.uid).sort()).toEqual([2, 4]);
+    const ev = kept.events.find((e) => e.type === 'scrapAll');
+    expect(ev?.type === 'scrapAll' && ev.count).toBe(1);
+    expect(act(st, { type: 'scrapAll' }, rng).state.inventory).toEqual([]);
+  });
 });
 
 describe('Equip best', () => {

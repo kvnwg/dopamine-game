@@ -48,8 +48,15 @@ export function InventoryPanel() {
   const shown = bag;
   const unlocked = bag.filter((x) => !x.locked);
   const scrapGold = unlocked.reduce((n, it) => n + scrapValue(g, it).coins, 0);
+  // Upgrades in the bag: ask first (Kevin: "make sure to ask the player first"), with keeping them the easy choice.
+  const upgrades = unlocked.filter((it) => isUpgrade(g, it)).length;
   const scrapAll = () => {
     if (unlocked.length === 0) return;
+    if (upgrades > 0) {
+      haptics.impact('medium');
+      useUi.getState().openPopup('scrapAll');
+      return;
+    }
     if (!armed) {
       setArmed(true);
       haptics.impact('medium');

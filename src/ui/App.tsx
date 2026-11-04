@@ -14,7 +14,7 @@ import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
 import { DragLayer } from './components/DragLayer';
 import { EquipFlight } from './components/EquipFlight';
-import { TokenSlam } from './components/TokenSlam';
+import { TokenFlights } from './components/TokenFlight';
 import { MiniRoller } from './components/MiniRoller';
 import { TutorialLayer } from './components/TutorialLayer';
 import { Toasts } from './components/Toasts';
@@ -84,7 +84,7 @@ export function App() {
           <div className={styles.nav}><BottomNav /></div>
           {tab === 'upgrades' && <UpgradeMap />}
           <SafeLayer name="mini"><MiniRoller /></SafeLayer>
-          <SafeLayer name="tokens"><TokenSlam /></SafeLayer>
+          <SafeLayer name="tokens"><TokenFlights /></SafeLayer>
           <SafeLayer name="drag"><DragLayer /></SafeLayer>
           <SafeLayer name="reveal"><RevealLayer /></SafeLayer>
           <SafeLayer name="unlocks"><UnlockedFx /></SafeLayer>

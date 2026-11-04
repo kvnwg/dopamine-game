@@ -16,7 +16,7 @@ import { createItem, itemName, pickBaseItem } from './loot';
 import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity } from './luck';
 import { perkFx, rigSpin } from './perks';
 import { addXp } from './progression';
-import { addToBag, drySpell, enchantChance, reelCount, rollTokens, scrapValue, spinCycle, tokenMult } from './roller';
+import { addToBag, drySpell, enchantChance, matchedSteps, reelCount, rollTokens, scrapValue, spinCycle, tokenMult } from './roller';
 import { killRewards } from './stages';
 import { upgradeEffects } from './upgrades';
 import { computeStats } from './stats';
@@ -176,9 +176,12 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
     if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) luck *= BAL.roll.goldenLuckMult;
     // Rigged Jackpot (an Alley perk) rigs offline spins too.
     const rigged = rigSpin(d);
+    // Each reel's luck tokens, as startSpin rolls them: a token every reel matches counts squared.
+    const tokens = Array.from({ length: reels }, () => rollTokens(rng, tokenChance));
+    const matched = matchedSteps(tokens);
     for (let r = 0; r < reels && out.rolls < count; r++) {
       // As the reels roll an item (rollReelItem), minus the tutorial and the dev's forced rarity.
-      const itemLuck = luck * tokenMult(rollTokens(rng, tokenChance));
+      const itemLuck = luck * tokenMult(tokens[r], matched);
       const pity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d);
       const floor = rigged && (!pity || rarityAtLeast(rigged, bl.minRarity)) ? rigged : pity ? bl.minRarity : null;
       let rarity = floor ? rollRarity(itemLuck, rng, floor) : rollRarity(itemLuck, rng);

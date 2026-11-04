@@ -25,7 +25,7 @@
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
 import {
-  battleMaxHp, battleStats, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, runEffects, worldDef, type CoreEvent, type CrewHelper,
+  battleMaxHp, battleStats, chainFloor, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, runEffects, worldDef, type CoreEvent, type CrewHelper,
   type GameState, type Item,
 } from '../core';
 import { bus } from '../app/eventBus';
@@ -41,7 +41,9 @@ import {
   shadowTex, texOrigin, texSize, weaponTex, worldTextures, type FoeTex, type WorldKeys,
 } from './textures';
 import { SLAM_FROM, SLAM_HEIGHT, slamAnchor, slamBridge } from './equipSlam';
-import { reelStops } from '../ui/reelTiming';
+import { multOf, reelStops, tokenStops } from '../ui/reelTiming';
+import { tokenKey } from '../ui/tokenFx';
+import { luckBridge, luckRowsOf, luckSlot, TOKEN_FLIGHT_MS } from './luckRows';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
 import { blank, fromRows, setPx } from './pixel/buf';
@@ -59,6 +61,21 @@ import { snapCameraToGrid } from './gridSnap';
 
 /** The battle view: 180 x 160 art pixels, 1080 x 960 screen pixels. */
 export const BATTLE_W = VIEW.w * P;
+
+/** A reel's row of luck tokens near the top of the battle (showLuckChains). */
+interface LuckChain {
+  tokens: Phaser.GameObjects.Image[];
+  total: PixelText | null;
+  /** The rarity a big chain guarantees, under the total. */
+  floor: PixelText | null;
+  /** The reel's tokens, and the steps that count squared (every reel matched them). */
+  mults: readonly number[];
+  squared: number[];
+  row: number;
+  y: number;
+  /** Its reel has landed its item: the row is on its way out. */
+  done: boolean;
+}
 export const BATTLE_H = VIEW.h * P;
 /** The ground line: the bottom edge of the view row fighters stand on (y 828). */
 const FEET_Y = (FEET_ROW + 1) * P;
@@ -548,6 +565,8 @@ export class BattleScene extends Phaser.Scene {
   private pigeons: Pigeon[] = [];
   private pigeonClock = 0;
   private unsub?: () => void;
+  /** Luck tokens on their way into their rows, by key (tokenFx.ts tokenKey): each shows itself once (landLuck). */
+  private luckPending = new Map<string, () => void>();
 
   constructor() {
     super('Battle');
@@ -592,12 +611,15 @@ export class BattleScene extends Phaser.Scene {
     slamBridge.impact = impact;
     const kick = (ms: number, px: number) => this.shake(ms, (px * P) / BATTLE_W, 1);
     slamBridge.shake = kick;
+    const landLuck = (key: string) => this.landLuck(key);
+    luckBridge.land = landLuck;
     const done = () => {
       this.unsub?.();
       this.texts.destroy();
       if (slamBridge.dive === dive) slamBridge.dive = undefined;
       if (slamBridge.impact === impact) slamBridge.impact = undefined;
       if (slamBridge.shake === kick) slamBridge.shake = undefined;
+      if (luckBridge.land === landLuck) luckBridge.land = undefined;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, done);
     this.events.once(Phaser.Scenes.Events.DESTROY, done);
@@ -1729,63 +1751,140 @@ export class BattleScene extends Phaser.Scene {
   // ------------------------------------------------------------------ luck chains
 
   /**
-   * A reel that lands on luck tokens shows them near the top of the battle as they land: the first
-   * clover drops in, each next one lands beside it, and the running total (×2 → ×10 LUCK) sits after
-   * them. When the reel lands its item the row flashes and steps out. Timed like the reels
-   * (reelTiming.ts), so a token shows here the moment it stops on the reel.
+   * A reel that lands on luck tokens shows them in a row near the top of the battle (luckRows.ts):
+   * each token flies out of its reel into its place there (TokenFlight.tsx) and slams in (a flash,
+   * bits, a kick), the earlier ones shuffling over, with the running total (×2 → ×10 LUCK) after them
+   * and, for a big chain, the rarity it guarantees under it. When every reel lands the same token, the
+   * last one to slam in squares it on every row: their tokens flash gold, their totals jump and a gold
+   * "MATCH!" pops up under them. When the reel lands its item its row flashes and steps out. Timed like
+   * the reels (reelTiming.ts), plus the flight (none with Reduce motion).
    */
   private showLuckChains(e: Extract<CoreEvent, { type: 'spinStart' }>) {
-    let row = 0;
+    const rows = luckRowsOf(e.reels);
+    const delay = this.reduceMotion ? 0 : TOKEN_FLIGHT_MS;
+    const chains: LuckChain[] = [];
+    const match = new Set(tokenStops(e).filter((tk) => tk.match).map((tk) => `${tk.reel}:${tk.step}`));
     e.reels.forEach((r, i) => {
-      if (!r.mults.length) return;
-      const stops = reelStops(e, i);
-      // Under the gold and XP pop-ups that sit beneath the top bar (TopHud).
-      const chain = { tokens: [] as Phaser.GameObjects.Image[], total: null as PixelText | null, mult: 1, y: (35 + row * 19) * P };
-      row++;
-      stops.forEach((st, j) => {
+      if (rows[i] < 0) return;
+      const chain: LuckChain = { tokens: [], total: null, floor: null, mults: r.mults, squared: [], row: rows[i], y: luckSlot(rows[i], 0, 1).y, done: false };
+      chains.push(chain);
+      reelStops(e, i).forEach((st, j) => {
         if (st.token === null) {
-          this.time.delayedCall(st.at + 150, () => this.endLuckChain(chain));
+          this.time.delayedCall(st.at + delay + 150, () => this.endLuckChain(chain));
           return;
         }
-        this.time.delayedCall(st.at, () => this.addLuckToken(chain, st.token!, j));
+        // Shown when its flight slams it in (luckBridge), or a little after it should have.
+        const key = tokenKey(r.item.uid, j);
+        this.luckPending.set(key, () => {
+          this.addLuckToken(chain, j);
+          // The last of a matched step's tokens squares it on every row.
+          if (match.has(`${i}:${j}`)) this.time.delayedCall(70, () => this.squareLuck(chains, j));
+        });
+        this.time.delayedCall(st.at + delay + 250, () => this.landLuck(key));
       });
     });
   }
 
-  private addLuckToken(chain: { tokens: Phaser.GameObjects.Image[]; total: PixelText | null; mult: number; y: number }, x: number, step: number) {
-    if (!this.sys.isActive()) return;
-    chain.mult *= x;
-    const tex = luckTokenTex(this, x);
-    const gap = 18 * P;
+  /** A token slams into its row (its flight landed, or it's late): shown once. */
+  private landLuck(key: string) {
+    const add = this.luckPending.get(key);
+    if (!add) return;
+    this.luckPending.delete(key);
+    add();
+  }
+
+  private addLuckToken(chain: LuckChain, step: number) {
+    if (!this.sys.isActive() || chain.done) return;
+    const tex = luckTokenTex(this, chain.mults[step]);
     const n = chain.tokens.length + 1;
-    // The row (tokens, then the total) stays centered; earlier tokens slide over a whole pixel at a time.
-    const left = snap(BATTLE_W / 2 - ((n - 1) * gap) / 2 - 12 * P);
-    chain.tokens.forEach((t, k) => this.tweens.add({ targets: t, x: left + k * gap, duration: 120, ease: 'Stepped', easeParams: [3] }));
-    const tx = left + (n - 1) * gap;
+    // The row stays centered: earlier tokens shuffle over a whole pixel at a time.
+    chain.tokens.forEach((tk, k) => this.tweens.add({ targets: tk, x: luckSlot(chain.row, k, n).x, duration: 120, ease: 'Stepped', easeParams: [3] }));
+    const at = luckSlot(chain.row, n - 1, n);
     if (tex) {
-      const img = this.add.image(tx, chain.y - (this.reduceMotion ? 0 : 6 * P), tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(44);
+      const img = this.add.image(at.x, chain.y, tex.key).setOrigin(0.5, 0.5).setScale(P).setDepth(44);
       chain.tokens.push(img);
-      if (!this.reduceMotion) this.tweens.add({ targets: img, y: chain.y, duration: 160, ease: 'Bounce.easeOut' });
+      // It slams in: a pixel down on impact, then back up.
+      if (!this.reduceMotion) {
+        img.y = chain.y + P;
+        this.time.delayedCall(70, () => img.active && img.setY(chain.y));
+      }
       if (!this.reduceFlashing) {
         img.setTintFill(0xffffff);
         this.time.delayedCall(70, () => img.active && img.clearTint());
       }
     }
-    this.bits.burst(10 + step * 6, tx, chain.y, { speed: [30, 80], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
-    if (step > 0) this.shake(90, 0.002 + step * 0.001);
-    // The running total after the tokens.
+    this.bits.burst(12 + step * 6, at.x, chain.y, { speed: [30, 90], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
+    // A small kick, as gentle as a blow's (Kevin wanted the token slams' shake gentle).
+    this.shake(160, P / BATTLE_W, 1);
+    this.drawLuckTotal(chain);
+  }
+
+  /** A row's running total after its tokens, and under it the rarity a big chain guarantees. */
+  private drawLuckTotal(chain: LuckChain, gold = false) {
+    const n = chain.tokens.length;
+    if (!n) return;
+    const mult = multOf(chain.mults.slice(0, n), chain.squared);
     chain.total?.destroy();
-    const total = this.texts.add(`×${formatNumber(chain.mult)} ${t('battle.luck')}`, { face: 'big', fill: ['#d8ffd0', '#46d36b'], shadow: true }).setDepth(44);
-    total.place(snap(tx + 9 * P + (total.artW * P) / 2), chain.y);
+    chain.floor?.destroy();
+    chain.floor = null;
+    const last = luckSlot(chain.row, n - 1, n);
+    const fill = gold ? ['#fffbe0', '#ffd84a'] : ['#d8ffd0', '#46d36b'];
+    const total = this.texts.add(`×${formatNumber(mult)} ${t('battle.luck')}`, { face: 'big', fill, shadow: true }).setDepth(44);
+    const tx = snap(last.x + 9 * P + (total.artW * P) / 2);
+    total.place(tx, chain.y);
     if (!this.reduceFlashing) {
       total.setFlash(true);
       this.time.delayedCall(80, () => total.active && total.setFlash(false));
     }
     chain.total = total;
+    const floor = chainFloor(mult);
+    if (floor) {
+      const tag = this.texts.add(t('reel.tokenFloor', { rarity: t(`rarity.${floor}`).toUpperCase() }), { face: 'small', fill: rarityColor(floor), shadow: true }).setDepth(44);
+      tag.place(tx, chain.y + 8 * P);
+      chain.floor = tag;
+    }
   }
 
-  private endLuckChain(chain: { tokens: Phaser.GameObjects.Image[]; total: PixelText | null }) {
-    const parts: Array<{ setAlpha(a: number): unknown; destroy(): void; active: boolean }> = [...chain.tokens, ...(chain.total ? [chain.total] : [])];
+  /**
+   * Every reel landed the same token at `step` (Kevin: "if u have multiple rows spinning and they all
+   * land on the same multiplier, u need to square the luck"): it counts squared on every row now.
+   */
+  private squareLuck(chains: readonly LuckChain[], step: number) {
+    if (!this.sys.isActive()) return;
+    const live = chains.filter((c) => !c.done && c.tokens.length > step);
+    if (!live.length) return;
+    for (const c of live) {
+      if (!c.squared.includes(step)) c.squared.push(step);
+      const tk = c.tokens[step];
+      if (tk && !this.reduceFlashing) {
+        tk.setTintFill(0xffe680);
+        this.time.delayedCall(160, () => tk.active && tk.clearTint());
+      }
+      if (tk) this.bits.burst(18, tk.x, c.y, { speed: [40, 110], life: [320, 640], drag: 2, colors: [0xffffff, 0xfff28c, 0xffc233], fade: [0xd48a12], sizes: [2, 1] });
+      this.drawLuckTotal(c, true);
+    }
+    this.shake(260, (2 * P) / BATTLE_W, 1);
+    // "MATCH!" under the rows: it pops in flashing, holds, then lifts away in steps.
+    const y = Math.max(...live.map((c) => c.y)) + 17 * P;
+    const text = this.texts.add(t('battle.luckMatch'), { face: 'big', fill: ['#ffffff', '#fff28c', '#ffc233', '#ff9a1a'], shadow: true }).setDepth(45);
+    text.place(snap(BATTLE_W / 2), y + (this.reduceMotion ? 0 : 3 * P));
+    if (!this.reduceFlashing) {
+      text.setFlash(true);
+      this.time.delayedCall(90, () => text.active && text.setFlash(false));
+    }
+    if (!this.reduceMotion) [2, 1, 0].forEach((d, k) => this.time.delayedCall(40 + k * 40, () => text.active && text.place(snap(BATTLE_W / 2), y + d * P)));
+    [0.66, 0.33, 0].forEach((a, k) =>
+      this.time.delayedCall(1500 + k * 90, () => {
+        if (!text.active) return;
+        if (!a) text.destroy();
+        else text.setAlpha(a).place(snap(BATTLE_W / 2), y - (k + 1) * P);
+      }),
+    );
+  }
+
+  private endLuckChain(chain: LuckChain) {
+    chain.done = true;
+    const parts: Array<{ setAlpha(a: number): unknown; destroy(): void; active: boolean }> = [...chain.tokens, ...(chain.total ? [chain.total] : []), ...(chain.floor ? [chain.floor] : [])];
     for (const p of parts) if ('setTintFill' in p && !this.reduceFlashing) (p as Phaser.GameObjects.Image).setTintFill(0xffffff);
     this.time.delayedCall(80, () => {
       for (const p of parts) if (p.active && 'clearTint' in p) (p as Phaser.GameObjects.Image).clearTint();

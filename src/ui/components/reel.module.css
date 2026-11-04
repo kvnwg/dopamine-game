@@ -746,6 +746,21 @@
     color: #ffffff;
   }
 }
+/* Every reel matched a token: the multipliers are squared, in gold, with a bigger drop. */
+.chain[data-gold] {
+  color: #ffd84a;
+  animation: chainGold 0.36s steps(4) both;
+}
+@keyframes chainGold {
+  from {
+    transform: translateY(calc(-4 * var(--px)));
+    color: #ffffff;
+  }
+  50% {
+    transform: translateY(calc(-2 * var(--px)));
+    color: #fff6b0;
+  }
+}
 
 /* The machine shrinking into the mini roller's corner as the Roll tab closes (Reel.tsx shrinkToMini). */
 .shrink {

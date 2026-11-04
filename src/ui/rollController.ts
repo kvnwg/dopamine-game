@@ -160,7 +160,7 @@ export function installRollController(): () => void {
           if (rare.drama) {
             const view: RollView = {
               id: -best.item.uid, item: best.item, odds: best.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false,
-              at: performance.now(), mult: multOf(best.mults), scripted, ...rare,
+              at: performance.now(), mult: multOf(best.mults, e.matched), scripted, ...rare,
             };
             buildUp(view, itemStopMs(e, e.reels.indexOf(best)));
           } else {

@@ -10,6 +10,18 @@ import type { AdPlacement } from '../services';
 export const STAGE_TALL = { w: 1080, h: 1920 } as const;
 export const STAGE_WIDE = { w: 2160, h: 960 } as const;
 
+/** A luck token flying from its reel into the battle's luck row (TokenFlight.tsx). */
+export interface TokenFlightState {
+  id: number;
+  /** The token's key (tokenFx.ts tokenKey): the battle shows it in its row when the flight lands. */
+  key: string;
+  /** The token's multiplier (its picture). */
+  x: number;
+  reel: number;
+  row: number;
+  step: number;
+}
+
 export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll';
 export type Tab = 'alley' | 'heist' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
@@ -91,8 +103,11 @@ interface UiState {
   afterBoss: { world: number; firstTime: boolean; gems: number; loaves?: number } | null;
   /** Items the last rebirth unlocked (shown after the rebirth burst). */
   unlocked: { count: number; ids: string[] } | null;
-  /** A luck token just landed on reel `reel`: it flies out of that reel and slams onto the screen, on any tab (TokenSlam, tokenFx.ts). */
-  tokenSlam: { id: number; x: number; total: number; reel: number } | null;
+  /**
+   * Luck tokens on their way from the reel they landed on (`reel`) into their place in the battle's
+   * luck row at the top (`row`, the `step`-th token in it), on any tab (TokenFlight, tokenFx.ts).
+   */
+  tokenFlights: TokenFlightState[];
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -124,7 +139,7 @@ export const useUi = create<UiState>((set) => ({
   goldPulse: 0,
   afterBoss: null,
   unlocked: null,
-  tokenSlam: null,
+  tokenFlights: [],
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),

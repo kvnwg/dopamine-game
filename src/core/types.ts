@@ -44,6 +44,11 @@ export type CoreEvent =
   | {
       type: 'spinStart';
       reels: { item: Item; odds: number; mults: number[]; landAt: number }[];
+      /**
+       * Token steps at which every reel (two or more) landed the same token: those tokens count
+       * squared on every reel (x5 on all three reels gives each x25).
+       */
+      matched: number[];
       lucky: boolean;
       golden: boolean;
       luck: number;
@@ -70,7 +75,7 @@ export type CoreEvent =
       odds: number;
       /** The luck it was rolled at (the spin's luck times `mult`). */
       luck: number;
-      /** Product of the luck tokens this reel landed on first (1 without any). */
+      /** Product of the luck tokens this reel landed on first, a matched one squared (1 without any). */
       mult: number;
       placed: RollPlacement;
       newRecord: boolean;
@@ -189,7 +194,8 @@ export type Cheat =
   /** Jump to a world as if every world before it was beaten. */
   | { kind: 'setStage'; stage: number }
   | { kind: 'forceRarity'; rarity: Rarity | null }
-  | { kind: 'forceTokens'; mults: number[] | null }
+  /** The next spin's first reel lands these tokens before its item (`everyReel`: every reel does, a match). */
+  | { kind: 'forceTokens'; mults: number[] | null; everyReel?: boolean }
   | { kind: 'luckBoost'; seconds: number }
   | { kind: 'setDumpsterLevel'; level: number }
   | { kind: 'skipToLastWave' }

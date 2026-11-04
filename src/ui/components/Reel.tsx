@@ -46,6 +46,7 @@ import { flickerMs, glowAt, landFx, teasePlan, tierLight, type Tease } from '../
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
 import { tokenHoldMs } from '../reelTiming';
 import { tokenKey, tokenLanded } from '../tokenFx';
+import { luckRowsOf } from '../../render/luckRows';
 import { stagePoint } from '../drag';
 import { MINI, miniHeight, miniWidth } from './MiniRoller';
 import { useUi } from '../uiStore';
@@ -109,6 +110,9 @@ interface Run {
   /** Stops each reel has reached (its tokens, then its item); and how many it had when the run was built. */
   reached: number[];
   before: number[];
+  /** Each reel's row in the battle's luck rows (-1 without tokens), and the token steps every reel matched. */
+  rows: number[];
+  matched: number[];
   plan: Tease | null;
   /** The reel that stops last. */
   lastReel: number;
@@ -154,6 +158,8 @@ function buildRun(spin: NonNullable<GameState['roll']['current']>, prev: (StripC
     t0: performance.now() - elapsed,
     reached,
     before: reached.slice(),
+    rows: luckRowsOf(spin.reels),
+    matched: [...(spin.matched ?? [])],
     plan,
     lastReel,
     notch: strips.map(() => 0),
@@ -176,10 +182,18 @@ function buildRun(spin: NonNullable<GameState['roll']['current']>, prev: (StripC
 /** Index of the result cell (the last stop). */
 const resultIdx = (st: Strip) => (st.stops.length ? st.stops[st.stops.length - 1].idx : 0);
 
-/** The multiplier a reel has stacked up after `reached` stops. */
-function chainOf(st: Strip, reached: number): number {
+/** The token steps every reel matched that every reel has landed (they count squared from then). */
+function squaredSteps(r: Pick<Run, 'matched' | 'reached'>): number[] {
+  return r.matched.filter((k) => r.reached.every((m) => m > k));
+}
+
+/** The multiplier a reel has stacked up after `reached` stops, the `squared` steps counting squared. */
+function chainOf(st: Strip, reached: number, squared: readonly number[] = []): number {
   let x = 1;
-  for (let k = 0; k < Math.min(reached, st.stops.length); k++) x *= st.stops[k].token ?? 1;
+  for (let k = 0; k < Math.min(reached, st.stops.length); k++) {
+    const tk = st.stops[k].token ?? 1;
+    x *= squared.includes(k) ? tk * tk : tk;
+  }
   return x;
 }
 
@@ -412,6 +426,8 @@ export function ReelBank() {
   const noFlash = useGame((g) => g.settings.reduceFlashing);
   const [run, setRun] = useState<Run | null>(null);
   const [chain, setChain] = useState<number[]>([]);
+  /** Every reel matched a token: their multipliers are squared (the badges turn gold). */
+  const [gold, setGold] = useState(false);
   const [fx, setFx] = useState<Fx[]>([]);
   /** Reels showing light rays behind an Epic-or-better result (reel → tier). */
   const [rays, setRays] = useState<Record<number, number>>({});
@@ -461,7 +477,9 @@ export function ReelBank() {
     prevRef.current = next.strips.map((st) => st.cells[resultIdx(st)]);
     runRef.current = next;
     setRun(next);
-    setChain(next.strips.map((st, i) => chainOf(st, next.reached[i])));
+    const sq = squaredSteps(next);
+    setChain(next.strips.map((st, i) => chainOf(st, next.reached[i], sq)));
+    setGold(sq.length > 0);
     setFx([]);
     setRays({});
     if (timer < 0.15) {
@@ -544,12 +562,20 @@ export function ReelBank() {
           r.reached[i] += 1;
           cellRefs.current.get(`${r.key}:${i}:${stop.idx}`)?.setAttribute('data-revealed', '');
           if (stop.token !== null) {
-            // A luck token: chime, burst and its slam onto the screen (tokenFx.ts: once, on any tab),
-            // and the reel spins on with its luck multiplied.
-            const x = chainOf(st, r.reached[i]);
-            tokenLanded(tokenKey(r.key.split(',')[i], k), k, stop.token, x, i);
+            // A luck token: chime, burst and its flight into the battle's luck row (tokenFx.ts: once,
+            // on any tab), and the reel spins on with its luck multiplied. The last reel to land a token
+            // every reel matched squares it on all of them.
+            const match = r.matched.includes(k) && r.reached.every((m) => m > k);
+            tokenLanded(tokenKey(r.key.split(',')[i], k), k, stop.token, i, r.rows[i], match);
             setTimeout(() => audio.respin(), tokenHoldMs());
-            setChain((c) => c.map((cur, j) => (j === i ? x : cur)));
+            const sq = squaredSteps(r);
+            if (match) {
+              setChain(r.strips.map((sj, j) => chainOf(sj, r.reached[j], sq)));
+              setGold(true);
+            } else {
+              const x = chainOf(st, r.reached[i], sq);
+              setChain((c) => c.map((cur, j) => (j === i ? x : cur)));
+            }
             addFx({ kind: 'token', reel: i, tier: 0 }, 900);
           } else {
             const tier = rarityIndex(st.cells[stop.idx].rarity);
@@ -720,7 +746,7 @@ export function ReelBank() {
                 </div>
                 <div className={s.curve} />
                 {x > 1 && (
-                  <span key={x} className={s.chain}>
+                  <span key={x} className={s.chain} data-gold={(run && gold) || undefined}>
                     ×{formatNumber(x)}
                   </span>
                 )}
@@ -805,6 +831,8 @@ function buildRunShell(strips: Strip[]): Run {
     t0: 0,
     reached: strips.map(() => 0),
     before: strips.map(() => 0),
+    rows: strips.map(() => -1),
+    matched: [],
     plan: null,
     lastReel: 0,
     notch: strips.map(() => 0),

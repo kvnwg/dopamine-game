@@ -1,7 +1,7 @@
 /** The Worlds tab: all 20 worlds, open from the start, with a threat read-out and their payout. */
 import { useMemo, type CSSProperties } from 'react';
 import { DATA } from '../../data';
-import { formatNumber, worldRewards, worldThreat, type ThreatLevel } from '../../core';
+import { formatNumber, tutorialOver, worldRewards, worldThreat, type ThreatLevel } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
@@ -40,6 +40,8 @@ export function WorldsPanel() {
   // Before the first pick (a new game's raccoon waits for it), no threat ratings: at level 1 every world
   // reads as deadly (he levels up through the waves), and World 1 says where to start.
   const first = !g.stage.chosen;
+  // During the tutorial he can't fall in World 1 (combat.ts): no scary rating on it.
+  const safeStart = !tutorialOver(g);
   const threats = useMemo(
     () => DATA.worlds.map((_, i) => worldThreat(g, i + 1).level),
     // Threat only depends on the raccoon's stats.
@@ -82,7 +84,7 @@ export function WorldsPanel() {
                 <div className={s.info}>
                   <span className={s.name}>{w.name}</span>
                   <div className={s.row}>
-                    {!first && <ThreatChip level={level} />}
+                    {!first && !(n === 1 && safeStart) && <ThreatChip level={level} />}
                     <span className={s.gold}>
                       <CoinIcon />×{formatNumber(worldRewards(n).gold)}
                     </span>

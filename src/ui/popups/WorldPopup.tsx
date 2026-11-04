@@ -35,9 +35,12 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
       return;
     }
     haptics.impact('heavy');
+    // A new game's first world (before the dumpster is open) keeps you here: the tutorial then asks
+    // you to go to the Roll tab yourself (Kevin). Any other trip goes straight to the Roll tab.
+    const tutorialStart = !g.features.unlocked.includes('roll');
     dispatch({ type: 'travel', world });
     useUi.getState().toast(t('toast.travel', { n: world, name: def.name }), 'info');
-    useUi.getState().setTab('alley');
+    if (!tutorialStart) useUi.getState().setTab('alley');
     onClose();
   };
   const tone = firstPick || threat.level === 'easy' ? 'green' : threat.level === 'tough' ? 'gold' : 'red';

@@ -2,7 +2,8 @@
  * The first-run tutorial (new games only; see BAL.tutorial and dumpster.beginner in core). Quick
  * steps, each paid off with as much fanfare as the game has:
  *  - First a world (Kevin: "have them start on a world, and then unlock the roller"): the game opens
- *    on the Worlds tab and the hand points at World 1; picked, the raccoon starts fighting there.
+ *    on the Worlds tab and the hand points at World 1; picked, the raccoon starts fighting there, and
+ *    the player stays on Worlds until the hand points them to the Roll tab.
  *  - Then the dumpster, padlocked under steel: the hand taps the padlock (DumpsterLock), the metal
  *    falls off, and it rolls the first item by itself: the Traffic Cone of Destiny, with the big reveal.
  *  1. Put it on: a pointing hand carries a ghost of it from its tile up to the raccoon, over and over,
@@ -159,7 +160,8 @@ function Hand({
       const el = ref.current;
       if (!el) return;
       let ms = performance.now() - t0;
-      if (ms > LOOP) {
+      // A full loop, or (with nothing found to point at: a tab still sliding in) a moment's wait.
+      if (ms > LOOP || (!from && !tap && ms > 150)) {
         t0 = performance.now();
         ms = 0;
         plan();
@@ -333,9 +335,15 @@ export function TutorialLayer() {
     hand = true;
     target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
   } else if (step === 'open') {
-    bubble = { text: t('tut.open') };
+    // He's fighting; the player goes to the Roll tab, then busts the dumpster open there.
     hand = true;
-    target = { target: '[data-lock-target]' };
+    if (tab === 'alley') {
+      bubble = { text: t('tut.open') };
+      target = { target: '[data-lock-target]' };
+    } else {
+      bubble = { text: t('tut.goRoll') };
+      target = { target: navTab('alley') };
+    }
   } else if (step === 'roll') bubble = { text: t('tut.roll') };
   else if (step === 'best') {
     bubble = { text: t('tut.best') };

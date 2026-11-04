@@ -187,3 +187,10 @@
     animation: none;
   }
 }
+
+/* The wide stage (PC): over the battle on the left, above the fight, where the raccoon wears it. */
+:global([data-layout='wide']) .powerWrap {
+  right: auto;
+  width: 1080px;
+  top: 300px;
+}

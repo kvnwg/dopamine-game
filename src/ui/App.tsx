@@ -18,6 +18,7 @@ import { TokenSlam } from './components/TokenSlam';
 import { MiniRoller } from './components/MiniRoller';
 import { TutorialLayer } from './components/TutorialLayer';
 import { Toasts } from './components/Toasts';
+import { HoverInfo } from './components/HoverInfo';
 import { AdOverlay } from './components/AdOverlay';
 import { TitleScreen } from './components/TitleScreen';
 import { DevPanel } from '../dev/DevPanel';
@@ -25,14 +26,21 @@ import { SHOW_DEV } from '../dev/flags';
 import { installRollController } from './rollController';
 import { installSound } from './soundController';
 import { installTokenFx } from './tokenFx';
-import { useUi } from './uiStore';
+import { installKeyboard } from './keyboard';
+import { STAGE_TALL, STAGE_WIDE, useUi } from './uiStore';
 
-const W = 1080;
-const H = 1920;
+/**
+ * The stage: tall on phones (1080 x 1920: the battle over the menus), wide on PC screens (2160 x 960:
+ * the battle on the left, the menus and tabs on the right; Kevin: "make a PC version"). Both halves
+ * keep their exact sizes, so every panel lays out the same either way.
+ */
+/** A screen this much wider than tall gets the wide stage. */
+const WIDE_ASPECT = 1.25;
 
 export function App() {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
+  const wide = useUi((u) => u.wide);
   const tab = useUi((u) => u.tab);
   // The upgrade map covers the whole screen; underneath, keep showing the tab it was opened from.
   const prevTab = useUi((u) => u.prevTab);
@@ -41,7 +49,12 @@ export function App() {
   useLayoutEffect(() => {
     const el = frameRef.current;
     if (!el) return;
-    const fit = () => setScale(Math.min(el.clientWidth / W, el.clientHeight / H));
+    const fit = () => {
+      const isWide = el.clientWidth / Math.max(1, el.clientHeight) >= WIDE_ASPECT;
+      const st = isWide ? STAGE_WIDE : STAGE_TALL;
+      if (useUi.getState().wide !== isWide) useUi.setState({ wide: isWide });
+      setScale(Math.min(el.clientWidth / st.w, el.clientHeight / st.h));
+    };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
@@ -51,11 +64,12 @@ export function App() {
   useEffect(() => installRollController(), []);
   useEffect(() => installSound(), []);
   useEffect(() => installTokenFx(), []);
+  useEffect(() => installKeyboard(), []);
 
   return (
     <div className={styles.viewport}>
       <div className={styles.frame} ref={frameRef}>
-        <div className={styles.stage} data-stage style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
+        <div className={styles.stage} data-stage data-layout={wide ? 'wide' : undefined} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
           <div className={styles.battle}><BattlePanel /></div>
           <div className={styles.lower}>
             {/* A new tab's panel slides up with a little bounce (keyed so it plays on every switch). */}
@@ -78,6 +92,7 @@ export function App() {
           <SafeLayer name="tutorial"><TutorialLayer /></SafeLayer>
           <SafeLayer name="equip"><EquipFlight /></SafeLayer>
           <SafeLayer name="toasts"><Toasts /></SafeLayer>
+          <SafeLayer name="hover"><HoverInfo /></SafeLayer>
           <AdOverlay />
           {SHOW_DEV && <DevPanel />}
           <TitleScreen />

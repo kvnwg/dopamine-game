@@ -668,3 +668,26 @@
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
 }
+
+/*
+ * The wide stage (PC) is 960 px tall: the hint sits at the very bottom, enchantments run in a row
+ * instead of a column, and the shock wave starts where the item stands (the middle of the stage).
+ */
+:global([data-layout='wide']) .tap {
+  bottom: 22px;
+}
+:global([data-layout='wide']) .enchants {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 2000px;
+}
+:global([data-layout='wide']) .shock {
+  left: 1080px;
+  top: 372px;
+}
+/* Toasts on the wide stage: over the battle on the left, as on a phone. */
+:global([data-layout='wide']) .toasts {
+  right: auto;
+  width: 1080px;
+}

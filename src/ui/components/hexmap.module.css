@@ -596,3 +596,11 @@
     animation: none !important;
   }
 }
+
+/* The wide stage (PC): the selected upgrade's card sits centred under the map, a phone-width column. */
+:global([data-layout='wide']) .foot {
+  left: 50%;
+  right: auto;
+  width: 1080px;
+  transform: translateX(-50%);
+}

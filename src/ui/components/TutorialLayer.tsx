@@ -31,7 +31,7 @@ import { introFeature, seeFeature } from '../features';
 import { stagePoint } from '../drag';
 import { t } from '../i18n';
 import { raysUrl } from '../rays';
-import { useUi } from '../uiStore';
+import { stageSize, useUi } from '../uiStore';
 import { GemIcon, HandIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import s from './tutorial.module.css';
@@ -101,9 +101,12 @@ function bagButton(): { x: number; y: number } | null {
   return spot(`nav button[aria-label="${t('tab.bag')}"]`, 0.3);
 }
 
-/** The stage's height, and how far below its fingertip the hand reaches (with its bob and shadow). */
-const STAGE_H = 1920;
+/** The stage's size (tall or wide, App.tsx), and how far below and right of its fingertip the hand reaches (with its bob and shadow). */
+const stageEl = () => document.querySelector('[data-stage]') as HTMLElement | null;
+const stageH = () => stageEl()?.offsetHeight || 1920;
+const stageW = () => stageEl()?.offsetWidth || 1080;
 const HAND_REACH = 30 * UI_PX;
+const HAND_RIGHT = 26 * UI_PX;
 
 /**
  * The pointing hand. With `from`, it carries a ghost of item `uid` from there up onto the raccoon and
@@ -116,9 +119,11 @@ function Hand({
   const ghost = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<'drag' | 'tap'>('drag');
   const modeRef = useRef(mode);
-  // Near the bottom of the screen (the tabs), the hand points down from above, or it would hang off the edge.
+  // Near the bottom of the screen (the tabs), the hand points down from above, or it would hang off the
+  // edge; near the right edge (the Worlds tab) it turns around, its palm to the left of its finger.
   const [flip, setFlip] = useState(false);
   const flipRef = useRef(flip);
+  const [mirror, setMirror] = useState(false);
   useEffect(() => {
     let raf = 0;
     let t0 = performance.now();
@@ -136,11 +141,12 @@ function Hand({
         modeRef.current = m;
         setMode(m);
       }
-      const f = !!tap && tap.y > STAGE_H - HAND_REACH;
+      const f = !!tap && tap.y > stageH() - HAND_REACH;
       if (f !== flipRef.current) {
         flipRef.current = f;
         setFlip(f);
       }
+      setMirror(!!tap && tap.x > stageW() - HAND_RIGHT);
     };
     plan();
     const LOOP = 1900;
@@ -193,7 +199,7 @@ function Hand({
     return () => cancelAnimationFrame(raf);
   }, [uid, best, target, fallback]);
   return (
-    <div ref={ref} className={s.hand} data-mode={mode} data-flip={flip || undefined}>
+    <div ref={ref} className={s.hand} data-mode={mode} data-flip={flip || undefined} data-mirror={mirror || undefined}>
       {baseId && mode === 'drag' && (
         <div ref={ghost} className={s.ghost}>
           <PixelArt art={itemArt(baseId, 1)} />
@@ -233,8 +239,9 @@ function Finale({ gems, onClose }: { gems: number; onClose: () => void }) {
     return () => clearTimeout(close);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const confetti = Array.from({ length: 36 }, (_, i) => ({
-    x: (i * 149) % 1080,
+  const across = stageSize().w;
+  const confetti = Array.from({ length: Math.round(36 * (across / 1080)) }, (_, i) => ({
+    x: (i * 149) % across,
     d: 1400 + ((i * 97) % 900),
     delay: (i * 53) % 700,
     c: ['#ff5a7a', '#ffd54f', '#5bd23a', '#4fc3f7', '#c48bff', '#ffffff'][i % 6],

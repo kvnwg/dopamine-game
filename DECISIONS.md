@@ -2,7 +2,25 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Heist fixes: red Leave buttons, +max HP shops, named traps, shops that wait for money, pigeons (Nov 4, newest)
+## A PC version: the wide layout, mouse and keyboard (Nov 4, newest)
+
+Kevin: "make a PC version for this as well"; he picked a wide layout at the same link, with phones unchanged.
+
+| # | Decision | Why |
+|---|---|---|
+| W1 | One game, one link: the screen's shape picks the stage. Wider than 1.25 : 1, it is the wide stage (2160 x 960 px): the tall stage's two halves side by side, the battle (1080 x 960) on the left, the menus (1080 x 800) over the tabs (1080 x 160) on the right. Otherwise it is the phone stage (1080 x 1920). It switches live when the window is resized (App.tsx, `useUi.wide`, `data-layout="wide"` on the stage). | Every panel keeps its exact size, so none is laid out twice. Phones in portrait are unchanged; phones held sideways and tablets in landscape get the wide stage, which shows them bigger than the tall one would. |
+| W2 | The wide stage keeps its 2.25 : 1 shape and is letterboxed: in a browser window on a 16:9 monitor the bars are about 2 to 8% of the height; fullscreen on 16:9 they are about 10% each. | The battle is a fixed 1080 x 960 Phaser scene (180 x 160 art pixels). A taller stage would need a taller battle view throughout the renderer. |
+| W3 | On the wide stage, the title is a panoramic street, 360 x 160 art pixels, with the logo, PLAY and the raccoon in the middle (`setTitleShape`). | |
+| W4 | Full-screen moments (rare finds, hauls, the rebirth burst, the tutorial's finale) are centred on the whole stage, and their confetti spans it. The rare find's hint sits at the bottom edge, enchantments run in a row, and the shock wave starts at the item. The power count after an equip and the toasts sit over the battle, where the raccoon is. | The 960 px height had the reveal's lines overlapping and the power count cut off. |
+| W5 | Popups keep a 30 px margin (at most 900 px tall) and scroll inside. Their buttons (Collect, START THE FIGHT!, Scrap all, Lock) stay pinned at the bottom while the rest scrolls under them. | The offline report and the World popup are taller than 960 px; their buttons were out of sight. |
+| W6 | The upgrade map fills the wide stage, centred on its middle. On the Perks page, the four trees are in one row, the page's words sit beside the Upgrades/Perks switch, and the perk card sits beside the Close bar. | The 2 x 2 trees and the card didn't fit 960 px. |
+| W7 | Drag-to-equip on the wide stage: drop anywhere over the battle (the left half), onto a gear panel, or after a clear drag to the left. Hints no longer say "up" ("Drag it onto him"). | The raccoon is to the left of the menus there. |
+| W8 | The tutorial's bubble sits over the battle. The hand points down at tabs, as on phones, and near the right edge (the Worlds tab) it turns around so its palm isn't cut off. This applies on phones too. | |
+| W9 | With a mouse (a fine pointer that can hover, `pointer.ts`), every string's "tap" reads "click" ("Click the dumpster to bust it open!", "CLICK AGAIN!"), and "pinch to zoom" reads "scroll to zoom" (i18n.ts `forMouse`, with a test). Touch screens keep "tap". | |
+| W10 | Hover info: resting the mouse on a piece of gear (bag, worn slots, finds) shows a card over it after a quarter second. It gives the name, rarity, "1 in X", slot and power, and what wearing it would change (+N or -N power, or "He's wearing it"). A click, drag, scroll or key hides it (HoverInfo.tsx). Buttons brighten under the mouse. Touch screens never see the card. | Gear can be compared without opening each item. |
+| W11 | Keys (keyboard.ts): 1 to 6 open the tabs in the bar's order (Roll, Heist, Bag, Upgrades, Rebirth, Worlds; a locked tab answers as a tap would), and E is Equip best, from any tab once the Bag is open. Esc closes a popup, or else the upgrade map. Enter or Space press PLAY on the title. Keys wait while the title or a popup is up, except Esc. | |
+
+## Heist fixes: red Leave buttons, +max HP shops, named traps, shops that wait for money, pigeons (Nov 4)
 
 Kevin: "leave button in heist should be red if clickable, greyed out means unclickable", "less heals in shop for heists, more +max health", "don't just say 'a trap' for heist, detail what kind of trap and make it silly and funny", "if i barely got any money from the first few rounds, stop giving me so many shops", "get rid of the text between the actual heist icons and the start heist button", "heist said a gang of pigeons want a fight, and it was 2 raccoons", "add little pigeons when u get them in heist".
 

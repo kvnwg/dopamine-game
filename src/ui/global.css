@@ -261,3 +261,11 @@ button {
     outline-color: #fff7c2;
   }
 }
+
+/* A mouse (PC): buttons brighten a little under the pointer. Touch screens never see it. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled),
+  nav button:hover {
+    filter: brightness(1.1);
+  }
+}

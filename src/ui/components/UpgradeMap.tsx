@@ -45,7 +45,10 @@ const DRAW = 0.93;
 const K_MIN = 0.25;
 const K_MAX = 1.7;
 /** Where the map centers things: the middle of the area between the header and the buy card. */
-const FOCUS = { x: 540, y: 800 };
+/** Where the map's focus sits on screen (stage px): tall stage, or wide (PC: the middle, above the card). */
+const FOCUS_TALL = { x: 540, y: 800 };
+const FOCUS_WIDE = { x: 1080, y: 390 };
+const focusPoint = () => (useUi.getState().wide ? FOCUS_WIDE : FOCUS_TALL);
 
 function hexPoints(r: number): string {
   return [0, 60, 120, 180, 240, 300]
@@ -478,7 +481,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   /* ----- pan and zoom (applied straight to the DOM; React re-renders only when the game changes) */
   const contentRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<View>(useUi.getState().mapView ?? { x: FOCUS.x, y: FOCUS.y, k: 1 });
+  const viewRef = useRef<View>(useUi.getState().mapView ?? { x: focusPoint().x, y: focusPoint().y, k: 1 });
   const boundsRef = useRef(bounds);
   boundsRef.current = bounds;
   const animRef = useRef(0);
@@ -488,8 +491,8 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const clamp = (v: View) => {
     const b = boundsRef.current;
     v.k = Math.min(K_MAX, Math.max(K_MIN, v.k));
-    v.x = Math.min(FOCUS.x - b.minX * v.k, Math.max(FOCUS.x - b.maxX * v.k, v.x));
-    v.y = Math.min(FOCUS.y - b.minY * v.k, Math.max(FOCUS.y - b.maxY * v.k, v.y));
+    v.x = Math.min(focusPoint().x - b.minX * v.k, Math.max(focusPoint().x - b.maxX * v.k, v.x));
+    v.y = Math.min(focusPoint().y - b.minY * v.k, Math.max(focusPoint().y - b.maxY * v.k, v.y));
   };
   const iconsRef = useRef<HTMLDivElement>(null);
   const iconsK = useRef(-1);
@@ -520,7 +523,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const glideTo = (mx: number, my: number, k = viewRef.current.k) => {
     stopAnim();
     const from = { ...viewRef.current };
-    const to = { x: FOCUS.x - mx * k, y: FOCUS.y - my * k, k };
+    const to = { x: focusPoint().x - mx * k, y: focusPoint().y - my * k, k };
     const t0 = performance.now();
     const step = (now: number) => {
       const p = Math.min(1, (now - t0) / 420);

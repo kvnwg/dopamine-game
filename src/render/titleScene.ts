@@ -33,12 +33,16 @@ import { FEET_ROW, VIEW, type LayerName } from './pixel/sceneryTypes';
 import { glowOverlay, paintClouds, paintSky, paintVignette } from './pixel/atmosphere';
 import { CLOUD_SCROLL0, LAYER_NAMES, layerRow, viewAtmo, worldArt, worldSeed } from './worldLook';
 
-/** The title in art pixels (the whole 1080 x 1920 stage at P), and how far down the battle view's rows sit. */
-export const TITLE = { w: VIEW.w, h: 320, drop: 320 - VIEW.h } as const;
+/**
+ * The title in art pixels, and how far down the battle view's rows sit: the whole stage at P, tall
+ * (phones: 1080 x 1920, the street under a tall sky) or wide (PC: 2160 x 960, twice the battle view's
+ * width at its height, the street right across). setTitleShape picks one before the title is built.
+ */
+export const TITLE: { w: number; h: number; drop: number; wide: boolean } = { w: VIEW.w, h: 320, drop: 320 - VIEW.h, wide: false };
 
 /** The raccoon's feet column and the row he stands on (the battle's ground row, moved down). */
-const HERO_COL = 74;
-const HERO_FEET = FEET_ROW + TITLE.drop;
+let HERO_COL = 74;
+let HERO_FEET = FEET_ROW + TITLE.drop;
 /** Where the battle shows him (BattleScene HERO_WALK_X, FEET_ROW): the iris opens on him there. */
 const BATTLE_HERO = { x: 52, y: FEET_ROW - 8 } as const;
 
@@ -51,11 +55,28 @@ const WALK_SPEED = HERO_WALK.stride * HERO_WALK.fps;
 const FRAME = { up: 2, squash: 4, cheer: [13, 14] } as const;
 
 /** Rows: the logo's top, the higher cloud strips' top and the PLAY button's top. */
-const LOGO_TOP = 40;
-const HIGH_CLOUDS = 104;
-const BUTTON_TOP = 152;
+let LOGO_TOP = 40;
+let HIGH_CLOUDS = 104;
+let BUTTON_TOP = 152;
 /** Rows the dust motes drift in: over the yards and the sidewalk. */
-const MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 } as const;
+let MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 };
+
+/**
+ * Lays the title out for the tall stage (phones) or the wide one (PC): wide, the logo sits in the sky
+ * over the middle, the PLAY button just under it, and the raccoon walks the sidewalk in the middle.
+ */
+export function setTitleShape(wide: boolean): void {
+  TITLE.wide = wide;
+  TITLE.w = wide ? VIEW.w * 2 : VIEW.w;
+  TITLE.h = wide ? VIEW.h : 320;
+  TITLE.drop = TITLE.h - VIEW.h;
+  HERO_COL = wide ? VIEW.w - 8 : 74;
+  HERO_FEET = FEET_ROW + TITLE.drop;
+  LOGO_TOP = wide ? 6 : 40;
+  HIGH_CLOUDS = wide ? 8 : 104;
+  BUTTON_TOP = wide ? 58 : 152;
+  MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 };
+}
 /** The button's face around its label (art px). */
 const PAD = { x: 12, y: 5 } as const;
 

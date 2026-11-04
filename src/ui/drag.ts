@@ -54,7 +54,7 @@ export function stagePoint(clientX: number, clientY: number): { x: number; y: nu
   const stage = document.querySelector('[data-stage]') as HTMLElement | null;
   if (!stage) return { x: clientX, y: clientY };
   const r = stage.getBoundingClientRect();
-  const k = r.width / STAGE_W || 1;
+  const k = r.width / (stage.offsetWidth || STAGE_W) || 1;
   return { x: (clientX - r.left) / k, y: (clientY - r.top) / k };
 }
 
@@ -67,6 +67,8 @@ function overDropTarget(clientX: number, clientY: number): boolean {
 function wouldEquip(startX: number, startY: number, clientX: number, clientY: number): boolean {
   if (overDropTarget(clientX, clientY)) return true;
   const p = stagePoint(clientX, clientY);
+  // The wide stage (PC): the raccoon is to the left of the menus, so over the battle (left half) equips.
+  if (document.querySelector('[data-stage][data-layout="wide"]')) return p.x < STAGE_W || stagePoint(startX, startY).x - p.x > LIFT_PX;
   return p.y < UPPER_Y || stagePoint(startX, startY).y - p.y > LIFT_PX;
 }
 

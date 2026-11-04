@@ -33,7 +33,7 @@
  * strips and reelTiming.ts for when each reel stops). It chimes and bursts into clovers, its ×N chip
  * stacks up on the reel, and the reel spins on to its next stop. Fillers only show unlocked items.
  */
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { RARITIES, type Rarity } from '../../data';
 import { currentLuck, formatNumber, rarityIndex, reelCount, type GameState } from '../../core';
 import { gameStore, useGame } from '../../app/store';
@@ -46,6 +46,8 @@ import { flickerMs, glowAt, landFx, teasePlan, tierLight, type Tease } from '../
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
 import { tokenHoldMs } from '../reelTiming';
 import { tokenKey, tokenLanded } from '../tokenFx';
+import { stagePoint } from '../drag';
+import { MINI, miniHeight, miniWidth } from './MiniRoller';
 import { useUi } from '../uiStore';
 import { Chunky, type Grad } from './Chunky';
 import { PixelArt } from './PixelArt';
@@ -436,6 +438,19 @@ export function ReelBank() {
     [],
   );
 
+  // Leaving the Roll tab: the machine shrinks into the mini roller's corner (Kevin: "add a little
+  // animation of the roller shrinking into the top left when u leave the tab").
+  useLayoutEffect(() => {
+    const rig = rigRef.current;
+    return () => {
+      const ui = useUi.getState();
+      const lower = ui.tab === 'upgrades' ? ui.prevTab : ui.tab;
+      const game = gameStore.getState().game;
+      if (!rig || lower === 'alley' || game.settings.reduceMotion) return;
+      shrinkToMini(rig, game.roll.current?.reels.length ?? reelCount(game));
+    };
+  }, []);
+
   // A new spin: build fresh strips that start from the last results, and wind the machine up.
   const spinKey = spin ? spin.reels.map((r) => r.item.uid).join(',') : '';
   useEffect(() => {
@@ -532,7 +547,7 @@ export function ReelBank() {
             // A luck token: chime, burst and its slam onto the screen (tokenFx.ts: once, on any tab),
             // and the reel spins on with its luck multiplied.
             const x = chainOf(st, r.reached[i]);
-            tokenLanded(tokenKey(r.key.split(',')[i], k), k, stop.token, x);
+            tokenLanded(tokenKey(r.key.split(',')[i], k), k, stop.token, x, i);
             setTimeout(() => audio.respin(), tokenHoldMs());
             setChain((c) => c.map((cur, j) => (j === i ? x : cur)));
             addFx({ kind: 'token', reel: i, tier: 0 }, 900);
@@ -683,6 +698,7 @@ export function ReelBank() {
                 }}
                 data-tease={plan?.reel === i || undefined}
                 data-rays={rayTier !== undefined || undefined}
+                data-reel={i}
               >
                 <div className={s.under}>
                   <div className={s.light} />
@@ -736,6 +752,41 @@ export function ReelBank() {
       </div>
     </div>
   );
+}
+
+/**
+ * A copy of the machine, where it was, shrinking into the mini roller's spot under the settings gear
+ * in five steps (the mini roller fades in as it lands), then gone.
+ */
+function shrinkToMini(node: HTMLElement, reels: number) {
+  const stage = document.querySelector<HTMLElement>('[data-stage]');
+  const r = node.getBoundingClientRect();
+  if (!stage || r.width < 2) return;
+  const a = stagePoint(r.left, r.top);
+  const b = stagePoint(r.right, r.bottom);
+  const w = b.x - a.x;
+  const h = b.y - a.y;
+  const ghost = document.createElement('div');
+  ghost.className = s.shrink;
+  Object.assign(ghost.style, { left: `${a.x}px`, top: `${a.y}px`, width: `${w}px`, height: `${h}px` });
+  const copy = node.cloneNode(true) as HTMLElement;
+  // Only a picture: nothing looks for it (a token's flight starts at the mini roller; the tutorial's hand).
+  for (const el of [copy, ...copy.querySelectorAll<HTMLElement>('[data-reel], [data-intro], [data-lock-target]')]) {
+    el.removeAttribute('data-reel');
+    el.removeAttribute('data-intro');
+    el.removeAttribute('data-lock-target');
+  }
+  ghost.appendChild(copy);
+  stage.appendChild(ghost);
+  // It lands centred on the mini roller, as big as fits in it.
+  const k = Math.min(miniWidth(reels) / w, miniHeight(reels) / h);
+  const tx = MINI.left + (miniWidth(reels) - w * k) / 2 - a.x;
+  const ty = MINI.top + (miniHeight(reels) - h * k) / 2 - a.y;
+  const to = `translate(${Math.round(tx)}px, ${Math.round(ty)}px) scale(${k})`;
+  const anim = ghost.animate([{ transform: 'none', opacity: 1 }, { transform: to, opacity: 0.85 }], { duration: 300, easing: 'steps(5, end)', fill: 'forwards' });
+  const done = () => ghost.remove();
+  anim.onfinish = done;
+  setTimeout(done, 900);
 }
 
 /** A run with nothing moving (the idle bank before the first spin). */

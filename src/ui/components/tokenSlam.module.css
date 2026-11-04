@@ -1,9 +1,22 @@
 /*
- * A luck token slamming onto the screen (TokenSlam.tsx): over the battle, on any tab, above the upgrade
- * map and under popups and the reveal. 1.4 s; it hits at 100 ms (7.14%). Whole pixels only: the art
- * steps from its Scale3x picture to its Scale2x one as it lands, and everything moves in whole art
- * pixel steps (var(--px) = 6 stage px).
+ * A luck token's multiplier out of the wheel and onto the screen (TokenSlam.tsx): over the battle, on
+ * any tab, above the upgrade map and under popups and the reveal. The flight runs on the DOM from JS
+ * (.fly); the slam's own moment (.slam) is 1.4 s from the hit. Whole pixels only: pictures change size
+ * by stepping to their Scale2x/Scale3x versions, and everything moves in whole art pixel steps
+ * (var(--px) = 6 stage px).
  */
+.fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 25;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 calc(2 * var(--px)) 0 rgba(10, 6, 20, 0.45));
+}
+
 .slam {
   position: absolute;
   left: 540px;
@@ -54,16 +67,11 @@
   animation: raysIn 1.4s both, raySpin 12s linear infinite;
 }
 @keyframes raysIn {
-  0%,
-  7% {
-    opacity: 0;
-    animation-timing-function: steps(1, end);
-  }
-  10% {
+  0% {
     opacity: 0.6;
     animation-timing-function: steps(1, end);
   }
-  14%,
+  4%,
   100% {
     opacity: 1;
   }
@@ -74,30 +82,6 @@
   }
 }
 
-/* The drop: its Scale3x picture falls two steps, then is gone as the Scale2x one lands. */
-.big {
-  position: absolute;
-  left: -144px;
-  top: -144px;
-  animation: drop 1.4s both;
-}
-@keyframes drop {
-  0% {
-    opacity: 1;
-    transform: translateY(calc(-10 * var(--px)));
-    animation-timing-function: steps(1, end);
-  }
-  3.5% {
-    opacity: 1;
-    transform: translateY(calc(-4 * var(--px)));
-    animation-timing-function: steps(1, end);
-  }
-  7.1%,
-  100% {
-    opacity: 0;
-    transform: none;
-  }
-}
 /* The landing: it hits a pixel low, kicks up one and settles. */
 .small {
   position: absolute;
@@ -106,25 +90,16 @@
   animation: land 1.4s both;
 }
 @keyframes land {
-  0%,
-  7% {
-    opacity: 0;
+  0% {
     transform: translateY(calc(2 * var(--px)));
     animation-timing-function: steps(1, end);
   }
-  7.1% {
-    opacity: 1;
-    transform: translateY(calc(2 * var(--px)));
-    animation-timing-function: steps(1, end);
-  }
-  11% {
-    opacity: 1;
+  4% {
     transform: translateY(calc(-1 * var(--px)));
     animation-timing-function: steps(1, end);
   }
-  15%,
+  8%,
   100% {
-    opacity: 1;
     transform: none;
   }
 }
@@ -134,44 +109,33 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 0;
-  height: 0;
   border: var(--px) solid #7ef08f;
   box-shadow: 0 0 0 var(--px) var(--ink);
-  opacity: 0;
   animation: ring 1.4s both;
 }
 @keyframes ring {
-  0%,
-  7% {
-    opacity: 0;
-    margin: -120px;
-    width: 240px;
-    height: 240px;
-    animation-timing-function: steps(1, end);
-  }
-  7.1% {
+  0% {
     opacity: 1;
     margin: -120px;
     width: 240px;
     height: 240px;
     animation-timing-function: steps(1, end);
   }
-  11% {
+  4% {
     opacity: 0.75;
     margin: -168px;
     width: 336px;
     height: 336px;
     animation-timing-function: steps(1, end);
   }
-  15% {
+  8% {
     opacity: 0.4;
     margin: -216px;
     width: 432px;
     height: 432px;
     animation-timing-function: steps(1, end);
   }
-  19%,
+  12%,
   100% {
     opacity: 0;
     margin: -216px;
@@ -189,32 +153,25 @@
   height: calc(2 * var(--px));
   background: #7cff6b;
   box-shadow: 0 0 0 var(--px) var(--ink);
-  opacity: 0;
   animation: bit 1.4s both;
 }
 @keyframes bit {
-  0%,
-  7% {
-    opacity: 0;
-    transform: none;
-    animation-timing-function: steps(1, end);
-  }
-  7.1% {
+  0% {
     opacity: 1;
     transform: translate(calc(var(--dx) / 3), calc(var(--dy) / 3));
     animation-timing-function: steps(1, end);
   }
-  12% {
+  5% {
     opacity: 1;
     transform: translate(calc(var(--dx) * 2 / 3), calc(var(--dy) * 2 / 3));
     animation-timing-function: steps(1, end);
   }
-  17% {
+  10% {
     opacity: 0.6;
     transform: translate(var(--dx), var(--dy));
     animation-timing-function: steps(1, end);
   }
-  22%,
+  15%,
   100% {
     opacity: 0;
     transform: translate(var(--dx), var(--dy));
@@ -238,25 +195,16 @@
   animation: stamp 1.4s both;
 }
 @keyframes stamp {
-  0%,
-  7% {
-    opacity: 0;
+  0% {
     font-size: 132px;
     animation-timing-function: steps(1, end);
   }
-  7.1% {
-    opacity: 1;
-    font-size: 132px;
-    animation-timing-function: steps(1, end);
-  }
-  11% {
-    opacity: 1;
+  4% {
     font-size: 108px;
     animation-timing-function: steps(1, end);
   }
-  15%,
+  8%,
   100% {
-    opacity: 1;
     font-size: 96px;
   }
 }
@@ -279,25 +227,24 @@
 }
 @keyframes floorIn {
   0%,
-  17% {
+  9% {
     opacity: 0;
     transform: translateY(calc(2 * var(--px)));
     animation-timing-function: steps(1, end);
   }
-  18% {
+  10% {
     opacity: 1;
     transform: translateY(calc(2 * var(--px)));
     animation-timing-function: steps(1, end);
   }
-  22%,
+  14%,
   100% {
     opacity: 1;
     transform: none;
   }
 }
 
-/* Reduced motion: no drop, ring, bits or turning rays; it simply shows, then fades. */
-.slam[data-calm] .big,
+/* Reduced motion: no flight, ring, bits or turning rays; it simply shows, then fades. */
 .slam[data-calm] .ring,
 .slam[data-calm] .bits {
   display: none;

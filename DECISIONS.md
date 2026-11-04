@@ -2,7 +2,17 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Big chains pay off, a loss retries the world, volume sliders, sound that always starts (Nov 4, newest)
+## A mini roller off the Roll tab, a token's number out of the wheel, the machine shrinking away (Nov 4, newest)
+
+Kevin: "when ur not on the rolling page, there should still be a mini roller on the top left of ur screen under the settings, that plays the sound and still shows u rolls", "when u hit a multiplier, the number should come out of wheel, get big, and then slam down into the middle of ur screen. whereever the wheel might be. u dont need a mini roller if ur on the roller tab. add a little animation of the roller shrinking into the top left when u leave the tab".
+
+| # | Decision | Why |
+|---|---|---|
+| M1 | Off the Roll tab (once the dumpster is open), a mini roller sits under the settings gear (MiniRoller.tsx): a 16 x 16 window per reel, two to a row with an odd last one centred. While a reel spins, black silhouettes of unlocked items flick past, slower as its stop comes; a luck token shows its clover with a green rim for the token's hold; the find lands in color with a rim in its rarity's light. It plays the reels' own sounds (start, ticks, re-spins, landings; the token's chime still comes from tokenFx.ts, once). It runs on core's roll timer like the big reels, so it shows the same spin at the same moment, and comes back showing what it last showed. Tap it to go to the Roll tab. Not shown on the Roll tab. | Kevin's request. Item pictures as drawn (no Scale2x) to stay small. Two to a row keeps it to the corner (at most 228 x 336 stage px for 5 reels) and clear of the luck chains across the top of the battle up to four tokens long; three in a row covered a three-token chain. |
+| M2 | A luck token's slam now starts in its reel (TokenSlam.tsx): it pops up out of the reel it landed on (the Roll tab's reels, or the mini roller's window on any other tab) at the size it's drawn there, flies to the middle of the screen growing a size at a time to its Scale3x picture (0.32 s, easing out), hangs there a beat, then slams down as before (T2, R3). Its three sizes are in place from the start, so no size is ever blank while it loads. Reduced motion: no flight, the slam simply shows. | "The number should come out of the wheel, get big, and then slam down into the middle of the screen, wherever the wheel might be." |
+| M3 | Leaving the Roll tab, a copy of the machine shrinks in five steps (0.3 s) from where it was into the mini roller's spot, which fades in as it lands. Not with reduced motion. The copy is only a picture: a token landing meanwhile flies out of the mini roller, and the tutorial's hand doesn't point at it. | "A little animation of the roller shrinking into the top left when u leave the tab." |
+
+## Big chains pay off, a loss retries the world, volume sliders, sound that always starts (Nov 4)
 
 Kevin: "are u sure my luck multipliers work? i got x60 a couple times and got nothing good", "losing doesnt have to take u to the world before. u just retry that world again", "add settings to turn down music, sound effects, etc", "sometimes the game has no sounds when i open it", "tutorial finger gets cut off from the bottom".
 
@@ -40,7 +50,7 @@ Kevin: "even if im not on the rolling page, if i landed a luck booster it should
 | # | Decision | Why |
 |---|---|---|
 | T1 | A luck token's chime plays on every tab. src/ui/tokenFx.ts times each spin's tokens from its start (reelTiming.ts tokenStops, on core's roll timer, as the reels do), so they land whether or not the reels are on screen; the Roll tab's reels report the same tokens as they show them, and each plays once, whichever comes first. A token already past (the game was away, or loaded mid-spin) isn't played late. | Off the Roll tab the reels aren't there to play it. |
-| T2 | Every token also slams onto the screen, on every tab (TokenSlam.tsx): over the battle, its Scale3x clover drops two steps and lands as its Scale2x picture, the battle gets a small kick (R3; it was a whole-screen jolt), a square ring and eight clover bits fly out, green rays turn behind it, and the reel's new luck is stamped under it ("x15 LUCK" for a x5 then a x3); after a second it lifts away in quarter-step fades (1.4 s in all). It hits 0.1 s after the chime starts, with the chime's impact. Reduced motion: no drop, jolt, ring or bits. It sits above the upgrade map and under popups and the full-screen reveal. | "Slam onto the screen like the items do." |
+| T2 | *Now starts with a flight out of its reel (M2).* Every token also slams onto the screen, on every tab (TokenSlam.tsx): over the battle, its Scale3x clover drops two steps and lands as its Scale2x picture, the battle gets a small kick (R3; it was a whole-screen jolt), a square ring and eight clover bits fly out, green rays turn behind it, and the reel's new luck is stamped under it ("x15 LUCK" for a x5 then a x3); after a second it lifts away in quarter-step fades (1.4 s in all). It hits 0.1 s after the chime starts, with the chime's impact. Reduced motion: no drop, jolt, ring or bits. It sits above the upgrade map and under popups and the full-screen reveal. | "Slam onto the screen like the items do." |
 
 ## Recorded sounds (Nov 3)
 

@@ -746,3 +746,11 @@
     color: #ffffff;
   }
 }
+
+/* The machine shrinking into the mini roller's corner as the Roll tab closes (Reel.tsx shrinkToMini). */
+.shrink {
+  position: absolute;
+  z-index: 22;
+  pointer-events: none;
+  transform-origin: 0 0;
+}

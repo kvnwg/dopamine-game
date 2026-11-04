@@ -75,8 +75,8 @@ interface UiState {
   afterBoss: { world: number; firstTime: boolean; gems: number } | null;
   /** Items the last rebirth unlocked (shown after the rebirth burst). */
   unlocked: { count: number; ids: string[] } | null;
-  /** A luck token just landed on a reel: it slams onto the screen, on any tab (TokenSlam, tokenFx.ts). */
-  tokenSlam: { id: number; x: number; total: number } | null;
+  /** A luck token just landed on reel `reel`: it flies out of that reel and slams onto the screen, on any tab (TokenSlam, tokenFx.ts). */
+  tokenSlam: { id: number; x: number; total: number; reel: number } | null;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;

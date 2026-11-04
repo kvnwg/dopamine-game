@@ -1,7 +1,7 @@
 /*
  * A luck token's multiplier out of the wheel and onto the screen (TokenSlam.tsx): over the battle, on
  * any tab, above the upgrade map and under popups and the reveal. The flight runs on the DOM from JS
- * (.fly); the slam's own moment (.slam) is 1.4 s from the hit. Whole pixels only: pictures change size
+ * (.fly); the slam's own moment (.slam) is 1.9 s from the hit. Whole pixels only: pictures change size
  * by stepping to their Scale2x/Scale3x versions, and everything moves in whole art pixel steps
  * (var(--px) = 6 stage px).
  */
@@ -25,7 +25,7 @@
   height: 0;
   z-index: 25;
   pointer-events: none;
-  animation: away 1.4s both;
+  animation: away 1.9s both;
 }
 /* It hangs there, then lifts away and fades in quarter steps. */
 @keyframes away {
@@ -64,7 +64,7 @@
   width: 660px;
   height: 660px;
   background: center / 100% 100% no-repeat;
-  animation: raysIn 1.4s both, raySpin 12s linear infinite;
+  animation: raysIn 1.9s both, raySpin 12s linear infinite;
 }
 @keyframes raysIn {
   0% {
@@ -87,7 +87,7 @@
   position: absolute;
   left: -96px;
   top: -96px;
-  animation: land 1.4s both;
+  animation: land 1.9s both;
 }
 @keyframes land {
   0% {
@@ -111,7 +111,7 @@
   top: 0;
   border: var(--px) solid #7ef08f;
   box-shadow: 0 0 0 var(--px) var(--ink);
-  animation: ring 1.4s both;
+  animation: ring 1.9s both;
 }
 @keyframes ring {
   0% {
@@ -153,7 +153,7 @@
   height: calc(2 * var(--px));
   background: #7cff6b;
   box-shadow: 0 0 0 var(--px) var(--ink);
-  animation: bit 1.4s both;
+  animation: bit 1.9s both;
 }
 @keyframes bit {
   0% {
@@ -192,7 +192,7 @@
   -webkit-text-stroke: 12px var(--ink);
   paint-order: stroke fill;
   white-space: nowrap;
-  animation: stamp 1.4s both;
+  animation: stamp 1.9s both;
 }
 @keyframes stamp {
   0% {
@@ -223,7 +223,7 @@
   -webkit-text-stroke: 10px var(--ink);
   paint-order: stroke fill;
   white-space: nowrap;
-  animation: floorIn 1.4s both;
+  animation: floorIn 1.9s both;
 }
 @keyframes floorIn {
   0%,
@@ -258,5 +258,5 @@
   font-size: 96px;
 }
 .slam[data-calm] .rays {
-  animation: raysIn 1.4s both;
+  animation: raysIn 1.9s both;
 }

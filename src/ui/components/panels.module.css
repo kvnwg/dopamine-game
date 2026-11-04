@@ -63,7 +63,7 @@
 }
 .cardLabel {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: #8b7d72;
   letter-spacing: 1px;
 }
@@ -118,7 +118,7 @@
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -128,11 +128,11 @@
   background: rgba(239, 83, 80, 0.2);
   border: var(--px) solid #ef5350;
   color: #ffb3a8;
-  font-size: 24px;
+  font-size: 30px;
   text-align: center;
 }
 .dragNote {
-  font-size: 20px;
+  font-size: 26px;
   color: #a9aed0;
   max-width: 420px;
   text-align: right;
@@ -159,7 +159,7 @@
   margin-left: var(--px);
   padding: 0 var(--px);
   background: rgba(0, 0, 0, 0.25);
-  font-size: 26px;
+  font-size: 30px;
 }
 /* Bag tiles (16 x 16 art, 108 px tiles): eight across, room above each for its "1 in X" banner. */
 .grid {
@@ -178,7 +178,7 @@
 .emptyNote {
   margin: 54px 36px;
   text-align: center;
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1.4;
   color: #a9aed0;
 }
@@ -221,7 +221,7 @@
   color: #6b2fb8;
 }
 .rbSub {
-  font-size: 23px;
+  font-size: 30px;
   color: #6d5f78;
 }
 .rbCard {
@@ -298,14 +298,14 @@
 }
 .rbFromTo b {
   color: #5bc236;
-  font-size: 22px;
+  font-size: 30px;
 }
 .rbFromTo em {
   font-style: normal;
   color: #2f8a1c;
 }
 .rbNote {
-  font-size: 22px;
+  font-size: 30px;
   line-height: 1.2;
   color: #7a6a60;
   text-align: center;

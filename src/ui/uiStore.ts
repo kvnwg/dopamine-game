@@ -121,6 +121,7 @@ export const useUi = create<UiState>((set) => ({
   toast: (text, tone = 'info') => {
     const id = toastId++;
     set((s) => ({ toasts: [...s.toasts.slice(-2), { id, text, tone }] }));
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), 2400);
+    // Up long enough to read (Kevin: things "moved too fast"): 3.5 s, more for a long one.
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), Math.max(3500, 1400 + text.length * 55));
   },
 }));

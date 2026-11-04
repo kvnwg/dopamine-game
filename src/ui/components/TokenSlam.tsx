@@ -29,7 +29,7 @@ const FLY = 230;
 const HANG = 90;
 const SLAM_AT = POP + FLY + HANG;
 /** How long the slam's own moment runs (tokenSlam.module.css runs on the same length). */
-const HIT_MS = 1400;
+const HIT_MS = 1900;
 const GREEN = '#7ef08f';
 
 /** Clover bits thrown out on impact (art px; multiples of 3, so each third of the way is whole). */

@@ -55,7 +55,7 @@
   background: rgba(26, 19, 38, 0.86);
   color: #fff;
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: 24px;
   line-height: calc(4 * var(--px));
   white-space: nowrap;
 }
@@ -117,13 +117,13 @@
 }
 .odds i {
   font-style: normal;
-  font-size: 17px;
+  font-size: 20px;
   -webkit-text-stroke: 4px var(--ink);
   paint-order: stroke fill;
 }
 .odds b {
   font-weight: 400;
-  font-size: 26px;
+  font-size: 28px;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
 }

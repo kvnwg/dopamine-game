@@ -89,7 +89,7 @@
 }
 .note {
   margin: 12px 0 0;
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1.35;
   color: #7a6a60;
 }
@@ -133,7 +133,7 @@
   paint-order: stroke fill;
 }
 .meta {
-  font-size: 25px;
+  font-size: 30px;
   color: #7a6a60;
 }
 .powerBig {
@@ -153,7 +153,7 @@
   gap: var(--px);
   height: calc(7 * var(--px));
   padding: 0 calc(2 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
   line-height: calc(7 * var(--px));
   box-shadow: var(--pixel-edge);
   color: #fff;
@@ -174,7 +174,7 @@
   display: flex;
   justify-content: space-between;
   padding: 6px calc(3 * var(--px));
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 900;
 }
 .statRow:nth-child(even) {
@@ -192,7 +192,7 @@
   gap: calc(2 * var(--px));
   margin-top: var(--px);
   padding: 0 calc(3 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
   color: #b8860b;
 }
 .enchantList {
@@ -206,7 +206,7 @@
   display: flex;
   align-items: center;
   gap: calc(2 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
   color: #5d4f47;
 }
 .enchantChip {
@@ -215,7 +215,7 @@
   padding: 0 calc(2 * var(--px));
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   line-height: calc(6 * var(--px));
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
@@ -225,7 +225,7 @@
   margin: 20px 0 0;
   text-align: center;
   font-style: italic;
-  font-size: 26px;
+  font-size: 30px;
   color: #8b7d72;
 }
 .equippedTag {
@@ -256,13 +256,13 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 27px;
+  font-size: 30px;
   font-weight: 900;
 }
 .table th {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 26px;
+  font-size: 30px;
   color: #8b7d72;
   padding: 4px 6px 9px;
   text-align: right;
@@ -352,7 +352,7 @@
 .findsTitle,
 .noFinds {
   margin: calc(2 * var(--px)) 0 0;
-  font-size: 26px;
+  font-size: 30px;
   opacity: 0.8;
 }
 /* (Each tile's "1 in X" banner sticks out above it: rows get room for it.) */
@@ -402,7 +402,7 @@
   display: flex;
   align-items: center;
   gap: calc(2 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
 }
 /* One rarity: not found yet, a faint square; found, its color in an ink frame. */
 .pip {
@@ -462,7 +462,7 @@
   gap: calc(3 * var(--px));
   padding: 0 calc(2 * var(--px)) calc(3 * var(--px));
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: #6d6157;
 }
 .volumeRow > span {

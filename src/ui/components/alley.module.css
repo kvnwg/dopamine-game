@@ -45,7 +45,7 @@
   gap: calc(2 * var(--px));
   min-height: calc(7 * var(--px));
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: var(--ink);
   white-space: nowrap;
 }
@@ -83,7 +83,7 @@
 }
 .luckyText {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 30px;
   color: #3a8f25;
   white-space: nowrap;
 }
@@ -111,7 +111,7 @@
   paint-order: stroke fill;
 }
 .luckWord {
-  font-size: 22px;
+  font-size: 30px;
   margin-top: var(--px);
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -130,7 +130,7 @@
   border: var(--px) solid #a463f2;
   background: #efe1ff;
   color: #6b2fb8;
-  font-size: 21px;
+  font-size: 27px;
   line-height: calc(5 * var(--px));
   white-space: nowrap;
 }
@@ -220,7 +220,7 @@
   box-shadow: var(--pixel-edge);
   background: #7c82a8;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 30px;
   line-height: calc(5 * var(--px));
   color: #fff;
   white-space: nowrap;
@@ -294,7 +294,7 @@
 }
 .deltaWord {
   margin-top: var(--px);
-  font-size: 22px;
+  font-size: 30px;
   letter-spacing: 2px;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -303,7 +303,7 @@
   display: flex;
   align-items: center;
   gap: var(--px);
-  font-size: 26px;
+  font-size: 30px;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
 }
@@ -328,14 +328,14 @@
   animation: platePop 300ms steps(3) 180ms both;
 }
 .oddsTier {
-  font-size: 20px;
+  font-size: 26px;
   line-height: 1;
   margin-bottom: 2px;
   white-space: nowrap;
   -webkit-text-stroke: 5px var(--ink);
 }
 .oddsSmall {
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1;
 }
 .oddsBig {

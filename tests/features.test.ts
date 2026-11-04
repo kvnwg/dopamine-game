@@ -38,7 +38,7 @@ describe('a new game opens its features one by one', () => {
     expect(start?.type === 'spinStart' && start.scripted).toBe('first');
   });
 
-  it('each opens when it becomes useful, once: the Bag with the first item worn, luck and the Codex after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Worlds after World 1, Rebirth near the first rebirth, Heists with it, Perks with the second', () => {
+  it('each opens when it becomes useful, once: the Bag with the first item worn, luck, the Codex and Worlds after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Rebirth near the first rebirth, Heists with it, Perks with the second', () => {
     let st = freshState();
     let r = step(st);
     expect(r.opened).toEqual([]);
@@ -47,22 +47,19 @@ describe('a new game opens its features one by one', () => {
     st.lifetime.itemsEquipped = 1;
     r = step(st);
     expect(r.opened).toEqual(['bag']);
-    // The tutorial ends: luck and the Codex (Upgrades and the dumpster wait for gold).
+    // The tutorial ends: luck (the odds), the Codex (the items) and Worlds, introduced in that order (a
+    // new game's raccoon waits there for his first world); Upgrades and the dumpster wait for gold.
     st = r.st;
     st.dumpster.beginner = { state: 'done', uid: null };
     st.currencies.coins = 0;
     r = step(st);
-    expect(r.opened).toEqual(['luck', 'codex']);
+    expect(r.opened).toEqual(['luck', 'codex', 'worlds']);
     // Gold for the cheapest upgrade (and the dumpster's).
     st = r.st;
     st.currencies.coins = Math.max(upgradeCost(st.dumpster.level), 1e6);
     r = step(st);
     expect(r.opened).toEqual(['upgrades', 'dumpster']);
-    // World 1 beaten: Worlds; a couple of worlds short of the first rebirth's: Rebirth.
-    st = r.st;
-    st.stage.highestCleared = 1;
-    r = step(st);
-    expect(r.opened).toEqual(['worlds']);
+    // A couple of worlds short of the first rebirth's: Rebirth.
     st = r.st;
     st.stage.highestCleared = rebirthTabWorld();
     r = step(st);

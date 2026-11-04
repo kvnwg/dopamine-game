@@ -6,7 +6,9 @@
  *  - the Bag, once the first item is on the raccoon;
  *  - luck and the Codex, once the tutorial is over;
  *  - Upgrades and the dumpster's own upgrade, once the tutorial is over and one is affordable;
- *  - Worlds, once World 1's boss is beaten; Rebirth, a couple of worlds before the first rebirth's;
+ *  - Worlds, once the tutorial is over (after Luck and the Codex: the player picks the first world
+ *    there, and only then does the raccoon start fighting); Rebirth, a couple of worlds before the
+ *    first rebirth's;
  *  - Heists, with the first rebirth (BAL.heist.unlockRebirths);
  *  - the Upgrades screen's Perks page, with the second rebirth (BAL.perks.unlockRebirths).
  * Core decides when each opens; the UI introduces them one at a time (the tutorial points at it) and
@@ -20,8 +22,12 @@ import { perksOpen } from './perks';
 import { rebirthRequirement } from './rebirth';
 import { affordableUpgrades } from './upgrades';
 
-/** The order features are introduced in when several are waiting. */
-export const FEATURE_ORDER: readonly Feature[] = FEATURES;
+/**
+ * The order features are introduced in when several are waiting: as the tutorial ends, Luck (the
+ * rarity odds) and the Codex (every item) come first, then Worlds, where the player picks the first
+ * world and the fighting starts (stage.chosen).
+ */
+export const FEATURE_ORDER: readonly Feature[] = ['roll', 'bag', 'luck', 'codex', 'worlds', 'upgrades', 'dumpster', 'rebirth', 'heist', 'perks'];
 
 export function hasFeature(state: Pick<GameState, 'features'>, f: Feature): boolean {
   return state.features.unlocked.includes(f);
@@ -58,7 +64,8 @@ function ready(d: GameState, f: Feature): boolean {
     case 'dumpster':
       return tutorialOver(d) && d.currencies.coins >= dumpsterUpgradeCost(d.dumpster.level);
     case 'worlds':
-      return d.stage.highestCleared >= 1 || d.rebirths > 0;
+      // With the tutorial over (a new game waits for its first pick here), or a world already beaten.
+      return tutorialOver(d) || d.stage.highestCleared >= 1 || d.rebirths > 0;
     case 'rebirth':
       return d.stage.highestCleared >= rebirthTabWorld() || d.rebirths > 0;
     case 'heist':

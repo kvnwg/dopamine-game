@@ -92,7 +92,7 @@
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 30px;
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -274,7 +274,7 @@
   background: #fff;
   box-shadow: var(--pixel-edge), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   line-height: calc(7 * var(--px));
   color: var(--ink);
   white-space: nowrap;
@@ -400,7 +400,7 @@
 }
 .choiceAuto {
   position: relative;
-  font-size: 24px;
+  font-size: 30px;
   opacity: 0.9;
 }
 

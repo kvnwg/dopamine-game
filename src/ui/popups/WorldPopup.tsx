@@ -20,8 +20,12 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
   if (!def) return null;
   const threat = worldThreat(g, world);
   const r = worldRewards(world);
-  const here = g.battle.stage === world;
-  const risky = threat.level === 'deadly' || threat.level === 'oneShot';
+  // Before the first pick he stands in World 1 without fighting: its button starts the fight.
+  const here = g.stage.chosen && g.battle.stage === world;
+  // The first pick, World 1 (where the tutorial points): a friendly start, no threat read-out (at level 1
+  // every world reads as deadly; he levels up through the waves before its boss).
+  const firstPick = !g.stage.chosen && world === 1;
+  const risky = !firstPick && (threat.level === 'deadly' || threat.level === 'oneShot');
   const tier = itemTierFor({ battle: { ...g.battle, stage: world }, stage: g.stage });
   const go = () => {
     if (risky && !armed) {
@@ -36,14 +40,20 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
     useUi.getState().setTab('alley');
     onClose();
   };
-  const tone = threat.level === 'easy' ? 'green' : threat.level === 'tough' ? 'gold' : 'red';
+  const tone = firstPick || threat.level === 'easy' ? 'green' : threat.level === 'tough' ? 'gold' : 'red';
   return (
     <Modal title={t('battle.worldLabel', { n: world, name: def.name })} tone={tone} onClose={onClose}>
       <div className={s.worldThumb}>{thumb && <PixelArt art={thumb} />}</div>
-      <div className={s.threatRow}>
-        <ThreatChip level={threat.level} big />
-        <span className={s.threatText}>{t(`worlds.margin${threat.level[0].toUpperCase()}${threat.level.slice(1)}`)}</span>
-      </div>
+      {firstPick ? (
+        <div className={s.threatRow}>
+          <span className={s.threatText}>{t('worlds.firstPick')}</span>
+        </div>
+      ) : (
+        <div className={s.threatRow}>
+          <ThreatChip level={threat.level} big />
+          <span className={s.threatText}>{t(`worlds.margin${threat.level[0].toUpperCase()}${threat.level.slice(1)}`)}</span>
+        </div>
+      )}
       <div className={s.inset}>
         <div className={s.statRow}>
           <span className={s.statSub}>{t('worlds.enemyHit', { hit: formatNumber(threat.enemyHit), hp: formatNumber(threat.playerHp) })}</span>
@@ -67,8 +77,8 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
             {t('worlds.youAreHere')}
           </button>
         ) : (
-          <button className={`btn ${risky ? 'red' : ''}`} onClick={go}>
-            {risky ? (armed ? t('worlds.confirm') : t('worlds.goAnyway')) : t('worlds.go')}
+          <button className={`btn ${risky ? 'red' : ''}`} onClick={go} data-intro={g.stage.chosen ? undefined : 'worldGo'}>
+            {risky ? (armed ? t('worlds.confirm') : t('worlds.goAnyway')) : g.stage.chosen ? t('worlds.go') : t('worlds.start')}
           </button>
         )}
       </div>

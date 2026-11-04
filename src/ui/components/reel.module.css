@@ -421,7 +421,7 @@
 .bank[data-n='2'] .tier {
   left: var(--lx);
   top: calc(2 * var(--px) + var(--art) / 2 + 44px);
-  font-size: 26px;
+  font-size: 30px;
   -webkit-text-stroke: 5px var(--ink);
 }
 .bank[data-side] .cell[data-revealed] .tier {
@@ -699,7 +699,7 @@
   height: calc(5 * var(--px));
   padding: 0 var(--px);
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: 26px;
   line-height: calc(5 * var(--px));
   color: #ffffff;
   background: #5a5668;

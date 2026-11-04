@@ -4,8 +4,8 @@
  * Roll tab, a small bank of the dumpster's reels sits under the settings gear: each reel a window of
  * one item at its own size, flicking through black silhouettes while it spins (slowing as it nears its
  * stop), holding on a luck token's clover, and landing on its find in color with a rim in its rarity's
- * light, with the reels' own sounds (start, ticks, re-spins, landings; the token's chime and slam come
- * from tokenFx.ts). It runs on core's roll timer, like the Roll tab's reels, so it shows the same spin
+ * light. It is silent (Kevin: "when ur off the roll tab, no more rolling sounds appear, except for luck
+ * multipliers"): only a luck token's chime and slam sound, from tokenFx.ts. It runs on core's roll timer, like the Roll tab's reels, so it shows the same spin
  * at the same moment. Tap it to go to the Roll tab. Leaving the Roll tab, the big machine shrinks into
  * it (Reel.tsx).
  */
@@ -13,7 +13,6 @@ import { useEffect, useRef, type CSSProperties } from 'react';
 import { gameStore, useGame } from '../../app/store';
 import { rarityIndex, reelCount } from '../../core';
 import { itemArt, luckTokenArt, UI_PX } from '../../render/icons';
-import { audio } from '../../services/audio';
 import { t } from '../i18n';
 import { tierLight } from '../reelDrama';
 import { filler } from '../reelStrip';
@@ -51,7 +50,6 @@ interface Plan {
   /** The landed find's picture and rim. */
   url: string;
   rim: string;
-  tier: number;
   /** Stops passed; when a token's hold ends; the next silhouette flick (ms, page clock); flicks so far. */
   reached: number;
   holdUntil: number;
@@ -74,7 +72,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
     let key = '';
     let t0 = 0;
     let plan: Plan[] = [];
-    let lastReel = 0;
     const setWin = (i: number, url: string, state: 'spin' | 'token' | 'landed', rim: string | null) => {
       const img = imgs.current[i];
       const win = wins.current[i];
@@ -107,7 +104,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
             stops,
             url: itemArt(r.item.baseId, 1).url,
             rim: tierLight(rarityIndex(r.item.rarity)),
-            tier: rarityIndex(r.item.rarity),
             reached: stops.filter((st) => st.at <= timer).length,
             holdUntil: 0,
             nextFlick: 0,
@@ -115,7 +111,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
             fillers: Array.from({ length: 12 }, (_, f) => itemArt(filler(r.item.uid * 31 + i * 101 + f, false, rebirths, false).baseId, 1).url),
           };
         });
-        lastReel = plan.reduce((best, p, i) => (p.stops[p.stops.length - 1].at > plan[best].stops[plan[best].stops.length - 1].at ? i : best), 0);
         // Joined mid-spin: whatever has already landed shows as landed.
         plan.forEach((p, i) => {
           if (p.reached >= p.stops.length) setWin(i, p.url, 'landed', p.rim);
@@ -124,7 +119,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
             setWin(i, luckTokenArt(p.stops[p.reached - 1].token!, 1).url, 'token', '#7ef08f');
           }
         });
-        if (timer < 150) audio.reelStart();
       }
       if (!spin) return;
       const el = now - t0;
@@ -139,8 +133,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
             bump(i, -UI_PX, 140);
           } else {
             setWin(i, p.url, 'landed', p.rim);
-            const last = plan.every((q) => q.reached >= q.stops.length);
-            audio.reelLand(p.tier, last);
             bump(i, UI_PX, 140);
           }
         }
@@ -149,7 +141,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
           if (el < p.holdUntil) return;
           p.holdUntil = 0;
           p.nextFlick = 0;
-          audio.respin();
         }
         // Spinning: silhouettes flick past, slower as the stop comes (one still one, with reduced motion).
         if (now < p.nextFlick) return;
@@ -163,7 +154,6 @@ function MiniBank({ hidden }: { hidden: boolean }) {
         p.nextFlick = now + 55 + 115 * close;
         p.flick += 1;
         setWin(i, p.fillers[p.flick % p.fillers.length], 'spin', null);
-        audio.reelTick(close, i === lastReel ? 1 : 0);
       });
     };
     raf = requestAnimationFrame(frame);

@@ -67,7 +67,7 @@
 }
 .label {
   font-family: var(--font-display);
-  font-size: 27px;
+  font-size: 30px;
   line-height: calc(4 * var(--px));
   color: #8f95bd;
   white-space: nowrap;
@@ -86,7 +86,7 @@
 }
 .active .label {
   color: #fff;
-  font-size: 29px;
+  font-size: 30px;
 }
 .tab:active .icon {
   transform: translateY(var(--px));
@@ -102,7 +102,7 @@
   border: var(--px) solid var(--ink);
   background: #ef5350;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 28px;
   color: #fff;
   animation: badgeBob 1.2s steps(2) infinite;
 }

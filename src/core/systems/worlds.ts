@@ -16,8 +16,10 @@ export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean 
   const w = Math.round(world);
   // The raccoon is out on a heist: the Alley waits.
   if (d.heist?.run) return false;
-  if (w < 1 || w > worldCount() || w === d.battle.stage) return false;
+  // (Before the first pick he stands in World 1 without fighting: picking it starts the fight.)
+  if (w < 1 || w > worldCount() || (w === d.battle.stage && d.stage.chosen)) return false;
   const s = d.stage;
+  s.chosen = true;
   s.returnTo = w > d.battle.stage ? d.battle.stage : w;
   s.mode = w > s.highestCleared ? 'push' : 'farm';
   s.powerAtDeath = null;

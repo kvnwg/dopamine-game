@@ -435,6 +435,12 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
   const stats = computeStats(d);
   if (b.playerHp > stats.HP) b.playerHp = stats.HP;
 
+  // A new game's raccoon waits in his street until a world is picked (stage.chosen).
+  if (b.phase === 'idle' || !d.stage.chosen) {
+    b.playerHp = stats.HP;
+    return;
+  }
+
   if (b.phase === 'dead') {
     b.phaseTime -= dt;
     if (b.phaseTime <= 0) onDeathResolved(d, ev);

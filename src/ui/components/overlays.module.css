@@ -179,14 +179,14 @@
   padding: 0 calc(2 * var(--px));
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   line-height: calc(6 * var(--px));
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
 }
 .enchantDesc {
-  font-size: 26px;
+  font-size: 30px;
   color: #fff;
 }
 .flash {
@@ -546,7 +546,7 @@
   animation: fadeUp 400ms ease-out 500ms both;
 }
 .haulCount {
-  font-size: 28px;
+  font-size: 30px;
   color: #d8dcf5;
   animation: fadeUp 400ms ease-out 700ms both;
 }
@@ -623,7 +623,7 @@
 }
 .adSub {
   font-family: var(--font-body);
-  font-size: 26px;
+  font-size: 30px;
   color: #a9aed0;
 }
 
@@ -657,7 +657,7 @@
   background: var(--cream);
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   line-height: calc(7 * var(--px));
   color: var(--ink);
   white-space: nowrap;

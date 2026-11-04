@@ -69,13 +69,15 @@ const navTab = (tab: string) => `nav button[aria-label="${t(`tab.${tab}`)}"]`;
 /**
  * Where the hand points to introduce each feature (a button on the Roll tab falls back to the Roll
  * tab while another tab is open), and how long the introduction waits for a tap before moving on.
+ * Luck (the rarity odds) and the Codex (every item) are shown for sure: not tapped in time, their
+ * popup opens by itself (`show`).
  */
-const INTRO: Record<Exclude<Feature, 'roll'>, { target: string; fallback?: string; ms: number }> = {
+const INTRO: Record<Exclude<Feature, 'roll'>, { target: string; fallback?: string; ms: number; show?: 'luck' | 'codex' }> = {
   bag: { target: navTab('bag'), ms: 30_000 },
-  luck: { target: '[data-intro="luck"]', fallback: navTab('alley'), ms: 12_000 },
+  luck: { target: '[data-intro="luck"]', fallback: navTab('alley'), ms: 7_000, show: 'luck' },
   upgrades: { target: navTab('upgrades'), ms: 30_000 },
   worlds: { target: navTab('worlds'), ms: 30_000 },
-  codex: { target: '[data-intro="codex"]', fallback: navTab('alley'), ms: 12_000 },
+  codex: { target: '[data-intro="codex"]', fallback: navTab('alley'), ms: 7_000, show: 'codex' },
   dumpster: { target: '[data-intro="dumpster"]', fallback: navTab('alley'), ms: 15_000 },
   rebirth: { target: navTab('rebirth'), ms: 30_000 },
   heist: { target: navTab('heist'), ms: 30_000 },
@@ -270,6 +272,9 @@ export function TutorialLayer() {
   );
   // The offline-rewards popup shows from game state, not the UI's popup.
   const busy = useGame((g) => g.offline.pending !== null) || busyUi;
+  const worldsOpen = useGame((g) => g.features.unlocked.includes('worlds'));
+  const chosen = useGame((g) => g.stage.chosen);
+  const tab = useUi((u) => u.tab);
   const [finale, setFinale] = useState<number | null>(null);
   /** The "keep rolling" bubble after the first equip shows for a few seconds only. */
   const [fightUntil, setFightUntil] = useState(0);
@@ -330,11 +335,26 @@ export function TutorialLayer() {
     hand = true;
     target = INTRO[introducing];
   }
-  const showing = !busy && introducing !== null;
+  // A new game's first world: the raccoon waits until one is picked (stage.chosen). Worlds' own
+  // introduction points at its tab; once it's met, the hand stays on the tab (or World 1's card, on
+  // the Worlds tab) until he's fighting. It comes after the Bag, Luck and the Codex, and anything
+  // introduced after it (Upgrades, say) waits until he's fighting.
+  const before = introducing === 'bag' || introducing === 'luck' || introducing === 'codex';
+  const picking = !before && (step === null || step === 'fight') && worldsOpen && !chosen;
+  if (picking) {
+    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.intro.worlds'), gold: true, intro: true };
+    hand = true;
+    target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
+  }
+  const showing = !busy && introducing !== null && !picking;
   useEffect(() => {
     if (!showing || !introducing || introducing === 'roll') return;
-    // Not tapped in time: the next one gets its turn.
-    const id = setTimeout(() => seeFeature(introducing), INTRO[introducing].ms);
+    // Not tapped in time: the odds and the items open by themselves; anything else lets the next one have its turn.
+    const intro = INTRO[introducing];
+    const id = setTimeout(() => {
+      seeFeature(introducing);
+      if (intro.show) useUi.getState().openPopup(intro.show);
+    }, intro.ms);
     return () => clearTimeout(id);
   }, [showing, introducing]);
   return (

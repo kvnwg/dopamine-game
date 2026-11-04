@@ -103,7 +103,7 @@ export const EnemyStateSchema = z.object({
 export const BattleSchema = z.object({
   stage: z.number().int().positive(),
   wave: z.number().int().nonnegative(),
-  /** `idle`: a heist between stops (the hero stands, no enemies). */
+  /** `idle`: the hero stands, no enemies: a heist between stops, or a new game before its first world is picked. */
   phase: z.enum(['walking', 'fighting', 'dead', 'choice', 'idle']),
   phaseTime: z.number(),
   playerHp: z.number(),
@@ -328,6 +328,12 @@ export const GameStateSchema = z.object({
     showToughHint: z.boolean(),
     /** Losses in a row in this world: it is retried until worlds.lossesBeforeBack, then it falls back. */
     losses: z.number().int().nonnegative().default(0),
+    /**
+     * A world has been picked. A new game's raccoon waits in his street (the battle idle) until the
+     * player picks his first world on the Worlds tab (Kevin: "raccoon doesn't start attacking until u
+     * show and select a world"). Saves from before this are already fighting.
+     */
+    chosen: z.boolean().default(true),
   }),
   battle: BattleSchema,
   dumpster: z.object({
@@ -443,12 +449,13 @@ export function createInitialState(now: number, seed: number): GameState {
     equipped: emptyEquipment(),
     inventory: [],
     nextItemUid: 1,
-    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0 },
+    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0, chosen: false },
     battle: {
       stage: 1,
       wave: 0,
-      phase: 'walking',
-      phaseTime: BAL.combat.walkSeconds,
+      // Waiting for the player to pick a world (stage.chosen).
+      phase: 'idle',
+      phaseTime: 0,
       playerHp: BAL.player.base.HP,
       playerAtkProgress: 0,
       enemies: [],

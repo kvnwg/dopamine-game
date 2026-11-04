@@ -39,7 +39,7 @@ function glideLogo(boot: HTMLElement): boolean {
   if (!c.width || !w || !h) return false;
   // Screen px per title art px, and the title's logo box on screen.
   const a = c.width / TITLE.w;
-  const at = titleLogoAt(w);
+  const at = titleLogoAt();
   const to = { x: c.left + at.x * a, y: c.top + at.y * a, w: w * a, h: h * a };
   // Stop its bob first, so it flies from where it rests.
   logo.style.animation = 'none';

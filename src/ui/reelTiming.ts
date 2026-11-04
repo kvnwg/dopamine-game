@@ -15,6 +15,8 @@ export interface SpinTiming {
   spinSeconds: number;
   baseSpinSeconds?: number;
   stepSeconds?: number;
+  /** Token steps every reel landed the same token on (core matchedSteps): those count squared. */
+  matched?: readonly number[];
 }
 
 export interface ReelStop {
@@ -66,22 +68,37 @@ export interface TokenStop {
   step: number;
   at: number;
   x: number;
-  /** The reel's multiplier once it lands (this token times the ones before it on that reel). */
+  /**
+   * The reel's multiplier once it lands (this token times the ones before it on that reel, a matched
+   * one squared once the last reel has landed it).
+   */
   total: number;
+  /** The last of a matched step's tokens to land: every reel's token of that step now counts squared. */
+  match?: true;
 }
 
 /** Every luck token of a spin, in the order they land. */
 export function tokenStops(spin: SpinTiming): TokenStop[] {
   const out: TokenStop[] = [];
+  const matched = spin.matched ?? [];
   spin.reels.forEach((_, reel) => {
-    let total = 1;
     reelStops(spin, reel).forEach((stop, step) => {
       if (stop.token === null) return;
-      total *= stop.token;
-      out.push({ reel, step, at: stop.at, x: stop.token, total });
+      out.push({ reel, step, at: stop.at, x: stop.token, total: 1 });
     });
   });
-  return out.sort((a, b) => a.at - b.at);
+  out.sort((a, b) => a.at - b.at || a.reel - b.reel);
+  // A matched step completes when its last token lands; every token of an earlier step has landed
+  // by then (a token step is longer than the reels' stagger).
+  const completes = new Map<number, TokenStop>();
+  for (const tk of out) if (matched.includes(tk.step)) completes.set(tk.step, tk);
+  for (const tk of completes.values()) tk.match = true;
+  for (const tk of out) {
+    const mults = (spin.reels[tk.reel].mults ?? []).slice(0, tk.step + 1);
+    const squared = matched.filter((k) => k < tk.step || (k === tk.step && tk.match));
+    tk.total = multOf(mults, squared);
+  }
+  return out;
 }
 
 /** When reel `i` stops on its item (ms after the spin starts). */
@@ -90,7 +107,7 @@ export function itemStopMs(spin: SpinTiming, i: number): number {
   return stops[stops.length - 1].at;
 }
 
-/** Product of the tokens a reel lands on before its item (1 without any). */
-export function multOf(mults: readonly number[] | undefined): number {
-  return (mults ?? []).reduce((a, b) => a * b, 1);
+/** Product of the tokens a reel lands on before its item, the `matched` steps squared (1 without any). */
+export function multOf(mults: readonly number[] | undefined, matched: readonly number[] = []): number {
+  return (mults ?? []).reduce((a, x, k) => a * (matched.includes(k) ? x * x : x), 1);
 }

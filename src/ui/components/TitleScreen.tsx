@@ -42,7 +42,7 @@ function Title({ onClose }: { onClose: () => void }) {
     const { reduceMotion, reduceFlashing } = getGame().settings;
     try {
       setTitleShape(wide);
-      titleRef.current = new TitleRenderer(canvas, { name, label, reduceMotion, reduceFlashing });
+      titleRef.current = new TitleRenderer(canvas, { label, reduceMotion, reduceFlashing });
     } catch (err) {
       startAnyway(err);
       onClose();
@@ -52,7 +52,7 @@ function Title({ onClose }: { onClose: () => void }) {
       titleRef.current?.destroy();
       titleRef.current = null;
     };
-  }, [name, label, onClose, wide]);
+  }, [label, onClose, wide]);
 
   const play = useCallback(() => {
     const title = titleRef.current;

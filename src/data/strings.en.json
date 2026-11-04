@@ -443,6 +443,7 @@
   "codex.locked": "Rebirth {n}",
   "codex.lockedHint": "Unlocks at Rebirth {n}",
   "battle.luck": "LUCK",
+  "battle.luckMatch": "MATCH! LUCK SQUARED",
   "battle.xpGain": "+{n} XP",
   "heistUi.title": "HEISTS",
   "heistUi.sub": "Rob a joint: 3 acts of 6 stops, then the boss. Get busted and you keep half the loot.",

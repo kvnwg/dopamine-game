@@ -2,7 +2,32 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## No drag hint on the last roll, the dumpster asks only with the gold, a roomier upgrade map on PC (Nov 4, newest)
+## A hand-drawn logo, and a PLAY button with a bite out of it (Nov 4, newest)
+
+Kevin: "the dumpster legend logo on the loading screen is too dull and has no interesting factors. make it look like a whimsical human designed it, also the play button is too boring".
+
+| # | Decision | Why |
+|---|---|---|
+| L1 | The logo is no longer the pixel font made bigger. Its letters are drawn by hand (`src/render/logoGlyphs.ts`): fat, round-cornered, 20 art px tall. Each is tilted a few degrees (whole-pixel shears, so no pixel is lost or smudged) and set a little up or down. They are glossy (a light top edge, a shaded bottom edge, a white gloss mark) and stand on a 3 px drop in their own darker color. DUMPSTER is dumpster green, tossed in a heap; LEGEND is gold, on a gentle arch. | A sign painter's lettering instead of a typeface. |
+| L2 | DUMPSTER's U is a trash can (a light rim, dark ribs, a dark inside) with the raccoon peeking out of it in a little gold crown, paws on the rim. A fish skeleton lies on the R. The whole logo is a die-cut sticker: a cream border and an ink edge round its outline, the letters' holes filled. (`src/render/logoArt.ts`) | The game in one picture: a raccoon, a dumpster, and he's the legend. |
+| L3 | On the title the logo comes alive once the loading screen has gone. The letters hop in a wave every few seconds. The raccoon blinks, glances left or right, and now and then ducks into the can and pops back up. Two flies buzz round the can and the fish bone, and a shine and twinkles run over LEGEND. The loading screen shows the same logo with the raccoon blinking, the flies and the twinkles (CSS). Those stop as it glides away, so it lands on the title's logo, still at rest, without a jump. | |
+| L4 | PLAY is a chunky tomato-red sticker button: a glossy face on a deep lip, a cream play arrow, PLAY in the logo's letters, and a bite out of its top-right corner, with crumbs dropping from it now and then. Its letters wave, its arrow nudges forward, a glint crosses it, and now and then it boings. Pressed, its face sinks into the lip, flashes and throws its sparks as before. A translation the logo's letters can't spell is lettered in the pixel font. | Red stands out against the sky and the green and gold logo. |
+| L5 | On phones the logo is at the top with PLAY under it; on a PC the logo and PLAY sit side by side over the street, clear of the raccoon. | The taller logo and button didn't fit stacked in the PC title's 160 rows. |
+| L6 | The logo is the game's mark: it reads DUMPSTER LEGEND in any language. The page still carries the name as text for screen readers. | |
+
+## Matching luck tokens square the luck; tokens slam into the battle's luck rows (Nov 4)
+
+Kevin: "if u have multiple rows spinning and they all land on the same multiplier, u need to square the luck"; "no more slamming the luck multipliers on screen actually, just slam it into the top where it goes".
+
+| # | Decision | Why |
+|---|---|---|
+| M1 | A spin with two or more reels where every reel lands the same luck token at the same step of its chain counts that token squared on every reel: x5 on all three reels gives each reel x25. Each step is checked on its own, and only while every reel is still landing tokens (x2 then x5 on one reel and x3 then x5 on the other square the x5: x50 and x75). The squared luck also counts for the chain floors, so x5 on every reel guarantees each an Epic. Offline rolls follow the same rule. (`matchedSteps`, `tokenMult` in roller.ts; the spin keeps `matched`, old saves load without it.) | "Square the luck" is read as squaring the matched token's multiplier, not the raccoon's whole luck, which would be thousands of times more late in a run. |
+| M2 | The rolls are made in the same order for a single reel and on scripted spins, so seeded runs (the balance test) play out as before. With several reels, every reel's tokens are rolled before any item. Over 75-minute bot runs (seeds 1 to 5), four seeds came out identical and one finished a world lower. | A match is rare: two reels match about once in 900 spins. |
+| M3 | The middle-of-the-screen slam (green rays, ring, big "×6 LUCK") is gone. A token now pops out of its reel (the Roll tab's, or the mini roller on any other tab), rises a size bigger and dives into its place in its reel's row of tokens near the top of the battle, where it lands with a white flash, clover bits and a small kick, and the row's total ("×10 LUCK") updates. The flight tells the battle when it lands (`luckBridge`), so the two never drift apart. With Reduce motion, or when the upgrade map or a popup covers the battle, nothing flies and the row just shows it. | The row at the top was already where the luck goes; now the token visibly goes there. |
+| M4 | A chain big enough to guarantee a rarity says so under its total ("EPIC OR BETTER!", in the rarity's color), which the old slam used to show. | |
+| M5 | A match lands with the last matching token: every row's token flashes gold, the totals jump to the squared value in gold, "MATCH! LUCK SQUARED" pops up under the rows, the battle kicks a little harder and a jingle plays. On the Roll tab the reels' ×N badges turn gold with the new value. | |
+
+## No drag hint on the last roll, the dumpster asks only with the gold, a roomier upgrade map on PC (Nov 4)
 
 Kevin: "get rid of the upgrade, drag it text", "don't ask the player to upgrade dumpster when they don't have enough money", "manage the space better, there's barely any space to move and look around" (the upgrade map on a PC).
 

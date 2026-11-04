@@ -18,7 +18,7 @@ import { CHARACTER_OUTLINE } from '../render/pixel/palette';
 import { HERO_SHEET, HERO_WALK } from '../render/pixel/hero';
 import { frameBuf } from '../render/pixel/indexed';
 import { FEET_ROW } from '../render/pixel/sceneryTypes';
-import { titleArt, titleLogo, titleSky } from '../render/titleScene';
+import { logoParts, titleArt, titleLogo, titleSky } from '../render/titleScene';
 import { layerRow, worldArt } from '../render/worldLook';
 import { pngDataUrl } from './png';
 
@@ -29,7 +29,12 @@ const str = (key: string): string => DATA.strings[key] ?? key;
 
 /** The loading screen's art, at one buffer pixel per art pixel. */
 export interface BootArt {
+  /** The logo at rest on its sticker (the title's, before anything on it moves). */
   logo: PixelBuf;
+  /** Its moving parts, placed in `logo`: the raccoon's blink, two flies' rounds, LEGEND's twinkles. */
+  blink: { buf: PixelBuf; x: number; y: number };
+  flies: Array<Array<[number, number]>>;
+  twinkle: { strip: PixelBuf; size: number; at: Array<[number, number]> };
   /** The walk's frames side by side (facing right, as on the title), in playing order. */
   walk: PixelBuf;
   /** One frame's size and where his feet are in it (the bottom row they stand on, the column between them). */
@@ -102,10 +107,42 @@ export function bootArt(): BootArt {
     renderText(str(`boot.line${n}`), { face: 'big', fill: ['#ffffff', '#ffffff', '#ffffff', '#fff3d6', '#fff3d6', '#ffe6b8', '#ffe6b8'], ink: TEXT_INK, shadow: true }),
   );
   // The title's clouds: its high pair and its low pair, each pair's rows relative to its first.
-  const tc = titleArt(str('title.name'), str('title.play')).clouds;
+  const tc = titleArt(str('title.play')).clouds;
   const pair = (cs: typeof tc) => cs.map((c) => ({ buf: c.buf, dy: c.y - cs[0].y, speed: c.speed }));
+  // The logo's moving parts, in the logo picture's px (its pieces sit `pad` in from the sticker's edge).
+  const { art, pad } = logoParts();
+  const coon = art.pieces.find((p) => p.kind === 'coon')!;
+  const round = (c: { x: number; y: number }, rx: number, ry: number, up: number, n: number): Array<[number, number]> =>
+    Array.from({ length: n }, (_, k) => {
+      const a = (k / n) * Math.PI * 2;
+      return [Math.round(pad + c.x + Math.sin(a) * rx), Math.round(pad + c.y - up + Math.sin(a * 2) * ry)];
+    });
+  // Twinkles: dot, plus, star, plus, dot (the title's), five frames side by side.
+  const TW = [[[0, 0]], [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]], [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1], [-2, 0], [2, 0], [0, -2], [0, 2]]];
+  const twFrames = [TW[0], TW[1], TW[2], TW[1], TW[0]];
+  const strip = blank(5 * twFrames.length, 5);
+  twFrames.forEach((f, i) => {
+    for (const [dx, dy] of f) {
+      const k = ((2 + dy) * strip.w + i * 5 + 2 + dx) * 4;
+      strip.px.set(dx === 0 && dy === 0 ? [255, 255, 255, 255] : [255, 246, 200, 255], k);
+    }
+  });
+  // On the top edges of LEGEND's first and last letters and its middle one.
+  const legend = art.pieces.filter((p) => p.kind === 'letter' && p.line === 1);
+  const topEdge = (p: (typeof legend)[number]): [number, number] => {
+    for (let y = 0; y < p.buf.h; y++) {
+      for (let x = 2; x < p.buf.w - 2; x++) {
+        const k = (y * p.buf.w + x) * 4;
+        if (p.buf.px[k + 3] && p.buf.px[k] + p.buf.px[k + 1] + p.buf.px[k + 2] > 400) return [pad + p.x + x + 1, pad + p.y + y];
+      }
+    }
+    return [pad + p.x, pad + p.y];
+  };
   return {
-    logo: titleLogo(str('title.name')),
+    logo: titleLogo(),
+    blink: { buf: art.coon[1], x: pad + coon.x, y: pad + coon.y },
+    flies: [round(art.can, 13, 5, 9, 24), round(art.bone, 8, 4, 3, 20)],
+    twinkle: { strip, size: 5, at: [topEdge(legend[0]), topEdge(legend[2]), topEdge(legend[legend.length - 1])] },
     walk,
     // Mirrored, his feet's column moves to the other side of the frame.
     frame: { w: fw, h: fh, feetX: fw - 1 - HERO_SHEET.anchor.x, feetY: HERO_SHEET.anchor.y },
@@ -228,12 +265,57 @@ ${cloudWidths.map((w) => `@keyframes bt-cloud${w} { to { transform: translateX(c
   padding-top: calc(8 * var(--u));
 }
 #boot .bt-logo {
-  display: block;
+  position: relative;
+  flex: none;
   width: calc(${a.logo.w} * var(--u));
   height: calc(${a.logo.h} * var(--u));
   animation: bt-bob 1.6s steps(1) infinite;
 }
 @keyframes bt-bob { 50% { transform: translateY(calc(-1 * var(--u))); } }
+#boot .bt-logo-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+/* The raccoon blinks now and then; flies buzz round the can and the fish bone; LEGEND twinkles. Each
+   rests hidden, so stopping them (the glide) leaves the logo exactly as the title's rests. */
+#boot .bt-blink {
+  position: absolute;
+  left: calc(${a.blink.x} * var(--u));
+  top: calc(${a.blink.y} * var(--u));
+  width: calc(${a.blink.buf.w} * var(--u));
+  height: calc(${a.blink.buf.h} * var(--u));
+  opacity: 0;
+  animation: bt-blink 3.3s steps(1) infinite;
+}
+@keyframes bt-blink { 0%, 100% { opacity: 0; } 61%, 64.5% { opacity: 1; } 65% { opacity: 0; } }
+#boot .bt-fly {
+  position: absolute;
+  left: calc(-1 * var(--u));
+  top: calc(-1 * var(--u));
+  width: calc(3 * var(--u));
+  height: calc(2 * var(--u));
+  opacity: 0;
+  background: linear-gradient(90deg, #eaf6ff 0 33.4%, transparent 33.4% 66.6%, #eaf6ff 66.6%) 0 0 / 100% 50% no-repeat,
+    linear-gradient(90deg, transparent 0 33.4%, ${TEXT_INK} 33.4% 66.6%, transparent 66.6%) 0 100% / 100% 50% no-repeat;
+}
+${a.flies.map((path, i) => `#boot .bt-fly${i} { animation: bt-fly${i} ${(path.length * 0.11).toFixed(2)}s steps(1) infinite; }
+@keyframes bt-fly${i} { ${path.map(([x, y], k) => `${((k / path.length) * 100).toFixed(2)}% { opacity: 1; transform: translate(calc(${x} * var(--u)), calc(${y} * var(--u))); }`).join(' ')} 100% { opacity: 1; transform: translate(calc(${path[0][0]} * var(--u)), calc(${path[0][1]} * var(--u))); } }`).join('\n')}
+#boot .bt-tw {
+  position: absolute;
+  width: calc(${a.twinkle.size} * var(--u));
+  height: calc(${a.twinkle.size} * var(--u));
+  opacity: 0;
+  background: url(${pngDataUrl(a.twinkle.strip)}) 0 0 / ${a.twinkle.strip.w / a.twinkle.size * 100}% 100% no-repeat;
+  animation: bt-tw 2.4s steps(1) infinite;
+}
+@keyframes bt-tw {
+  0%, 100% { opacity: 0; background-position-x: 0%; }
+  70% { opacity: 1; background-position-x: 0%; }
+  73% { opacity: 1; background-position-x: 25%; }
+  76% { opacity: 1; background-position-x: 50%; }
+  79% { opacity: 1; background-position-x: 75%; }
+  82% { opacity: 1; background-position-x: 100%; }
+  85% { opacity: 0; }
+}
+${a.twinkle.at.map(([x, y], i) => `#boot .bt-tw${i} { left: calc(${x - 2} * var(--u)); top: calc(${y - 2} * var(--u)); animation-delay: ${(i * 0.8).toFixed(1)}s; }`).join('\n')}
+#boot[data-glide] .bt-logo > * { animation: none; }
 #boot .bt-load { display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--u)); }
 #boot .bt-bar {
   position: relative;
@@ -325,7 +407,7 @@ ${lineKeyframes(L, CYCLE)}
 }
 @keyframes bt-walk { to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) {
-  #boot .bt-logo, #boot .bt-shine, #boot .bt-ground, #boot .bt-walk, #boot .bt-line, #boot .bt-sky > div { animation: none; }
+  #boot .bt-logo, #boot .bt-logo > *, #boot .bt-shine, #boot .bt-ground, #boot .bt-walk, #boot .bt-line, #boot .bt-sky > div { animation: none; }
   #boot .bt-line0 { opacity: 1; }
 }`;
   const lines = a.lines
@@ -339,7 +421,12 @@ ${lineKeyframes(L, CYCLE)}
       `<div class="bt-sky bt-high">${a.clouds.high.map((_, i) => `<div class="bt-ch${i} bt-px"></div>`).join('')}</div>` +
       `<div class="bt-sky bt-low">${a.clouds.low.map((_, i) => `<div class="bt-cl${i} bt-px"></div>`).join('')}</div>` +
       '<div class="bt-top">' +
-      `<img class="bt-logo" src="${pngDataUrl(a.logo)}" alt="" data-w="${a.logo.w}" data-h="${a.logo.h}">` +
+      `<div class="bt-logo" data-w="${a.logo.w}" data-h="${a.logo.h}">` +
+      `<img class="bt-logo-img bt-px" src="${pngDataUrl(a.logo)}" alt="">` +
+      `<img class="bt-blink bt-px" src="${pngDataUrl(a.blink.buf)}" alt="">` +
+      a.flies.map((_, i) => `<i class="bt-fly bt-fly${i}"></i>`).join('') +
+      a.twinkle.at.map((_, i) => `<i class="bt-tw bt-tw${i} bt-px"></i>`).join('') +
+      '</div>' +
       `<div class="bt-load"><div class="bt-bar"><i class="bt-fill"></i><i class="bt-shine"></i></div><div class="bt-lines">${lines}</div></div>` +
       '</div>' +
       '<div class="bt-street"><div class="bt-ground bt-px"></div><div class="bt-shadow"></div><div class="bt-hero"><div class="bt-walk bt-px"></div></div></div>' +
@@ -367,7 +454,7 @@ export function splashImage(w: number, h: number, opts: { art: 'hero' | 'logo+he
   const hero = flipX(frameBuf(HERO_SHEET, HERO_SHEET.anims.idle.frames[0]));
   let art = hero;
   if (opts.art === 'logo+hero') {
-    const logo = titleLogo(str('title.name'));
+    const logo = titleLogo();
     const gap = 10;
     art = blank(Math.max(logo.w, hero.w), logo.h + gap + hero.h);
     blit(art, logo, Math.floor((art.w - logo.w) / 2), 0);

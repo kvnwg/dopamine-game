@@ -1230,6 +1230,7 @@
     },
     "shop": {
       "healPct": 30,
+      "maxHpChance": 0.75,
       "perks": 2,
       "prices": {
         "heal": 15,

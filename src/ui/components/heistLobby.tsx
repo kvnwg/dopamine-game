@@ -1,7 +1,7 @@
 /**
  * The Heist tab with no run going: tickets (x/6, with the time to the daily refill), the three places
- * to rob as cards (a slice of their look, the boss, wins; locked ones say what opens them), the stops a
- * run is made of, and a big Start button that spends a ticket. A rewarded ad gives +1 ticket once a day.
+ * to rob as cards (a slice of their look, the boss, wins; locked ones say what opens them), the picked
+ * place's one-liner, and a big Start button that spends a ticket. A rewarded ad gives +1 ticket once a day.
  */
 import { useState, type CSSProperties } from 'react';
 import { canStartHeist, formatNumber, heistAdTicketAvailable, heistsOpen } from '../../core';
@@ -17,9 +17,6 @@ import {
   type HeistLocationId,
 } from './heistShared';
 import s from './heist.module.css';
-
-/** The stops a run is made of, for the legend. */
-const LEGEND = ['fight', 'choice', 'treasure', 'shop', 'shrine', 'trap', 'wheel', 'boss'] as const;
 
 /** A place's look: the busiest stretch of its backdrop, cropped to the card. */
 function LocThumb({ world }: { world: number }) {
@@ -158,14 +155,6 @@ function HeistLobbyOpen() {
       <p className={s.blurb}>
         <b>{locationInfo(sel).name}:</b> {locationInfo(sel).blurb}
       </p>
-      <div className={s.legend}>
-        {LEGEND.map((k) => (
-          <span key={k} className={s.legendItem}>
-            <NodeIcon kind={k} />
-            {t(`heist.node.${k}`)}
-          </span>
-        ))}
-      </div>
       <div className={s.lobbyActions}>
         <button className={`btn blue small ${s.adBtn}`} disabled={!adOk} onClick={adTicket}>
           <TvIcon />

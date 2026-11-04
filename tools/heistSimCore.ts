@@ -10,7 +10,7 @@
  */
 import {
   heistChoose, heistClaim, heistDecline, heistEventDef, heistGo, heistLeaveShop, heistOptionAvailable,
-  heistRevive, heistTick, perkDef, Rng, startHeist, TICK_SECONDS, type CoreEvent, type GameState, type HeistRun,
+  heistRevive, heistTick, perkDef, Rng, startHeist, TICK_SECONDS, type CoreEvent, type GameState, type HeistRun, type ShopItem,
 } from '../src/core';
 import { BAL, type LocationId, type OutcomeDef } from '../src/data';
 
@@ -39,6 +39,12 @@ export interface HeistSimResult {
   avgHpLeft: number;
   bags: number;
   coins: number;
+  /** Shop stops played, and how many of them the run couldn't buy anything in (Fresh Stock aside). */
+  shops: number;
+  brokeShops: number;
+  /** Shop stops that stocked a heal, and a +max HP perk. */
+  healShops: number;
+  maxHpShops: number;
 }
 
 const TAG_SCORE: Record<string, number> = { tank: 9, speed: 8, crit: 7, fire: 6, crew: 6, chaos: 5, loot: 2 };
@@ -152,6 +158,20 @@ function decide(d: GameState, rng: Rng, ev: CoreEvent[]): boolean {
   }
 }
 
+/** The decision the run waits on now (read afresh after a step that may have opened one). */
+function pendingOf(d: GameState): HeistRun['pending'] {
+  return d.heist.run?.pending ?? null;
+}
+
+/** A shop stop just opened: what it stocks, and whether the run can pay for any of it. */
+function countShop(run: HeistRun, stock: ShopItem[], out: HeistSimResult): void {
+  out.shops += 1;
+  const buys = stock.filter((s) => s.kind !== 'reroll');
+  if (buys.every((s) => run.coins < s.price)) out.brokeShops += 1;
+  if (stock.some((s) => s.kind === 'heal')) out.healShops += 1;
+  if (stock.some((s) => s.kind === 'perk' && (perkDef(s.id)?.effect.hpPct ?? 0) > 0)) out.maxHpShops += 1;
+}
+
 /** Plays one run to its end. */
 function playRun(base: GameState, opts: HeistSimOptions, rng: Rng, out: HeistSimResult): void {
   const d = structuredClone(base);
@@ -197,6 +217,8 @@ function playRun(base: GameState, opts: HeistSimOptions, rng: Rng, out: HeistSim
     }
     if (run.status === 'ready' && d.battle.phase !== 'walking') {
       heistGo(d, rng, ev);
+      const opened = pendingOf(d);
+      if (opened?.kind === 'shop' && ev.some((e) => e.type === 'heistNode' && e.kind === 'shop')) countShop(run, opened.stock, out);
       continue;
     }
     heistTick(d, rng, now, ev, TICK_SECONDS);
@@ -208,7 +230,7 @@ function playRun(base: GameState, opts: HeistSimOptions, rng: Rng, out: HeistSim
 export function simulateHeists(opts: HeistSimOptions): HeistSimResult {
   const out: HeistSimResult = {
     runs: opts.runs, wins: 0, winRate: 0, lostAt: [0, 0, 0, 0], revives: 0, avgSeconds: 0, avgPerks: 0,
-    avgLevel: 0, avgHpLeft: 0, bags: 0, coins: 0,
+    avgLevel: 0, avgHpLeft: 0, bags: 0, coins: 0, shops: 0, brokeShops: 0, healShops: 0, maxHpShops: 0,
   };
   const rng = new Rng(Rng.hashSeed(opts.seed));
   for (let i = 0; i < opts.runs; i++) playRun(opts.state, opts, rng, out);

@@ -1,7 +1,8 @@
 /**
  * CrazyGames store covers drawn from the game's own art: World 1's street and sky (titleArt), the
  * raccoon cheering, the dumpster with its lid blown off and rare finds bursting out of it in their
- * rarity colors, and the game's mark: the raccoon's face raising a spatula (raccoonMark.ts), no text.
+ * rarity colors, and the game's mark: the raccoon's face as the game draws him, raising his spatula
+ * (raccoonMark.ts), no text.
  *
  * Everything is composed on a canvas of art pixels, then scaled up `k` times with no smoothing, so the
  * whole cover keeps square pixels. The raccoon, the finds and the logo use the game's Scale2x versions
@@ -67,7 +68,7 @@ const P = {
 }[layout];
 
 // The logo's place (drawn last, on top); the finds keep clear of it.
-const logo = raccoonMark();
+const logo = raccoonMark(layout === 'land' ? 5 : layout === 'port' ? 4 : 3); // the game's own pixels, whole-pixel scaled
 const logoAt = { x: Math.max(2, Math.min(AW - logo.w - 2, Math.round(AW * P.logoX - logo.w / 2))), y: P.logoY };
 
 // ---- the dumpster, lid blown off, light pouring out

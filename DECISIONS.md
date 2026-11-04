@@ -2,7 +2,18 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## The upgrade map on one canvas (Nov 4, newest)
+## Full-screen moments that iPhones can hold (Nov 4, newest)
+
+Kevin: "i just got a rare item and the animation crashed my game".
+
+| # | Decision | Why |
+|---|---|---|
+| R1 | The cause, from WebKit's own source (`GraphicsLayerCA::updateRootRelativeScale`: "For now we disable this logic altogether"). Safari draws every composited layer (anything animated, or anything over the battle) at the screen's pixel ratio, 3 on an iPhone, per stage pixel. It ignores the stage's shrink to fit the screen (`transform: scale(0.39)` sideways), so each layer costs about 6.6 times what it shows. A layer that covers the stage was about 75 MB; a 1500 px ray burst about 81 MB; a layer only gets scaled down past 156 MB on its own. A big reveal stacked several of these (the black screen over the game, two ray bursts, the shock ring, white flashes, full-screen fades), several hundred MB at once. The same went for the old upgrade map, and probably the big haul crash before. | Measured in Chromium here, the reveal held 112 to 141 layers covering 21 million stage pixels, about 770 MB if Safari draws them as above. |
+| R2 | While a full-screen moment is up, everything under it stops drawing: the upgrade map at once, and a rare find's reveal, a big haul or a rebirth once its backdrop has faded in (0.3 s). Only the moment itself, toasts, popups and hover cards stay (`data-keep-lit`). With nothing composited underneath, the moment is no longer one big layer over the game: it is drawn into the page at the screen's own size. Everything shows again the moment it closes. The haul's and the rebirth's backdrops are solid now (they let the game show through before), and the map no longer fades in. | During a reveal, the game's own layers (reels, battle, bank, toasts, nav) are gone; at its darkest the reveal is 0.8 million stage pixels of layers. |
+| R3 | Every ray burst (reveal, haul, rebirth, the tutorial's finale, the equip slam, behind rare results on the reels) is an image element, not a box with the rays as its background. Safari shows an image element straight from its small picture (384 px, `RenderLayerBacking::isDirectlyCompositedImage`), however big it is drawn and while it turns. The shock ring at a big landing is a small canvas (one pixel per art pixel, scaled up crisp), drawn step by step and removed when done. It was a growing bordered box that stayed as a layer after it faded. The reveal's color glow no longer fades in (it comes in under the white flash). The white flashes are plain color, which Safari holds without a picture. | The reveal looks as before: rays, glow, shock ring, confetti, sparkles, flash. |
+| R4 | Not done: popups (luck, settings, item details) still darken the game over a full-screen layer, the same cost as before. They show the game dimmed behind them on purpose, and none has been reported crashing. | |
+
+## The upgrade map on one canvas (Nov 4)
 
 Kevin, on the version above: "nope, i start the game, click the upgrades tab and it still crashes me".
 

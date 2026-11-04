@@ -97,6 +97,7 @@ function Title({ onClose }: { onClose: () => void }) {
       ref={rootRef}
       className={s.title}
       data-title
+      data-keep-lit
       onClick={play}
       onPointerDown={() => press(true)}
       onPointerUp={() => press(false)}

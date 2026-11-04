@@ -14,6 +14,7 @@ import { revealLanded, skipReveal } from '../rollController';
 import { DRAMA_LEVEL, revealPhases } from '../revealTiming';
 import { stagePoint } from '../drag';
 import { RAINBOW, raysUrl } from '../rays';
+import { Rays } from './Rays';
 import { t } from '../i18n';
 import { stageSize, useUi, type RollView } from '../uiStore';
 import { enchantLabel, fmtOdds } from './AlleyPanel';
@@ -123,6 +124,54 @@ function Sparkles({ n }: { n: number }) {
   );
 }
 
+/** `hex` mixed with white (`w` of white), as CSS color-mix(in srgb, hex, #fff w) would. */
+function mixWhite(hex: string, w: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.round(v + (255 - v) * w);
+  return `rgb(${ch((n >> 16) & 255)}, ${ch((n >> 8) & 255)}, ${ch(n & 255)})`;
+}
+
+/**
+ * The landing's shock wave: a one-art-pixel square ring growing from the item to 1512 px and fading,
+ * in 16 steps over 0.72 s, then gone. Drawn on a canvas of one pixel per art pixel (scaled up crisp):
+ * as a growing bordered box it was a layer as big as itself, redrawn every step, and stayed after.
+ */
+function ShockRing({ color }: { color: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c?.getContext('2d');
+    if (!c || !ctx) return;
+    const t0 = performance.now();
+    let raf = 0;
+    let shown = -1;
+    const frame = (now: number) => {
+      const k = Math.min(15, Math.floor(((now - t0) / SHOCK_MS) * 16));
+      if (k !== shown) {
+        shown = k;
+        ctx.clearRect(0, 0, SHOCK_ART, SHOCK_ART);
+        const size = Math.max(2, Math.round((108 + (SHOCK_ART * UI_PX - 108) * (k / 16)) / UI_PX));
+        const o = Math.floor((SHOCK_ART - size) / 2);
+        ctx.globalAlpha = 1 - k / 16;
+        ctx.fillStyle = color;
+        ctx.fillRect(o, o, size, 1);
+        ctx.fillRect(o, o + size - 1, size, 1);
+        ctx.fillRect(o, o, 1, size);
+        ctx.fillRect(o + size - 1, o, 1, size);
+      }
+      if (now - t0 < SHOCK_MS) raf = requestAnimationFrame(frame);
+      else setDone(true);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [color]);
+  return done ? null : <canvas ref={ref} className={s.shock} width={SHOCK_ART} height={SHOCK_ART} aria-hidden />;
+}
+const SHOCK_MS = 720;
+/** The ring's canvas in art pixels (1512 stage px across at the end). */
+const SHOCK_ART = 252;
+
 /** The reveal's light starts no higher than Shiny's blue, so it never gives the ceiling away. */
 const GLOW_START = RARITIES.indexOf('shiny');
 
@@ -150,7 +199,7 @@ function RareReveal({ view }: { view: RollView }) {
   const skip = useRef(false);
   const phaseRef = useRef<Phase>('black');
   const rootRef = useRef<HTMLDivElement>(null);
-  const raysRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const raysRefs = useRef<(HTMLImageElement | null)[]>([]);
   // The light's tier (climbs with the counter); the rays follow once a step has settled.
   const glowRef = useRef(Math.min(itemTier, GLOW_START));
   const raysTierRef = useRef(glowRef.current);
@@ -206,9 +255,9 @@ function RareReveal({ view }: { view: RollView }) {
       }
       if (el - glowAt >= 180 && raysTierRef.current !== glow) {
         raysTierRef.current = glow;
-        const url = `url(${raysFor(glow)})`;
+        const url = raysFor(glow);
         raysRefs.current.forEach((r) => {
-          if (r) r.style.backgroundImage = url;
+          if (r && r.getAttribute('src') !== url) r.src = url;
         });
       }
       if (next !== cur) {
@@ -257,12 +306,13 @@ function RareReveal({ view }: { view: RollView }) {
   const landed = phase === 'landed';
   const forYou = landed && luck >= 1.2 && view.luckOdds < view.odds;
   // The light's color right now (the effect steps it up the tiers straight on the DOM).
-  const raysNow = `url(${raysFor(raysTierRef.current)})`;
+  const raysNow = raysFor(raysTierRef.current);
   const banner = view.scripted === 'beginner' ? t('reveal.beginner') : view.scripted === 'first' ? t('reveal.firstFind') : null;
   return (
     <div
       ref={rootRef}
       className={s.rare}
+      data-keep-lit
       data-phase={phase}
       data-drama={drama}
       data-calm={calm || undefined}
@@ -274,25 +324,25 @@ function RareReveal({ view }: { view: RollView }) {
       {phase === 'dark' && <div className={s.rareSpark} />}
       {lit && <div className={s.rareGlow} />}
       {lit && !calm && (
-        <div
+        <Rays
           className={s.rays}
-          ref={(el) => {
+          url={raysNow}
+          imgRef={(el) => {
             raysRefs.current[0] = el;
           }}
-          style={{ backgroundImage: raysNow }}
         />
       )}
       {lit && !calm && lvl > 0 && (
-        <div
+        <Rays
           className={`${s.rays} ${s.raysBack}`}
-          ref={(el) => {
+          url={raysNow}
+          imgRef={(el) => {
             raysRefs.current[1] = el;
           }}
-          style={{ backgroundImage: raysNow }}
         />
       )}
       {landed && !calm && <Confetti n={[30, 44, 60][lvl]} />}
-      {landed && !calm && <div className={s.shock} />}
+      {landed && !calm && <ShockRing color={mixWhite(rarityColor(it.rarity), 0.3)} />}
       <div className={s.center}>
         <div className={s.rareTitle}>
           {landed && banner && (
@@ -416,9 +466,9 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
   const times = haul.usual ? haul.coins / haul.usual : 0;
   const worth = times > 0 ? t('haul.usual', { x: times >= 10 ? formatNumber(Math.round(times)) : times.toFixed(1) }) : t('haul.first');
   return (
-    <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })}>
+    <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })} data-keep-lit>
       <div className={s.haulBack} />
-      {!calm && <div className={s.haulRays} style={{ backgroundImage: `url(${raysUrl(['#ffd23f'], 18, 0.42)})` }} />}
+      {!calm && <Rays className={s.haulRays} url={raysUrl(['#ffd23f'], 18, 0.42)} />}
       <div className={s.haulCenter}>
         <div className={s.title}>
           <Chunky text={t(`haul.${haul.size}`)} size={[100, 112, 128][lvl]} grad="gold" />
@@ -458,9 +508,9 @@ function RebirthFx() {
   const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
   if (n === null) return null;
   return (
-    <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties}>
+    <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties} data-keep-lit>
       <div className={s.backdrop} />
-      <div className={s.rays} style={{ backgroundImage: `url(${raysUrl(['#c48bff'])})` }} />
+      <Rays className={s.rays} url={raysUrl(['#c48bff'])} />
       <Confetti n={40} />
       <div className={s.center}>
         <Chunky text={t('rebirth.done', { n })} size={124} grad="purple" className={s.title} />

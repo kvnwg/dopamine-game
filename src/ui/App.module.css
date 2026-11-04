@@ -62,10 +62,11 @@
   .panelIn { animation: none; }
 }
 .nav { height: 160px; flex: none; position: relative; z-index: 2; }
-/* Under the open upgrade map (App.tsx): not drawn at all. */
-.battle[data-covered],
-.lower[data-covered],
-.nav[data-covered] {
+/*
+ * Under a full-screen moment (App.tsx blackout): only the moment itself, toasts, popups and hover
+ * cards (data-keep-lit) are drawn; the battle, the menus and everything else on the stage are not.
+ */
+.stage[data-blackout] > :not([data-keep-lit]) {
   visibility: hidden;
 }
 

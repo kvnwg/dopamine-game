@@ -42,6 +42,7 @@ import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { t } from '../i18n';
 import { RAINBOW, raysUrl } from '../rays';
+import { Rays } from './Rays';
 import { flickerMs, glowAt, landFx, teasePlan, tierLight, type Tease } from '../reelDrama';
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
 import { tokenHoldMs } from '../reelTiming';
@@ -729,10 +730,7 @@ export function ReelBank() {
                 <div className={s.under}>
                   <div className={s.light} />
                   {rayTier !== undefined && (
-                    <div
-                      className={s.rays}
-                      style={{ backgroundImage: `url(${rayTier >= rarityIndex('mythic') ? raysUrl(RAINBOW, 20, 0.5) : raysUrl([tierLight(rayTier)], 16, 0.55)})` }}
-                    />
+                    <Rays className={s.rays} url={rayTier >= rarityIndex('mythic') ? raysUrl(RAINBOW, 20, 0.5) : raysUrl([tierLight(rayTier)], 16, 0.55)} />
                   )}
                 </div>
                 <div

@@ -22,7 +22,7 @@
 .backdrop {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--c) 55%, #1a1630) 0%, rgba(12, 12, 26, 0.94) 62%);
+  background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--c) 55%, #1a1630) 0%, rgba(12, 12, 26, 0.94) 62%), #14121f;
 }
 .rays {
   /* Rays drawn once into a small image (src/ui/rays.ts), fade baked in: no mask, one modest layer. */
@@ -32,7 +32,6 @@
   width: 1500px;
   height: 1500px;
   margin: -750px 0 0 -750px;
-  background: center / 100% 100% no-repeat;
   pointer-events: none;
   animation: raySpin 14s linear infinite;
 }
@@ -298,7 +297,6 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 50%, transparent) 0%, transparent 58%);
-  animation: fadeIn 500ms ease-out backwards;
 }
 .rare .rays {
   top: 40%;
@@ -436,18 +434,16 @@
   paint-order: stroke fill;
   animation: fadeUp 400ms ease-out 300ms backwards;
 }
-/* A shock wave: a one-pixel square ring growing out from the item. */
+/* A shock wave: a one-pixel square ring growing out from the item (a canvas, RevealLayer.tsx ShockRing). */
 .shock {
   position: absolute;
   left: 540px;
   top: 768px;
-  border: var(--px) solid color-mix(in srgb, var(--c) 70%, #fff);
+  width: 1512px;
+  height: 1512px;
+  margin: -756px 0 0 -756px;
   pointer-events: none;
-  animation: shock 720ms steps(16) forwards;
-}
-@keyframes shock {
-  from { width: 108px; height: 108px; margin: -54px 0 0 -54px; opacity: 1; }
-  to { width: 1512px; height: 1512px; margin: -756px 0 0 -756px; opacity: 0; }
+  image-rendering: pixelated;
 }
 .rare[data-phase='landed']:not([data-calm]) .center {
   animation: quake 460ms steps(7) 1;
@@ -494,7 +490,7 @@
 .haulBack {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 42%, rgba(255, 196, 40, 0.38), rgba(12, 10, 24, 0.88) 62%);
+  background: radial-gradient(circle at 50% 42%, rgba(255, 196, 40, 0.38), rgba(12, 10, 24, 0.88) 62%), #14121f;
 }
 .haulRays {
   /* Gold rays drawn once into a small image (src/ui/rays.ts): no mask, one modest layer. */
@@ -504,7 +500,6 @@
   width: 1500px;
   height: 1500px;
   margin: -750px 0 0 -750px;
-  background: center / 100% 100% no-repeat;
   pointer-events: none;
   animation: raySpin 10s linear infinite;
 }

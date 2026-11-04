@@ -695,7 +695,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const discount = Math.round((1 - Math.pow(1 - BAL.rebirth.upgradeDiscountPer, rebirths)) * 100);
 
   return (
-    <div className={s.overlay} data-calm={calm || undefined}>
+    <div className={s.overlay} data-calm={calm || undefined} data-keep-lit>
       <div className={s.viewport} ref={viewportRef}>
         <div className={s.grid} ref={gridRef} style={{ backgroundImage: GRID_URL }} aria-hidden />
         <canvas ref={canvasRef} className={s.canvas} aria-hidden />

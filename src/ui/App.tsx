@@ -51,15 +51,23 @@ export function App() {
   // The upgrade map covers the whole screen; underneath, keep showing the tab it was opened from.
   const prevTab = useUi((u) => u.prevTab);
   const lowerTab = tab === 'upgrades' ? prevTab : tab;
-  // Once the map has faded in over them, the battle and the menus under it stop drawing (it hides
-  // them whole): nothing spends memory or time on what can't be seen. They show again the moment it closes.
-  const [mapUp, setMapUp] = useState(false);
+  // Full-screen moments hide the whole game under them, and then it stops drawing: the upgrade map at
+  // once, a rare find's reveal, a big haul and a rebirth once their backdrop has faded in. Safari draws
+  // anything layered over the battle at 3 pixels per stage pixel, ignoring the stage's shrink to the
+  // screen: a full-screen moment over the game cost a 75 MB layer and more for each piece moving on
+  // it, and crashed iPhones (Kevin: "i just got a rare item and the animation crashed my game").
+  // With nothing under it, it is drawn at the screen's own size. All shows again the moment it closes.
+  const reveal = useUi((u) => u.celebrate !== null);
+  const haul = useUi((u) => u.haul !== null);
+  const reborn = useUi((u) => u.rebirthFx !== null);
+  const moment = reveal || haul || reborn;
+  const [dark, setDark] = useState(false);
   useEffect(() => {
-    if (tab !== 'upgrades') return setMapUp(false);
-    const id = window.setTimeout(() => setMapUp(true), 300);
+    if (!moment) return setDark(false);
+    const id = window.setTimeout(() => setDark(true), 300);
     return () => window.clearTimeout(id);
-  }, [tab]);
-  const covered = (tab === 'upgrades' && mapUp) || undefined;
+  }, [moment]);
+  const blackout = tab === 'upgrades' || (moment && dark) || undefined;
 
   useLayoutEffect(() => {
     const el = frameRef.current;
@@ -84,9 +92,9 @@ export function App() {
   return (
     <div className={styles.viewport}>
       <div className={styles.frame} ref={frameRef}>
-        <div className={styles.stage} data-stage data-layout={wide ? 'wide' : undefined} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
-          <div className={styles.battle} data-covered={covered}><BattlePanel /></div>
-          <div className={styles.lower} data-covered={covered}>
+        <div className={styles.stage} data-stage data-layout={wide ? 'wide' : undefined} data-blackout={blackout} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
+          <div className={styles.battle}><BattlePanel /></div>
+          <div className={styles.lower}>
             {/* A new tab's panel slides up with a little bounce (keyed so it plays on every switch). */}
             <div key={lowerTab === 'upgrades' ? 'alley' : lowerTab} className={styles.panelIn}>
               {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
@@ -96,7 +104,7 @@ export function App() {
               {lowerTab === 'worlds' && <WorldsPanel />}
             </div>
           </div>
-          <div className={styles.nav} data-covered={covered}><BottomNav /></div>
+          <div className={styles.nav}><BottomNav /></div>
           {tab === 'upgrades' && (
             <SafeLayer name="upgrades" onError={leaveUpgrades}>
               <UpgradeMap />

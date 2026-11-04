@@ -14,10 +14,6 @@
   background:
     radial-gradient(circle at 50% 42%, rgba(91, 132, 255, 0.28), transparent 55%),
     linear-gradient(180deg, #1a2147 0%, #121734 55%, #0b0e22 100%);
-  animation: mapIn 220ms ease-out backwards;
-}
-@keyframes mapIn {
-  from { opacity: 0; }
 }
 .viewport {
   position: absolute;

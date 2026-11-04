@@ -139,7 +139,6 @@
   top: calc(50% - 760px);
   width: 1520px;
   height: 1520px;
-  background-size: 100% 100%;
   animation: raysTurn 9s linear infinite;
 }
 @keyframes raysTurn {

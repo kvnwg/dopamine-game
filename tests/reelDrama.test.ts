@@ -8,10 +8,16 @@ import { freshState, T0 } from './helpers';
 
 type SpinStart = Extract<CoreEvent, { type: 'spinStart' }>;
 
-/** A spin whose first reel is forced to `rarity` (the rest roll normally), with `extraReels` more reels. */
-function spinOf(rarity: Rarity, extraReels = 0, seed = 5): SpinStart {
+/**
+ * A spin whose first reel is forced to `rarity` (the rest roll normally), with `extraReels` more reels,
+ * after half an hour of play with nothing rare found (so the core judges it rare lately: luck.ts
+ * judgeFinds), or, with `busy`, just after a very rare find (so nothing in it is news).
+ */
+function spinOf(rarity: Rarity, extraReels = 0, seed = 5, busy = false): SpinStart {
   const st = structuredClone(freshState(seed)) as GameState;
   st.dumpster.firstDiveDone = true;
+  st.playTimeMs = 30 * 60_000;
+  st.roll.rare = { since: 0, hist: busy ? [[st.playTimeMs - 5_000, 1e12]] : [] };
   st.currencies.bags = 0;
   st.upgrades.extraReel = extraReels;
   st.dumpster.forcedRarity = rarity;
@@ -52,12 +58,12 @@ describe('reel build-ups (Roll tab)', () => {
     }
   });
 
-  it('junk never glows, and plain results only sometimes', () => {
+  it('junk never glows, and plain results only sometimes (in the middle of play: nothing rare lately)', () => {
     let glows = 0;
     for (let seed = 1; seed <= 200; seed++) {
       const spin = spinOf('junk', 0, seed);
       expect(teasePlan(spin, 1)).toBeNull();
-      const spinS = spinOf('shiny', 0, seed);
+      const spinS = spinOf('shiny', 0, seed, true);
       const item = spinS.reels[0].item;
       const shiny = teasePlan(spinS, 1);
       if (shiny) {

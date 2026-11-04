@@ -29,6 +29,17 @@ const CHORDS = [
   [48, 52, 55, 59],
 ];
 const ROOTS = [41, 40, 38, 36];
+/** How far ahead the music is scheduled (s): a busy moment (a big reveal, the upgrade map opening) shorter than this never makes it skip. */
+const MUSIC_AHEAD = 0.3;
+/**
+ * Most sound effects at once (each a few audio nodes); past it new ones are dropped until some end. A
+ * phone's audio thread that gets more than it can mix in time crackles and drops out, so a late-game
+ * rush of coins, hits and spins stays under this.
+ */
+const MAX_SFX_VOICES = 48;
+/** How often the audio checks on itself (ms), and the least time between rebuilding it (ms). */
+const WATCH_MS = 1000;
+const REBUILD_GAP_MS = 8000;
 
 interface ToneOpts {
   type?: OscillatorType;
@@ -116,6 +127,18 @@ class AudioEngine {
   private loaded = false;
   /** What a build-up's sounds play through, so they all stop as its find lands (endRamp). */
   private rampBus: GainNode | null = null;
+  /** Sound effects playing right now (MAX_SFX_VOICES). */
+  private sfxVoices = 0;
+  /** The very end of the chain: watched for broken output (NaN) by the watchdog. */
+  private probe: AnalyserNode | null = null;
+  private probeBuf: Float32Array | null = null;
+  private watchTimer: ReturnType<typeof setInterval> | null = null;
+  /** The context's clock at the last check, and how many checks in a row it hasn't moved while running. */
+  private lastClock = -1;
+  private stuck = 0;
+  private rebuiltAt = -1e9;
+  /** Suspended on purpose (the app is in the background): the watchdog leaves it be. */
+  private parked = false;
 
   private rnd(): number {
     this.seed = (this.seed + 0x6d2b79f5) >>> 0;
@@ -166,6 +189,8 @@ class AudioEngine {
     const r = this.recs.get(name);
     const ctx = this.ctx;
     if (!r || !ctx) return false;
+    // Too much at once: this one is dropped (and its synthesized stand-in with it).
+    if (this.sfxVoices >= MAX_SFX_VOICES) return true;
     const rate = Math.pow(2, (o.semis ?? 0) / 12);
     const level = (SOUND_LEVELS[name] ?? 1) * (o.gain ?? 1);
     let start = at;
@@ -186,7 +211,17 @@ class AudioEngine {
     src.connect(g);
     g.connect(o.bus ?? this.sfx);
     src.start(start, from);
+    this.voice(src);
     return true;
+  }
+
+  /** Counts a sound effect's voice while it plays (MAX_SFX_VOICES). */
+  private voice(src: AudioScheduledSourceNode): void {
+    this.sfxVoices++;
+    src.onended = () => {
+      this.sfxVoices = Math.max(0, this.sfxVoices - 1);
+      src.disconnect();
+    };
   }
 
   /** The bus for the build-up under way (risers, shake, crawl, glow): a fresh one after each landing. */
@@ -219,6 +254,7 @@ class AudioEngine {
   unlock(): void {
     try {
       if (!this.ctx) this.build();
+      this.parked = false;
       const ctx = this.ctx;
       // Any state but running or closed: 'suspended' (made before a tap counted, or after the app was
       // in the background) or iOS's 'interrupted' (after a call or an app switch). Every tap tries.
@@ -244,7 +280,13 @@ class AudioEngine {
     comp.ratio.value = 4;
     comp.attack.value = 0.004;
     comp.release.value = 0.2;
-    comp.connect(ctx.destination);
+    // The output passes a probe on its way out, so the watchdog can tell if it ever breaks (watch).
+    const probe = ctx.createAnalyser();
+    probe.fftSize = 256;
+    comp.connect(probe);
+    probe.connect(ctx.destination);
+    this.probe = probe;
+    this.probeBuf = new Float32Array(probe.fftSize);
     this.master = ctx.createGain();
     this.master.gain.value = 0.9;
     this.master.connect(comp);
@@ -265,6 +307,91 @@ class AudioEngine {
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = this.rnd() * 2 - 1;
+    this.sfxVoices = 0;
+    this.lastClock = -1;
+    this.stuck = 0;
+    ctx.onstatechange = () => {
+      // Knocked out of running while the game is on screen (iOS: a call, Siri, another app's sound):
+      // try to come straight back (a tap does too; see unlock).
+      if (this.ctx === ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !this.parked && document.visibilityState === 'visible') {
+        void ctx.resume().then(
+          () => this.syncMusic(),
+          () => {},
+        );
+      }
+    };
+    this.watchTimer ??= setInterval(() => this.watch(), WATCH_MS);
+  }
+
+  /**
+   * The watchdog (Kevin: "sound randomly cuts out"). Every second, while the game is on screen:
+   * audio knocked out of running is resumed; a context whose clock has stopped though it says it's
+   * running (it happens on iPhones after an interruption), or whose output has gone bad (one broken
+   * value poisons everything after it for good), is thrown away and built anew, music and all.
+   */
+  private watch(): void {
+    const ctx = this.ctx;
+    if (!ctx || this.parked || document.visibilityState !== 'visible') {
+      this.stuck = 0;
+      this.lastClock = -1;
+      return;
+    }
+    const state = ctx.state as string;
+    if (state === 'closed') return this.rebuild();
+    if (state !== 'running') {
+      this.lastClock = -1;
+      void ctx.resume().then(
+        () => this.syncMusic(),
+        () => {},
+      );
+      return;
+    }
+    this.stuck = ctx.currentTime === this.lastClock ? this.stuck + 1 : 0;
+    this.lastClock = ctx.currentTime;
+    let broken = this.stuck >= 3;
+    const probe = this.probe;
+    const buf = this.probeBuf;
+    if (!broken && probe && buf) {
+      probe.getFloatTimeDomainData(buf as Float32Array<ArrayBuffer>);
+      for (let i = 0; i < buf.length; i += 8) {
+        if (!Number.isFinite(buf[i])) {
+          broken = true;
+          break;
+        }
+      }
+    }
+    if (broken) this.rebuild();
+  }
+
+  /** A fresh audio context in place of a broken one (at most every REBUILD_GAP_MS); the next tap starts it if it can't start itself. */
+  private rebuild(): void {
+    const now = performance.now();
+    if (now - this.rebuiltAt < REBUILD_GAP_MS) return;
+    this.rebuiltAt = now;
+    const old = this.ctx;
+    this.ctx = null;
+    this.rampBus = null;
+    if (this.musicTimer) {
+      clearInterval(this.musicTimer);
+      this.musicTimer = null;
+    }
+    if (old) {
+      old.onstatechange = null;
+      void old.close().catch(() => {});
+    }
+    try {
+      this.build();
+    } catch {
+      return;
+    }
+    const ctx = this.ctx as AudioContext | null;
+    if (ctx && ctx.state !== 'running') {
+      void ctx.resume().then(
+        () => this.syncMusic(),
+        () => {},
+      );
+    }
+    this.syncMusic();
   }
 
   private soundGain(): number {
@@ -291,10 +418,12 @@ class AudioEngine {
   }
 
   suspend(): void {
+    this.parked = true;
     if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend();
   }
 
   resume(): void {
+    this.parked = false;
     const ctx = this.ctx;
     if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') {
       void ctx.resume().then(
@@ -319,6 +448,8 @@ class AudioEngine {
 
   private tone(freq: number, at: number, dur: number, o: ToneOpts = {}) {
     const ctx = this.ctx!;
+    const music = o.bus === this.musicBus;
+    if (!music && this.sfxVoices >= MAX_SFX_VOICES) return;
     const osc = ctx.createOscillator();
     osc.type = o.type ?? 'sine';
     osc.frequency.setValueAtTime(freq, at);
@@ -353,10 +484,13 @@ class AudioEngine {
     }
     osc.start(at);
     osc.stop(at + dur + 0.05);
+    if (!music) this.voice(osc);
   }
 
   private noise(at: number, dur: number, o: NoiseOpts = {}) {
     const ctx = this.ctx!;
+    const music = o.bus === this.musicBus;
+    if (!music && this.sfxVoices >= MAX_SFX_VOICES) return;
     const src = ctx.createBufferSource();
     src.buffer = this.noiseBuf;
     src.loop = true;
@@ -376,6 +510,7 @@ class AudioEngine {
     g.connect(o.bus ?? this.sfx);
     src.start(at, this.rnd() * 1.5);
     src.stop(at + dur + 0.05);
+    if (!music) this.voice(src);
   }
 
   private bell(freq: number, at: number, dur: number, gain = 0.1, bus?: AudioNode) {
@@ -1349,7 +1484,14 @@ class AudioEngine {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const eighth = 60 / BPM / 2;
-    while (this.nextStep < ctx.currentTime + 0.15) {
+    // Fell behind (the page was too busy to schedule for a while): pick the beat up where it is now
+    // rather than playing every missed note at once.
+    if (this.nextStep < ctx.currentTime - 0.05) {
+      const missed = Math.ceil((ctx.currentTime - this.nextStep) / eighth);
+      this.nextStep += missed * eighth;
+      this.step = (this.step + missed) % 32;
+    }
+    while (this.nextStep < ctx.currentTime + MUSIC_AHEAD) {
       const swing = this.step % 2 === 1 ? eighth * 0.16 : 0;
       this.playStep(this.step, this.nextStep + swing);
       this.nextStep += eighth;
@@ -1391,4 +1533,31 @@ class AudioEngine {
   }
 }
 
-export const audio = new AudioEngine();
+/**
+ * Nothing the audio does can break the game: every call that fails (a node the browser refused, a
+ * value it didn't like) is dropped quietly, never thrown into a game update.
+ */
+function guarded<T extends object>(o: T): T {
+  const proto = Object.getPrototypeOf(o) as Record<string, unknown>;
+  for (const key of Object.getOwnPropertyNames(proto)) {
+    if (key === 'constructor') continue;
+    const desc = Object.getOwnPropertyDescriptor(proto, key);
+    const fn = desc?.value;
+    if (typeof fn !== 'function') continue;
+    Object.defineProperty(o, key, {
+      value: (...args: unknown[]) => {
+        try {
+          return (fn as (...a: unknown[]) => unknown).apply(o, args);
+        } catch (e) {
+          if (import.meta.env?.DEV) console.warn('audio', key, e);
+          return undefined;
+        }
+      },
+      writable: true,
+      configurable: true,
+    });
+  }
+  return o;
+}
+
+export const audio = guarded(new AudioEngine());

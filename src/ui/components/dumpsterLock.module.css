@@ -132,10 +132,10 @@
 }
 /* Tapped before a world is picked: it rattles side to side, no (two names, so each tap replays it). */
 .lock[data-phase='idle'][data-nope='a'] .padlock > img {
-  animation: nopeA 0.36s both;
+  animation: nopeA 0.36s backwards;
 }
 .lock[data-phase='idle'][data-nope='b'] .padlock > img {
-  animation: nopeB 0.36s both;
+  animation: nopeB 0.36s backwards;
 }
 @keyframes nopeA {
   0% { transform: translateX(calc(-2 * var(--px))); animation-timing-function: steps(1, end); }

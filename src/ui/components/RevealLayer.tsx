@@ -412,8 +412,9 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
       };
     });
   }, [lvl]);
-  const mins = Math.round(haul.minutes);
-  const worth = mins >= 120 ? t('haul.hours', { n: Math.round(haul.minutes / 6) / 10 }) : t('haul.minutes', { n: mins });
+  // Against the run's usual haul (haul.ts judgeHaul): "That's 4.2× your usual haul!".
+  const times = haul.usual ? haul.coins / haul.usual : 0;
+  const worth = times > 0 ? t('haul.usual', { x: times >= 10 ? formatNumber(Math.round(times)) : times.toFixed(1) }) : t('haul.first');
   return (
     <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })}>
       <div className={s.haulBack} />

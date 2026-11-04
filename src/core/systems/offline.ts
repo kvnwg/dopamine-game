@@ -282,23 +282,3 @@ export function collectOffline(d: GameState, doubled: boolean, ev: CoreEvent[]):
   addXp(d, xp, ev);
   return true;
 }
-
-/**
- * A Scrap All haul measured in minutes of the raccoon's recent gold income from fights (Infinity
- * before there is any income). Bags fill up, so a haul is often worth many minutes of fighting.
- */
-export function haulMinutes(state: GameState, coins: number, now: number): number {
-  const rate = currentRate(state, now).coins;
-  return rate > 0 ? coins / rate : Infinity;
-}
-
-export type HaulSize = 'big' | 'huge' | 'mega';
-
-/** How big a deal a Scrap All haul is (feel.haul, in minutes of fighting); null for an everyday one. */
-export function haulSize(minutes: number): HaulSize | null {
-  const h = BAL.feel.haul;
-  if (minutes >= h.mega) return 'mega';
-  if (minutes >= h.huge) return 'huge';
-  if (minutes >= h.big) return 'big';
-  return null;
-}

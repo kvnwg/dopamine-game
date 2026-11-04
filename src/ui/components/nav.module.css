@@ -53,7 +53,7 @@
 }
 /* A locked tab tapped: a quick head shake. */
 .nope .icon {
-  animation: nope 0.36s both;
+  animation: nope 0.36s backwards;
 }
 @keyframes nope {
   0% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }

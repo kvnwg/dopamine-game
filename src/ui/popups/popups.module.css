@@ -22,7 +22,7 @@
   background: var(--cream);
   box-shadow: 0 calc(2 * var(--px)) 0 0 var(--ink), 0 30px 80px rgba(0, 0, 0, 0.5);
   color: var(--ink);
-  animation: pop 260ms both;
+  animation: pop 260ms backwards;
 }
 .wide {
   width: 1000px;

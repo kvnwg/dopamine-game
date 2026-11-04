@@ -21,7 +21,8 @@ import { registerCodex } from './codex';
 import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
-import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity, spinBuildsUp } from './luck';
+import { currentLuck, itemOddsOneIn, judgeFinds, luckyEvery, rollRarity } from './luck';
+import { judgeHaul } from './haul';
 import { perkBagMult, perkFx, perkSpinMult, rigSpin } from './perks';
 import { addXp } from './progression';
 import { rebirthGoldMult } from './rebirth';
@@ -298,10 +299,11 @@ export function matchedSteps(mults: ReadonlyArray<readonly number[]>): number[] 
 }
 
 /**
- * Starts a spin: rolls every reel's result. A Trash Bag, if there is one, pays for a faster turbo spin,
- * unless the spin builds up to a rare find (spinBuildsUp): then it runs at normal speed so its riser and
- * glow can play out, and the bag waits for the next spin (Kevin: "turbo rolls should get slowed down if
- * ur gonna play ramp up music").
+ * Starts a spin: rolls every reel's result, and judges the finds (judgeFinds: which get the full-screen
+ * reveal, how much the spin builds up). A Trash Bag, if there is one, pays for a faster turbo spin,
+ * unless the spin builds up to a rare find: then it runs at normal speed so its riser and glow can
+ * play out, and the bag waits for the next spin (Kevin: "turbo rolls should get slowed down if ur
+ * gonna play ramp up music").
  */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
@@ -348,25 +350,30 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     rolled.push({ item, mults });
   }
-  // The finds decide the pace: a build-up (a scripted spin always has one) needs the spin's full length,
-  // and the warm-up spins roll at their own easy pace (the bags wait).
-  const buildsUp = scripted !== null || spinBuildsUp(rolled.map((r) => r.item), currentLuck(d, now));
+  // The finds decide the pace: a build-up (a scripted spin always has one, and its find the reveal)
+  // needs the spin's full length, and the warm-up spins roll at their own easy pace (the bags wait).
+  const judged = judgeFinds(d, rolled.map((r) => r.item), currentLuck(d, now));
+  if (scripted) judged.drama[0] ??= 'big';
+  const buildsUp = scripted !== null || judged.tease > 0 || judged.drama.some((x) => x !== null);
   const turbo = d.currencies.bags >= 1 && !buildsUp && !warmup;
   if (turbo) d.currencies.bags -= 1;
   const cycle = spinCycle(d, turbo);
   const baseSpinSeconds = cycle * spinShare();
   const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
-  const reels = rolled.map((r) => ({
+  const reels = rolled.map((r, i) => ({
     item: r.item, odds: itemOddsOneIn(r.item), mults: r.mults, landAt: baseSpinSeconds + r.mults.length * stepSeconds, landed: false,
+    drama: judged.drama[i],
   }));
   const spinSeconds = Math.max(...reels.map((r) => r.landAt));
-  d.roll.current = { reels, matched, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false, scripted };
+  const tease = judged.tease;
+  d.roll.current = { reels, matched, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false, scripted, tease };
   d.roll.timer = 0;
   ev.push({
     type: 'spinStart',
-    reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt })),
+    reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt, drama: r.drama })),
     matched: [...matched],
+    tease,
     lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds,
     ...(scripted ? { scripted } : {}),
     ...(rigged ? { rigged } : {}),
@@ -414,7 +421,7 @@ function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
     const placed = decidePlacement(d, item);
     ev.push({
       type: 'roll', item, reel, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: r.odds,
-      luck: spin.luck * mult, mult, placed, newRecord, ...(spin.scripted && reel === 0 ? { scripted: spin.scripted } : {}),
+      luck: spin.luck * mult, mult, placed, newRecord, drama: r.drama ?? null, ...(spin.scripted && reel === 0 ? { scripted: spin.scripted } : {}),
     });
     registerCodex(d, item, ev);
     if (placed === 'bag') addToBag(d, item, ev);
@@ -533,7 +540,7 @@ export function scrapAllFromBag(d: GameState, ev: CoreEvent[], keepUpgrades = fa
   d.inventory = keep;
   d.currencies.coins += coins;
   d.lifetime.itemsRecycled += count;
-  ev.push({ type: 'scrapAll', count, coins, xp });
+  ev.push({ type: 'scrapAll', count, coins, xp, ...judgeHaul(d, coins) });
   addXp(d, xp, ev);
   return count;
 }

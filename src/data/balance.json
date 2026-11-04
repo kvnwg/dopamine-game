@@ -435,19 +435,24 @@
     "legendarySlowMoSeconds": 0.3,
     "rattleBeatSeconds": 0.15,
     "buildUp": {
-      "rare": 40,
-      "veryRare": 400
+      "windowMinutes": [0.5, 2],
+      "tierOneIn": 6
     },
     "bigRoll": {
-      "big": 2500,
-      "huge": 25000,
-      "insane": 250000,
-      "tierOneIn": 30
+      "windowMinutes": [5, 50, 500],
+      "coverShare": 0.1,
+      "minHistoryMinutes": 2,
+      "tierOneIn": 20,
+      "historyMax": 48
     },
     "haul": {
-      "big": 10,
-      "huge": 40,
-      "mega": 120
+      "trendWeight": 0.6,
+      "slopeWeight": 0.5,
+      "maxGapMinutes": 10,
+      "warmup": 2,
+      "big": 2.5,
+      "huge": 6,
+      "mega": 20
     },
     "rattleBeatsByRarity": {
       "junk": 3,

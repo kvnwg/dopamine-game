@@ -61,9 +61,13 @@ export const SpinSchema = z.object({
         mults: z.array(z.number()).default(() => []),
         landAt: z.number().nonnegative().optional(),
         landed: z.boolean().default(false),
+        /** The full-screen reveal it gets as it lands (luck.ts judgeFinds), decided when the spin starts. */
+        drama: z.enum(['big', 'huge', 'insane']).nullable().default(null),
       }),
     )
     .min(1),
+  /** The spin's smaller build-up (luck.ts judgeFinds): 0 none, 1 a riser and glow, 2 a longer one. */
+  tease: z.number().int().min(0).max(2).default(0),
   /** Token steps every reel landed the same token on: those count squared (roller.ts matchedSteps). */
   matched: z.array(z.number().int().nonnegative()).default(() => []),
   lucky: z.boolean(),
@@ -369,6 +373,14 @@ export const GameStateSchema = z.object({
     sinceLucky: z.number().int().nonnegative(),
     /** Spins still owed by a heist's Golden Dumpster: each is a golden spin at heist.golden.luckMult luck. */
     goldenLeft: z.number().int().nonnegative().default(0),
+    /**
+     * The finds the reveal is judged against (luck.ts judgeFinds): since when (play clock) finds are
+     * watched, and the rarest ones as [play clock ms, findScore], rarest first, each rarer than every
+     * find after it.
+     */
+    rare: z
+      .object({ since: z.number().nullable(), hist: z.array(z.tuple([z.number(), z.number()])) })
+      .default(() => ({ since: null, hist: [] })),
   }),
   upgrades: z.record(z.string(), z.number().int().nonnegative()),
   rebirths: z.number().int().nonnegative(),
@@ -382,6 +394,13 @@ export const GameStateSchema = z.object({
     paused: z.boolean(),
     pending: PendingOfflineSchema.nullable(),
   }),
+  /**
+   * The run's Scrap All hauls as a trend (haul.ts judgeHaul): for rebirth `run`, `n` hauls so far, the
+   * smoothed log of a haul (`level`) and its growth per minute of play (`slope`) as of the play clock `atMs`.
+   */
+  haulTrend: z
+    .object({ run: z.number().int().nonnegative(), n: z.number().int().nonnegative(), level: z.number(), slope: z.number(), atMs: z.number() })
+    .default(() => ({ run: 0, n: 0, level: 0, slope: 0, atMs: 0 })),
   lifetime: z.object({
     kills: z.number().int().nonnegative(),
     wavesCleared: z.number().int().nonnegative(),
@@ -481,13 +500,14 @@ export function createInitialState(now: number, seed: number): GameState {
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },
-    roll: { timer: 0, current: null, count: 0, sinceLucky: 0, goldenLeft: 0 },
+    roll: { timer: 0, current: null, count: 0, sinceLucky: 0, goldenLeft: 0, rare: { since: null, hist: [] } },
     upgrades: {},
     rebirths: 0,
     luckBoostEndsAt: null,
     records: { bestOdds: 0, bestItemName: '', bestRarity: null },
     codex: { entries: [] },
     offline: { buckets: [], trackingSince: null, pausedRate: null, paused: false, pending: null },
+    haulTrend: { run: 0, n: 0, level: 0, slope: 0, atMs: 0 },
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, soundVolume: 1, musicVolume: 1, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),

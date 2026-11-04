@@ -10,8 +10,8 @@
  * the machine shakes); an uncommon one sometimes gets a small glow that climbs only to its own tier.
  * A glow never climbs past the real result. Junk never glows.
  */
-import { BAL, RARITIES, type Rarity } from '../data';
-import { luckOddsOneIn, rarityIndex, revealDrama, type Item } from '../core';
+import { RARITIES, type Rarity } from '../data';
+import { luckOddsOneIn, rarityIndex, type Item, type RollDrama } from '../core';
 import { hash } from './reelStrip';
 import { reelStops, stopOrder, tokenHoldMs, type SpinTiming } from './reelTiming';
 
@@ -43,14 +43,15 @@ export interface Tease {
 }
 
 type TeaseSpin = SpinTiming & {
-  reels: ReadonlyArray<{ item: Pick<Item, 'uid' | 'rarity' | 'enchants'>; mults?: readonly number[] }>;
+  /** `drama`: the full-screen reveal the core gave the find (luck.ts judgeFinds). */
+  reels: ReadonlyArray<{ item: Pick<Item, 'uid' | 'rarity' | 'enchants'>; mults?: readonly number[]; drama?: RollDrama | null }>;
   /** A tutorial spin (the first roll, beginner's luck): its first reel gets the full build-up. */
   scripted?: 'first' | 'beginner' | null;
+  /** The spin's build-up the core judged (judgeFinds): 1 rare for you lately, 2 rarer still. */
+  tease?: number;
 };
 
-/** "1 in X" thresholds at the raccoon's luck for each build-up level (the full reveal's own threshold for level 3). */
-const RARE = BAL.feel.buildUp.rare;
-const VERY_RARE = BAL.feel.buildUp.veryRare;
+const DRAMA_RANK: Record<RollDrama, number> = { big: 1, huge: 2, insane: 3 };
 /**
  * Uncommon results (1 in 6 or rarer at your luck) glow a little this often, and plain ones (1 in 2
  * or rarer) now and then: a low glow that stays low, so a glow's first color never tells.
@@ -59,13 +60,25 @@ const HOPE_CHANCE = 0.35;
 const LOW_HOPE_CHANCE = 0.06;
 
 /**
- * The spin's build-up, or null for a plain spin. `luck` is the raccoon's luck now (currentLuck). A
- * tutorial spin's first reel always gets the full one (its result always gets the full reveal).
+ * The spin's build-up, or null for a plain spin. `luck` is the raccoon's luck now (currentLuck). The
+ * core decides the levels (luck.ts judgeFinds: rare for the raccoon lately, so they come as often
+ * early as late): a find getting the full reveal builds up all the way (a tutorial spin's first reel
+ * always does), the spin's `tease` gives the smaller ones, and an uncommon find now and then gets a
+ * low glow of hope.
  */
 export function teasePlan(spin: TeaseSpin, luck: number): Tease | null {
   const order = stopOrder(spin);
   let reel = order[0];
   for (const i of order) if (rarityIndex(spin.reels[i].item.rarity) >= rarityIndex(spin.reels[reel].item.rarity)) reel = i;
+  // The find with the biggest reveal, if any (the last to stop among equals).
+  let top = 0;
+  for (const i of order) {
+    const d = spin.reels[i].drama;
+    if (d && DRAMA_RANK[d] >= top) {
+      top = DRAMA_RANK[d];
+      reel = i;
+    }
+  }
   if (spin.scripted) reel = 0;
   const item = spin.reels[reel].item;
   const tier = rarityIndex(item.rarity);
@@ -74,10 +87,9 @@ export function teasePlan(spin: TeaseSpin, luck: number): Tease | null {
   const u = hash(item.uid * 31 + 7);
   const u2 = hash(item.uid * 53 + 11);
   let level: TeaseLevel;
-  // (The full reveal's own rule: rare for your luck, by its rarity and its card's "1 in X".)
-  if (revealDrama(item, luck) || spin.scripted) level = 3;
-  else if (odds >= VERY_RARE) level = 2;
-  else if (odds >= RARE) level = 1;
+  if (spin.reels[reel].drama || spin.scripted) level = 3;
+  else if ((spin.tease ?? 0) >= 2) level = 2;
+  else if ((spin.tease ?? 0) >= 1) level = 1;
   else if (odds >= 6 && u < HOPE_CHANCE) level = 0;
   else if (odds >= 2 && u < LOW_HOPE_CHANCE) level = 0;
   else return null;

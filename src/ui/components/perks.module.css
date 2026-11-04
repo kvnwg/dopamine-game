@@ -13,7 +13,7 @@
   background:
     radial-gradient(circle at 50% 40%, rgba(255, 196, 92, 0.16), transparent 58%),
     linear-gradient(180deg, #1f1d3c 0%, #151431 55%, #0c0b20 100%);
-  animation: pageIn 220ms steps(3) both;
+  animation: pageIn 220ms steps(3) backwards;
 }
 @keyframes pageIn {
   from { opacity: 0; }
@@ -211,7 +211,7 @@
 }
 /* Just eaten: it flashes bright and settles, in steps. */
 .node[data-fresh] {
-  animation: nodeEat 600ms steps(5) both;
+  animation: nodeEat 600ms steps(5) backwards;
 }
 @keyframes nodeEat {
   0% { filter: brightness(2.6); }

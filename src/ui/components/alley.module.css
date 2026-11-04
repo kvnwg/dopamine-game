@@ -173,7 +173,7 @@
 }
 /* A new result drops in, overshoots an art pixel and settles (whole pixels); its plates pop in after it. */
 .lastIn {
-  animation: lastIn 300ms steps(4) both;
+  animation: lastIn 300ms steps(4) backwards;
 }
 @keyframes lastIn {
   0% { transform: translateY(calc(-3 * var(--px))); filter: brightness(1.5); }
@@ -181,7 +181,7 @@
   75% { transform: none; filter: none; }
 }
 .lastRare {
-  animation: lastIn 300ms steps(4) both, rareGlow 1.4s steps(2) 300ms infinite;
+  animation: lastIn 300ms steps(4) backwards, rareGlow 1.4s steps(2) 300ms infinite;
 }
 @keyframes rareGlow {
   50% { box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 0 calc(2 * var(--px)) var(--c); }
@@ -267,10 +267,10 @@
   font-family: var(--font-display);
   color: #fff;
   cursor: pointer;
-  animation: platePop 300ms steps(3) 90ms both;
+  animation: platePop 300ms steps(3) 90ms backwards;
 }
 .delta[data-dir='up'] {
-  animation: platePop 300ms steps(3) 90ms both, deltaBob 1s steps(2) 700ms infinite;
+  animation: platePop 300ms steps(3) 90ms backwards, deltaBob 1s steps(2) 700ms infinite;
 }
 @keyframes deltaBob {
   50% { transform: translateY(calc(-1 * var(--px))); }
@@ -325,7 +325,7 @@
   color: #fff;
   -webkit-text-stroke: 7px var(--ink);
   paint-order: stroke fill;
-  animation: platePop 300ms steps(3) 180ms both;
+  animation: platePop 300ms steps(3) 180ms backwards;
 }
 .oddsTier {
   font-size: 26px;
@@ -344,7 +344,7 @@
   white-space: nowrap;
 }
 .lastOddsRare {
-  animation: platePop 300ms steps(3) 180ms both, oddsGlow 0.9s steps(2) 480ms infinite;
+  animation: platePop 300ms steps(3) 180ms backwards, oddsGlow 0.9s steps(2) 480ms infinite;
 }
 @keyframes oddsGlow {
   50% { box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink), 0 0 0 calc(2 * var(--px)) var(--c); filter: brightness(1.15); }

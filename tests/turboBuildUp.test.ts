@@ -1,18 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { currentLuck, Rng, spinBuildsUp, tick, type CoreEvent, type GameState } from '../src/core';
-import { BAL, type Rarity } from '../src/data';
+import { judgeFinds, Rng, tick, type CoreEvent, type GameState } from '../src/core';
+import type { Rarity } from '../src/data';
 import { freshState, T0 } from './helpers';
 
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 
-/** A new game past its tutorial spins, with Trash Bags for turbo spins. */
+/** A new game past its tutorial spins (its finds watched long enough to be judged), with Trash Bags for turbo spins. */
 function bagsState(bags: number): GameState {
   const st = clone(freshState(7));
   st.dumpster.firstDiveDone = true;
   st.dumpster.beginner = { state: 'done', uid: null };
   st.currencies.bags = bags;
+  st.playTimeMs = 60 * 60_000;
+  st.roll.rare = { since: 0, hist: [] };
   return st;
 }
+
+/** Whether a spin builds up (the core's judgement it carries). */
+const buildsUp = (e: Extract<CoreEvent, { type: 'spinStart' }>) => e.tease > 0 || e.reels.some((r) => r.drama !== null);
 
 /** Ticks until the next spin starts: its spinStart event and the state right after. */
 function nextSpin(st: GameState, rng: Rng, from = 0): { e: Extract<CoreEvent, { type: 'spinStart' }>; state: GameState; at: number } {
@@ -46,7 +51,7 @@ describe('turbo spins and build-ups', () => {
     const st = bagsState(3);
     st.dumpster.forcedRarity = 'junk';
     const { e, state } = nextSpin(st, new Rng(1));
-    if (spinBuildsUp(e.reels.map((r) => r.item), currentLuck(st, T0))) return; // (a heavily enchanted junk find)
+    expect(buildsUp(e)).toBe(false);
     expect(e.turbo).toBe(true);
     expect(state.currencies.bags).toBe(2);
     const slow = bagsState(0);
@@ -63,7 +68,7 @@ describe('turbo spins and build-ups', () => {
     for (let n = 0; n < 60; n++) {
       // (Fights drop Trash Bags too, so only the spin's own pace is checked here.)
       const r = nextSpin(st, rng, at);
-      const builds = spinBuildsUp(r.e.reels.map((x) => x.item), currentLuck(r.state, T0 + r.at * 100));
+      const builds = buildsUp(r.e);
       expect(r.e.turbo).toBe(!builds);
       if (builds) slowed++;
       else turbo++;
@@ -74,15 +79,15 @@ describe('turbo spins and build-ups', () => {
     expect(turbo + slowed).toBe(60);
   });
 
-  it('spinBuildsUp: the rarest find rare enough at your luck, or any find with the full reveal', () => {
-    const rare = BAL.feel.buildUp.rare;
-    expect(rare).toBeGreaterThan(1);
-    // Legendary is 1 in 1,000 at luck 1: a build-up; at luck 1,000 it's everyday.
-    expect(spinBuildsUp([item('legendary')], 1)).toBe(true);
-    expect(spinBuildsUp([item('legendary')], 1000)).toBe(false);
-    expect(spinBuildsUp([item('junk')], 1)).toBe(false);
-    expect(spinBuildsUp([], 1)).toBe(false);
-    // Only the rarest find counts for the smaller build-up (the Roll tab builds up to that reel).
-    expect(spinBuildsUp([item('junk'), item('epic')], 1)).toBe(true);
+  it('a build-up: a find rarer than anything lately (feel.buildUp), a common one never', () => {
+    const st = bagsState(0);
+    // Nothing in a while: an Epic builds up; right after it, a Shiny doesn't, and Junk never does.
+    expect(judgeFinds(st, [item('epic')], 1).tease).toBeGreaterThan(0);
+    expect(judgeFinds(st, [item('shiny')], 1).tease).toBe(0);
+    st.playTimeMs += 10 * 60_000;
+    expect(judgeFinds(st, [item('junk')], 1).tease).toBe(0);
+    // Only the spin's finds that beat the stretch count; one is enough.
+    st.playTimeMs += 10 * 60_000;
+    expect(judgeFinds(st, [item('junk'), item('legendary')], 1).tease).toBe(2);
   });
 });

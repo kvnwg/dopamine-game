@@ -1,6 +1,8 @@
 import type { z } from 'zod';
 import type { Feature, ItemSchema, SubstatSchema, ItemEnchantSchema, HeistRewards } from './state';
 import type { HeistNodeKind, LocationId, Rarity, Slot, StatId } from '../data';
+import type { RollDrama } from './systems/luck';
+import type { HaulSize } from './systems/haul';
 
 export type Item = z.infer<typeof ItemSchema>;
 export type Substat = z.infer<typeof SubstatSchema>;
@@ -43,7 +45,10 @@ export type CoreEvent =
    */
   | {
       type: 'spinStart';
-      reels: { item: Item; odds: number; mults: number[]; landAt: number }[];
+      /** `drama`: the full-screen reveal the find gets as it lands (luck.ts judgeFinds). */
+      reels: { item: Item; odds: number; mults: number[]; landAt: number; drama: RollDrama | null }[];
+      /** The spin's smaller build-up: 0 none, 1 a riser and glow, 2 a longer one (luck.ts judgeFinds). */
+      tease: 0 | 1 | 2;
       /**
        * Token steps at which every reel (two or more) landed the same token: those tokens count
        * squared on every reel (x5 on all three reels gives each x25).
@@ -79,6 +84,8 @@ export type CoreEvent =
       mult: number;
       placed: RollPlacement;
       newRecord: boolean;
+      /** The full-screen reveal it gets (luck.ts judgeFinds), or null. */
+      drama: RollDrama | null;
       /** The tutorial scripted this result: the very first roll, or beginner's luck. */
       scripted?: 'first' | 'beginner';
     }
@@ -88,7 +95,11 @@ export type CoreEvent =
   /** A feature opened (src/core/systems/features.ts): the dumpster on the player's tap, the rest as they become useful. */
   | { type: 'featureUnlocked'; feature: Feature }
   | { type: 'scrap'; item: Item; xp: number; coins: number; auto: boolean }
-  | { type: 'scrapAll'; count: number; xp: number; coins: number }
+  /**
+   * `size`: the cutscene it gets against the run's usual hauls (haul.ts judgeHaul), null for none;
+   * `usual`: what a usual haul is worth now (null before the run has a trend).
+   */
+  | { type: 'scrapAll'; count: number; xp: number; coins: number; size: HaulSize | null; usual: number | null }
   | { type: 'luckBoost'; endsAt: number; seconds: number }
   | { type: 'upgradeBought'; id: string; level: number }
   /** `unlocked`: base items the dumpster can roll from now on. */

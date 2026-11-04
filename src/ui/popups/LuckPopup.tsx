@@ -73,7 +73,7 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
       </div>
       <p className={s.note}>{t('luck.lucky', { n: luckyEvery(g), mult: BAL.roll.luckyRollMult })}</p>
       <p className={s.note}>{t('luck.enchantChance', { pct: (enchantChance(g) * 100).toFixed(1) })}</p>
-      <p className={s.note}>{t('luck.revealBar', { rarity: t(`rarity.${bar.rarity}`), x: fmtOdds(bar.oneIn) })}</p>
+      <p className={s.note}>{t('luck.revealBar', { rarity: t(`rarity.${bar.rarity}`), n: bar.minutes })}</p>
       <p className={s.note}>{t('luck.badLuck', { level: bl.minDumpsterLevel, n: bl.drySpell })}</p>
       <p className={s.note}>{t('luck.potionDrop', { mult: BAL.luck.potion.mult, s: BAL.luck.potion.seconds })}</p>
       <p className={s.note}>{t('luck.slots')}</p>

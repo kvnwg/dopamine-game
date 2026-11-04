@@ -93,7 +93,8 @@ interface UiState {
   /** The dev cheat panel is open (playtest builds; opened from Settings). */
   devOpen: boolean;
   /** A big Scrap All haul being celebrated. */
-  haul: { id: number; coins: number; minutes: number; count: number; size: HaulSize } | null;
+  /** `usual`: what a usual haul of the run is worth now (null for the game's first haul). */
+  haul: { id: number; coins: number; usual: number | null; count: number; size: HaulSize } | null;
   /** Bumped when coins land on the gold counter (it pulses). */
   goldPulse: number;
   /**

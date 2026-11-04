@@ -138,10 +138,14 @@ const zoomOf = (k: number): Zoom => (k >= 0.85 ? 'near' : k >= 0.45 ? 'mid' : 'f
 /** Up close, a hex's icon sits this far above its center (map px), between the tier and the name or price. */
 const iconLift = (view: HexView) => (view === 'open' ? 9 : 13);
 
-/** Where a hex's icon goes in the icon layer at zoom `k` (whole stage px). */
+/**
+ * Where a hex's icon goes in the icon layer at zoom `k` (whole stage px). A flat move: a 3D one gave
+ * every icon its own GPU layer (a hundred or more late in the game); this way they all paint into the
+ * icon layer.
+ */
 function iconSpot(n: HexNode, view: HexView, k: number): string {
   const lift = zoomOf(k) === 'near' ? iconLift(view) : 0;
-  return `translate3d(${Math.round(nodeX(n) * k)}px, ${Math.round((nodeY(n) - lift) * k)}px, 0)`;
+  return `translate(${Math.round(nodeX(n) * k)}px, ${Math.round((nodeY(n) - lift) * k)}px)`;
 }
 
 export function nodeName(n: HexNode): string {
@@ -718,6 +722,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const links = hexes.filter((h) => h.node.prev && shown.has(h.node.prev));
   /** Room round the hexes for the links' strokes (they run between hex centers, inside the bounds). */
   const pad = 40;
+  const glowing = hexes.filter((h) => h.view === 'open' && coins >= h.price).map((h) => h.node);
 
   return (
     <div className={s.overlay} data-calm={calm || undefined}>
@@ -762,6 +767,12 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
               );
             })}
           </svg>
+          {/* The glows of the hexes you can buy: a steady one behind them, and one breathing around them. */}
+          <div className={s.glows} aria-hidden>
+            {glowing.map((n) => (
+              <div key={n.key} className={s.glow} style={{ left: nodeX(n), top: nodeY(n) }} />
+            ))}
+          </div>
           {hexes.map(({ node, view, price }) => (
             <Hex
               key={`${node.key}:${view}`}
@@ -774,6 +785,11 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
               calm={calm}
             />
           ))}
+          <div className={s.glowPulse} aria-hidden>
+            {glowing.map((n) => (
+              <div key={n.key} className={s.glow} style={{ left: nodeX(n), top: nodeY(n) }} />
+            ))}
+          </div>
         </div>
         <div className={s.icons} ref={iconsRef}>
           {hexes.map(({ node, view }) =>

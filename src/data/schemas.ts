@@ -446,19 +446,41 @@ export const BalanceSchema = z.object({
     legendarySlowMoSeconds: nonNeg,
     rattleBeatSeconds: positive,
     /**
-     * A roll this rare at the raccoon's current luck ("1 in X" for its tier or better, see luckOddsOneIn)
-     * gets the full-screen reveal; huge and insane ones get a longer, louder one.
+     * The Roll tab's smaller build-ups (reelDrama.ts): a find rarer for the raccoon than anything he
+     * found in the last `windowMinutes[0]` minutes of play gets a riser and a climbing glow, in the last
+     * `windowMinutes[1]` a longer one; either way only if its tier is at least 1 in `tierOneIn` at his
+     * luck. A turbo spin carrying one runs at normal speed so it can play out (luck.ts judgeFinds).
      */
+    buildUp: z.object({ windowMinutes: z.array(positive).length(2), tierOneIn: positive }),
     /**
-     * The Roll tab's smaller build-ups (reelDrama.ts): a find this rare at the raccoon's luck ("1 in X",
-     * enchantments included) gets a riser and a climbing glow (`rare`), a longer one (`veryRare`). A
-     * turbo spin carrying one runs at normal speed so it can play out (luck.ts spinBuildsUp).
+     * The full-screen reveal (luck.ts judgeFinds): a find rarer for the raccoon (findScore) than
+     * anything in the last `windowMinutes[0]` minutes of play (big), `[1]` (huge) or `[2]` (insane),
+     * whose tier is at least 1 in `tierOneIn` at his luck. So it comes about as often early as late,
+     * however fast and lucky he rolls. A window counts once the finds watched cover `coverShare` of it
+     * (all of them before that), and none before `minHistoryMinutes`. The `historyMax` best finds are kept.
      */
-    buildUp: z.object({ rare: positive, veryRare: positive }),
-    /** The big reveal: a roll's tier-or-better odds at the raccoon's luck must reach `big` (`huge`, `insane` make it bigger). */
-    bigRoll: z.object({ big: positive, huge: positive, insane: positive, tierOneIn: positive }),
-    /** A Scrap All worth this many minutes of fighting (see haulMinutes) gets a big, huge or mega haul moment. */
-    haul: z.object({ big: positive, huge: positive, mega: positive }),
+    bigRoll: z.object({
+      windowMinutes: z.array(positive).length(3),
+      coverShare: z.number().min(0).max(1),
+      minHistoryMinutes: nonNeg,
+      tierOneIn: positive,
+      historyMax: z.number().int().positive(),
+    }),
+    /**
+     * A Scrap All haul against the run's own hauls (haul.ts judgeHaul): their trend (in log terms,
+     * per minute of play; Holt's smoothing with `trendWeight` and `slopeWeight`, gaps counted up to
+     * `maxGapMinutes`) says what a usual haul is worth now; `big`, `huge` and `mega` times that get
+     * the cutscene. The run's first `warmup` hauls only set the trend (the game's very first gets it).
+     */
+    haul: z.object({
+      trendWeight: z.number().min(0).max(1),
+      slopeWeight: z.number().min(0).max(1),
+      maxGapMinutes: positive,
+      warmup: z.number().int().nonnegative(),
+      big: positive,
+      huge: positive,
+      mega: positive,
+    }),
     rattleBeatsByRarity: rarityRecord(z.number().int().positive()),
     revealSecondsByRarity: rarityRecord(positive),
     hotDumpsterStartPct: nonNeg,

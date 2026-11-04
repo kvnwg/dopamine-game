@@ -225,7 +225,7 @@ button {
   70%, 100% { transform: translateY(0); filter: none; }
 }
 .popped {
-  animation: btnPop 180ms both;
+  animation: btnPop 180ms backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .popped {

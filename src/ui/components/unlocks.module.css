@@ -45,7 +45,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(10, 8, 22, 0.72);
-  animation: fadeIn 0.2s steps(2) both;
+  animation: fadeIn 0.2s steps(2) backwards;
 }
 .card {
   width: 960px;
@@ -58,7 +58,7 @@
   box-shadow:
     0 calc(-1 * var(--u)) 0 0 var(--ink), 0 var(--u) 0 0 var(--ink), calc(-1 * var(--u)) 0 0 0 var(--ink), var(--u) 0 0 0 var(--ink),
     0 calc(-2 * var(--u)) 0 0 #c48bff, 0 calc(2 * var(--u)) 0 0 #c48bff, calc(-2 * var(--u)) 0 0 0 #c48bff, calc(2 * var(--u)) 0 0 0 #c48bff;
-  animation: cardIn 0.27s steps(3) both;
+  animation: cardIn 0.27s steps(3) backwards;
 }
 /* The card shows every new item at once. */
 .card .strip {
@@ -89,7 +89,7 @@
   color: #ffd75a;
   -webkit-text-stroke: 6px var(--ink);
   paint-order: stroke fill;
-  animation: heistsPop 0.5s 0.4s steps(3) both;
+  animation: heistsPop 0.5s 0.4s steps(3) backwards;
 }
 @keyframes heistsPop {
   from {

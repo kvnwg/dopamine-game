@@ -13,7 +13,7 @@
   box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
   color: var(--ink);
   pointer-events: none;
-  animation: hoverIn 120ms steps(2) both;
+  animation: hoverIn 120ms steps(2) backwards;
 }
 @keyframes hoverIn {
   from { opacity: 0; }

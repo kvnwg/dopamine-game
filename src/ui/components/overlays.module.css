@@ -50,7 +50,7 @@
 }
 /* Big outlined words slam in (text only). */
 .title {
-  animation: titleIn 520ms cubic-bezier(0.34, 1.7, 0.5, 1) both;
+  animation: titleIn 520ms cubic-bezier(0.34, 1.7, 0.5, 1) backwards;
 }
 @keyframes titleIn {
   0% { transform: scale(2.4); opacity: 0; }
@@ -69,7 +69,7 @@
   -webkit-text-stroke: 9px var(--ink);
   paint-order: stroke fill;
   text-shadow: 0 6px 0 var(--ink);
-  animation: fadeUp 400ms ease-out 260ms both;
+  animation: fadeUp 400ms ease-out 260ms backwards;
 }
 /* The odds plate: square on the grid, it glows instead of growing. */
 .odds {
@@ -83,7 +83,7 @@
   color: #fff;
   -webkit-text-stroke: 10px var(--ink);
   paint-order: stroke fill;
-  animation: oddsIn 300ms steps(3) 300ms both, oddsBeat 0.8s steps(2) 900ms infinite;
+  animation: oddsIn 300ms steps(3) 300ms backwards, oddsBeat 0.8s steps(2) 900ms infinite;
 }
 .odds i {
   font-style: normal;
@@ -138,7 +138,7 @@
 .tags {
   display: flex;
   gap: calc(4 * var(--px));
-  animation: fadeUp 400ms steps(3) 460ms both;
+  animation: fadeUp 400ms steps(3) 460ms backwards;
 }
 .tag {
   height: calc(9 * var(--px));
@@ -165,7 +165,7 @@
   display: flex;
   flex-direction: column;
   gap: calc(2 * var(--px));
-  animation: fadeUp 400ms steps(3) 560ms both;
+  animation: fadeUp 400ms steps(3) 560ms backwards;
 }
 .enchant {
   display: flex;
@@ -205,7 +205,7 @@
   bottom: 120px;
   font-size: 30px;
   color: rgba(255, 255, 255, 0.65);
-  animation: fadeUp 400ms ease-out 1200ms both;
+  animation: fadeUp 400ms ease-out 1200ms backwards;
 }
 /* A haul's hint shows once its coins are in (it waits for a tap, like the reveal). */
 .tapNow {
@@ -254,7 +254,7 @@
   position: absolute;
   inset: 0;
   background: #000;
-  animation: fadeIn 250ms ease-out both;
+  animation: fadeIn 250ms ease-out backwards;
 }
 /* Light gathering in the dark: motes (one art pixel each) drift toward the middle, a point of light throbs with the heartbeat. */
 .motes {
@@ -298,7 +298,7 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 50%, transparent) 0%, transparent 58%);
-  animation: fadeIn 500ms ease-out both;
+  animation: fadeIn 500ms ease-out backwards;
 }
 .rare .rays {
   top: 40%;
@@ -323,7 +323,7 @@
   bottom: calc(100% + 2 * var(--px));
   display: flex;
   justify-content: center;
-  animation: bannerIn 360ms steps(4) both;
+  animation: bannerIn 360ms steps(4) backwards;
 }
 @keyframes bannerIn {
   0% { transform: translateY(calc(-4 * var(--px))); opacity: 0; }
@@ -341,7 +341,7 @@
 .rareItem {
   position: relative;
   margin: 6px 0 4px;
-  animation: rise var(--appear, 650ms) steps(8) both;
+  animation: rise var(--appear, 650ms) steps(8) backwards;
 }
 .rareItem::before {
   content: '';
@@ -370,7 +370,7 @@
 }
 .rareLit::before {
   opacity: 1;
-  animation: litFlash 360ms steps(3) both;
+  animation: litFlash 360ms steps(3) backwards;
 }
 @keyframes litFlash {
   0% { opacity: 1; transform: scale(1.25); }
@@ -408,7 +408,7 @@
 }
 /* The counter: its plate takes each tier's colors as the number climbs past their odds. */
 .rareOdds {
-  animation: oddsIn 300ms steps(3) both;
+  animation: oddsIn 300ms steps(3) backwards;
   transition: box-shadow 200ms;
 }
 .rareOdds b {
@@ -422,7 +422,7 @@
 }
 /* The real odds land: the plate drops into place with a flash. */
 .oddsLanded {
-  animation: slamIn 360ms steps(4) both, oddsBeat 0.8s steps(2) 1s infinite;
+  animation: slamIn 360ms steps(4) backwards, oddsBeat 0.8s steps(2) 1s infinite;
 }
 @keyframes slamIn {
   0% { transform: translateY(calc(-4 * var(--px))); filter: brightness(2.2); }
@@ -434,7 +434,7 @@
   color: #ffe08a;
   -webkit-text-stroke: 6px var(--ink);
   paint-order: stroke fill;
-  animation: fadeUp 400ms ease-out 300ms both;
+  animation: fadeUp 400ms ease-out 300ms backwards;
 }
 /* A shock wave: a one-pixel square ring growing out from the item. */
 .shock {
@@ -532,7 +532,7 @@
   -webkit-text-stroke: 12px var(--ink);
   paint-order: stroke fill;
   text-shadow: 0 8px 0 var(--ink);
-  animation: amountIn 360ms steps(4) 150ms both;
+  animation: amountIn 360ms steps(4) 150ms backwards;
 }
 @keyframes amountIn {
   from { transform: translateY(calc(4 * var(--px))); opacity: 0; filter: brightness(2); }
@@ -543,12 +543,12 @@
   color: #fff;
   -webkit-text-stroke: 7px var(--ink);
   paint-order: stroke fill;
-  animation: fadeUp 400ms ease-out 500ms both;
+  animation: fadeUp 400ms ease-out 500ms backwards;
 }
 .haulCount {
   font-size: 30px;
   color: #d8dcf5;
-  animation: fadeUp 400ms ease-out 700ms both;
+  animation: fadeUp 400ms ease-out 700ms backwards;
 }
 /* A coin flying out of the burst and into the gold counter: it only moves (no growing or shrinking). */
 .haulCoin {
@@ -590,7 +590,7 @@
   color: var(--ink);
   font-size: 32px;
   text-align: center;
-  animation: toastIn 260ms both;
+  animation: toastIn 260ms backwards;
 }
 /* A toast drops in, overshoots a pixel and settles (whole pixels, each keyframe held). */
 @keyframes toastIn {

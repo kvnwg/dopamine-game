@@ -6,8 +6,8 @@
 import { BAL, RARITIES, type Rarity } from '../../data';
 import type { Rng } from '../rng';
 import type { GameState } from '../state';
-import { rarityAtLeast, rarityIndex } from '../util';
-import { combatEffects } from './enchants';
+import { rarityAtLeast } from '../util';
+import { combatEffects, enchantTierWeights } from './enchants';
 import { perkLuckMult } from './perks';
 import { upgradeEffects } from './upgrades';
 
@@ -93,47 +93,98 @@ export function luckOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: nu
 }
 
 export type RollDrama = 'big' | 'huge' | 'insane';
+const DRAMAS: RollDrama[] = ['big', 'huge', 'insane'];
 
-/**
- * The full-screen reveal, and how big: a find gets it when its rarity is uncommon for your luck (its
- * tier-or-better odds at your luck, enchantments aside, at least 1 in feel.bigRoll.tierOneIn) and its
- * card's "1 in X" (enchantments included) is at least feel.bigRoll.big x your luck (10x and 100x that
- * make it huge and insane). Enchantments can't turn a common find into a reveal, and it comes about as
- * often at any luck (once in roughly 900 to 1,600 rolls).
- */
-export function revealDrama(item: { rarity: Rarity; enchants: Array<{ tier: number }> }, luck: number): RollDrama | null {
-  const l = Math.max(1, luck);
-  if (luckOddsOneIn({ rarity: item.rarity, enchants: [] }, l) < BAL.feel.bigRoll.tierOneIn) return null;
-  return rollDrama(itemOddsOneIn(item) / l);
+/** The chance of enchantments as good as these (their count and tiers) at the raccoon's own enchant chance and mastery now. */
+function enchantOddsNow(state: Pick<GameState, 'upgrades'>, enchants: Array<{ tier: number }>): number {
+  const n = enchants.length;
+  if (n === 0) return 1;
+  const e = BAL.enchant;
+  const up = upgradeEffects(state);
+  const chance = Math.min(1, e.baseChance + up.enchantChance);
+  const tiers = enchantTierWeights(up.enchantTier);
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  let p = chance * (e.countWeights[Math.min(n, e.countWeights.length) - 1] / sum(e.countWeights));
+  for (const en of enchants) p *= tiers[en.tier - 1] / sum(tiers);
+  return p;
 }
 
 /**
- * Whether a spin landing these finds gets a build-up as its reels roll in: one of them gets the full
- * reveal (the Roll tab builds up to the reel with the rarest card, rollController.ts), or its rarest
- * find is rare enough at this luck for the smaller build-up (feel.buildUp.rare, reelDrama.ts
- * teasePlan). A turbo spin that would carry one runs at normal speed instead (startSpin).
+ * How rare a find is for the raccoon right now, as "1 in X": its tier or better at his luck, times
+ * its enchantments at his own enchant chance and mastery (so enchantments he rolls all the time
+ * don't make a find special). Only compared with other finds (judgeFinds), never shown.
  */
-export function spinBuildsUp(finds: ReadonlyArray<{ rarity: Rarity; enchants: Array<{ tier: number }> }>, luck: number): boolean {
-  if (finds.length === 0) return false;
-  const top = Math.max(...finds.map((f) => rarityIndex(f.rarity)));
-  const l = Math.max(1, luck);
-  return finds.some((f) => revealDrama(f, l) !== null || (rarityIndex(f.rarity) === top && luckOddsOneIn(f, l) >= BAL.feel.buildUp.rare));
+export function findScore(state: Pick<GameState, 'upgrades'>, item: { rarity: Rarity; enchants: Array<{ tier: number }> }, luck: number): number {
+  return luckOddsOneIn({ rarity: item.rarity, enchants: [] }, luck) / enchantOddsNow(state, item.enchants);
 }
 
-/** The least a find needs for the full-screen reveal at this luck: its rarity, and its card's "1 in X". */
-export function revealBar(luck: number): { rarity: Rarity; oneIn: number } {
+/**
+ * Which finds of a spin get the full-screen reveal and how big, and how much the spin builds up
+ * (Kevin: "late game ... every single [one] gets the animation, early game, i RARELY see one. please
+ * find a system to make it proportionate"). A find gets the reveal when it is rarer for the raccoon
+ * (findScore) than anything he found in the last few minutes of play (feel.bigRoll.windowMinutes:
+ * big), the last hour or so (huge) or the last several hours (insane), and its tier is uncommon at
+ * his luck. However fast he rolls and however lucky he is, that comes about every few minutes, early
+ * and late alike. The build-up works the same over shorter windows (feel.buildUp). The finds are then
+ * added to the ones watched (roll.rare). Nothing is judged in a new game's first couple of minutes
+ * (feel.bigRoll.minHistoryMinutes): the tutorial scripts its own reveals.
+ */
+export function judgeFinds(
+  d: GameState,
+  finds: ReadonlyArray<{ rarity: Rarity; enchants: Array<{ tier: number }> }>,
+  luck: number,
+): { drama: Array<RollDrama | null>; tease: 0 | 1 | 2 } {
+  const b = BAL.feel.bigRoll;
+  const bu = BAL.feel.buildUp;
+  const now = d.playTimeMs;
+  const watch = d.roll.rare;
+  watch.since ??= now;
+  const l = Math.max(1, luck);
+  const MIN = 60_000;
+  const watched = now - watch.since;
+  const longest = Math.max(...b.windowMinutes, ...bu.windowMinutes) * MIN;
+  watch.hist = watch.hist.filter(([at]) => at >= now - longest);
+  /** The rarest find of the last `ms` (0 if none). The history is rarest first, so the first one in the window is it. */
+  const rarestSince = (ms: number) => watch.hist.find(([at]) => at >= now - ms)?.[1] ?? 0;
+  /** How many of `windows` (minutes, shortest first) this find beats, each counting once the watch covers enough of it. */
+  const beats = (score: number, windows: readonly number[]) => {
+    let k = 0;
+    for (const w of windows) {
+      const ms = w * MIN;
+      if (watched < Math.min(ms, Math.max(b.minHistoryMinutes * MIN, ms * b.coverShare))) break;
+      if (score <= rarestSince(ms)) break;
+      k++;
+    }
+    return k;
+  };
+  const scores = finds.map((f) => findScore(d, f, l));
+  const drama = finds.map((f, i) => {
+    if (luckOddsOneIn({ rarity: f.rarity, enchants: [] }, l) < b.tierOneIn) return null;
+    const k = beats(scores[i], b.windowMinutes);
+    return k > 0 ? DRAMAS[k - 1] : null;
+  });
+  let tease: 0 | 1 | 2 = 0;
+  finds.forEach((f, i) => {
+    if (luckOddsOneIn({ rarity: f.rarity, enchants: [] }, l) < bu.tierOneIn) return;
+    tease = Math.max(tease, beats(scores[i], bu.windowMinutes)) as 0 | 1 | 2;
+  });
+  // Watched from now on: each find drops the ones before it that it's at least as rare as.
+  for (const sc of scores) {
+    while (watch.hist.length > 0 && watch.hist[watch.hist.length - 1][1] <= sc) watch.hist.pop();
+    watch.hist.push([now, sc]);
+  }
+  if (watch.hist.length > b.historyMax) watch.hist.splice(0, watch.hist.length - b.historyMax);
+  return { drama, tease };
+}
+
+/**
+ * What the reveal takes at this luck, for the luck popup: a find whose tier is at least `rarity`
+ * (1 in feel.bigRoll.tierOneIn at this luck), rarer than everything in the last `minutes`.
+ */
+export function revealBar(luck: number): { rarity: Rarity; minutes: number } {
   const l = Math.max(1, luck);
   const rarity = RARITIES.find((r) => luckOddsOneIn({ rarity: r, enchants: [] }, l) >= BAL.feel.bigRoll.tierOneIn) ?? RARITIES[RARITIES.length - 1];
-  return { rarity, oneIn: Math.round(BAL.feel.bigRoll.big * l) };
-}
-
-/** How big a deal odds of 1 in `luckOdds` (for the raccoon's luck) are (feel.bigRoll); null for everyday ones. */
-export function rollDrama(luckOdds: number): RollDrama | null {
-  const b = BAL.feel.bigRoll;
-  if (luckOdds >= b.insane) return 'insane';
-  if (luckOdds >= b.huge) return 'huge';
-  if (luckOdds >= b.big) return 'big';
-  return null;
+  return { rarity, minutes: BAL.feel.bigRoll.windowMinutes[0] };
 }
 
 /** Rolls a rarity: tiers are tried from rarest down; anything below `minRarity` is never rolled. */

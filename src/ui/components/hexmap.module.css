@@ -14,7 +14,7 @@
   background:
     radial-gradient(circle at 50% 42%, rgba(91, 132, 255, 0.28), transparent 55%),
     linear-gradient(180deg, #1a2147 0%, #121734 55%, #0b0e22 100%);
-  animation: mapIn 220ms ease-out both;
+  animation: mapIn 220ms ease-out backwards;
 }
 @keyframes mapIn {
   from { opacity: 0; }
@@ -80,13 +80,19 @@
 .hex[data-sel] {
   z-index: 3;
 }
+/*
+ * The opening ripple: hexes and their icons pop in ring by ring. Visibility only, and gone once it has
+ * played (fill backwards): an opacity fade gave every hex and icon its own GPU layer, hundreds on a
+ * late-game map, kept for as long as the map was open, and that crashed phones on opening it
+ * (Kevin's tester, "it crashed a few times whenever i pressed upgrade").
+ */
 .hex[data-mode='intro'],
 .hexIcon[data-mode='intro'] {
-  animation: hexIn 300ms steps(3) both;
+  animation: hexIn 300ms steps(3) backwards;
 }
 .hex[data-mode='fresh'][data-view='owned'],
 .hexIcon[data-mode='fresh'][data-view='owned'] {
-  animation: hexBuy 560ms steps(5) both;
+  animation: hexBuy 560ms steps(5);
 }
 .hex[data-mode='fresh'][data-view='owned'] {
   z-index: 2;
@@ -94,11 +100,11 @@
 .hex[data-mode='fresh'][data-view='open'],
 .hex[data-mode='fresh'][data-view='mystery'],
 .hexIcon[data-mode='fresh'][data-view='open'] {
-  animation: hexReveal 420ms steps(4) both;
+  animation: hexReveal 420ms steps(4);
 }
 /* Hexes and their icons appear, light up when bought and blink when revealed: no growing or turning. */
 @keyframes hexIn {
-  from { opacity: 0; }
+  from { visibility: hidden; }
 }
 @keyframes hexBuy {
   0% { filter: brightness(2.4); }
@@ -114,27 +120,46 @@
   inset: 0;
 }
 /*
- * An affordable hex glows behind: a soft green light that breathes smoothly (opacity and size only, so
- * it stays smooth on phones; Kevin: "glowing animation behind upgrades needs to be more smooth").
+ * Affordable hexes glow: a soft green light that breathes smoothly (Kevin: "glowing animation behind
+ * upgrades needs to be more smooth"). A steady small glow behind the hexes, and a bigger one around
+ * them that fades in and out, cut out where its own hex is, so it looks like light from behind. The
+ * breathing ones share one layer, above the hexes so nothing has to be lifted over it: each glow (and
+ * each hex over it) used to get a GPU layer of its own, which crashed phones on a late-game map.
  */
-.hex[data-afford]::before {
-  content: '';
+.glows,
+.glowPulse {
   position: absolute;
-  inset: -26%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(126, 240, 143, 0.9), rgba(126, 240, 143, 0.4) 55%, rgba(126, 240, 143, 0) 100%);
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
   pointer-events: none;
-  will-change: opacity, transform;
+}
+.glow {
+  position: absolute;
+  width: 236px;
+  height: 236px;
+  margin: -118px 0 0 -118px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(126, 240, 143, 0.36), rgba(126, 240, 143, 0.16) 55%, rgba(126, 240, 143, 0) 100%);
+}
+.glowPulse {
   animation: hexGlow 1.8s ease-in-out infinite alternate;
+}
+.glowPulse .glow {
+  width: 280px;
+  height: 280px;
+  margin: -140px 0 0 -140px;
+  border-radius: 0;
+  background: radial-gradient(closest-side, rgba(126, 240, 143, 0.54), rgba(126, 240, 143, 0.24) 55%, rgba(126, 240, 143, 0) 100%);
+  clip-path: polygon(evenodd, 0 0, 280px 0, 280px 280px, 0 280px, 0 0, 238.0px 140.0px, 189.0px 224.9px, 91.0px 224.9px, 42.0px 140.0px, 91.0px 55.1px, 189.0px 55.1px, 238.0px 140.0px);
 }
 @keyframes hexGlow {
   from {
-    opacity: 0.4;
-    transform: scale(0.9);
+    opacity: 0;
   }
   to {
     opacity: 1;
-    transform: scale(1.06);
   }
 }
 /* (The bread counter on the Perks tab still pulses: a smooth fade.) */
@@ -396,7 +421,7 @@
 }
 /* A locked tab shakes its head when tapped, a pixel each way. */
 .tab[data-nope] {
-  animation: tabNope 400ms steps(4) both;
+  animation: tabNope 400ms steps(4) backwards;
 }
 @keyframes tabNope {
   25% { transform: translateX(calc(-1 * var(--px))); }
@@ -583,19 +608,25 @@
 .overlay[data-calm] .hex,
 .overlay[data-calm] .hexIcon,
 .overlay[data-calm] .body,
-.overlay[data-calm] .hex::before,
+.overlay[data-calm] .glowPulse,
 .overlay[data-calm] .tab,
 .overlay[data-calm] .tabBread {
   animation: none !important;
 }
+.overlay[data-calm] .glowPulse {
+  opacity: 0.6;
+}
 @media (prefers-reduced-motion: reduce) {
   .hex,
-  .hex::before,
+  .glowPulse,
   .hexIcon,
   .body,
   .tab,
   .tabBread {
     animation: none !important;
+  }
+  .glowPulse {
+    opacity: 0.6;
   }
 }
 

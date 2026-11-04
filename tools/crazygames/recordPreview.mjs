@@ -1,5 +1,6 @@
 // Records the CrazyGames preview videos from real gameplay: a new game's first minute (title, PLAY,
-// busting the padlock off the dumpster, the first roll's Legendary reveal, dragging it onto the raccoon).
+// busting the padlock off the dumpster, the first rolls, the Traffic Cone's Legendary reveal, then Equip
+// best putting it on the raccoon). The take follows the game's own UI state (window.__dl, dev server).
 //   node tools/crazygames/recordPreview.mjs
 // Writes crazygames/video/preview-landscape-1920x1080.mp4 and preview-portrait-1080x1620.mp4.
 // CrazyGames rules followed: 15-20 s, no sound, opens on the cover image, no fast-forward, no cursor,
@@ -45,42 +46,50 @@ async function record(browser, base, dir) {
   // JPEG keeps the page running at full speed (PNG encoding slowed the drag down).
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, everyNthFrame: Number(process.env.PREVIEW_NTH ?? 1) });
 
-  // The script of the take (real time).
-  await sleep(1600); // the title: the raccoon walking down his street
+  // Moments of the take, on the screencast's own clock (seconds from its first frame).
+  const marks = {};
+  const mark = (name) => {
+    marks[name] = frames.length ? frames[frames.length - 1].t - frames[0].t : 0;
+  };
+  const ui = () => page.evaluate(() => {
+    const u = window.__dl?.ui?.getState?.();
+    return { charging: !!u?.charging, celebrate: !!u?.celebrate };
+  });
+  const waitFor = async (key, ms) => {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      if ((await ui())[key]) return true;
+      await sleep(60);
+    }
+    return false;
+  };
+  const click = async (locator) => {
+    const box = await locator.first().boundingBox().catch(() => null);
+    if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    return !!box;
+  };
+
+  // The script of the take, in real time: a brand-new player's first minute.
+  await sleep(1400); // the title: the raccoon walking down his street
+  mark('space');
   await page.keyboard.press('Space'); // PLAY
   await sleep(2300);
-  const lock = await page.locator('[class*="_padlock_"]').first().boundingBox();
-  if (lock) await page.mouse.click(lock.x + lock.width / 2, lock.y + lock.height / 2);
-  await sleep(9000); // the reels roll, the black beat, the count-up, then the gold LEGENDARY card a while
+  mark('lock');
+  await click(page.locator('[class*="_padlock_"]')); // bust the padlock off the dumpster
+  if (!(await waitFor('charging', 40000))) throw new Error('the first big roll never started charging');
+  mark('charge'); // warm-up rolls done: the dumpster shakes and glows for the Traffic Cone of Destiny
+  if (!(await waitFor('celebrate', 15000))) throw new Error('the Legendary reveal never showed');
+  await sleep(6600); // the black beat, the count-up, then the gold YOUR FIRST FIND! LEGENDARY! card
   await page.mouse.click(VIEW.width / 2, VIEW.height * 0.5);
-  await sleep(700);
-  const tile = await page.locator('[class*="_grab_"]').first().boundingBox();
-  if (tile) {
-    // Drag the find up onto the raccoon (he stands left of centre in the battle view).
-    const from = { x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 };
-    const to = { x: VIEW.width * 0.29, y: VIEW.height * 0.39 };
-    const dragAt = Date.now();
-    // Raw input events, not awaited one by one: each awaited move waits on the busy headless
-    // renderer (~200 ms), which made the drag crawl. Pipelined, it moves at the page's frame rate.
-    const send = (type, p, buttons) =>
-      cdp.send('Input.dispatchMouseEvent', { type, x: p.x, y: p.y, button: type === 'mouseMoved' && !buttons ? 'none' : 'left', buttons, clickCount: 1 });
-    await send('mouseMoved', from, 0);
-    await send('mousePressed', from, 1);
-    const moves = [];
-    for (let i = 1; i <= 14; i++) {
-      const k = i / 14;
-      const e = k * k * (3 - 2 * k);
-      moves.push(send('mouseMoved', { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e }, 1));
-      await sleep(18);
-    }
-    await Promise.all(moves);
-    await sleep(120);
-    await send('mouseReleased', to, 0);
-    console.log(`drag took ${Date.now() - dragAt} ms`);
-  }
-  await sleep(6000); // the slam onto him, his power counting up, the next spins
+  await sleep(450);
+  await click(page.getByRole('button', { name: 'Bag' })); // the tutorial points at the Bag
+  await sleep(500);
+  await click(page.getByRole('button', { name: /equip best/i }));
+  mark('equip'); // the cone flies onto him, his power counts up
+  await sleep(4500);
   await cdp.send('Page.stopScreencast');
   await page.close();
+  console.log('marks (s):', Object.entries(marks).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', '));
 
   // Frames → files + a concat list with each frame's real duration.
   const list = [];
@@ -102,24 +111,50 @@ async function record(browser, base, dir) {
     '-vf', `fps=${FPS},scale=1080:1920:flags=neighbor,format=yuv420p`,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '12', master,
   ]);
-  return master;
+  return { master, marks, total: span };
+}
+
+/** Black moments in the take (the PLAY iris closing, the reveal's black beat), in seconds. */
+function blackSpans(master) {
+  const probe = spawnSync('ffmpeg', ['-hide_banner', '-i', master, '-vf', 'blackdetect=d=0.05:pix_th=0.1:pic_th=0.92', '-an', '-f', 'null', '-']);
+  return [...probe.stderr.toString().matchAll(/black_start:([\d.]+) black_end:([\d.]+)/g)].map((m) => [Math.max(0, Number(m[1]) - 0.15), Number(m[2]) + 0.1]);
 }
 
 /**
- * The take with its black moments (the PLAY iris closing, the reveal's black beat) cut out, so the
- * preview never shows a black screen. Plain cuts: nothing is sped up.
+ * What to keep: the title, the padlock breaking and the first warm-up roll, then (a plain cut, nothing
+ * sped up) from just before the Traffic Cone's build-up to just after Equip best lands it on him, with
+ * every black moment cut. If that runs long, less of the warm-up is kept; the ending always stays.
  */
-function cutBlack(master, dir) {
-  const probe = spawnSync('ffmpeg', ['-hide_banner', '-i', master, '-vf', 'blackdetect=d=0.05:pix_th=0.1:pic_th=0.92', '-an', '-f', 'null', '-']);
-  const log = probe.stderr.toString();
-  const spans = [...log.matchAll(/black_start:([\d.]+) black_end:([\d.]+)/g)].map((m) => [Math.max(0, Number(m[1]) - 0.15), Number(m[2]) + 0.1]);
-  console.log('cut black:', spans.map(([a, b]) => `${a.toFixed(2)}-${b.toFixed(2)}s`).join(', ') || 'none');
-  if (!spans.length) return master;
-  const keep = spans.map(([a, b]) => `between(t,${a.toFixed(3)},${b.toFixed(3)})`).join('+');
+function plan(marks, black, total) {
+  const endAt = Math.min(total, marks.equip + 3.6);
+  const len = (k) => k.reduce((sum, [a, b]) => sum + b - a, 0);
+  const build = (afterLock) => {
+    const remove = [[marks.lock + afterLock, marks.charge - 0.3], ...black].filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+    const kept = [];
+    let cur = 0;
+    for (const [a, b] of remove) {
+      if (a > cur) kept.push([cur, Math.min(a, endAt)]);
+      cur = Math.max(cur, b);
+      if (cur >= endAt) break;
+    }
+    if (cur < endAt) kept.push([cur, endAt]);
+    return kept.filter(([a, b]) => b - a > 0.05);
+  };
+  let afterLock = 3.4;
+  let kept = build(afterLock);
+  while (len(kept) > CLIP + 0.3 && afterLock > 1.6) kept = build((afterLock -= 0.2));
+  const start = Math.max(0, len(kept) - CLIP);
+  console.log(`keep: ${kept.map(([a, b]) => `${a.toFixed(2)}-${b.toFixed(2)}`).join(', ')} (${len(kept).toFixed(1)} s, start ${start.toFixed(2)})`);
+  if (len(kept) - start < 13.5) console.warn('warning: the preview will be under 15 s; lengthen the take');
+  return { kept, start };
+}
+
+function cut(master, kept, dir) {
+  const keep = kept.map(([a, b]) => `between(t,${a.toFixed(3)},${b.toFixed(3)})`).join('+');
   const out = path.join(dir, 'cut.mp4');
   execFileSync('ffmpeg', [
     '-y', '-loglevel', 'error', '-i', master,
-    '-vf', `select='not(${keep})',setpts=N/(${FPS}*TB)`,
+    '-vf', `select='${keep}',setpts=N/(${FPS}*TB)`,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '12', '-r', String(FPS), out,
   ]);
   return out;
@@ -149,10 +184,9 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dl-preview-'));
 const vite = await startVite();
 const browser = await chromium.launch();
 try {
-  // PREVIEW_MASTER=file reuses an earlier take (KEEP_MASTER=1 saves one) to re-cut without re-recording.
-  const master = process.env.PREVIEW_MASTER || (await record(browser, vite.base, tmp));
-  const take = cutBlack(master, tmp);
-  const start = Number(process.env.PREVIEW_START ?? 0.3);
+  const { master, marks, total } = await record(browser, vite.base, tmp);
+  const { kept, start } = plan(marks, blackSpans(master), total);
+  const take = cut(master, kept, tmp);
   for (const [name, w, h, k] of [
     ['preview-landscape-1920x1080.mp4', 1920, 1080, 6],
     ['preview-portrait-1080x1620.mp4', 1080, 1620, 6],
@@ -163,7 +197,6 @@ try {
     compose(take, cover, start, w, h, out);
     console.log(`wrote ${path.relative(ROOT, out)} (${(fs.statSync(out).size / 1e6).toFixed(1)} MB)`);
   }
-  if (process.env.KEEP_MASTER) fs.copyFileSync(master, path.join(OUT, 'master-1080x1920.mp4'));
 } finally {
   await browser.close();
   await vite.close();

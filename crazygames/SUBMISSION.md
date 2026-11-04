@@ -30,8 +30,8 @@ The requirements below were checked against the official docs at <https://docs.c
 | Landscape cover | `crazygames/covers/cover-landscape-1920x1080.png` | 16:9, 1920×1080 |
 | Portrait cover | `crazygames/covers/cover-portrait-800x1200.png` | 2:3, 800×1200 |
 | Square cover | `crazygames/covers/cover-square-800x800.png` | 1:1, 800×800 |
-| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 18 s, silent, opens on the cover, 4.9 MB |
-| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 18 s, silent, opens on the cover, 5.5 MB |
+| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 18 s, silent, opens on the cover, 5.1 MB |
+| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 18 s, silent, opens on the cover, 5.6 MB |
 
 **Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the real logo. The title is the only text, with no borders or icons.
 
@@ -40,9 +40,9 @@ The requirements below were checked against the official docs at <https://docs.c
 - Busting the padlock off the dumpster.
 - The reels rolling.
 - The count-up into the "YOUR FIRST FIND! LEGENDARY!" reveal.
-- Dragging the Traffic Cone of Destiny onto the raccoon, his power counting up.
+- Opening the Bag and tapping Equip best: the Traffic Cone of Destiny lands on the raccoon and his power counts up.
 
-They have no cursor and no fast-forward. The black moments (the PLAY iris and the reveal's black beat) are cut out, and blurred gameplay fills the sides instead of black bars.
+They have no cursor and no fast-forward. Plain cuts skip most warm-up rolls and the black moments (the PLAY iris and the reveal's black beat), and blurred gameplay fills the sides instead of black bars.
 
 ---
 

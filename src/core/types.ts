@@ -17,7 +17,8 @@ export type CoreEvent =
   | { type: 'playerHit'; enemyUid: number; amount: number; crit: boolean; targetUid: number; killed: boolean; echo: boolean }
   | { type: 'enemyHit'; enemyUid: number; amount: number; heavy: boolean }
   | { type: 'playerDodge'; enemyUid: number }
-  | { type: 'heal'; amount: number; source: 'lifesteal' | 'wave' | 'heist' }
+  /** `perk`: Dr. Squeaks patching the raccoon up, or Playing Possum's second wind. */
+  | { type: 'heal'; amount: number; source: 'lifesteal' | 'wave' | 'heist' | 'perk' }
   | { type: 'kill'; enemyUid: number; enemyId: string; coins: number; xp: number; kind: 'regular' | 'miniboss' | 'boss' }
   | { type: 'burn'; enemyUid: number; amount: number }
   | { type: 'chain'; fromUid: number; toUid: number; amount: number }
@@ -53,6 +54,8 @@ export type CoreEvent =
       restSeconds: number;
       /** A spin the tutorial scripts (its first reel): the very first one, or beginner's luck. */
       scripted?: 'first' | 'beginner';
+      /** Rigged Jackpot (an Alley perk) rigged this spin: every reel lands this rarity or better. */
+      rigged?: Rarity;
     }
   /** One reel lands (a spin with several reels sends one of these per reel). */
   | {
@@ -111,7 +114,18 @@ export type CoreEvent =
   | { type: 'heistStun'; enemyUid: number; seconds: number }
   /** The run is over and banked: what was paid (and the ring, when it dropped). The main battle is back. */
   | { type: 'heistEnd'; won: boolean; rewards: HeistRewards; item: Item | null }
+  // ---- Alley perks (src/core/systems/perks.ts)
+  /** A world's boss fell for the first time this run: `loaves` Half-Eaten Bread Loaves, `bread` now in the pocket. */
+  | { type: 'breadEarned'; world: number; loaves: number; bread: number }
+  | { type: 'perkBought'; id: string; cost: number }
+  /** A crew perk's helper hit an enemy in the Alley battle. */
+  | { type: 'crewHit'; helper: CrewHelper; enemyUid: number; amount: number; killed: boolean }
+  /** Playing Possum: a knockout blow left the raccoon standing at `hp`. */
+  | { type: 'secondWind'; hp: number }
   | { type: 'error'; message: string };
+
+/** The Alley crew: the pigeon, the sewer rats, the seagull, Raccoon Mafia's recruits and the Gluten Golem. */
+export type CrewHelper = 'pigeon' | 'rats' | 'gull' | 'mafia' | 'golem';
 
 export type GameAction =
   /** A new game's first tap: the padlock comes off the dumpster and it starts rolling. */
@@ -126,6 +140,8 @@ export type GameAction =
   | { type: 'scrapAll' }
   | { type: 'toggleLock'; uid: number }
   | { type: 'buyUpgrade'; id: string }
+  /** Spends Half-Eaten Bread Loaves on an Alley perk (the Upgrades screen's Perks page). */
+  | { type: 'buyPerk'; id: string }
   | { type: 'rebirth' }
   | { type: 'travel'; world: number }
   /** After a boss: on to the next world, or this one again. */
@@ -166,7 +182,8 @@ export type SettingKey = 'haptics' | 'sound' | 'music' | 'reduceFlashing' | 'red
 export type VolumeKey = 'soundVolume' | 'musicVolume';
 
 export type Cheat =
-  | { kind: 'addCurrency'; coins?: number; gems?: number; bags?: number }
+  /** `bread`: Half-Eaten Bread Loaves (they only buy perks once perks are open). */
+  | { kind: 'addCurrency'; coins?: number; gems?: number; bags?: number; bread?: number }
   | { kind: 'addXp'; amount: number }
   /** Jump to a world as if every world before it was beaten. */
   | { kind: 'setStage'; stage: number }

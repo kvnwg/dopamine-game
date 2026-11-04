@@ -8,6 +8,7 @@ import type { Rng } from '../rng';
 import type { GameState } from '../state';
 import { rarityAtLeast } from '../util';
 import { combatEffects } from './enchants';
+import { perkLuckMult } from './perks';
 import { upgradeEffects } from './upgrades';
 
 export const RARITY_ODDS: Record<Rarity, number> = { junk: 1, ...BAL.rarityOdds };
@@ -19,6 +20,8 @@ export interface LuckBreakdown {
   rebirthMult: number;
   boostMult: number;
   boostEndsAt: number | null;
+  /** Carb Loading (an Alley perk): luck for every uneaten loaf. */
+  perkMult: number;
   total: number;
 }
 
@@ -29,8 +32,9 @@ export function luckBreakdown(state: GameState, now: number): LuckBreakdown {
   const rebirthMult = 1 + state.rebirths * BAL.rebirth.luckPer;
   const boosting = state.luckBoostEndsAt !== null && now < state.luckBoostEndsAt;
   const boostMult = boosting ? BAL.luck.potion.mult : 1;
-  const total = (1 + upgrades + dumpster + enchants) * rebirthMult * boostMult;
-  return { upgrades, dumpster, enchants, rebirthMult, boostMult, boostEndsAt: boosting ? state.luckBoostEndsAt : null, total };
+  const perkMult = perkLuckMult(state);
+  const total = (1 + upgrades + dumpster + enchants) * rebirthMult * boostMult * perkMult;
+  return { upgrades, dumpster, enchants, rebirthMult, boostMult, boostEndsAt: boosting ? state.luckBoostEndsAt : null, perkMult, total };
 }
 
 export function currentLuck(state: GameState, now: number): number {

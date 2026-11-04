@@ -38,7 +38,7 @@ describe('a new game opens its features one by one', () => {
     expect(start?.type === 'spinStart' && start.scripted).toBe('first');
   });
 
-  it('each opens when it becomes useful, once: the Bag with the first item worn, luck and the Codex after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Worlds after World 1, Rebirth near the first rebirth, Heists with it', () => {
+  it('each opens when it becomes useful, once: the Bag with the first item worn, luck and the Codex after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Worlds after World 1, Rebirth near the first rebirth, Heists with it, Perks with the second', () => {
     let st = freshState();
     let r = step(st);
     expect(r.opened).toEqual([]);
@@ -72,6 +72,11 @@ describe('a new game opens its features one by one', () => {
     st.rebirths = BAL.heist.unlockRebirths;
     r = step(st);
     expect(r.opened).toEqual(['heist']);
+    // The second: the Upgrades screen's Perks page.
+    st = r.st;
+    st.rebirths = BAL.perks.unlockRebirths;
+    r = step(st);
+    expect(r.opened).toEqual(['perks']);
     expect([...r.st.features.unlocked].sort()).toEqual([...FEATURES].sort());
     // Nothing opens twice.
     expect(step(r.st).opened).toEqual([]);

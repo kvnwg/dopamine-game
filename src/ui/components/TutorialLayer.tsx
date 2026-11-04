@@ -79,6 +79,9 @@ const INTRO: Record<Exclude<Feature, 'roll'>, { target: string; fallback?: strin
   dumpster: { target: '[data-intro="dumpster"]', fallback: navTab('alley'), ms: 15_000 },
   rebirth: { target: navTab('rebirth'), ms: 30_000 },
   heist: { target: navTab('heist'), ms: 30_000 },
+  // The Perks page lives on the Upgrades screen: the hand points at its tab, and inside, the Perks
+  // switch blinks until it is tapped (UpgradeMap.tsx).
+  perks: { target: navTab('upgrades'), ms: 30_000 },
 };
 
 /** The middle of the first element matching `sel` that is on screen (stage px), or null. */

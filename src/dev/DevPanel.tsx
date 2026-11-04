@@ -33,6 +33,7 @@ export function DevPanel() {
             <button className={s.b} onClick={() => cheat({ kind: 'addCurrency', gems: 500 })}>+500 gems</button>
             <button className={s.b} onClick={() => cheat({ kind: 'addCurrency', bags: 50 })}>+50 bags</button>
             <button className={s.b} onClick={() => cheat({ kind: 'addXp', amount: 5_000 })}>+5K XP</button>
+            <button className={s.b} onClick={() => cheat({ kind: 'addCurrency', bread: 5 })}>+5 bread</button>
           </div>
         </div>
         <div className={s.group}>
@@ -90,7 +91,8 @@ export function DevPanel() {
           {st.LIFESTEAL.toFixed(1)}% · REGEN {st.REGEN.toFixed(1)} · BAG {st.BAG_FIND.toFixed(1)}%
           <br />
           power {playerPower(getGame())} · rolls {g.roll.count} · luck ×{currentLuck(g, clock.now()).toFixed(2)} · rebirths {g.rebirths} · dry streak {g.dumpster.dryStreak} · play{' '}
-          {(g.playTimeMs / 60000).toFixed(1)}m · mode {g.stage.mode} · best {g.stage.highestCleared}
+          {(g.playTimeMs / 60000).toFixed(1)}m · mode {g.stage.mode} · best {g.stage.highestCleared} · bread {g.perks.bread} · perks{' '}
+          {g.perks.owned.join(', ') || 'none'}
         </div>
       </div>
     </>

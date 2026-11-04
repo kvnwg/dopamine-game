@@ -19,8 +19,8 @@ import heistJson from './heist.json';
 import heistEventsJson from './heistEvents.json';
 import {
   AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, HeistEventsSchema, HeistFileSchema, ItemsSchema,
-  WorldsSchema, LOCATION_IDS, RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
-  type Affix, type Assets, type Balance, type BaseItem, type CurseDef, type EnchantDef, type EnemyDef, type HeistEventDef,
+  WorldsSchema, LOCATION_IDS, PERK_TREE_IDS, RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
+  type Affix, type AlleyPerkDef, type Assets, type Balance, type BaseItem, type CurseDef, type EnchantDef, type EnemyDef, type HeistEventDef,
   type HeistLocationDef, type LocationId, type MintPerk, type PerkDef, type WorldDef, type Theme,
 } from './schemas';
 import type { z } from 'zod';
@@ -57,6 +57,9 @@ export interface GameData {
   heistCursesById: Map<string, CurseDef>;
   heistEvents: HeistEventDef[];
   heistEventsById: Map<string, HeistEventDef>;
+  /** Alley perks (the Upgrades screen's Perks page), in balance.json order. */
+  alleyPerks: AlleyPerkDef[];
+  alleyPerksById: Map<string, AlleyPerkDef>;
 }
 
 function parse<T extends z.ZodTypeAny>(name: string, schema: T, raw: unknown): z.infer<T> {
@@ -169,6 +172,7 @@ export function buildGameData(raw: {
   const heist = buildHeistData(raw.heist ?? heistJson, raw.heistEvents ?? heistEventsJson, {
     balance, itemsById, enemiesById, worlds, assets,
   });
+  const alleyPerksById = checkAlleyPerks(balance);
 
   return {
     balance,
@@ -188,7 +192,45 @@ export function buildGameData(raw: {
     enchantsById,
     upgradeMap: upgradeMap.nodes,
     ...heist,
+    alleyPerks: balance.perks.list,
+    alleyPerksById,
   };
+}
+
+/**
+ * The Alley perk trees (balance.json `perks`): every tree listed once and rooted, ids unique, each
+ * perk opened by perks of its own tree that cost less (deeper is pricier), every perk reachable from
+ * its tree's root, and a rarity on (only) the perks that rig spins.
+ */
+function checkAlleyPerks(balance: Balance): Map<string, AlleyPerkDef> {
+  const p = balance.perks;
+  const byId = new Map<string, AlleyPerkDef>();
+  for (const perk of p.list) {
+    if (byId.has(perk.id)) fail(`duplicate perk id ${perk.id}`);
+    byId.set(perk.id, perk);
+  }
+  const trees = p.trees.map((t) => t.id);
+  for (const id of PERK_TREE_IDS) if (trees.filter((t) => t === id).length !== 1) fail(`perk tree ${id} must be listed once`);
+  for (const perk of p.list) {
+    for (const req of perk.requires) {
+      const parent = byId.get(req);
+      if (!parent) fail(`perk ${perk.id} requires unknown perk ${req}`);
+      if (parent.tree !== perk.tree) fail(`perk ${perk.id} requires ${req} from another tree`);
+      if (parent.cost >= perk.cost) fail(`perk ${perk.id} must cost more than ${req}, which opens it`);
+    }
+    if (!!perk.effect.jackpotEvery !== !!perk.rarity) fail(`perk ${perk.id}: a rarity goes with (only) jackpotEvery`);
+  }
+  for (const tree of PERK_TREE_IDS) {
+    const list = p.list.filter((x) => x.tree === tree);
+    if (!list.some((x) => x.requires.length === 0)) fail(`perk tree ${tree} has no root`);
+    // Cheaper perks open dearer ones, so walking in cost order reaches everything reachable.
+    const reached = new Set<string>();
+    for (const perk of [...list].sort((a, b) => a.cost - b.cost)) {
+      if (perk.requires.length === 0 || perk.requires.some((r) => reached.has(r))) reached.add(perk.id);
+    }
+    for (const perk of list) if (!reached.has(perk.id)) fail(`perk ${perk.id} can never be reached`);
+  }
+  return byId;
 }
 
 type HeistData = Pick<

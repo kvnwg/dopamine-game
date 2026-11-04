@@ -134,6 +134,20 @@ export function installSound(): () => void {
           // The loot is banked.
           if (e.won || e.rewards.coins > 0 || e.rewards.bags > 0) audio.collect();
           break;
+        // ---- Alley perks: a loaf in the pocket, a perk eaten (the top of a tree rings out), the crew's
+        // blows (a small tick, like a heist helper's), and Playing Possum's second wind.
+        case 'breadEarned':
+          setTimeout(() => audio.heistTicket(), 600);
+          break;
+        case 'perkBought':
+          audio.heistPerk(e.cost >= 4);
+          break;
+        case 'crewHit':
+          audio.heistHelper();
+          break;
+        case 'secondWind':
+          audio.heistPerk(true);
+          break;
       }
     }
   });

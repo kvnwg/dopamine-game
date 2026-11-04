@@ -3,14 +3,17 @@
  * its fights through fightStep with a RunCombat, which adds the run's perks). Emits events that the
  * renderer turns into animation. Enchantments add burn, chain lightning, echo strikes, explosions and
  * thorns. The Alley battle runs in a world (battle.stage): 4 regular waves, then the world's boss.
+ * The Alley's own perks (perks.ts, bought with Half-Eaten Bread Loaves) add the crew, the second wind,
+ * the rage, harder-hit bosses and the loaves a boss pays the first time it falls in a run.
  */
 import { BAL, DATA, type BossSpecial, type EnemyDef, type PerkEffectKey } from '../../data';
 import type { Rng } from '../rng';
-import type { EnemyState, GameState, HeistFight } from '../state';
-import type { CoreEvent, Stats } from '../types';
+import type { EnemyState, GameState, HeistFight, PerkState } from '../state';
+import type { CoreEvent, CrewHelper, Stats } from '../types';
 import { combatEffects, type CombatEffects } from './enchants';
 import { addXp } from './progression';
 import { recordRewards } from './offline';
+import { earnBread, NO_PERKS, perkFoes, perkFx, perksWorldStart, type PerkFx } from './perks';
 import { addLuckBoost, goldMult, potionSeconds, xpMult } from './roller';
 import { defConstant, generateWave, isBossWave, killRewards, worldCount } from './stages';
 import { computeStats, playerPower } from './stats';
@@ -53,6 +56,7 @@ export function startStage(d: GameState, stage: number, ev: CoreEvent[], push: b
   d.battle.playerHp = stats.HP;
   d.battle.playerAtkProgress = 0;
   d.battle.enemies = [];
+  perksWorldStart(d);
   ev.push({ type: 'stageStart', stage, push });
 }
 
@@ -99,6 +103,8 @@ export interface Ctx {
   k: number;
   /** Set in heist fights. */
   run?: RunCombat;
+  /** The Alley's perks (Alley fights with perks owned only). */
+  perk?: Readonly<PerkFx>;
 }
 
 /** Perk burns burn at this share of ATK per second when no perk sets it. */
@@ -138,6 +144,8 @@ function onKill(c: Ctx, e: EnemyState) {
   ev.push({ type: 'kill', enemyUid: e.uid, enemyId: e.enemyId, coins, xp: r.xp, kind: e.kind });
   if (e.kind === 'regular') recordRewards(d, now, { bags: 0, coins, xp: r.xp });
   else if (c.rng.chance(BAL.worlds.boss.potionChance)) addLuckBoost(d, now, potionSeconds(d), ev);
+  // Raccoon Mafia: a beaten regular joins the crew until the world ends.
+  if (c.perk && c.perk.recruitAtkPct > 0 && e.kind === 'regular') d.perks.recruits = Math.min(c.perk.recruitMax, d.perks.recruits + 1);
   addXp(d, r.xp, ev);
 }
 
@@ -146,7 +154,8 @@ function damageEnemy(c: Ctx, index: number, amount: number, allowExplode = true)
   const b = c.d.battle;
   const e = b.enemies[index];
   if (!e || e.hp <= 0) return false;
-  const dmg = e.kind === 'regular' ? amount : amount * (1 + c.stats.BOSS_DMG / 100);
+  // (YOLO, an Alley perk, makes bosses take more from everything.)
+  const dmg = e.kind === 'regular' ? amount : amount * (1 + c.stats.BOSS_DMG / 100) * (c.perk?.bossDmgMult ?? 1);
   e.hp -= dmg;
   if (e.hp > 0) return false;
   b.enemies.splice(index, 1);
@@ -195,12 +204,20 @@ function runOnHit(c: Ctx, uid: number, crit: boolean, killed: boolean) {
   }
 }
 
+/** An Alley hit: Hold My Soda (an Alley perk) multiplies it while the raccoon is low. */
+function alleyRoll(c: Ctx, target: EnemyState): { amount: number; crit: boolean } {
+  const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, c.k);
+  const fx = c.perk;
+  if (fx && fx.rageMult > 1 && (c.d.battle.playerHp / Math.max(1, c.stats.HP)) * 100 < fx.rageBelowPct) roll.amount *= fx.rageMult;
+  return roll;
+}
+
 /** One swing at the front enemy, with every on-hit enchantment (and, in heists, every on-hit perk). */
 function playerAttack(c: Ctx, echo: boolean) {
   const b = c.d.battle;
   const target = b.enemies[0];
   if (!target) return;
-  const roll = c.run ? runRoll(c, target) : rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, c.k);
+  const roll = c.run ? runRoll(c, target) : alleyRoll(c, target);
   const hpBefore = target.hp;
   const uid = target.uid;
   const killed = damageEnemy(c, 0, roll.amount);
@@ -274,6 +291,8 @@ function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoi
       }
     }
     if (d.battle.playerHp > 0) c.run.afterHurt();
+  } else if (c.perk && d.battle.playerHp <= 0) {
+    secondWind(c);
   }
   if (c.fx.thorns > 0) {
     const idx = d.battle.enemies.findIndex((x) => x.uid === e.uid);
@@ -348,6 +367,8 @@ function onWorldCleared(c: Ctx) {
     ev.push({ type: 'worldFirstClear', world, gems });
     addLuckBoost(d, now, potionSeconds(d), ev);
   }
+  // Half-Eaten Bread Loaves: the first time this world's boss falls this run (perks open).
+  earnBread(d, world, ev);
   d.lifetime.bossesBeaten += 1;
   ev.push({ type: 'stageClear', stage: world, firstTime });
   ev.push({ type: 'bossWin', stage: world });
@@ -427,11 +448,14 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
   }
 
   b.playerHp = Math.min(stats.HP, b.playerHp + stats.REGEN * dt);
+  const perk = perkFx(d);
 
   if (b.phase === 'walking') {
     b.phaseTime -= dt;
     if (b.phaseTime <= 0) {
       const wave = generateWave(b.stage, b.wave, rng, b.nextEnemyUid);
+      // Some perks change the enemies (angrier or well-fed bosses, harder-hitting regulars).
+      perkFoes(wave, perk);
       b.nextEnemyUid += wave.length;
       b.enemies = wave;
       b.phase = 'fighting';
@@ -442,7 +466,7 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
     return;
   }
 
-  const c: Ctx = { d, rng, now, ev, stats, fx: combatEffects(d), k: defConstant(b.stage) };
+  const c: Ctx = { d, rng, now, ev, stats, fx: combatEffects(d), k: defConstant(b.stage), perk: perk === NO_PERKS ? undefined : perk };
   const result = fightStep(c, dt);
   if (result === 'cleared') {
     b.playerAtkProgress = 0;
@@ -463,6 +487,79 @@ function helperHit(c: Ctx, helper: 'pigeon' | 'rocco', share: number) {
   const uid = t.uid;
   const killed = damageEnemy(c, 0, amount);
   c.ev.push({ type: 'heistHelper', helper, enemyUid: uid, amount, killed });
+}
+
+/** An Alley crew member's blow at the enemy at `index`: a share of ATK through its DEF, no crits (as heist helpers hit). */
+function crewHit(c: Ctx, helper: CrewHelper, index: number, share: number) {
+  const t = c.d.battle.enemies[index];
+  if (!t || !(share > 0)) return;
+  const amount = computeDamage(c.stats.ATK * share, t.def, false, 100, 1, c.k);
+  const uid = t.uid;
+  const killed = damageEnemy(c, index, amount);
+  c.ev.push({ type: 'crewHit', helper, enemyUid: uid, amount, killed });
+}
+
+/** A crew member hitting every enemy on screen (the sewer rats, the seagull). */
+function crewHitAll(c: Ctx, helper: CrewHelper, share: number) {
+  const b = c.d.battle;
+  // A blow can kill (and explode into) others: walk a copy of the line and find each one's place.
+  for (const e of [...b.enemies]) {
+    const i = b.enemies.indexOf(e);
+    if (i >= 0) crewHit(c, helper, i, share);
+  }
+}
+
+/**
+ * The Alley crew at the top of a step (Alley perks): every so many seconds the pigeon pecks, the rats gnaw
+ * every enemy, Dr. Squeaks patches the raccoon up, the seagull dive-bombs every enemy, Raccoon Mafia's
+ * recruits swing and the Gluten Golem slams. A timer waits at its next move while no enemy is left.
+ */
+function crewStep(c: Ctx, dt: number) {
+  const fx = c.perk!;
+  const d = c.d;
+  const b = d.battle;
+  const p: PerkState = d.perks;
+  const t = p.timers;
+  const every = (key: keyof PerkState['timers'], interval: number, act: () => void) => {
+    if (!(interval > 0)) return;
+    t[key] += dt;
+    while (t[key] >= interval && b.enemies.length > 0) {
+      t[key] -= interval;
+      act();
+    }
+    if (b.enemies.length === 0) t[key] = Math.min(t[key], interval);
+  };
+  if (fx.pigeonAtkPct > 0) every('pigeon', fx.pigeonEvery, () => crewHit(c, 'pigeon', 0, fx.pigeonAtkPct / 100));
+  if (fx.ratAtkPct > 0) every('rats', fx.ratEvery, () => crewHitAll(c, 'rats', fx.ratAtkPct / 100));
+  if (fx.healPct > 0) {
+    every('heal', fx.healEvery, () => {
+      const amount = Math.min(c.stats.HP - b.playerHp, (c.stats.HP * fx.healPct) / 100);
+      if (amount <= 0) return;
+      b.playerHp += amount;
+      c.ev.push({ type: 'heal', amount, source: 'perk' });
+    });
+  }
+  if (fx.gullAtkPct > 0) every('gull', fx.gullEvery, () => crewHitAll(c, 'gull', fx.gullAtkPct / 100));
+  if (fx.recruitAtkPct > 0 && p.recruits > 0) {
+    every('mafia', fx.recruitEvery, () => {
+      // (One recruited by these very swings joins in on the next round.)
+      const n = p.recruits;
+      for (let i = 0; i < n && b.enemies.length > 0; i++) crewHit(c, 'mafia', 0, fx.recruitAtkPct / 100);
+    });
+  }
+  if (fx.golemAtkPct > 0 && p.earned > 0) every('golem', fx.golemEvery, () => crewHit(c, 'golem', 0, (fx.golemAtkPct * p.earned) / 100));
+}
+
+/** Playing Possum (an Alley perk): once per world attempt, a knockout blow leaves the raccoon standing. */
+function secondWind(c: Ctx) {
+  const fx = c.perk!;
+  const p = c.d.perks;
+  if (!(fx.secondWindPct > 0) || p.windUsed) return;
+  p.windUsed = true;
+  const hp = (c.stats.HP * fx.secondWindPct) / 100;
+  c.d.battle.playerHp = hp;
+  c.ev.push({ type: 'secondWind', hp });
+  c.ev.push({ type: 'heal', amount: hp, source: 'perk' });
 }
 
 /** Heist timers at the top of a step: stuns wear off, Fortress of Junk recharges, the crew attacks. */
@@ -544,6 +641,7 @@ function useSpecials(c: Ctx, e: EnemyState, dt: number) {
 export function fightStep(c: Ctx, dt: number): 'cleared' | 'dead' | null {
   const b = c.d.battle;
   if (c.run) runTimers(c, dt);
+  else if (c.perk) crewStep(c, dt);
   tickBurns(c, dt);
   b.playerAtkProgress += attackSpeed(c) * dt;
   while (b.playerAtkProgress >= 1 && b.enemies.length > 0) {

@@ -6,6 +6,7 @@ import { BAL } from '../data';
 import { GameStateSchema, initialHeist, SAVE_VERSION, type GameState } from './state';
 import { sanitizeUpgrades } from './systems/upgrades';
 import { fitToPower } from './systems/loot';
+import { backfillBread } from './systems/perks';
 import type { Item } from './types';
 
 export interface KeyValueStorage {
@@ -190,9 +191,12 @@ export function deserialize(text: string | null, migrations: Record<number, Migr
   try {
     const raw = JSON.parse(text) as Record<string, unknown>;
     const migrated = migrate(raw, migrations);
+    const hadPerks = migrated.perks !== undefined;
     const parsed = GameStateSchema.safeParse(migrated);
     if (!parsed.success) return null;
     sanitizeUpgrades(parsed.data);
+    // A save from before Alley perks: the worlds already beaten this run pay their loaves.
+    if (!hadPerks) backfillBread(parsed.data);
     return parsed.data;
   } catch {
     return null;

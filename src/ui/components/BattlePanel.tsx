@@ -10,7 +10,7 @@ import { t } from "../i18n";
 import { featureView, seeFeature } from "../features";
 import { useUi } from "../uiStore";
 import { Chunky } from "./Chunky";
-import { ArrowRightIcon, SkullIcon } from "./Icons";
+import { ArrowRightIcon, BreadIcon, SkullIcon } from "./Icons";
 import { TopHud } from "./TopHud";
 import s from "./hud.module.css";
 
@@ -55,6 +55,15 @@ function BossChoice() {
         {reward?.firstTime && (
           <span className={s.choiceReward}>
             {t("choice.rewards", { gems: reward.gems })}
+          </span>
+        )}
+        {!!reward?.loaves && (
+          <span
+            className={s.choiceReward}
+            style={{ display: "inline-flex", alignItems: "center", gap: 12 }}
+          >
+            <BreadIcon size="sm" />
+            {t(reward.loaves === 1 ? "choice.loaf" : "choice.loaves", { n: reward.loaves })}
           </span>
         )}
         <div className={s.choiceBtns}>

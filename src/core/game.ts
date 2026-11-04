@@ -18,6 +18,7 @@ import {
 } from './systems/heist';
 import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
+import { buyPerk } from './systems/perks';
 import { addXp } from './systems/progression';
 import { doRebirth } from './systems/rebirth';
 import { addLuckBoost, equipFromBag, rollTick, scrapAllFromBag, scrapFromBag, toggleLock, equipBest } from './systems/roller';
@@ -83,6 +84,9 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         break;
       case 'buyUpgrade':
         buyUpgrade(d, action.id, ev);
+        break;
+      case 'buyPerk':
+        buyPerk(d, action.id, ev);
         break;
       case 'rebirth':
         doRebirth(d, ev);
@@ -173,6 +177,7 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       d.currencies.coins += cheat.coins ?? 0;
       d.currencies.gems += cheat.gems ?? 0;
       d.currencies.bags += cheat.bags ?? 0;
+      d.perks.bread = Math.max(0, d.perks.bread + Math.round(cheat.bread ?? 0));
       break;
     case 'addXp':
       addXp(d, cheat.amount, ev);

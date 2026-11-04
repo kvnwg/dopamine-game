@@ -14,6 +14,7 @@ import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem } from './loot';
 import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity } from './luck';
+import { perkFx, rigSpin } from './perks';
 import { addXp } from './progression';
 import { addToBag, drySpell, enchantChance, reelCount, rollTokens, scrapValue, spinCycle, tokenMult } from './roller';
 import { killRewards } from './stages';
@@ -160,6 +161,7 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
   const keepOdds = offlineKeepOdds();
   const tier = itemTierFor(d);
   const share = BAL.offline.scrapShare;
+  const tokenChance = perkFx(d).tokenChanceMult;
   let dry = dz.dryStreak;
   while (out.rolls < count) {
     // One spin's luck, as startSpin rolls it (lucky every Nth spin, the golden chance from upgrades).
@@ -170,10 +172,14 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
       luck *= BAL.roll.luckyRollMult + up.luckyMult;
     }
     if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) luck *= BAL.roll.goldenLuckMult;
+    // Rigged Jackpot (an Alley perk) rigs offline spins too.
+    const rigged = rigSpin(d);
     for (let r = 0; r < reels && out.rolls < count; r++) {
       // As the reels roll an item (rollReelItem), minus the tutorial and the dev's forced rarity.
-      const itemLuck = luck * tokenMult(rollTokens(rng));
-      let rarity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d) ? rollRarity(itemLuck, rng, bl.minRarity) : rollRarity(itemLuck, rng);
+      const itemLuck = luck * tokenMult(rollTokens(rng, tokenChance));
+      const pity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d);
+      const floor = rigged && (!pity || rarityAtLeast(rigged, bl.minRarity)) ? rigged : pity ? bl.minRarity : null;
+      let rarity = floor ? rollRarity(itemLuck, rng, floor) : rollRarity(itemLuck, rng);
       const slot = rollSlot(rng);
       const level = rollItemLevel(d.player.level, rng);
       const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);

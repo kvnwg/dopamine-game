@@ -1,10 +1,11 @@
 /**
  * Balance simulator CLI. Usage:
  *   npm run sim -- --minutes 60 --seeds 5
- * Prints a timeline and the minute each stage was first cleared.
+ *   npm run sim -- --minutes 240 --seeds 3 --perks focus    (or none; default: cheapest)
+ * Prints a timeline, the minute each stage was first cleared, rebirths, and the perks bought each run.
  */
 import { formatNumber } from '../src/core';
-import { simulate } from './simCore';
+import { simulate, type PerkStrategy } from './simCore';
 
 const fmt = (n: number) => formatNumber(n);
 
@@ -16,11 +17,14 @@ function arg(name: string, def: number): number {
 const minutes = arg('minutes', 60);
 const seeds = arg('seeds', 3);
 const verbose = process.argv.includes('--verbose');
+const perksAt = process.argv.indexOf('--perks');
+const perks = (perksAt >= 0 ? process.argv[perksAt + 1] : 'cheapest') as PerkStrategy;
+if (!['cheapest', 'focus', 'none'].includes(perks)) throw new Error(`--perks must be cheapest, focus or none (got ${perks})`);
 
 const reach20: number[] = [];
 for (let seed = 1; seed <= seeds; seed++) {
   const t0 = Date.now();
-  const r = simulate({ minutes, seed });
+  const r = simulate({ minutes, seed, perks });
   const ms = Date.now() - t0;
   console.log(`\n=== seed ${seed} (${minutes} min simulated in ${ms} ms) ===`);
   if (verbose || seed === 1) {
@@ -35,6 +39,11 @@ for (let seed = 1; seed <= seeds; seed++) {
   const cleared = Object.entries(r.clearedAt).map(([st, m]) => `${st}@${m.toFixed(1)}`).join(' ');
   console.log(`first clears: ${cleared}`);
   console.log(`rebirths at: ${r.rebirthAt.map((m) => m.toFixed(1)).join(', ') || 'none'}`);
+  const runs = [...new Set([...Object.keys(r.breadByRun).map(Number), ...r.perksBought.map((p) => p.run)])].sort((a, b) => a - b);
+  for (const run of runs) {
+    const bought = r.perksBought.filter((p) => p.run === run).map((p) => `${p.id}@${p.minute.toFixed(0)}`);
+    console.log(`run ${run + 1} (rebirths ${run}): ${r.breadByRun[run] ?? 0} loaves; perks: ${bought.join(' ') || 'none'}`);
+  }
   console.log(`deaths ${r.deaths}, jumps ahead ${r.jumps}, boss wins ${r.bossWins}`);
   console.log('rarities:', JSON.stringify(r.rarityCounts));
   reach20.push(Math.max(0, ...Object.keys(r.clearedAt).map(Number)));

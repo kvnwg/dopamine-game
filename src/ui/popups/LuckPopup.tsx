@@ -29,6 +29,8 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
   if (b.boostMult > 1 && b.boostEndsAt) {
     rows.push([`${t('luck.boost')} (${t('luck.boostLeft', { time: formatDuration((b.boostEndsAt - now) / 1000) })})`, `+${formatPct(b.boostMult - 1)}`]);
   }
+  // Carb Loading (an Alley perk): luck for every uneaten loaf.
+  if (b.perkMult > 1) rows.push([t('luck.perks', { n: g.perks.bread }), `+${formatPct(b.perkMult - 1)}`]);
   return (
     <Modal title={t('luck.title')} tone="green" onClose={onClose}>
       <div className={s.luckHero}>

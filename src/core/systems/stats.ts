@@ -4,6 +4,7 @@ import type { GameState } from '../state';
 import type { Item, Stats } from '../types';
 import { codexBonusMods } from './codex';
 import { enchantMods } from './enchants';
+import { perkStatMults } from './perks';
 import { upgradeEffects } from './upgrades';
 
 export function zeroStats(): Stats {
@@ -64,7 +65,7 @@ export interface StatBreakdown {
   pct: Stats;
 }
 
-type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades' | 'rebirths' | 'stage'>>;
+type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades' | 'rebirths' | 'stage' | 'perks'>>;
 
 export function statSources(state: StatState): StatBreakdown {
   const flat = zeroStats();
@@ -99,6 +100,11 @@ export function computeStats(state: StatState): Stats {
   const { flat, pct } = statSources(state);
   const out = zeroStats();
   for (const s of STAT_IDS) out[s] = flat[s] * (1 + pct[s] / 100);
+  // This run's Alley perks multiply on top (Glass Cannon, the Energy Drink, Holy Crust).
+  const perk = perkStatMults(state);
+  out.ATK *= perk.atk;
+  out.HP *= perk.hp;
+  out.ATK_SPD *= perk.atkSpd;
   const caps = BAL.player.caps;
   out.CRIT = Math.min(out.CRIT, caps.CRIT);
   out.DODGE = Math.min(out.DODGE, caps.DODGE);

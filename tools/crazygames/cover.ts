@@ -1,8 +1,8 @@
 /**
- * CrazyGames store covers, close-up style: the raccoon big and low in the frame, his BBQ Spatula raised
- * in his paw and sweeping up toward the top corner, over a soft, blurred view of the town (World 1's sky,
- * clouds and houses, as the title screen shows them), with a few flecks of light and the game's sparkles
- * on the blade. No text, no logo, no border.
+ * CrazyGames store covers and the logo, in the style of the store's tiles: the raccoon big in the frame,
+ * all of him, his BBQ Spatula raised in his paw toward the top corner, over a soft, blurred view of the
+ * town (World 1's sky, clouds and houses, as the title screen shows them), with a few flecks of light
+ * and the game's sparkles on the blade. No text, no border.
  *
  * The raccoon (his cheer pose, frame 13, as the battle shows him: hero.ts composeHero) and the spatula
  * (the game's BBQ Spatula item art) are the game's own pixels, both at one big pixel size and never
@@ -23,14 +23,14 @@ const layout = W / H > 1.3 ? 'land' : W / H < 0.8 ? 'port' : 'square';
 
 /**
  * Per format: across = how many game pixels span the cover's width (so the framing is the same at any
- * size); fig = where his frame's top left goes, in game pixels from the cover's top left (his face at
- * the left edge, the blade toward the top right, cropped below the belly by the bottom edge); bg = the
- * part of the title scene behind (art px: centre x, top, height).
+ * size); fig = where his frame's top left goes, in game pixels from the cover's top left (all of him,
+ * standing, the blade toward the top right); bg = the part of the title scene behind (art px: centre x,
+ * top, height), set so its street is about at his feet.
  */
 const L = {
-  square: { across: 20, fig: { x: -8.3, y: 1 }, bg: { cx: 92, top: 196, h: 90 } },
-  port: { across: 20, fig: { x: -8.3, y: 11.2 }, bg: { cx: 120, top: 150, h: 140 } },
-  land: { across: 26.67, fig: { x: -1.5, y: -3.8 }, bg: { cx: 96, top: 206, h: 72 } },
+  square: { across: 28, fig: { x: -2.7, y: 6 }, bg: { cx: 92, top: 178, h: 90 } },
+  port: { across: 28, fig: { x: -2.7, y: 16.3 }, bg: { cx: 120, top: 140, h: 140 } },
+  land: { across: 41, fig: { x: 4, y: 1.3 }, bg: { cx: 96, top: 194, h: 72 } },
 }[layout];
 /** Screen px per game pixel. */
 const PX = W / L.across;
@@ -157,6 +157,17 @@ const fy = (L.fig.y - heroAt.y) * P;
   g.addColorStop(1, 'rgba(255,250,225,0)');
   ctx.fillStyle = g;
   ctx.fillRect(hx - r, hy - r, r * 2, r * 2);
+}
+// A soft shadow on the ground under his feet.
+{
+  const feet = { x: fx + (heroAt.x + 11.5) * P, y: fy + (heroAt.y + 19.7) * P };
+  ctx.save();
+  ctx.filter = `blur(${Math.round(P * 0.5)}px)`;
+  ctx.fillStyle = 'rgba(15,30,45,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(feet.x, feet.y, 7.5 * P, 1.1 * P, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 ctx.save();
 ctx.imageSmoothingEnabled = false;

@@ -27,12 +27,10 @@ The requirements below were checked against the official docs at <https://docs.c
 | Landscape cover | `crazygames/covers/cover-landscape-1920x1080.png` | 16:9, 1920×1080 |
 | Portrait cover | `crazygames/covers/cover-portrait-800x1200.png` | 2:3, 800×1200 |
 | Square cover | `crazygames/covers/cover-square-800x800.png` | 1:1, 800×800 |
-| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17.1 s, 30 fps, silent, opens on the cover, 21.4 MB (limit 50 MB) |
-| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17.7 s, 30 fps, silent, opens on the cover, 22.5 MB (limit 50 MB) |
+| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17.1 s, 30 fps, silent, opens on the cover, 21.0 MB (limit 50 MB) |
+| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17.7 s, 30 fps, silent, opens on the cover, 22.2 MB (limit 50 MB) |
 
-**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, and the dumpster with rare finds bursting out. There is no text and no logo on them (CrazyGames allows the title and nothing else), and no borders or icons.
-
-**Logo** on its own: `crazygames/logo/logo-720x720.png`. It shows the raccoon's face exactly as the game draws him, raising his BBQ Spatula, in front of the town on the hill behind World 1's street. He and the town are the same pixel size, in a square with no outline (`tools/crazygames/raccoonMark.ts`).
+**Covers** are close-ups in the style of the store's tiles. The raccoon is big and low in the frame, cropped by the bottom edge, with his BBQ Spatula raised toward the top corner. Behind him is a soft, blurred view of World 1's town, with flecks of light, sunlight from the corner and the game's sparkles on the blade. He is his cheer pose and the spatula is its item art, both the game's own pixels at one big pixel size, never smoothed; only the background is soft (`tools/crazygames/cover.ts`). There is no text (CrazyGames allows the title and nothing else), and no borders or icons. The square cover is the tile players see in the game grid.
 
 **Previews** are a 17-second trailer of real gameplay, each in the layout players of that format see: the landscape one in the PC layout (the battle on the left, the dumpster's reels on the right), the portrait one in the phone layout. A dozen quick shots (0.5–1.9 s) with push-ins, punch-in zooms and shakes on the hits:
 1. The cover, dissolving into a close-up brawl in Lava Landfill: CRIT!s, big numbers, coins flying, LEVEL UP!
@@ -168,10 +166,10 @@ The CrazyGames build is its own Vite mode, so the phone apps and other web build
 
 ```bash
 npm run dev:crazygames      # play the CrazyGames build locally (SDK "local" mode)
-npm run crazygames:covers   # re-render the 3 covers and the logo from the game art   (Playwright, ffmpeg)
+npm run crazygames:covers   # re-render the 3 covers from the game art   (needs Playwright)
 npm run crazygames:trailer  # re-record the scenes and cut both previews  (Playwright + ffmpeg, ~30 min)
 npm run crazygames:recut    # re-cut only, after editing trailerShots.json (~4 min)
 npm run build:crazygames    # the upload zip
 ```
 Playwright, if you don't have it: `npm i -D playwright && npx playwright install chromium`.
-The covers are drawn by `tools/crazygames/cover.ts`. The trailer's scenes are scripted in `tools/crazygames/recordTrailer.mjs` and its edit is `tools/crazygames/trailerShots.json`. Recording keeps the raw scenes in `crazygames/.trailer/` (git-ignored), so changing the edit only needs a re-cut.
+The covers are drawn by `tools/crazygames/cover.ts` (framing per format at the top of the file). The trailer's scenes are scripted in `tools/crazygames/recordTrailer.mjs` and its edit is `tools/crazygames/trailerShots.json`. Recording keeps the raw scenes in `crazygames/.trailer/` (git-ignored), so changing the edit only needs a re-cut.

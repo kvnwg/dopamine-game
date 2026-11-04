@@ -42,7 +42,8 @@ export function MiniRoller() {
   const lower = tab === 'upgrades' ? prevTab : tab;
   const open = useGame((g) => g.features.unlocked.includes('roll'));
   if (!open || lower === 'alley') return null;
-  return <MiniBank />;
+  // The full-screen Upgrades screen covers the corner (and the HUD): it keeps rolling and sounding unseen.
+  return <MiniBank hidden={tab === 'upgrades'} />;
 }
 
 interface Plan {
@@ -59,7 +60,7 @@ interface Plan {
   fillers: string[];
 }
 
-function MiniBank() {
+function MiniBank({ hidden }: { hidden: boolean }) {
   const idle = useGame(reelCount);
   const spinN = useGame((g) => g.roll.current?.reels.length ?? 0);
   const rebirths = useGame((g) => g.rebirths);
@@ -175,6 +176,9 @@ function MiniBank() {
       className={s.mini}
       style={{ width: miniWidth(n), height: miniHeight(n) }}
       data-mini-roller
+      data-hidden={hidden || undefined}
+      aria-hidden={hidden || undefined}
+      tabIndex={hidden ? -1 : undefined}
       aria-label={t('mini.aria')}
       onClick={() => useUi.getState().setTab('alley')}
     >

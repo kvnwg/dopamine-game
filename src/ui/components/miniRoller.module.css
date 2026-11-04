@@ -1,6 +1,6 @@
 /*
- * The mini roller (MiniRoller.tsx): under the settings gear, over the battle (and over the upgrade map
- * when that was opened from another tab), on the 6 px grid. Each reel is a window of one item at its
+ * The mini roller (MiniRoller.tsx): under the settings gear, over the battle, on the 6 px grid (hidden
+ * under the full-screen Upgrades screen). Each reel is a window of one item at its
  * own size: black silhouettes flick past while it spins, its find shows in color with a rim in its
  * rarity's light, a token's clover in green.
  */
@@ -29,6 +29,11 @@
   to {
     opacity: 1;
   }
+}
+/* Under the full-screen Upgrades screen: still rolling (its sounds play), not shown. */
+.mini[data-hidden] {
+  visibility: hidden;
+  pointer-events: none;
 }
 .mini:active {
   transform: translateY(var(--px));

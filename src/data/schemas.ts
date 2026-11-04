@@ -458,6 +458,8 @@ export const BalanceSchema = z.object({
      * whose tier is at least 1 in `tierOneIn` at his luck. So it comes about as often early as late,
      * however fast and lucky he rolls. A window counts once the finds watched cover `coverShare` of it
      * (all of them before that), and none before `minHistoryMinutes`. The `historyMax` best finds are kept.
+     * HYPER RARE, the biggest showcase of all: the rarest find of the raccoon's whole game so far, at
+     * least 1 in `hyperOneIn` for him, once he has played `hyperWatchMinutes`.
      */
     bigRoll: z.object({
       windowMinutes: z.array(positive).length(3),
@@ -465,6 +467,8 @@ export const BalanceSchema = z.object({
       minHistoryMinutes: nonNeg,
       tierOneIn: positive,
       historyMax: z.number().int().positive(),
+      hyperOneIn: positive,
+      hyperWatchMinutes: nonNeg,
     }),
     /**
      * A Scrap All haul against the run's own hauls (haul.ts judgeHaul): their trend (in log terms,

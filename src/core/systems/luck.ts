@@ -69,15 +69,24 @@ export function itemOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: nu
   return Math.max(1, Math.round(1 / (rarityChances(1)[item.rarity] * enchantOdds(item.enchants))));
 }
 
-/** The chance of rolling exactly these enchantments (their count and tiers) at the base enchant chance. */
-function enchantOdds(enchants: Array<{ tier: number }>): number {
+/**
+ * How many times rarer an item's enchantments make it (in itemOddsOneIn), as the item card shows it
+ * (Kevin: "make it obvious that enchantments make items more rare"): rolling this many of them at the
+ * base enchant chance (`count`), times each one's tier (`tiers`, in order), all together `total`.
+ */
+export function enchantRarity(enchants: ReadonlyArray<{ tier: number }>): { count: number; tiers: number[]; total: number } {
   const n = enchants.length;
-  if (n === 0) return 1;
+  if (n === 0) return { count: 1, tiers: [], total: 1 };
   const e = BAL.enchant;
   const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
-  let p = e.baseChance * (e.countWeights[Math.min(n, e.countWeights.length) - 1] / sum(e.countWeights));
-  for (const en of enchants) p *= e.tierWeights[en.tier - 1] / sum(e.tierWeights);
-  return p;
+  const count = 1 / (e.baseChance * (e.countWeights[Math.min(n, e.countWeights.length) - 1] / sum(e.countWeights)));
+  const tiers = enchants.map((en) => sum(e.tierWeights) / e.tierWeights[en.tier - 1]);
+  return { count, tiers, total: tiers.reduce((a, b) => a * b, count) };
+}
+
+/** The chance of rolling exactly these enchantments (their count and tiers) at the base enchant chance. */
+function enchantOdds(enchants: Array<{ tier: number }>): number {
+  return 1 / enchantRarity(enchants).total;
 }
 
 /**
@@ -92,7 +101,8 @@ export function luckOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: nu
   return Math.max(1, Math.round(1 / (p * enchantOdds(item.enchants))));
 }
 
-export type RollDrama = 'big' | 'huge' | 'insane';
+/** The full-screen reveal's sizes, biggest last: HYPER RARE is the rarest find of the whole game. */
+export type RollDrama = 'big' | 'huge' | 'insane' | 'hyper';
 const DRAMAS: RollDrama[] = ['big', 'huge', 'insane'];
 
 /** The chance of enchantments as good as these (their count and tiers) at the raccoon's own enchant chance and mastery now. */
@@ -158,11 +168,22 @@ export function judgeFinds(
     return k;
   };
   const scores = finds.map((f) => findScore(d, f, l));
-  const drama = finds.map((f, i) => {
-    if (luckOddsOneIn({ rarity: f.rarity, enchants: [] }, l) < b.tierOneIn) return null;
+  const tierOk = finds.map((f) => luckOddsOneIn({ rarity: f.rarity, enchants: [] }, l) >= b.tierOneIn);
+  const drama: Array<RollDrama | null> = finds.map((_, i) => {
+    if (!tierOk[i]) return null;
     const k = beats(scores[i], b.windowMinutes);
     return k > 0 ? DRAMAS[k - 1] : null;
   });
+  // HYPER RARE (Kevin: "when u get a hyper rare item, even more rare than the regular animation ...
+  // the most insane item showcase animation ever"): the spin's rarest find, if it is the rarest of the
+  // whole game and at least 1 in feel.bigRoll.hyperOneIn for him, once he has played a while.
+  let top = -1;
+  scores.forEach((sc, i) => {
+    if (tierOk[i] && (top < 0 || sc > scores[top])) top = i;
+  });
+  const best = watch.best ?? 0;
+  if (top >= 0 && scores[top] > best && scores[top] >= b.hyperOneIn && watched >= b.hyperWatchMinutes * MIN) drama[top] = 'hyper';
+  watch.best = Math.max(best, ...scores);
   let tease: 0 | 1 | 2 = 0;
   finds.forEach((f, i) => {
     if (luckOddsOneIn({ rarity: f.rarity, enchants: [] }, l) < bu.tierOneIn) return;

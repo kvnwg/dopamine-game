@@ -17,7 +17,7 @@ function spinOf(rarity: Rarity, extraReels = 0, seed = 5, busy = false): SpinSta
   const st = structuredClone(freshState(seed)) as GameState;
   st.dumpster.firstDiveDone = true;
   st.playTimeMs = 30 * 60_000;
-  st.roll.rare = { since: 0, hist: busy ? [[st.playTimeMs - 5_000, 1e12]] : [] };
+  st.roll.rare = { since: 0, hist: busy ? [[st.playTimeMs - 5_000, 1e12]] : [], best: busy ? 1e12 : 0 };
   st.currencies.bags = 0;
   st.upgrades.extraReel = extraReels;
   st.dumpster.forcedRarity = rarity;

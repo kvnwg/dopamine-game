@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { findScore, judgeFinds, judgeHaul, performSpin, revealBar, rollEnchants, rollRarity, Rng, tick, type CoreEvent, type GameState } from '../src/core';
 import { BAL, type Rarity } from '../src/data';
+import { HYPER_LOCK_MS, revealPhases } from '../src/ui/revealTiming';
 import { freshState, T0 } from './helpers';
 
 const MIN = 60_000;
@@ -11,7 +12,7 @@ const item = (rarity: Rarity, tiers: number[] = []) => ({ rarity, enchants: tier
 function watched(minutes: number): GameState {
   const st = clone(freshState(3));
   st.playTimeMs = minutes * MIN;
-  st.roll.rare = { since: 0, hist: [] };
+  st.roll.rare = { since: 0, hist: [], best: 0 };
   return st;
 }
 
@@ -106,13 +107,83 @@ describe('the full-screen reveal: the rarest find in a while (Kevin: "make it pr
   });
 });
 
+describe('HYPER RARE: the rarest find of the whole game (Kevin: "even more rare than the regular animation")', () => {
+  const b = BAL.feel.bigRoll;
+
+  it('goes to a find rarer than any he has ever found, once it is at least 1 in feel.bigRoll.hyperOneIn for him', () => {
+    const st = watched(600);
+    // Nothing before it: a Grail is the rarest ever, and way past the floor.
+    expect(judgeFinds(st, [item('grail')], 1).drama).toEqual(['hyper']);
+    // Another Grail isn't rarer than the first: no HYPER RARE (it's still the rarest in a while).
+    expect(judgeFinds(st, [item('grail')], 1).drama[0]).not.toBe('hyper');
+    // An enchanted Grail is rarer still.
+    expect(judgeFinds(st, [item('grail', [3])], 1).drama).toEqual(['hyper']);
+    expect(st.roll.rare.best).toBe(findScore(st, item('grail', [3]), 1));
+  });
+
+  it('never below the floor, however rare the find is for the game so far', () => {
+    const st = watched(600);
+    // A Legendary is the rarest ever here, but 1 in 1,000 is no HYPER RARE: the biggest usual reveal.
+    expect(findScore(st, item('legendary'), 1)).toBeLessThan(b.hyperOneIn);
+    expect(judgeFinds(st, [item('legendary')], 1).drama).toEqual(['insane']);
+    // The floor is at his luck: a Prototype (1 in 400,000 at luck 1) at luck 40 is about 1 in 10,000.
+    const lucky = watched(600);
+    expect(findScore(lucky, item('prototype'), 40)).toBeLessThan(b.hyperOneIn);
+    expect(judgeFinds(lucky, [item('prototype')], 40).drama[0]).not.toBe('hyper');
+  });
+
+  it('not in a new game\'s first feel.bigRoll.hyperWatchMinutes, though finds then still count toward the record', () => {
+    const st = clone(freshState(7));
+    st.playTimeMs = 0;
+    judgeFinds(st, [item('junk')], 1);
+    st.playTimeMs = (b.hyperWatchMinutes - 1) * MIN;
+    expect(judgeFinds(st, [item('grail')], 1).drama[0]).not.toBe('hyper');
+    st.playTimeMs = (b.hyperWatchMinutes + 1) * MIN;
+    expect(judgeFinds(st, [item('grail')], 1).drama[0]).not.toBe('hyper');
+    expect(judgeFinds(st, [item('grail', [1])], 1).drama).toEqual(['hyper']);
+  });
+
+  it('only the rarest of a spin\'s finds gets it', () => {
+    const st = watched(600);
+    expect(judgeFinds(st, [item('museum'), item('grail'), item('mint')], 1).drama[1]).toBe('hyper');
+    expect(judgeFinds(watched(600), [item('museum'), item('grail'), item('mint')], 1).drama.filter((d) => d === 'hyper')).toHaveLength(1);
+  });
+
+  it('comes a few times in a long game, not every session', () => {
+    // A long bot-like game: luck and roll speed climbing, as in the reveal-rate test above.
+    const st = watched(0);
+    st.roll.rare.since = 0;
+    const rng = new Rng(11);
+    let n = 0;
+    const hours = 10;
+    for (let i = 0; i < hours * 60 * 60; i++) {
+      const minute = i / 60;
+      const luck = 2 * Math.pow(30, minute / (hours * 60));
+      st.playTimeMs = minute * MIN;
+      const f = { rarity: rollRarity(luck, rng), enchants: rollEnchants(rng, 0.2) };
+      if (judgeFinds(st, [f], luck).drama[0] === 'hyper') n++;
+    }
+    expect(n).toBeGreaterThanOrEqual(1);
+    expect(n).toBeLessThan(12);
+  });
+
+  it('its summoning (which can\'t be skipped) runs to the burst, Reduce motion or not', () => {
+    for (const calm of [false, true]) {
+      const p = revealPhases('hyper', calm);
+      expect(p.black + p.dark).toBe(HYPER_LOCK_MS);
+      expect(HYPER_LOCK_MS).toBeGreaterThanOrEqual(2000);
+    }
+    expect(revealPhases('hyper', false).count).toBeGreaterThan(revealPhases('insane', false).count);
+  });
+});
+
 describe('spins carry the core\'s judgement', () => {
   it('each reel\'s reveal and the spin\'s build-up go out with the spin, and the landing rolls carry their reveal', () => {
     const st = clone(freshState(9));
     st.dumpster.firstDiveDone = true;
     st.dumpster.beginner = { state: 'done', uid: null };
     st.playTimeMs = 30 * MIN;
-    st.roll.rare = { since: 0, hist: [] };
+    st.roll.rare = { since: 0, hist: [], best: 0 };
     st.dumpster.forcedRarity = 'mythic';
     const ev: CoreEvent[] = [];
     performSpin(st, new Rng(2), T0, ev);

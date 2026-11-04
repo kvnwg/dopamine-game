@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, canRebirth, combatEffects, luckOddsOneIn, createItem, currentLuck, goldMult, inventoryCapacity, computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng, performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick, sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item, bestUpgrades,
+  applyAction, canRebirth, combatEffects, enchantRarity, luckOddsOneIn, createItem, currentLuck, goldMult, inventoryCapacity, computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng, performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick, sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item, bestUpgrades,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
 import { freshState, histogram, pastWarmup, T0 } from './helpers';
@@ -325,6 +325,18 @@ describe('"1 in X" item odds', () => {
     const three = itemOddsOneIn({ rarity: 'epic', enchants: [{ tier: 3 }, { tier: 3 }, { tier: 3 }] });
     expect(one).toBeGreaterThan(plain * 10);
     expect(three).toBeGreaterThan(one * 1000);
+  });
+
+  it('the item card\'s sum adds up: its tier\'s odds times how much rarer its enchantments make it, each one\'s share in turn', () => {
+    const en = [{ tier: 1 }, { tier: 2 }];
+    const r = enchantRarity(en);
+    const plain = 1 / rarityChances(1).epic;
+    expect(itemOddsOneIn({ rarity: 'epic', enchants: en })).toBe(Math.round(plain * r.total));
+    expect(r.total).toBeCloseTo(r.count * r.tiers[0] * r.tiers[1], 6);
+    // One enchantment at the base chance; a higher tier is a rarer one.
+    expect(enchantRarity([{ tier: 1 }]).count).toBeCloseTo(1 / (BAL.enchant.baseChance * (BAL.enchant.countWeights[0] / 100)), 6);
+    expect(r.tiers[1]).toBeGreaterThan(r.tiers[0]);
+    expect(enchantRarity([])).toEqual({ count: 1, tiers: [], total: 1 });
   });
 });
 

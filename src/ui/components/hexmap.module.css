@@ -33,13 +33,20 @@
 }
 /*
  * The map itself: one canvas the size of the screen (hexMapDraw.ts), its pixels matched to the
- * screen's. Taps and drags go to the viewport under it.
+ * screen's. Taps and drags go to the viewport under it. Its box is half the screen's, scaled up 2x:
+ * Safari keeps a canvas's layer at 3 pixels per box pixel whatever the transforms (it ignores the
+ * stage's shrink to fit the phone), so a full-size box made a 75 MB layer, redrawn whole on every
+ * pan. Half-size, it is a quarter of that and still 1.5 pixels per stage pixel, sharper than any
+ * phone or PC shows the stage.
  */
 .canvas {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 50%;
+  transform: scale(2);
+  transform-origin: 0 0;
   pointer-events: none;
 }
 /* (The bread counter on the Perks tab still pulses: a smooth fade.) */

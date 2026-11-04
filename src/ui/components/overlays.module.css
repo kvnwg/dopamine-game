@@ -434,14 +434,19 @@
   paint-order: stroke fill;
   animation: fadeUp 400ms ease-out 300ms backwards;
 }
-/* A shock wave: a one-pixel square ring growing out from the item (a canvas, RevealLayer.tsx ShockRing). */
+/*
+ * A shock wave: a one-pixel square ring growing out from the item (a canvas, RevealLayer.tsx ShockRing).
+ * Its box is a third of the 1512 px it shows at, scaled up: Safari draws a canvas's layer at 3 pixels
+ * per box pixel whatever the transforms, so this keeps it at one per stage pixel (9 MB, not 82 MB).
+ */
 .shock {
   position: absolute;
   left: 540px;
   top: 768px;
-  width: 1512px;
-  height: 1512px;
-  margin: -756px 0 0 -756px;
+  width: 504px;
+  height: 504px;
+  margin: -252px 0 0 -252px;
+  transform: scale(3);
   pointer-events: none;
   image-rendering: pixelated;
 }
@@ -474,6 +479,124 @@
 .rare[data-calm] .glint::after,
 .rare[data-calm] .rareSpark {
   animation: none;
+}
+
+/* ------------------------------------------------------------ HYPER RARE (HyperFx.tsx) */
+/* The showcase's canvas: a third of the stage, scaled up 3x from the top left (see HyperFx.tsx). */
+.hyperFx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: scale(3);
+  transform-origin: 0 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+/* Warning bands while it summons: hazard stripes along both edges and its name racing past. */
+.hyperBand {
+  --from: -100%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 15%;
+  height: calc(20 * var(--px));
+  background: #0c0a14;
+  overflow: hidden;
+  pointer-events: none;
+  animation: bandIn 300ms steps(5) backwards;
+}
+.hyperBand[data-at='bottom'] {
+  --from: 100%;
+  top: auto;
+  bottom: 15%;
+}
+.hyperBand::before,
+.hyperBand::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: calc(3 * var(--px));
+  /* 8 x 3 art pixels: a stair-stepped yellow stripe on the band's black. */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='3' shape-rendering='crispEdges'%3E%3Cpath fill='%23ffd23f' d='M0 0h4v1H0zM1 1h4v1H1zM2 2h4v1H2z'/%3E%3C/svg%3E") 0 0 / calc(8 * var(--px)) calc(3 * var(--px)) repeat-x;
+  animation: stripes 400ms steps(8) infinite;
+}
+.hyperBand::before {
+  top: 0;
+}
+.hyperBand::after {
+  bottom: 0;
+  animation-direction: reverse;
+}
+.hyperBand[data-at='bottom']::before {
+  animation-direction: reverse;
+}
+.hyperBand[data-at='bottom']::after {
+  animation-direction: normal;
+}
+@keyframes bandIn {
+  from { transform: translateX(var(--from)); }
+}
+@keyframes stripes {
+  to { background-position-x: calc(8 * var(--px)); }
+}
+.hyperTrack {
+  position: absolute;
+  left: 0;
+  top: calc(4 * var(--px));
+  display: flex;
+  white-space: pre;
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: calc(12 * var(--px));
+  color: #ff3b3b;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+  animation: track 4s linear infinite, bandBlink 300ms steps(1) infinite;
+}
+.hyperBand[data-at='bottom'] .hyperTrack {
+  animation-direction: reverse, normal;
+}
+@keyframes track {
+  to { transform: translateX(-50%); }
+}
+@keyframes bandBlink {
+  50% { color: #ffffff; }
+}
+.rare[data-noflash] .hyperTrack {
+  animation: track 4s linear infinite;
+}
+.rare[data-calm] .hyperBand,
+.rare[data-calm] .hyperBand::before,
+.rare[data-calm] .hyperBand::after,
+.rare[data-calm] .hyperTrack {
+  animation: none;
+}
+/* Its banner over the tier's title once it lands, and the line under the name. */
+.hyperBanner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 2 * var(--px));
+  display: flex;
+  justify-content: center;
+  animation: hyperIn 480ms steps(6) backwards;
+}
+@keyframes hyperIn {
+  0% { transform: translateY(calc(-10 * var(--px))); opacity: 0; }
+  40% { transform: translateY(var(--px)); opacity: 1; }
+  70% { transform: none; }
+}
+.rare[data-calm] .hyperBanner {
+  animation: none;
+}
+.hyperSub {
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: #fff3b0;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  animation: fadeUp 400ms ease-out 450ms backwards;
 }
 
 /* ------------------------------------------------------------ a big Scrap All haul */
@@ -680,6 +803,18 @@
 :global([data-layout='wide']) .shock {
   left: 1080px;
   top: 372px;
+}
+/* (Sideways there's no room above the title: HYPER RARE!! goes beside it.) */
+:global([data-layout='wide']) .hyperBanner {
+  position: static;
+  margin-right: calc(6 * var(--px));
+}
+:global([data-layout='wide']) .hyperBand {
+  top: 3%;
+}
+:global([data-layout='wide']) .hyperBand[data-at='bottom'] {
+  top: auto;
+  bottom: 3%;
 }
 /* Toasts on the wide stage: over the battle on the left, as on a phone. */
 :global([data-layout='wide']) .toasts {

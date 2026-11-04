@@ -53,7 +53,8 @@ export function HoverInfo() {
       setShown(null);
       if (!el) return;
       timer = window.setTimeout(() => {
-        if (over !== el || !el.isConnected || useUi.getState().drag) return;
+        // (Not over a full-screen moment's own find: a big reveal shows it all already.)
+        if (over !== el || !el.isConnected || useUi.getState().drag || el.closest('[data-drama]')) return;
         setShown({ el, uid: Number(el.dataset.uid) });
       }, DELAY_MS);
     };

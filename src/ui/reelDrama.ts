@@ -51,7 +51,7 @@ type TeaseSpin = SpinTiming & {
   tease?: number;
 };
 
-const DRAMA_RANK: Record<RollDrama, number> = { big: 1, huge: 2, insane: 3 };
+const DRAMA_RANK: Record<RollDrama, number> = { big: 1, huge: 2, insane: 3, hyper: 4 };
 /**
  * Uncommon results (1 in 6 or rarer at your luck) glow a little this often, and plain ones (1 in 2
  * or rarer) now and then: a low glow that stays low, so a glow's first color never tells.

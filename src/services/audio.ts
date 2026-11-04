@@ -839,17 +839,80 @@ class AudioEngine {
     this.tone(260, at, 0.2, { type: 'triangle', gain: 0.04, freqEnd: 720 });
   }
 
-  /** The counter lands: a slam, a crash and a chord stab. `level` 0, 1, 2 = big, huge, insane. */
+  /** The counter lands: a slam, a crash and a chord stab. `level` 0, 1, 2, 3 = big, huge, insane, HYPER RARE. */
   slam(level: number): void {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
     // (A recording: the same slam, 1.5 dB louder for each size up.)
-    if (this.rec('slam', at, { gain: [1, 1.19, 1.41][Math.max(0, Math.min(2, level))] })) return;
+    if (this.rec('slam', at, { gain: [1, 1.19, 1.41, 1.68][Math.max(0, Math.min(3, level))] })) return;
     this.tone(52, at, 0.9, { gain: 0.55, freqEnd: 32 });
     this.noise(at, 0.12, { type: 'lowpass', freq: 2400, gain: 0.3 });
     this.noise(at + 0.01, 1.4 + level * 0.5, { type: 'highpass', freq: 4500, gain: 0.07 + level * 0.02, attack: 0.005 });
     for (const n of [60, 67, 72, 76, 79]) this.tone(midi(n), at, 0.6, { type: 'sawtooth', gain: 0.03, filter: 2800, attack: 0.005 });
+  }
+
+  /**
+   * HYPER RARE's summoning (`seconds` until the burst): the music drops out under a rumble that swells
+   * all the way, the long riser ends on the burst, and an alarm whoops faster and faster.
+   */
+  hyperIntro(seconds: number): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    // Held through the count; the landing's sting brings it back (reveal).
+    this.duckMusic(0.02, seconds + 5);
+    this.tone(46, at, 1.2, { gain: 0.45, freqEnd: 30 });
+    this.tone(34, at, seconds + 0.15, { gain: 0.42, attack: seconds * 0.85, freqEnd: 62, vibrato: 2 });
+    this.noise(at, seconds, { type: 'lowpass', freq: 160, freqEnd: 1400, gain: 0.2, attack: seconds * 0.9 });
+    if (!this.rec('riser_long', at, { fit: seconds - 0.12, gain: 1.25 })) {
+      for (const [base, g] of [[160, 0.05], [320, 0.035]] as const) {
+        this.tone(base, at, seconds, { type: 'sawtooth', gain: g, attack: seconds * 0.9, freqEnd: base * 4, filter: 2400 });
+      }
+    }
+    // The alarm: two-tone whoops, closer together as the burst nears.
+    for (const t of [0.12, 0.62, 1.04, 1.38, 1.64, 1.84, 1.98]) {
+      if (t > seconds - 0.25) break;
+      this.tone(988, at + t, 0.11, { type: 'square', gain: 0.03, filter: 2600, freqEnd: 740 });
+      this.tone(740, at + t + 0.12, 0.11, { type: 'square', gain: 0.025, filter: 2400, freqEnd: 988 });
+    }
+  }
+
+  /** Lightning striking HYPER RARE's core: a crackle and a snap. */
+  zap(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('zap', 70)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.05, { type: 'highpass', freq: 2600, gain: 0.07 });
+    this.noise(at + 0.03, 0.12, { type: 'bandpass', freq: 1400, q: 0.7, gain: 0.05, freqEnd: 500 });
+    this.tone(this.vary(1900, 0.2), at, 0.06, { type: 'square', gain: 0.018, freqEnd: 300, filter: 4000 });
+  }
+
+  /**
+   * HYPER RARE bursts open: a huge boom and crash, the slam at its loudest, a big chord and sparkles
+   * flying up the scale, with a long sizzle under it all.
+   */
+  hyperBoom(): void {
+    const ctx = this.live;
+    if (!ctx) return;
+    const at = ctx.currentTime;
+    this.duckMusic(0.02, 5);
+    this.rec('slam', at, { gain: 1.68 });
+    this.tone(96, at, 2.2, { gain: 0.7, freqEnd: 24 });
+    this.noise(at, 1.6, { type: 'lowpass', freq: 3600, freqEnd: 110, gain: 0.42, attack: 0.004 });
+    this.noise(at + 0.02, 3, { type: 'highpass', freq: 5200, gain: 0.07, attack: 0.01 });
+    for (const n of [48, 55, 60, 64, 67, 72, 76]) this.tone(midi(n), at, 2.4, { type: 'sawtooth', gain: 0.026, filter: 2200, attack: 0.012 });
+    [84, 88, 91, 96, 100, 103].forEach((n, k) => this.bell(midi(n), at + 0.22 + k * 0.065, 0.9, 0.045));
+  }
+
+  /** A firework bursting: a pop and a crackle as the sparks spread. */
+  firework(): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('firework', 140)) return;
+    const at = ctx.currentTime;
+    this.noise(at, 0.09, { type: 'lowpass', freq: 1800, gain: 0.16 });
+    this.tone(this.vary(140), at, 0.12, { gain: 0.14, freqEnd: 60 });
+    for (let i = 0; i < 6; i++) this.noise(at + 0.12 + this.rnd() * 0.45, 0.02, { type: 'highpass', freq: 4200, gain: 0.03 + this.rnd() * 0.03 });
   }
 
   /** A big Scrap All haul: a cash-register ka-ching, then coins pouring in (longer for bigger hauls). */

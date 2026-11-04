@@ -30,7 +30,7 @@ import { Chunky } from './Chunky';
 import { BreadIcon, CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
 import { PerksPage } from './PerksPage';
 import { PixelArt } from './PixelArt';
-import { drawGlows, drawMap, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
+import { drawMap, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
 import s from './hexmap.module.css';
 
 /* ---------------------------------------------------------------- geometry */
@@ -424,7 +424,6 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   /* ----- the canvas (hexMapDraw.ts): the view lives in a ref, and drawing reads refs, never React */
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const glowRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>(useUi.getState().mapView ?? { x: focusPoint().x, y: focusPoint().y, k: homeZoom() });
   const boundsRef = useRef(bounds);
   boundsRef.current = bounds;
@@ -436,32 +435,22 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   /** The map needs drawing (a pan, a zoom, a change), or is animating (the ripple, a flash). */
   const mapDirty = useRef(true);
   const mapMoving = useRef(false);
-  /** The glows need drawing now (with the map), or are breathing (about 30 times a second). */
-  const glowDirty = useRef(true);
-  const glowMoving = useRef(false);
-  const lastGlow = useRef(0);
   const loop = (now: number) => {
     frame.current = 0;
     const c = canvasRef.current;
-    const gc = glowRef.current;
-    if (!c || !gc || !c.offsetWidth) return;
-    const sx = c.width / c.offsetWidth;
+    // (The canvas's own box is half the map's, scaled up: hexmap.module.css .canvas.)
+    const vp = viewportRef.current;
+    if (!c || !vp || !vp.offsetWidth) return;
+    const sx = c.width / vp.offsetWidth;
     if (mapDirty.current || mapMoving.current) {
       mapDirty.current = false;
       const ctx = c.getContext('2d');
-      if (ctx) mapMoving.current = drawMap(ctx, c.width, c.height, sx, c.offsetWidth, c.offsetHeight, viewRef.current, drawRef.current, now, requestDraw);
+      if (ctx) mapMoving.current = drawMap(ctx, c.width, c.height, sx, vp.offsetWidth, vp.offsetHeight, viewRef.current, drawRef.current, now, requestDraw);
     }
-    if (glowDirty.current || (glowMoving.current && now - lastGlow.current >= 30)) {
-      glowDirty.current = false;
-      lastGlow.current = now;
-      const ctx = gc.getContext('2d');
-      if (ctx) glowMoving.current = drawGlows(ctx, gc.width, gc.height, sx, c.offsetWidth, c.offsetHeight, viewRef.current, drawRef.current, now);
-    }
-    if (mapMoving.current || glowMoving.current) frame.current = requestAnimationFrame(loop);
+    if (mapMoving.current) frame.current = requestAnimationFrame(loop);
   };
   function requestDraw() {
     mapDirty.current = true;
-    glowDirty.current = true;
     if (!frame.current) frame.current = requestAnimationFrame(loop);
   }
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
@@ -480,11 +469,9 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
         w = Math.round(w * cap);
         h = Math.round(h * cap);
       }
-      for (const el of [c, glowRef.current]) {
-        if (el && (el.width !== w || el.height !== h)) {
-          el.width = w;
-          el.height = h;
-        }
+      if (c.width !== w || c.height !== h) {
+        c.width = w;
+        c.height = h;
       }
       requestDraw();
     };
@@ -729,7 +716,6 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
     <div className={s.overlay} data-calm={calm || undefined} data-keep-lit>
       <div className={s.viewport} ref={viewportRef}>
         <div className={s.grid} ref={gridRef} style={{ backgroundImage: GRID_URL }} aria-hidden />
-        <canvas ref={glowRef} className={s.canvas} aria-hidden />
         <canvas ref={canvasRef} className={s.canvas} aria-hidden />
       </div>
 

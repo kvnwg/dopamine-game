@@ -62,7 +62,7 @@ export const SpinSchema = z.object({
         landAt: z.number().nonnegative().optional(),
         landed: z.boolean().default(false),
         /** The full-screen reveal it gets as it lands (luck.ts judgeFinds), decided when the spin starts. */
-        drama: z.enum(['big', 'huge', 'insane']).nullable().default(null),
+        drama: z.enum(['big', 'huge', 'insane', 'hyper']).nullable().default(null),
       }),
     )
     .min(1),
@@ -379,8 +379,13 @@ export const GameStateSchema = z.object({
      * find after it.
      */
     rare: z
-      .object({ since: z.number().nullable(), hist: z.array(z.tuple([z.number(), z.number()])) })
-      .default(() => ({ since: null, hist: [] })),
+      .object({
+        since: z.number().nullable(),
+        hist: z.array(z.tuple([z.number(), z.number()])),
+        /** The rarest find of the whole game (findScore), for HYPER RARE. */
+        best: z.number().default(0),
+      })
+      .default(() => ({ since: null, hist: [], best: 0 })),
   }),
   upgrades: z.record(z.string(), z.number().int().nonnegative()),
   rebirths: z.number().int().nonnegative(),
@@ -500,7 +505,7 @@ export function createInitialState(now: number, seed: number): GameState {
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },
-    roll: { timer: 0, current: null, count: 0, sinceLucky: 0, goldenLeft: 0, rare: { since: null, hist: [] } },
+    roll: { timer: 0, current: null, count: 0, sinceLucky: 0, goldenLeft: 0, rare: { since: null, hist: [], best: 0 } },
     upgrades: {},
     rebirths: 0,
     luckBoostEndsAt: null,

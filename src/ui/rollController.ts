@@ -42,7 +42,7 @@ function rareness(item: Item, drama: RollDrama | null | undefined): Pick<RollVie
   return { luckOdds: luckOddsOneIn(item, currentLuck(getGame(), Date.now())), drama: drama ?? null };
 }
 
-const DRAMA_RANK: Record<RollDrama, number> = { big: 1, huge: 2, insane: 3 };
+const DRAMA_RANK: Record<RollDrama, number> = { big: 1, huge: 2, insane: 3, hyper: 4 };
 
 /**
  * While the reels roll toward a big roll: rising rattle, a riser, then a silence drop just before its

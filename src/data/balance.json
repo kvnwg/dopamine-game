@@ -443,7 +443,9 @@
       "coverShare": 0.1,
       "minHistoryMinutes": 2,
       "tierOneIn": 20,
-      "historyMax": 48
+      "historyMax": 48,
+      "hyperOneIn": 100000,
+      "hyperWatchMinutes": 10
     },
     "haul": {
       "trendWeight": 0.6,

@@ -12,7 +12,7 @@ function bagsState(bags: number): GameState {
   st.dumpster.beginner = { state: 'done', uid: null };
   st.currencies.bags = bags;
   st.playTimeMs = 60 * 60_000;
-  st.roll.rare = { since: 0, hist: [] };
+  st.roll.rare = { since: 0, hist: [], best: 0 };
   return st;
 }
 

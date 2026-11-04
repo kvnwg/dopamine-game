@@ -38,7 +38,10 @@ export function luckBreakdown(state: GameState, now: number): LuckBreakdown {
 }
 
 export function currentLuck(state: GameState, now: number): number {
-  return luckBreakdown(state, now).total;
+  // Never anything but a real number of 1 or more: a NaN here would make every roll and odds NaN (and
+  // a NaN in the save used to make the next load throw the whole game away).
+  const v = luckBreakdown(state, now).total;
+  return Number.isFinite(v) && v >= 1 ? v : v === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : 1;
 }
 
 /** Every Nth roll is a lucky roll with boosted luck. */
@@ -149,9 +152,9 @@ export function judgeFinds(
   const now = d.playTimeMs;
   const watch = d.roll.rare;
   watch.since ??= now;
-  const l = Math.max(1, luck);
+  const l = Number.isFinite(luck) ? Math.max(1, luck) : 1;
   const MIN = 60_000;
-  const watched = now - watch.since;
+  const watched = Number.isFinite(now - watch.since) ? now - watch.since : 0;
   const longest = Math.max(...b.windowMinutes, ...bu.windowMinutes) * MIN;
   watch.hist = watch.hist.filter(([at]) => at >= now - longest);
   /** The rarest find of the last `ms` (0 if none). The history is rarest first, so the first one in the window is it. */
@@ -167,7 +170,11 @@ export function judgeFinds(
     }
     return k;
   };
-  const scores = finds.map((f) => findScore(d, f, l));
+  // (A score that isn't a real number counts as nothing: it would end up in the save.)
+  const scores = finds.map((f) => {
+    const sc = findScore(d, f, l);
+    return Number.isFinite(sc) ? sc : 0;
+  });
   const tierOk = finds.map((f) => luckOddsOneIn({ rarity: f.rarity, enchants: [] }, l) >= b.tierOneIn);
   const drama: Array<RollDrama | null> = finds.map((_, i) => {
     if (!tierOk[i]) return null;

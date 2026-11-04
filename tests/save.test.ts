@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, backupKey, deserialize, MemoryStorage, migrate, Rng, SAVE_KEY, SaveManager, serialize, tick, type GameState, computeItemPower } from '../src/core';
+import { applyAction, backupKey, deserialize, MemoryStorage, migrate, readSave, RESCUE_KEY, Rng, SAVE_KEY, SaveManager, serialize, tick, type GameState, computeItemPower } from '../src/core';
 import { SAVE_VERSION } from '../src/core/state';
 import { freshState, T0 } from './helpers';
 
@@ -37,6 +37,49 @@ describe('save / load', () => {
     const loaded = await mgr.load();
     expect(loaded?.source).toBe('backup');
     expect(loaded?.state.playTimeMs).toBe(1);
+  });
+
+  it('mends a save with a bad value instead of starting over (Kevin: "stop restarting my game save")', () => {
+    const st = structuredClone(played());
+    st.currencies.gems = 123;
+    const raw = JSON.parse(serialize(st)) as Record<string, any>;
+    // A number gone bad (NaN is written as null), a setting the build doesn't know, a broken bag item.
+    raw.currencies.coins = null;
+    raw.settings.reduceMotion = 'maybe';
+    raw.inventory.push({ ...raw.inventory[0], uid: 999_999, rarity: 'cursed' });
+    const before = raw.inventory.length;
+    const out = readSave(JSON.stringify(raw));
+    expect(out).not.toBeNull();
+    // What was broken goes back to a new game's (or, in the bag, the broken item goes); the rest stays.
+    expect(out!.state.currencies.coins).toBe(freshState().currencies.coins);
+    expect(out!.state.currencies.gems).toBe(123);
+    expect(out!.state.inventory).toHaveLength(before - 1);
+    expect(out!.state.inventory.some((x) => x.uid === 999_999)).toBe(false);
+    expect(out!.state.upgrades).toEqual(st.upgrades);
+    expect(out!.fixed.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('never writes a number that the next load would reject', () => {
+    const st = structuredClone(played());
+    st.currencies.coins = Number.NaN;
+    st.currencies.gems = Number.POSITIVE_INFINITY;
+    const text = serialize(st);
+    const back = deserialize(text);
+    expect(back?.currencies.coins).toBe(0);
+    expect(back?.currencies.gems).toBe(Number.MAX_VALUE);
+  });
+
+  it('keeps an unusable save in the rescue slot before anything can overwrite it', async () => {
+    const storage = new MemoryStorage();
+    const mgr = new SaveManager(storage, 2);
+    await storage.set(SAVE_KEY, '{"saveVersion": 8, "garbled');
+    expect(await mgr.load()).toBeNull();
+    expect(await storage.get(RESCUE_KEY)).toBe('{"saveVersion": 8, "garbled');
+    // The next saves rotate through the backups; the rescue slot stays as it was.
+    await mgr.save(freshState(1));
+    await mgr.save(freshState(2));
+    await mgr.save(freshState(3));
+    expect(await mgr.rescued()).toBe('{"saveVersion": 8, "garbled');
   });
 
   it('returns null for missing or invalid saves', async () => {

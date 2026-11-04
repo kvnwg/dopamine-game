@@ -745,6 +745,60 @@
     color: #ffffff;
   }
 }
+/*
+ * The stack grows as it climbs (Reel.tsx ChainBadge): bigger and a new color at ×10, ×25 (Epic or
+ * better guaranteed), ×50 (Legendary or better) and ×250 (Mythic or better), with a bigger drop, and
+ * the guaranteed tier under it.
+ */
+.chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+}
+.chain[data-tier='1'] {
+  font-size: 50px;
+  color: #6fd8ff;
+}
+.chain[data-tier='2'] {
+  font-size: 58px;
+  color: #d29bff;
+  animation: chainBig 0.33s steps(4) backwards;
+}
+.chain[data-tier='3'] {
+  font-size: 64px;
+  color: #ffd23f;
+  animation: chainBig 0.36s steps(4) backwards;
+}
+.chain[data-tier='4'] {
+  font-size: 72px;
+  color: #ff5252;
+  animation: chainBig 0.4s steps(5) backwards, chainRainbow 0.8s steps(1) 0.4s infinite;
+}
+@keyframes chainRainbow {
+  0% { color: #ff5252; }
+  20% { color: #ffb300; }
+  40% { color: #69f0ae; }
+  60% { color: #40c4ff; }
+  80% { color: #e040fb; }
+}
+@keyframes chainBig {
+  0% {
+    transform: translateY(calc(-5 * var(--px))) scale(1.6);
+    color: #ffffff;
+  }
+  50% {
+    transform: translateY(var(--px)) scale(0.92);
+  }
+}
+/* The tier a big stack guarantees, under it. */
+.chainFloor {
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 24px;
+  color: inherit;
+  -webkit-text-stroke: 5px var(--ink);
+}
 /* Every reel matched a token: the multipliers are squared, in gold, with a bigger drop. */
 .chain[data-gold] {
   color: #ffd84a;

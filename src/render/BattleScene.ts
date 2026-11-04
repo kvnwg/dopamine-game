@@ -25,7 +25,7 @@
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
 import {
-  battleMaxHp, battleStats, chainFloor, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, runEffects, worldDef, type CoreEvent, type CrewHelper,
+  battleMaxHp, battleStats, chainFloor, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, rarityIndex, runEffects, worldDef, type CoreEvent, type CrewHelper,
   type GameState, type Item,
 } from '../core';
 import { bus } from '../app/eventBus';
@@ -75,6 +75,24 @@ interface LuckChain {
   y: number;
   /** Its reel has landed its item: the row is on its way out. */
   done: boolean;
+  /** The best rarity its total has guaranteed so far (crossing a new one is celebrated). */
+  floorSeen?: string | null;
+}
+
+/**
+ * A luck row's total gets bigger and brighter as it stacks up (Kevin: a playtester "didn't notice
+ * the tiers stack ... esp when it gets to a higher number"): green, blue from ×10, then in the huge
+ * face purple from ×25 (an Epic or better guaranteed), gold from ×50 (Legendary or better) and rainbow
+ * from ×250 (Mythic or better). Matched (squared) rows stay gold.
+ */
+function luckTotalStyle(mult: number, gold: boolean): { face: 'big' | 'huge'; fill: string[] } {
+  const face = mult >= 25 ? 'huge' : 'big';
+  if (gold) return { face, fill: ['#fffbe0', '#ffd84a'] };
+  if (mult >= 250) return { face, fill: ['#ff6b6b', '#ffc233', '#7dff9a', '#5ad1ff', '#e48bff'] };
+  if (mult >= 50) return { face, fill: ['#fff7b0', '#ffc233', '#ff8a00'] };
+  if (mult >= 25) return { face, fill: ['#fbefff', '#d29bff', '#8a3ff0'] };
+  if (mult >= 10) return { face, fill: ['#e6f9ff', '#5ad1ff'] };
+  return { face, fill: ['#d8ffd0', '#46d36b'] };
 }
 export const BATTLE_H = VIEW.h * P;
 /** The ground line: the bottom edge of the view row fighters stand on (y 828). */
@@ -1813,7 +1831,9 @@ export class BattleScene extends Phaser.Scene {
         this.time.delayedCall(70, () => img.active && img.clearTint());
       }
     }
-    this.bits.burst(12 + step * 6, at.x, chain.y, { speed: [30, 90], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
+    // More bits the higher the stack.
+    const mult = multOf(chain.mults.slice(0, n), chain.squared);
+    this.bits.burst(12 + step * 6 + Math.round(8 * Math.log10(Math.max(1, mult))), at.x, chain.y, { speed: [30, 90], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
     // A small kick, as gentle as a blow's (Kevin wanted the token slams' shake gentle).
     this.shake(160, P / BATTLE_W, 1);
     this.drawLuckTotal(chain);
@@ -1828,20 +1848,40 @@ export class BattleScene extends Phaser.Scene {
     chain.floor?.destroy();
     chain.floor = null;
     const last = luckSlot(chain.row, n - 1, n);
-    const fill = gold ? ['#fffbe0', '#ffd84a'] : ['#d8ffd0', '#46d36b'];
-    const total = this.texts.add(`×${formatNumber(mult)} ${t('battle.luck')}`, { face: 'big', fill, shadow: true }).setDepth(44);
-    const tx = snap(last.x + 9 * P + (total.artW * P) / 2);
+    const look = luckTotalStyle(mult, gold);
+    // (In the huge face the number says it all: "×625", not "×625 LUCK", so a long one still fits.)
+    const label = look.face === 'huge' ? `×${formatNumber(mult)}` : `×${formatNumber(mult)} ${t('battle.luck')}`;
+    const total = this.texts.add(label, { face: look.face, fill: look.fill, shadow: true }).setDepth(44);
+    // After its tokens, but never past the view's right edge.
+    const tx = snap(Math.min(last.x + 9 * P + (total.artW * P) / 2, BATTLE_W - 3 * P - (total.artW * P) / 2));
     total.place(tx, chain.y);
     if (!this.reduceFlashing) {
       total.setFlash(true);
-      this.time.delayedCall(80, () => total.active && total.setFlash(false));
+      this.time.delayedCall(look.face === 'huge' ? 140 : 80, () => total.active && total.setFlash(false));
+    }
+    // A big total pops in from above (whole pixels).
+    if (look.face === 'huge' && !this.reduceMotion) {
+      [3, 1, 0].forEach((d, k) => this.time.delayedCall(k * 40, () => total.active && total.place(tx, chain.y - d * P)));
     }
     chain.total = total;
     const floor = chainFloor(mult);
     if (floor) {
-      const tag = this.texts.add(t('reel.tokenFloor', { rarity: t(`rarity.${floor}`).toUpperCase() }), { face: 'small', fill: rarityColor(floor), shadow: true }).setDepth(44);
-      tag.place(tx, chain.y + 8 * P);
+      const tag = this.texts.add(t('reel.tokenFloorShort', { rarity: t(`rarity.${floor}`).toUpperCase() }), { face: 'big', fill: rarityColor(floor), shadow: true }).setDepth(44);
+      tag.place(snap(Math.min(tx, BATTLE_W - 3 * P - (tag.artW * P) / 2)), chain.y + 9 * P);
       chain.floor = tag;
+      // A new guarantee reached: a burst in its color, a harder kick, its chime.
+      if (chain.floorSeen !== floor) {
+        chain.floorSeen = floor;
+        const c = Phaser.Display.Color.HexStringToColor(rarityColor(floor)).color;
+        this.bits.burst(40, tx, chain.y, { speed: [60, 160], life: [380, 760], drag: 2, colors: [0xffffff, c], fade: [c], sizes: [2, 1] });
+        this.shake(240, (2 * P) / BATTLE_W, 1);
+        audio.tierPass(rarityIndex(floor as Rarity));
+        haptics.impact('heavy');
+        if (!this.reduceFlashing) {
+          tag.setFlash(true);
+          [120, 240, 360].forEach((ms, k) => this.time.delayedCall(ms, () => tag.active && tag.setFlash(k % 2 === 1)));
+        }
+      }
     }
   }
 

@@ -17,6 +17,7 @@ export function Modal({
 }) {
   return (
     <div className={s.overlay} onClick={onClose} data-keep-lit>
+      <div className={s.dim} />
       <div className={`${s.card} ${wide ? s.wide : ''}`} onClick={(e) => e.stopPropagation()}>
         {title && (
           <div className={`${s.ribbon} ${s[tone]}`}>

@@ -35,7 +35,7 @@
  */
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { RARITIES, type Rarity } from '../../data';
-import { currentLuck, formatNumber, rarityIndex, reelCount, type GameState } from '../../core';
+import { chainFloor, currentLuck, formatNumber, rarityIndex, reelCount, type GameState } from '../../core';
 import { gameStore, useGame } from '../../app/store';
 import { itemArt, luckTokenArt, sparkleArt, uiBitArt, UI_PX, type Art, type ArtScale } from '../../render/icons';
 import { haptics } from '../../services';
@@ -404,6 +404,43 @@ function Landing({ f, x, y, layout, calm }: { f: Fx; x: number; y: number; layou
   );
 }
 
+/**
+ * A reel's luck stacked up so far (Kevin: a playtester "didn't notice the tiers stack, you need to
+ * make it more noticeable, esp when it gets to a higher number"). Each new token counts the total up
+ * from the last one (×2, ×4, ×7, ×10) with a drop, and the badge grows and changes color as it climbs:
+ * green, blue from ×10, purple from ×25 (an Epic or better guaranteed), gold from ×50 (Legendary or
+ * better), rainbow from ×250 (Mythic or better), the guaranteed tier written under it.
+ */
+function ChainBadge({ x, gold }: { x: number; gold: boolean }) {
+  const [shown, setShown] = useState(x);
+  const prev = useRef(x);
+  useEffect(() => {
+    const from = prev.current;
+    prev.current = x;
+    if (!(from > 0) || from >= x) {
+      setShown(x);
+      return;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / 360);
+      setShown(k >= 1 ? x : Math.max(from, Math.round(from * Math.pow(x / from, k))));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [x]);
+  const floor = chainFloor(x);
+  const tier = x >= 250 ? 4 : x >= 50 ? 3 : x >= 25 ? 2 : x >= 10 ? 1 : 0;
+  return (
+    <span key={x} className={s.chain} data-tier={tier} data-gold={gold || undefined}>
+      ×{formatNumber(shown)}
+      {floor && <em className={s.chainFloor}>{t('reel.tokenFloorShort', { rarity: t(`rarity.${floor}`).toUpperCase() })}</em>}
+    </span>
+  );
+}
+
 /** A luck token bursts into little pixel clovers. */
 function CloverBurst({ x, y }: { x: number; y: number }) {
   return (
@@ -743,11 +780,7 @@ export function ReelBank() {
                   <Cells strip={st} runKey={shown.key} reel={i} layout={L} reached={shown.reached[i]} before={shown.before[i]} idle={!run} cellRefs={cellRefs.current} />
                 </div>
                 <div className={s.curve} />
-                {x > 1 && (
-                  <span key={x} className={s.chain} data-gold={(run && gold) || undefined}>
-                    ×{formatNumber(x)}
-                  </span>
-                )}
+                {x > 1 && <ChainBadge x={x} gold={!!(run && gold)} />}
               </div>
             );
           })}

@@ -3,7 +3,7 @@
  * Storage is injected (localStorage on web, @capacitor/preferences on native, memory in tests).
  */
 import { BAL } from '../data';
-import { GameStateSchema, initialHeist, SAVE_VERSION, type GameState } from './state';
+import { createInitialState, GameStateSchema, initialHeist, SAVE_VERSION, type GameState } from './state';
 import { sanitizeUpgrades } from './systems/upgrades';
 import { fitToPower } from './systems/loot';
 import { backfillBread } from './systems/perks';
@@ -17,6 +17,8 @@ export interface KeyValueStorage {
 
 export const SAVE_KEY = 'dumpster_legend_save';
 export const backupKey = (i: number) => `${SAVE_KEY}_backup_${i}`;
+/** Where a save that couldn't be loaded is kept, untouched, before anything can overwrite it. */
+export const RESCUE_KEY = `${SAVE_KEY}_rescue`;
 
 /** Migration from version N to N+1, keyed by N. Add one for every saveVersion bump. */
 export type Migration = (save: Record<string, unknown>) => Record<string, unknown>;
@@ -181,26 +183,110 @@ export function migrate(
   return save;
 }
 
+/**
+ * The save as JSON. A number gone wrong (NaN, or past the largest a number can be) would come out as
+ * null, which the next load rejects; it is written as the nearest real number instead (0 for NaN).
+ */
 export function serialize(state: GameState): string {
-  return JSON.stringify(state);
+  return JSON.stringify(state, (_key, v: unknown) => (typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? 0 : v > 0 ? Number.MAX_VALUE : -Number.MAX_VALUE) : v));
 }
 
-/** Parses, migrates, and validates a save. Returns null if it is unusable. */
-export function deserialize(text: string | null, migrations: Record<number, Migration> = MIGRATIONS): GameState | null {
+type Path = PropertyKey[];
+const isObj = (v: unknown): v is Record<PropertyKey, unknown> => typeof v === 'object' && v !== null;
+function getAt(root: unknown, path: Path): unknown {
+  let cur = root;
+  for (const k of path) {
+    if (!isObj(cur)) return undefined;
+    cur = (cur as Record<PropertyKey, unknown>)[k];
+  }
+  return cur;
+}
+function setAt(root: unknown, path: Path, value: unknown): void {
+  const parent = getAt(root, path.slice(0, -1));
+  if (!isObj(parent)) return;
+  const k = path[path.length - 1];
+  if (value === undefined) delete (parent as Record<PropertyKey, unknown>)[k];
+  else (parent as Record<PropertyKey, unknown>)[k] = value;
+}
+const copy = <T,>(v: T): T => (v === undefined ? v : (JSON.parse(JSON.stringify(v)) as T));
+
+/**
+ * A save the schema rejects is mended rather than thrown away (players lost whole games to one bad
+ * value): each bad value is set back to a new game's, a bad entry in a list (the bag, the history)
+ * is dropped, and after a few rounds a section still failing is reset whole. Everything else is
+ * kept. `fixed` lists what was changed. Null only if even that fails.
+ */
+export function repairSave(migrated: Record<string, unknown>, now = Date.now()): { state: GameState; fixed: string[] } | null {
+  // Nothing worth keeping without its currencies and its worlds: not a game, just a broken file.
+  if (!isObj(migrated.currencies) || !isObj(migrated.stage)) return null;
+  const fresh = createInitialState(now, 1) as unknown as Record<string, unknown>;
+  const cur = copy(migrated);
+  const fixed: string[] = [];
+  for (let round = 0; round < 8; round++) {
+    const r = GameStateSchema.safeParse(cur);
+    if (r.success) return { state: r.data, fixed };
+    const drops = new Map<unknown[], Set<number>>();
+    for (const iss of r.error.issues) {
+      const path = iss.path as Path;
+      if (path.length === 0) return null;
+      // Last rounds: the whole section goes back to a new game's.
+      if (round >= 4) {
+        setAt(cur, [path[0]], copy(fresh[path[0] as string]));
+        fixed.push(String(path[0]));
+        continue;
+      }
+      // An entry of a list a new game doesn't have: drop the entry.
+      let dropped = false;
+      for (let j = 0; j < path.length; j++) {
+        const list = getAt(cur, path.slice(0, j));
+        if (!Array.isArray(list) || typeof path[j] !== 'number') continue;
+        const freshList = getAt(fresh, path.slice(0, j));
+        if (!Array.isArray(freshList) || freshList.length <= (path[j] as number)) {
+          if (!drops.has(list)) drops.set(list, new Set());
+          drops.get(list)!.add(path[j] as number);
+          fixed.push(path.slice(0, j + 1).join('.'));
+          dropped = true;
+        }
+        break;
+      }
+      if (dropped) continue;
+      if (iss.code === 'unrecognized_keys') {
+        for (const k of (iss as { keys?: string[] }).keys ?? []) setAt(cur, [...path, k], undefined);
+      } else {
+        setAt(cur, path, copy(getAt(fresh, path)));
+      }
+      fixed.push(path.join('.'));
+    }
+    for (const [list, idx] of drops) {
+      for (const i of [...idx].sort((a, b) => b - a)) list.splice(i, 1);
+    }
+  }
+  return null;
+}
+
+/** Parses, migrates, validates and (if need be) mends a save. Null if it is unusable. */
+export function readSave(text: string | null, migrations: Record<number, Migration> = MIGRATIONS): { state: GameState; fixed: string[] } | null {
   if (!text) return null;
   try {
     const raw = JSON.parse(text) as Record<string, unknown>;
+    if (!isObj(raw)) return null;
     const migrated = migrate(raw, migrations);
     const hadPerks = migrated.perks !== undefined;
     const parsed = GameStateSchema.safeParse(migrated);
-    if (!parsed.success) return null;
-    sanitizeUpgrades(parsed.data);
+    const out = parsed.success ? { state: parsed.data, fixed: [] as string[] } : repairSave(migrated);
+    if (!out) return null;
+    sanitizeUpgrades(out.state);
     // A save from before Alley perks: the worlds already beaten this run pay their loaves.
-    if (!hadPerks) backfillBread(parsed.data);
-    return parsed.data;
+    if (!hadPerks) backfillBread(out.state);
+    return out;
   } catch {
     return null;
   }
+}
+
+/** Parses, migrates, validates and mends a save. Returns null if it is unusable. */
+export function deserialize(text: string | null, migrations: Record<number, Migration> = MIGRATIONS): GameState | null {
+  return readSave(text, migrations)?.state ?? null;
 }
 
 export class SaveManager {
@@ -223,15 +309,26 @@ export class SaveManager {
     await this.storage.set(SAVE_KEY, text);
   }
 
-  /** Loads the newest valid save, falling back to backups if the main save is corrupt. */
-  async load(): Promise<{ state: GameState; source: 'main' | 'backup' } | null> {
-    const main = deserialize(await this.storage.get(SAVE_KEY));
-    if (main) return { state: main, source: 'main' };
+  /**
+   * Loads the newest valid save (mended if need be), falling back to backups if the main save is
+   * unusable. A main save that can't be loaded is first copied to the rescue slot, which nothing
+   * overwrites but the next such failure: the saves that follow would push it out of the backups.
+   */
+  async load(): Promise<{ state: GameState; source: 'main' | 'backup'; fixed: string[] } | null> {
+    const text = await this.storage.get(SAVE_KEY);
+    const main = readSave(text);
+    if (main) return { state: main.state, source: 'main', fixed: main.fixed };
+    if (text) await this.storage.set(RESCUE_KEY, text);
     for (let i = 0; i < this.backups; i++) {
-      const b = deserialize(await this.storage.get(backupKey(i)));
-      if (b) return { state: b, source: 'backup' };
+      const b = readSave(await this.storage.get(backupKey(i)));
+      if (b) return { state: b.state, source: 'backup', fixed: b.fixed };
     }
     return null;
+  }
+
+  /** The save kept in the rescue slot, if any (raw text). */
+  async rescued(): Promise<string | null> {
+    return this.storage.get(RESCUE_KEY);
   }
 
   async reset(): Promise<void> {

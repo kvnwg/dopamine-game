@@ -28,6 +28,8 @@ import { installSound } from './soundController';
 import { installTokenFx } from './tokenFx';
 import { installKeyboard } from './keyboard';
 import { STAGE_TALL, STAGE_WIDE, useUi } from './uiStore';
+import { takeBootNotes, whenStarted } from '../app/session';
+import { t } from './i18n';
 
 /**
  * The stage: tall on phones (1080 x 1920: the battle over the menus), wide on PC screens (2160 x 960:
@@ -87,6 +89,17 @@ export function App() {
     return () => ro.disconnect();
   }, []);
 
+  // Once the game starts: a word about the save if it was mended or came back from the player's account.
+  useEffect(
+    () =>
+      whenStarted(() => {
+        for (const note of takeBootNotes()) {
+          if (note.kind === 'cloud') useUi.getState().toast(t('save.restored'), 'good');
+          else useUi.getState().toast(t('save.mended', { n: note.count }), 'warn');
+        }
+      }),
+    [],
+  );
   useEffect(() => installRollController(), []);
   useEffect(() => installSound(), []);
   useEffect(() => installTokenFx(), []);
@@ -96,18 +109,28 @@ export function App() {
     <div className={styles.viewport}>
       <div className={styles.frame} ref={frameRef}>
         <div className={styles.stage} data-stage data-layout={wide ? 'wide' : undefined} data-blackout={blackout} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
-          <div className={styles.battle}><BattlePanel /></div>
+          <div className={styles.battle}>
+            <SafeLayer name="battle" retryMs={1000}>
+              <BattlePanel />
+            </SafeLayer>
+          </div>
           <div className={styles.lower}>
             {/* A new tab's panel slides up with a little bounce (keyed so it plays on every switch). */}
             <div key={lowerTab === 'upgrades' ? 'alley' : lowerTab} className={styles.panelIn}>
-              {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
-              {lowerTab === 'heist' && <HeistPanel />}
-              {lowerTab === 'bag' && <InventoryPanel />}
-              {lowerTab === 'rebirth' && <RebirthPanel />}
-              {lowerTab === 'worlds' && <WorldsPanel />}
+              <SafeLayer name={`panel ${lowerTab}`} retryMs={1000}>
+                {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
+                {lowerTab === 'heist' && <HeistPanel />}
+                {lowerTab === 'bag' && <InventoryPanel />}
+                {lowerTab === 'rebirth' && <RebirthPanel />}
+                {lowerTab === 'worlds' && <WorldsPanel />}
+              </SafeLayer>
             </div>
           </div>
-          <div className={styles.nav}><BottomNav /></div>
+          <div className={styles.nav}>
+            <SafeLayer name="nav" retryMs={1000}>
+              <BottomNav />
+            </SafeLayer>
+          </div>
           {tab === 'upgrades' && (
             <SafeLayer name="upgrades" onError={leaveUpgrades}>
               <UpgradeMap />
@@ -123,9 +146,9 @@ export function App() {
           <SafeLayer name="equip"><EquipFlight /></SafeLayer>
           <SafeLayer name="toasts"><Toasts /></SafeLayer>
           <SafeLayer name="hover"><HoverInfo /></SafeLayer>
-          <AdOverlay />
+          <SafeLayer name="ad"><AdOverlay /></SafeLayer>
           {SHOW_DEV && <DevPanel />}
-          <TitleScreen />
+          <SafeLayer name="title"><TitleScreen /></SafeLayer>
         </div>
       </div>
     </div>

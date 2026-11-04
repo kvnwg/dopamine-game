@@ -8,7 +8,7 @@
 import { produce } from 'immer';
 import { BAL } from '../data';
 import type { Rng } from './rng';
-import type { GameState } from './state';
+import { FEATURES, type GameState } from './state';
 import type { CoreEvent, GameAction, StepResult } from './types';
 import { combatTick, resolveAfterBoss, startStage } from './systems/combat';
 import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './systems/dumpster';
@@ -19,7 +19,7 @@ import {
 import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { buyPerk } from './systems/perks';
-import { addXp } from './systems/progression';
+import { addXp, totalXpForLevel } from './systems/progression';
 import { doRebirth } from './systems/rebirth';
 import { addLuckBoost, equipFromBag, rollTick, scrapAllFromBag, scrapFromBag, toggleLock, equipBest } from './systems/roller';
 import { worldCount } from './systems/stages';
@@ -217,6 +217,21 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
     case 'heistTickets':
       d.heist.tickets = clamp(Math.round(cheat.tickets), 0, 99);
       ev.push({ type: 'heistTickets', tickets: d.heist.tickets });
+      break;
+    case 'addLevels': {
+      const target = clamp(d.player.level + Math.round(cheat.levels), 1, BAL.player.levelCap);
+      const need = totalXpForLevel(target) - (totalXpForLevel(d.player.level) + d.player.xp);
+      if (need > 0) addXp(d, need, ev);
+      break;
+    }
+    case 'unlockAll':
+      d.features.unlocked = [...FEATURES];
+      d.features.seen = [...FEATURES];
+      d.dumpster.firstDiveDone = true;
+      if (d.dumpster.beginner.state !== 'done') d.dumpster.beginner = { state: 'done', uid: null };
+      break;
+    case 'addRebirths':
+      d.rebirths = clamp(d.rebirths + Math.round(cheat.n), 0, 9999);
       break;
   }
 }

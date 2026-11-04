@@ -22,7 +22,7 @@ export interface TokenFlightState {
   step: number;
 }
 
-export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll';
+export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll' | 'save' | 'admin';
 export type Tab = 'alley' | 'heist' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
 export interface RollView {

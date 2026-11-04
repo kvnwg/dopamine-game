@@ -211,7 +211,13 @@ export type Cheat =
   | { kind: 'setDumpsterLevel'; level: number }
   | { kind: 'skipToLastWave' }
   /** Set the heist ticket count. */
-  | { kind: 'heistTickets'; tickets: number };
+  | { kind: 'heistTickets'; tickets: number }
+  /** The admin portal: `levels` more levels for the raccoon. */
+  | { kind: 'addLevels'; levels: number }
+  /** The admin portal: every feature open and introduced, the tutorial over. */
+  | { kind: 'unlockAll' }
+  /** The admin portal: `n` more rebirths counted (what they unlock follows), nothing wiped. */
+  | { kind: 'addRebirths'; n: number };
 
 export interface StepResult<S> {
   state: S;

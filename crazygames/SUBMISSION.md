@@ -30,23 +30,23 @@ The requirements below were checked against the official docs at <https://docs.c
 | Landscape cover | `crazygames/covers/cover-landscape-1920x1080.png` | 16:9, 1920×1080 |
 | Portrait cover | `crazygames/covers/cover-portrait-800x1200.png` | 2:3, 800×1200 |
 | Square cover | `crazygames/covers/cover-square-800x800.png` | 1:1, 800×800 |
-| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17 s, silent, opens on the cover, 22.0 MB |
-| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17 s, silent, opens on the cover, 20.1 MB |
+| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 19 s, silent, opens on the cover, 14.0 MB |
+| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 19 s, silent, opens on the cover, 15.8 MB |
 
 **Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the real logo. The title is the only text, with no borders or icons.
 
-**Previews** are a 17-second trailer: 20 fast shots of real gameplay, each 0.5–1.3 s, with punch-in zooms, impact shakes and flash cuts. The shots, in order:
-- A cold open on luck tokens slamming for a ONE SHOT K.O.
-- Combat in Funky Farmland (a BOSS! call-out), Neon Night Market and Dungeon Dumps.
-- The reels charging up, then a count-up racing from 1 in 482 to the HOLY GRAIL! card (1 in 250M).
-- Equip best: the gear flies onto the raccoon and slams, with HOLY GRAIL! and MYTHIC!
-- The Gator Vinnie boss fight ending in WORLD CLEARED.
-- 170M crits in Cosmic Compactor and a ONE SHOT K.O. in Golden Gardens.
-- The finale: a pile of new gear, LEGENDARY! HOLY GRAIL!, and his POWER counting up to 4,895,496.
+**Previews** are a 19-second trailer of real gameplay at a smooth 30 fps: 11 shots of 1–2.6 s with gentle push-ins. They tell the game's loop in order:
+1. The raccoon fights in Neon Night Market.
+2. His dumpster rolls loot underneath.
+3. A rare roll: the dumpster charges up, the odds race through the tiers, and it lands on HOLY GRAIL! (1 in 250M).
+4. Equip best puts it on him and his POWER jumps.
+5. He takes down the Gator Vinnie boss: WORLD CLEARED.
+6. On to new worlds: Glacier Gulch and Cosmic Compactor.
+7. It ends on his POWER, past 5 million.
 
-The landscape cut reframes the portrait game to fill 16:9 (no black bars). Every shot plays at real speed (no fast-forward), with no cursor, no black screens and no "play now" text.
+Shots that need the whole battle view (world banner, raccoon and enemies together) show it fitted over a blurred copy of itself, never black bars. Every shot plays at real speed (no fast-forward), with no cursor, no black screens and no "play now" text.
 
-How it's made: `tools/crazygames/recordTrailer.mjs` loads a mid-game save made by the game's balance bot (`trailerSave.ts`: about 90 minutes in, World 10, 3 rebirths) and records 15 scenes at the full 1080×1920. The dev cheats are used only to set scenes up: which world, a forced Grail roll, a luck-token chain. `tools/crazygames/editTrailer.mjs` then cuts the trailer from the edit list in `tools/crazygames/trailerShots.json`, which holds each shot's in point, length, camera framing per format, zoom, shake and flash.
+How it's made: `tools/crazygames/recordTrailer.mjs` loads a mid-game save made by the game's balance bot (`trailerSave.ts`: about 90 minutes in, World 10, 3 rebirths). It takes over the page's clock (`virtualTime.js`), so every frame is exactly 1/30 s of game time however slowly the headless browser renders, and records each scene at the full 1080×1920. The dev cheats are used only to set scenes up: which world, a forced Grail roll. `tools/crazygames/editTrailer.mjs` then cuts the trailer from the edit list in `tools/crazygames/trailerShots.json`, which holds each shot's in point, length, camera framing per format, zoom, shake and flash. Preview an edit without rendering video with `node tools/crazygames/editTrailer.mjs --storyboard land` (or `port`).
 
 ---
 

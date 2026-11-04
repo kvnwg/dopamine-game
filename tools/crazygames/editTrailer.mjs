@@ -6,9 +6,12 @@
 // speed), no black screens or black bars, no cursor, no "play now" text.
 //
 // The camera is done here, frame by frame: ffmpeg decodes each shot to raw RGB, this script crops the
-// eased zoom with exact sub-pixel framing and samples it nearest-neighbour (the pixel art stays square),
-// adds the shake and the flash, and pipes the frames back to ffmpeg. (ffmpeg's own scale+crop can't do
-// this: its crop keeps the first frame's size while the zoom changes it, so the framing drifts.)
+// eased zoom with exact sub-pixel framing and samples it bilinearly (the recording has 6 px per art
+// pixel, so edges stay crisp while zooms glide without shimmer), adds the shake and the flash, and pipes
+// the frames back to ffmpeg. A camera with an `h` shows a region taller than the output (the whole
+// battle view, say) fitted into the frame over a blurred, darkened copy of itself instead of black bars.
+// (ffmpeg's own scale+crop can't do this: its crop keeps the first frame's size while the zoom changes
+// it, so the framing drifts.)
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
@@ -40,8 +43,9 @@ export function cameraAt(shot, cam, OW, OH, t) {
   const [w0, w1] = cam.w;
   const zt = cam.zt ?? shot.d;
   const u = Math.min(t / zt, 1);
-  const W = w0 + (w1 - w0) * (1 - Math.pow(1 - u, 3)); // ease out: a punch that settles
-  const H = (W * OH) / OW;
+  const e = 1 - Math.pow(1 - u, 3); // ease out: a punch that settles
+  const W = w0 + (w1 - w0) * e;
+  const H = cam.h ? cam.h[0] + (cam.h[1] - cam.h[0]) * e : (W * OH) / OW;
   let sx = 0;
   let sy = 0;
   if (shot.shake && t < SHAKE_FOR) {
@@ -54,27 +58,106 @@ export function cameraAt(shot, cam, OW, OH, t) {
   return { x, y, w: W, h: H };
 }
 
-function renderFrame(src, dst, OW, OH, r, flash) {
-  const xs = new Int32Array(OW);
-  for (let j = 0; j < OW; j++) xs[j] = Math.min(SW - 1, Math.floor(r.x + ((j + 0.5) * r.w) / OW)) * 3;
-  for (let k = 0; k < OH; k++) {
-    const row = Math.min(SH - 1, Math.floor(r.y + ((k + 0.5) * r.h) / OH)) * SW * 3;
-    let o = k * OW * 3;
-    if (flash > 0) {
-      for (let j = 0; j < OW; j++, o += 3) {
-        const p = row + xs[j];
-        dst[o] = src[p] + (255 - src[p]) * flash;
-        dst[o + 1] = src[p + 1] + (255 - src[p + 1]) * flash;
-        dst[o + 2] = src[p + 2] + (255 - src[p + 2]) * flash;
-      }
-    } else {
-      for (let j = 0; j < OW; j++, o += 3) {
-        const p = row + xs[j];
-        dst[o] = src[p];
-        dst[o + 1] = src[p + 1];
-        dst[o + 2] = src[p + 2];
+/** Bilinear sample tables for `n` output pixels across [start, start + span) source pixels. */
+function taps(n, start, span, limit) {
+  const i0 = new Int32Array(n);
+  const f = new Float32Array(n);
+  for (let j = 0; j < n; j++) {
+    const v = Math.max(0, Math.min(limit - 1.001, start + ((j + 0.5) * span) / n - 0.5));
+    i0[j] = Math.floor(v);
+    f[j] = v - i0[j];
+  }
+  return { i0, f };
+}
+
+/** Draws source rect `r` into dst at (ox, oy, dw, dh), bilinear. */
+function blit(src, dst, OW, r, ox, oy, dw, dh, flash, dim = 1) {
+  const X = taps(dw, r.x, r.w, SW);
+  const Y = taps(dh, r.y, r.h, SH);
+  const rowLen = SW * 3;
+  for (let k = 0; k < dh; k++) {
+    const y0 = Y.i0[k] * rowLen;
+    const y1 = y0 + rowLen;
+    const fy = Y.f[k];
+    let o = ((oy + k) * OW + ox) * 3;
+    for (let j = 0; j < dw; j++, o += 3) {
+      const x0 = X.i0[j] * 3;
+      const fx = X.f[j];
+      for (let c = 0; c < 3; c++) {
+        const a = src[y0 + x0 + c] + (src[y0 + x0 + 3 + c] - src[y0 + x0 + c]) * fx;
+        const b = src[y1 + x0 + c] + (src[y1 + x0 + 3 + c] - src[y1 + x0 + c]) * fx;
+        let v = (a + (b - a) * fy) * dim;
+        if (flash > 0) v += (255 - v) * flash;
+        dst[o + c] = v;
       }
     }
+  }
+}
+
+/** A blurred, darkened backdrop: the area around `r` averaged down to a few dozen pixels, then stretched. */
+function backdrop(src, dst, OW, OH, r) {
+  const bw = 32;
+  const bh = Math.max(2, Math.round((bw * OH) / OW));
+  // The backdrop covers the output: widen (or heighten) the region to the output's aspect.
+  let w = r.w;
+  let h = r.h;
+  if (w / h < OW / OH) w = (h * OW) / OH;
+  else h = (w * OH) / OW;
+  const x0 = Math.max(0, Math.min(SW - Math.min(w, SW), r.x + r.w / 2 - w / 2));
+  const y0 = Math.max(0, Math.min(SH - Math.min(h, SH), r.y + r.h / 2 - h / 2));
+  w = Math.min(w, SW);
+  h = Math.min(h, SH);
+  const small = new Float32Array(bw * bh * 3);
+  for (let by = 0; by < bh; by++) {
+    for (let bx = 0; bx < bw; bx++) {
+      let sr = 0;
+      let sg = 0;
+      let sb = 0;
+      for (let q = 0; q < 16; q++) {
+        const sx = Math.min(SW - 1, Math.floor(x0 + ((bx + ((q % 4) + 0.5) / 4) * w) / bw));
+        const sy = Math.min(SH - 1, Math.floor(y0 + ((by + (Math.floor(q / 4) + 0.5) / 4) * h) / bh));
+        const p = (sy * SW + sx) * 3;
+        sr += src[p];
+        sg += src[p + 1];
+        sb += src[p + 2];
+      }
+      const o = (by * bw + bx) * 3;
+      small[o] = sr / 16;
+      small[o + 1] = sg / 16;
+      small[o + 2] = sb / 16;
+    }
+  }
+  for (let k = 0; k < OH; k++) {
+    const vy = Math.max(0, Math.min(bh - 1.001, ((k + 0.5) * bh) / OH - 0.5));
+    const y0i = Math.floor(vy);
+    const fy = vy - y0i;
+    for (let j = 0; j < OW; j++) {
+      const vx = Math.max(0, Math.min(bw - 1.001, ((j + 0.5) * bw) / OW - 0.5));
+      const x0i = Math.floor(vx);
+      const fx = vx - x0i;
+      const p00 = (y0i * bw + x0i) * 3;
+      const p10 = p00 + 3;
+      const p01 = p00 + bw * 3;
+      const p11 = p01 + 3;
+      const o = (k * OW + j) * 3;
+      for (let c = 0; c < 3; c++) {
+        const a = small[p00 + c] + (small[p10 + c] - small[p00 + c]) * fx;
+        const b = small[p01 + c] + (small[p11 + c] - small[p01 + c]) * fx;
+        dst[o + c] = (a + (b - a) * fy) * 0.45;
+      }
+    }
+  }
+}
+
+function renderFrame(src, dst, OW, OH, r, flash) {
+  const s = Math.min(OW / r.w, OH / r.h);
+  const dw = Math.min(OW, Math.round(r.w * s));
+  const dh = Math.min(OH, Math.round(r.h * s));
+  if (dw < OW - 1 || dh < OH - 1) {
+    backdrop(src, dst, OW, OH, r);
+    blit(src, dst, OW, r, Math.floor((OW - dw) / 2), Math.floor((OH - dh) / 2), dw, dh, flash);
+  } else {
+    blit(src, dst, OW, r, 0, 0, OW, OH, flash);
   }
 }
 
@@ -119,7 +202,25 @@ for (const shot of SHOTS) {
   if (shot.t + shot.d > m.duration + 0.01) throw new Error(`shot ${shot.s}@${shot.t} runs past the scene (${m.duration.toFixed(2)} s)`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+/** Decodes the one frame at `t` of a scene (raw RGB). */
+function frameAt(scene, t) {
+  return execFileSync('ffmpeg', ['-loglevel', 'error', '-ss', String(t), '-i', path.join(SRC, `${scene}.mp4`), '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 64 << 20 });
+}
+
+// --storyboard <land|port> <dir>: each shot's first and last frame as PNGs, rendered exactly as the video.
+if (process.argv[2] === '--storyboard') {
+  const f = FORMATS.find((x) => x.key === (process.argv[3] || 'land'));
+  const dir = process.argv[4] || path.join(SRC, `storyboard-${f.key}`);
+  fs.mkdirSync(dir, { recursive: true });
+  SHOTS.forEach((shot, i) => {
+    for (const [k, t] of [[0, 0], [1, shot.d - 1 / FPS]]) {
+      const dst = Buffer.alloc(f.w * f.h * 3);
+      renderFrame(frameAt(shot.s, shot.t + t), dst, f.w, f.h, cameraAt(shot, shot[f.key], f.w, f.h, t), 0);
+      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${f.w}x${f.h}`, '-i', '-', '-frames:v', '1', path.join(dir, `${String(i).padStart(2, '0')}-${k}.png`)], { input: dst });
+    }
+  });
+  console.log(`storyboard in ${dir}`);
+} else if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const tmp = path.join(SRC, '_edit');
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.mkdirSync(tmp, { recursive: true });
@@ -151,7 +252,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         `[0:v]scale=${f.w}:${f.h},setsar=1,format=yuv420p,fps=${FPS},settb=AVTB[c];` +
           `[1:v]setsar=1,format=yuv420p,fps=${FPS},settb=AVTB[g];` +
           `[c][g]xfade=transition=fade:duration=${FADE}:offset=${INTRO - FADE},format=yuv420p[v]`,
-        '-map', '[v]', '-an', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p',
+        '-map', '[v]', '-an', '-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-crf', '20', '-pix_fmt', 'yuv420p',
         '-r', String(FPS), '-movflags', '+faststart', out,
       ]);
       const dur = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out]).toString().trim();

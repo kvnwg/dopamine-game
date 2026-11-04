@@ -1,17 +1,18 @@
 /**
  * The title screen's picture (src/ui/components/TitleScreen.tsx): World 1's street scrolling in
- * parallax with the bare raccoon walking in place, the logo (bobbing a pixel, a shine and twinkles now
- * and then), the PLAY button (breathing a pixel, a glint now and then), dust motes and a passing flock
- * of birds; and the PLAY sequence: the button sinks and flashes, throws sparks, stars and a ring, the
- * raccoon crouches, hops and cheers, an iris closes on him, the game starts under it, and the iris
- * opens on him in the battle. Reduce motion keeps the scene still (he idles) and fades in four steps
- * instead of the hop and the iris; reduce flashing leaves out the button's flash.
+ * parallax with the bare raccoon walking in place, the logo (logoArt.ts: its letters hop in a wave
+ * now and then, the raccoon in the trash can blinks, glances about and ducks, flies buzz round the
+ * can and the fish bone, a shine and twinkles run over LEGEND), the PLAY button (logoArt.ts: its
+ * letters wave, its arrow nudges, a glint crosses it, crumbs drop from its bite), dust motes and a
+ * passing flock of birds; and the PLAY sequence: the button sinks and flashes, throws sparks, stars
+ * and a ring, the raccoon crouches, hops and cheers, an iris closes on him, the game starts under it,
+ * and the iris opens on him in the battle. Reduce motion keeps the scene still (he idles) and fades in
+ * four steps instead of the hop and the iris; reduce flashing leaves out the button's flash.
  *
  * One pixel grid: everything is drawn on a canvas of art pixels (TITLE.w x TITLE.h, one canvas pixel
  * per art pixel) that the page shows at exactly P stage px per canvas pixel (1080 x 1920), never
  * smoothed. Every position is a whole canvas pixel, so every move is a whole art pixel; nothing is
- * scaled or rotated. Big lettering is the battle's bitmap font made finer with Scale2x (twice the art
- * pixels, the same pixel size), like the UI's big icons.
+ * scaled or rotated while it runs (the logo's tilted letters are drawn tilted).
  *
  * The backdrop is the battle's own (worldLook.ts worldArt(1)): its graded and lit layers at their rows
  * in the battle view, moved down TITLE.drop rows so the street fills the bottom of the screen, under a
@@ -23,11 +24,12 @@
  * browser side. It owns one requestAnimationFrame loop and a few small canvases, all let go in destroy().
  */
 import { DATA } from '../data';
+import { BUTTON_LIP, logoArt, playButtonArt, stickerOf, type LogoArt, type PlayButtonArt } from './logoArt';
 import { toCanvas } from './pixel';
-import { blank, flipX, rgb, scale2x, type PixelBuf } from './pixel/buf';
+import { blank, blit, clone, flipX, rgb, type PixelBuf } from './pixel/buf';
 import { frameBuf } from './pixel/indexed';
 import { HERO_SHEET, HERO_WALK } from './pixel/hero';
-import { renderText, TEXT_INK } from './pixel/font';
+import { TEXT_INK } from './pixel/font';
 import { CHARACTER_OUTLINE } from './pixel/palette';
 import { FEET_ROW, VIEW, type LayerName } from './pixel/sceneryTypes';
 import { glowOverlay, paintClouds, paintSky, paintVignette } from './pixel/atmosphere';
@@ -54,16 +56,16 @@ const WALK_SPEED = HERO_WALK.stride * HERO_WALK.fps;
 /** Sheet frames used directly: crouched, stretched up, the cheer pair. */
 const FRAME = { up: 2, squash: 4, cheer: [13, 14] } as const;
 
-/** Rows: the logo's top, the higher cloud strips' top and the PLAY button's top. */
-let LOGO_TOP = 40;
+/** Rows: the logo's top (tall), the higher cloud strips' top, and the gap between the logo and PLAY. */
+let LOGO_TOP = 36;
 let HIGH_CLOUDS = 104;
-let BUTTON_TOP = 152;
+const BUTTON_GAP = { tall: 24, wide: 16 } as const;
 /** Rows the dust motes drift in: over the yards and the sidewalk. */
 let MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 };
 
 /**
- * Lays the title out for the tall stage (phones) or the wide one (PC): wide, the logo sits in the sky
- * over the middle, the PLAY button just under it, and the raccoon walks the sidewalk in the middle.
+ * Lays the title out for the tall stage (phones) or the wide one (PC): wide, the logo and the PLAY
+ * button sit side by side in the sky over the middle, and the raccoon walks the sidewalk in the middle.
  */
 export function setTitleShape(wide: boolean): void {
   TITLE.wide = wide;
@@ -72,141 +74,84 @@ export function setTitleShape(wide: boolean): void {
   TITLE.drop = TITLE.h - VIEW.h;
   HERO_COL = wide ? VIEW.w - 8 : 74;
   HERO_FEET = FEET_ROW + TITLE.drop;
-  LOGO_TOP = wide ? 6 : 40;
+  LOGO_TOP = wide ? 4 : 36;
   HIGH_CLOUDS = wide ? 8 : 104;
-  BUTTON_TOP = wide ? 58 : 152;
   MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 };
 }
-/** The button's face around its label (art px). */
-const PAD = { x: 12, y: 5 } as const;
 
 const INK = TEXT_INK;
-/** The game's green button (global.css .btn): light top band, face, dark bottom bands. */
-const GREEN = { light: '#b0ec6c', face: '#5dc14c', dark: '#2f8a45' } as const;
-const SHADOW = 'rgba(10, 6, 20, 0.55)';
 /** A deeper blue over the world's sky, so the taller sky darkens toward the top (behind the logo). */
 const ZENITH = '#2a62c4';
 
-/** Logo fills, one color per row of the Scale2x lettering (18 rows), top to bottom. */
-const LOGO_GOLD = rowsOf([['#fffbe0', 2], ['#ffe680', 4], ['#ffc233', 6], ['#ff9a1a', 6]]);
-const LOGO_ICE = rowsOf([['#ffffff', 2], ['#f2fbff', 5], ['#c8eeff', 6], ['#8fd8ff', 5]]);
-/** The shade under each logo line's letters (a two-row extrusion over the ink drop). */
-const LOGO_DEPTH = { gold: '#b4501a', ice: '#3c78c8' } as const;
-
-function rowsOf(bands: ReadonlyArray<readonly [string, number]>): string[] {
-  return bands.flatMap(([c, n]) => Array.from({ length: n }, () => c));
-}
-
 // ------------------------------------------------------------------ pure art
 
-/** `b` with every opaque pixel in row y recolored to `rows[y]` (the last color below the list). */
-function paintRows(b: PixelBuf, rows: readonly string[]): PixelBuf {
-  const out = blank(b.w, b.h);
-  for (let y = 0; y < b.h; y++) {
-    const [r, g, bl] = rgb(rows[Math.min(y, rows.length - 1)]);
-    for (let x = 0; x < b.w; x++) {
-      const i = (y * b.w + x) * 4;
-      if (!b.px[i + 3]) continue;
-      out.px[i] = r;
-      out.px[i + 1] = g;
-      out.px[i + 2] = bl;
-      out.px[i + 3] = 255;
-    }
+/** The logo and its sticker backing (they never change, so they are drawn once). The loading screen animates parts of it too. */
+let logoMemo: { art: LogoArt; sticker: PixelBuf; pad: number } | null = null;
+export function logoParts(): { art: LogoArt; sticker: PixelBuf; pad: number } {
+  if (!logoMemo) {
+    const art = logoArt();
+    const st = stickerOf(art.buf, 2);
+    logoMemo = { art, sticker: st.buf, pad: st.pad };
   }
-  return out;
+  return logoMemo;
+}
+
+const buttonMemo = new Map<string, PlayButtonArt>();
+function buttonArt(label: string): PlayButtonArt {
+  let b = buttonMemo.get(label);
+  if (!b) {
+    b = playButtonArt(label);
+    buttonMemo.set(label, b);
+  }
+  return b;
 }
 
 /**
- * `b` inside an `r`-pixel border of `color` (square corners, like the font's outline), with `drop`
- * more rows of it underneath (a drop shadow): the border grows downward.
+ * The whole logo at rest on its sticker backing, as the title shows it before anything moves. The
+ * loading screen and the app's splash images use it (src/boot/bootArt.ts). (The logo is the game's
+ * mark, drawn letter by letter, so it reads DUMPSTER LEGEND whatever the language.)
  */
-function bordered(b: PixelBuf, color: string, r: number, drop: number): PixelBuf {
-  const out = blank(b.w + 2 * r, b.h + 2 * r + drop);
-  const [cr, cg, cb] = rgb(color);
-  const solid = (x: number, y: number) => x >= 0 && y >= 0 && x < b.w && y < b.h && b.px[(y * b.w + x) * 4 + 3] > 0;
-  for (let y = 0; y < out.h; y++) {
-    for (let x = 0; x < out.w; x++) {
-      const sx = x - r;
-      const sy = y - r;
-      const o = (y * out.w + x) * 4;
-      if (solid(sx, sy)) {
-        out.px.set(b.px.subarray((sy * b.w + sx) * 4, (sy * b.w + sx) * 4 + 4), o);
-        continue;
-      }
-      let near = false;
-      for (let dy = -r - drop; dy <= r && !near; dy++) for (let dx = -r; dx <= r && !near; dx++) near = solid(sx + dx, sy + dy);
-      if (!near) continue;
-      out.px[o] = cr;
-      out.px[o + 1] = cg;
-      out.px[o + 2] = cb;
-      out.px[o + 3] = 255;
-    }
-  }
+export function titleLogo(): PixelBuf {
+  const { art, sticker, pad } = logoParts();
+  const out = clone(sticker);
+  blit(out, art.buf, pad, pad);
   return out;
 }
 
-/** One logo line: the bold face made finer (Scale2x), banded fill, a shaded extrusion, a chunky ink outline and drop. */
-function logoLine(text: string, fill: readonly string[], depth: string): PixelBuf {
-  const letters = scale2x(renderText(text, { face: 'huge', fill: '#ffffff', ink: null }));
-  return bordered(bordered(paintRows(letters, fill), depth, 0, 2), INK, 2, 2);
+export interface TitleLayout {
+  /** The logo's box (its sticker backing) and the PLAY button's (art px). */
+  logo: { x: number; y: number; w: number; h: number };
+  button: { x: number; y: number; w: number; h: number };
 }
 
-/** Where the title draws a logo `w` art px wide (titleLogo's buffer): its top-left in title art px, for the current shape. */
-export function titleLogoAt(w: number): { x: number; y: number } {
-  return { x: Math.floor((TITLE.w - w) / 2), y: LOGO_TOP };
+/** Where the logo and the PLAY button go for a label, for the current shape (the page puts PLAY's hit area there). */
+export function titleLayout(label: string): TitleLayout {
+  const { sticker } = logoParts();
+  const b = buttonArt(label);
+  if (TITLE.wide) {
+    // Side by side over the middle, the button level with the logo's middle.
+    const total = sticker.w + BUTTON_GAP.wide + b.w;
+    const x0 = Math.floor((TITLE.w - total) / 2);
+    return {
+      logo: { x: x0, y: LOGO_TOP, w: sticker.w, h: sticker.h },
+      button: { x: x0 + sticker.w + BUTTON_GAP.wide, y: LOGO_TOP + Math.round((sticker.h - b.h) / 2), w: b.w, h: b.h },
+    };
+  }
+  return {
+    logo: { x: Math.floor((TITLE.w - sticker.w) / 2), y: LOGO_TOP, w: sticker.w, h: sticker.h },
+    button: { x: Math.floor((TITLE.w - b.w) / 2), y: LOGO_TOP + sticker.h + BUTTON_GAP.tall, w: b.w, h: b.h },
+  };
+}
+
+/** Where the title draws its logo (titleLogo's buffer): its top-left in title art px, for the current shape. */
+export function titleLogoAt(): { x: number; y: number } {
+  const { logo } = titleLayout(DATA.strings['title.play'] ?? 'PLAY');
+  return { x: logo.x, y: logo.y };
 }
 
 /** The title's sky colors, top to bottom (world 1's banded sky under a deeper zenith). The loading screen paints the same bands. */
 export function titleSky(): string[] {
   return [ZENITH, ...viewAtmo(DATA.worlds[0].look.atmo, worldArt(1).set).sky];
-}
-
-/**
- * The whole logo for a game name ("Dumpster Legend": a line per word) in one buffer, laid out as the
- * title shows it: lines centred, each overlapping the one above by its outline and drop. The loading
- * screen and the app's splash images use it (src/boot/bootArt.ts).
- */
-export function titleLogo(name: string): PixelBuf {
-  const words = name.trim().split(/\s+/);
-  const lines = (words.length > 1 ? [words[0], words.slice(1).join(' ')] : words).map((l, i) =>
-    logoLine(l, i === 0 ? LOGO_GOLD : LOGO_ICE, i === 0 ? LOGO_DEPTH.gold : LOGO_DEPTH.ice),
-  );
-  const w = Math.max(...lines.map((l) => l.w));
-  const h = lines.reduce((n, l) => n + l.h - 4, 4);
-  const out = blank(w, h);
-  let y = 0;
-  for (const l of lines) {
-    const x0 = Math.floor((w - l.w) / 2);
-    for (let yy = 0; yy < l.h; yy++) {
-      for (let xx = 0; xx < l.w; xx++) {
-        const i = (yy * l.w + xx) * 4;
-        if (l.px[i + 3]) out.px.set(l.px.subarray(i, i + 4), ((y + yy) * w + x0 + xx) * 4);
-      }
-    }
-    y += l.h - 4;
-  }
-  return out;
-}
-
-/** The PLAY label: the logo's bold face made finer, white with a one-pixel ink outline and drop (like .btn text). */
-function playLabel(text: string): PixelBuf {
-  const plain = renderText(text, { face: 'huge', fill: '#ffffff', ink: null });
-  // A long translation stays as drawn rather than outgrowing the screen.
-  const fine = plain.w * 2 <= TITLE.w - 60 ? scale2x(plain) : plain;
-  return bordered(fine, INK, 1, 1);
-}
-
-export interface TitleLayout {
-  /** The PLAY button's border box (art px); its drop shadow takes two more rows. */
-  button: { x: number; y: number; w: number; h: number };
-}
-
-/** Where the PLAY button goes for a label (the page puts its hit area there). */
-export function titleLayout(label: string): TitleLayout {
-  const l = playLabel(label);
-  const w = l.w + 2 * PAD.x + 2;
-  const h = l.h + 2 * PAD.y + 2;
-  return { button: { x: Math.floor((TITLE.w - w) / 2), y: BUTTON_TOP, w, h } };
 }
 
 export interface TitleArt {
@@ -221,18 +166,21 @@ export interface TitleArt {
   layers: Record<LayerName, { buf: PixelBuf; y: number; scroll0: number }>;
   /** The hero sheet's frames the title shows (others empty), mirrored to face right like the battle shows him; no gear. */
   hero: PixelBuf[];
-  /** The logo, one buffer per line. */
-  logo: PixelBuf[];
-  play: PixelBuf;
+  /** The logo's pieces and its sticker backing (its pieces sit `pad` px in from the backing's edge). */
+  logo: LogoArt;
+  sticker: PixelBuf;
+  pad: number;
+  /** The PLAY button's layers. */
+  button: PlayButtonArt;
   /** Bird color (the battle's: the sky's top darkened). */
   bird: string;
 }
 
 /**
- * The title's art for a game name ("Dumpster Legend": a line per word) and PLAY label. Not kept: the
- * title shows once per start, and its buffers can go once it closes.
+ * The title's art for its PLAY label. Not kept (but the logo's and the button's pieces, which are
+ * small): the title shows once per start, and its buffers can go once it closes.
  */
-export function titleArt(name: string, label: string): TitleArt {
+export function titleArt(label: string): TitleArt {
   const world = worldArt(1);
   const { set } = world;
   const seed = worldSeed(1);
@@ -255,9 +203,8 @@ export function titleArt(name: string, label: string): TitleArt {
   ];
   const layers = {} as TitleArt['layers'];
   for (const name of LAYER_NAMES) layers[name] = { buf: world.layers[name], y: layerRow(set, name) + d, scroll0: set.scroll0[name] };
-  const words = name.trim().split(/\s+/);
-  const lines = words.length > 1 ? [words[0], words.slice(1).join(' ')] : words;
   const [r, g, b] = rgb(atmo.sky[0]);
+  const { art, sticker, pad } = logoParts();
   const shown = new Set<number>([...HERO_SHEET.anims.idle.frames, ...HERO_WALK.frames, FRAME.up, FRAME.squash, ...FRAME.cheer]);
   return {
     sky: paintSky(atmo, TITLE.w, TITLE.h, seed, world.scale),
@@ -266,8 +213,10 @@ export function titleArt(name: string, label: string): TitleArt {
     clouds,
     layers,
     hero: HERO_SHEET.frames.map((_, f) => (shown.has(f) ? flipX(frameBuf(HERO_SHEET, f)) : blank(HERO_SHEET.w, HERO_SHEET.h))),
-    logo: lines.map((l, i) => logoLine(l, i === 0 ? LOGO_GOLD : LOGO_ICE, i === 0 ? LOGO_DEPTH.gold : LOGO_DEPTH.ice)),
-    play: playLabel(label),
+    logo: art,
+    sticker,
+    pad,
+    button: buttonArt(label),
     bird: `rgb(${Math.round(r * 0.55)}, ${Math.round(g * 0.55)}, ${Math.round(b * 0.55)})`,
   };
 }
@@ -275,7 +224,6 @@ export function titleArt(name: string, label: string): TitleArt {
 // ------------------------------------------------------------------ the renderer
 
 export interface TitleOptions {
-  name: string;
   label: string;
   reduceMotion: boolean;
   reduceFlashing: boolean;
@@ -308,11 +256,19 @@ const SEQ = {
 } as const;
 const FADE = { start: 120, step: 90, steps: 4 } as const;
 /**
- * Glints across the button and shines across the logo: seconds before the first, between them, and
- * to cross. A shine always comes 1.2 s after a glint, so the two never run at once.
+ * Glints across the button and shines across LEGEND: seconds before the first, between them, and to
+ * cross. A shine always comes 1.2 s after a glint, so the two never run at once. The logo's own
+ * moments run on its clock (from when the loading screen has gone); the button's on the title's.
  */
 const GLINT = { delay: 1, period: 2.6, sweep: 0.45 } as const;
 const LOGO_SHINE = { delay: 2.2, period: 5.2, sweep: 0.7 } as const;
+/** The logo's letters hop in a wave (DUMPSTER, then LEGEND), each a beat after the one before. */
+const LOGO_WAVE = { delay: 0.8, period: 4.2, stagger: 0.055 } as const;
+/** PLAY's letters wave and its arrow nudges forward, half a period apart; now and then it boings. */
+const PLAY_WAVE = { delay: 0.6, period: 2.4, stagger: 0.07 } as const;
+const BOING = { delay: 1.7, period: 3.6 } as const;
+/** A hop: up a pixel, two, one, down (50 ms each). */
+const HOP_STEPS = [-1, -2, -1] as const;
 /** The hop: height (art px) every 30 ms. */
 const HOP = [2, 4, 6, 7, 8, 8, 7, 6, 4, 2] as const;
 /** The iris holds around him at this radius (art px) before it shuts. */
@@ -370,8 +326,11 @@ export class TitleRenderer {
     clouds: HTMLCanvasElement[];
     layers: Record<LayerName, HTMLCanvasElement>;
     hero: HTMLCanvasElement;
-    logo: HTMLCanvasElement[];
-    play: HTMLCanvasElement;
+    sticker: HTMLCanvasElement;
+    /** One per logo piece (logoArt pieces), and the raccoon's frames. */
+    pieces: HTMLCanvasElement[];
+    coon: HTMLCanvasElement[];
+    button: { sticker: HTMLCanvasElement; lip: HTMLCanvasElement; face: HTMLCanvasElement; flash: HTMLCanvasElement; arrow: HTMLCanvasElement; letters: HTMLCanvasElement[] };
   };
   private raf = 0;
   private last = 0;
@@ -387,15 +346,26 @@ export class TitleRenderer {
   /** Stars that twinkle around the button as it's pressed: where, and when (ms after the press). */
   private stars: Array<{ x: number; y: number; at: number }> = [];
   private motes: Mote[] = [];
-  private twinkle: { line: number; x: number; y: number; t: number; wait: number } = { line: 0, x: 0, y: 0, t: -1, wait: 1.2 };
+  private twinkle: { piece: number; x: number; y: number; t: number; wait: number } = { piece: 0, x: 0, y: 0, t: -1, wait: 1.2 };
   private flock = { active: false, x: 0, y: 0, vx: 0, t: 0, wait: 3 };
   private seed = 0x2f6e2b1;
-  /** Logo pixels a twinkle can land on: [line, x, y], on the top edges of the letters. */
+  /**
+   * The logo's clock (s): it starts once the loading screen has gone, so the logo the loading
+   * screen's glides onto holds still until then; -1 before.
+   */
+  private logoT = -1;
+  /** Logo pixels a twinkle can land on: [piece, x, y], on the top edges of LEGEND's letters. */
   private sparkSpots: Array<[number, number, number]> = [];
-  /** Each logo line's letter fill by screen diagonal (x + y), for the shine that sweeps across it. */
+  /** LEGEND's letter fill by diagonal (x + y, in the logo's own px), per piece, for the shine that sweeps across it. */
   private logoFill: Array<Map<number, Array<[number, number]>>> = [];
   private logoDiag = { min: 0, max: 0 };
-  private logoAt: Array<{ x: number; y: number }> = [];
+  /** Each letter piece's place in reading order (DUMPSTER then LEGEND), -1 for the rest; the can's piece. */
+  private letterOrder: number[] = [];
+  private canPiece = -1;
+  /** The raccoon in the can: his frame, how far he has ducked (art px), what he does next and when. */
+  private coon = { frame: 0, duck: 0, act: 'none' as 'none' | 'blink' | 'look' | 'duck', at: 0, next: 1.6 };
+  /** The PLAY face's extent on each row (for the glint), from the art. */
+  private faceRows: Array<[number, number]> = [];
 
   constructor(canvas: HTMLCanvasElement, private opts: TitleOptions) {
     canvas.width = TITLE.w;
@@ -404,7 +374,7 @@ export class TitleRenderer {
     if (!ctx) throw new Error('No 2D canvas');
     ctx.imageSmoothingEnabled = false;
     this.ctx = ctx;
-    this.art = titleArt(opts.name, opts.label);
+    this.art = titleArt(opts.label);
     this.layout = titleLayout(opts.label);
     const c = (b: PixelBuf) => {
       const cv = toCanvas(b, 1);
@@ -416,6 +386,10 @@ export class TitleRenderer {
     a.hero.forEach((f, i) => {
       for (let y = 0; y < f.h; y++) heroSheet.px.set(f.px.subarray(y * f.w * 4, (y + 1) * f.w * 4), (y * heroSheet.w + i * HERO_SHEET.w) * 4);
     });
+    const bt = a.button;
+    // The face's white silhouette, for its flash on PLAY.
+    const flash = clone(bt.face);
+    for (let i = 0; i < flash.px.length; i += 4) if (flash.px[i + 3]) flash.px.set([255, 255, 255, 255], i);
     this.img = {
       sky: c(a.sky),
       vignette: c(a.vignette),
@@ -423,31 +397,32 @@ export class TitleRenderer {
       clouds: a.clouds.map((cl) => c(cl.buf)),
       layers: { far: c(a.layers.far.buf), mid: c(a.layers.mid.buf), ground: c(a.layers.ground.buf), fg: c(a.layers.fg.buf) },
       hero: c(heroSheet),
-      logo: a.logo.map((l) => c(l)),
-      play: c(a.play),
+      sticker: c(a.sticker),
+      pieces: a.logo.pieces.map((p) => c(p.buf)),
+      coon: a.logo.coon.map((f) => c(f)),
+      button: { sticker: c(bt.sticker), lip: c(bt.lip), face: c(bt.face), flash: c(flash), arrow: c(bt.arrow.buf), letters: bt.letters.map((l) => c(l.buf)) },
     };
     this.cloudScroll = a.clouds.map((cl) => cl.scroll0);
-    // Logo lines centered, each overlapping the one above by its outline and drop.
-    let y = LOGO_TOP;
-    this.logoAt = a.logo.map((l) => {
-      const at = { x: Math.floor((TITLE.w - l.w) / 2), y };
-      // The next line's top outline lies on this one's outline and drop (ink on ink).
-      y += l.h - 4;
-      return at;
-    });
+    // The logo's letters in reading order; LEGEND's fill for its shine and its top edges for twinkles.
+    let order = 0;
     this.logoDiag = { min: Infinity, max: -Infinity };
-    a.logo.forEach((l, i) => {
-      // Letter fill: the bright pixels (not the ink or the shade under the letters).
+    a.logo.pieces.forEach((piece, i) => {
+      this.letterOrder.push(piece.kind === 'letter' ? order++ : -1);
+      if (piece.kind === 'letter' && piece.line === 0 && piece.index === 1) this.canPiece = i;
+      const diag = new Map<number, Array<[number, number]>>();
+      this.logoFill.push(diag);
+      if (piece.kind !== 'letter' || piece.line !== 1) return;
+      const l = piece.buf;
+      // Letter fill: the bright pixels (not the ink or the drop under the letters).
       const fill = (x: number, y: number) => {
         if (x < 0 || y < 0 || x >= l.w || y >= l.h) return false;
         const k = (y * l.w + x) * 4;
         return l.px[k + 3] > 0 && l.px[k] + l.px[k + 1] + l.px[k + 2] > 400;
       };
-      const diag = new Map<number, Array<[number, number]>>();
       for (let y = 0; y < l.h; y++) {
         for (let x = 0; x < l.w; x++) {
           if (!fill(x, y)) continue;
-          const d = this.logoAt[i].x + x + this.logoAt[i].y + y;
+          const d = piece.x + x + piece.y + y;
           if (!diag.has(d)) diag.set(d, []);
           diag.get(d)!.push([x, y]);
           this.logoDiag.min = Math.min(this.logoDiag.min, d);
@@ -456,8 +431,20 @@ export class TitleRenderer {
           if (!fill(x, y - 1) && fill(x - 1, y) && fill(x + 1, y)) this.sparkSpots.push([i, x, y]);
         }
       }
-      this.logoFill.push(diag);
     });
+    // PLAY's face, row by row (inside its ink outline), for the glint.
+    const f = bt.face;
+    for (let y = 0; y < f.h; y++) {
+      let x0 = -1;
+      let x1 = -1;
+      for (let x = 0; x < f.w; x++) {
+        const k = (y * f.w + x) * 4;
+        if (!f.px[k + 3] || (f.px[k] === 0x1a && f.px[k + 1] === 0x13 && f.px[k + 2] === 0x26)) continue;
+        if (x0 < 0) x0 = x;
+        x1 = x + 1;
+      }
+      this.faceRows.push([x0, x1]);
+    }
     // Dust motes in the sunlight over the street (the battle's World 1 particles).
     for (let i = 0; i < 12; i++) {
       this.motes.push({
@@ -569,10 +556,69 @@ export class TitleRenderer {
         if (m.y < MOTES.top) m.vy = Math.abs(m.vy);
         if (m.y > MOTES.bottom) m.vy = -Math.abs(m.vy);
       }
+      this.updateLogo(dt);
       this.updateTwinkle(dt);
       this.updateFlock(dt);
+      this.updateCrumbs();
     }
     if (this.seq) this.advance(now);
+  }
+
+  /**
+   * The logo's clock starts once the loading screen has gone (until then the logo holds still, so the
+   * loading screen's own glides onto it and leaves without a jump). The raccoon then blinks, glances
+   * about and now and then ducks into his can.
+   */
+  private updateLogo(dt: number) {
+    if (this.logoT < 0) {
+      if (typeof document !== 'undefined' && document.getElementById('boot')) return;
+      this.logoT = 0;
+    }
+    this.logoT += dt;
+    const c = this.coon;
+    const t = this.logoT;
+    if (c.act === 'none') {
+      if (t < c.next || this.seq) return;
+      const r = this.rand();
+      c.act = r < 0.55 ? 'blink' : r < 0.8 ? 'look' : 'duck';
+      c.at = t;
+      c.frame = c.act === 'blink' ? 1 : c.act === 'look' ? (this.rand() < 0.5 ? 2 : 3) : 0;
+      return;
+    }
+    const k = t - c.at;
+    if (c.act === 'blink' && k >= 0.13) this.endCoonAct(1.6 + this.rand() * 1.8);
+    if (c.act === 'look' && k >= 0.9) this.endCoonAct(0.6 + this.rand() * 1.2);
+    if (c.act === 'duck') {
+      // Down into the can in three steps, a beat there, then up again with a pixel's overshoot.
+      const steps = [1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, -1, 0];
+      const i = Math.floor(k / 0.06);
+      if (i >= steps.length) this.endCoonAct(2.2 + this.rand() * 2);
+      else c.duck = steps[i];
+    }
+  }
+
+  private endCoonAct(wait: number) {
+    Object.assign(this.coon, { act: 'none', frame: 0, duck: 0, next: this.logoT + wait });
+  }
+
+  /** Now and then a crumb drops from PLAY's bite. */
+  private updateCrumbs() {
+    if (this.seq || Math.floor(this.t / 0.1) === Math.floor((this.t - 0.0001) / 0.1)) return;
+    if (this.rand() > 0.025) return;
+    const b = this.layout.button;
+    const at = this.art.button.crumbs;
+    this.bits.push({
+      x: b.x + at.x + this.rand() * 3,
+      y: b.y + at.y,
+      vx: 2 + this.rand() * 6,
+      vy: -4 - this.rand() * 6,
+      age: 0,
+      life: 700 + this.rand() * 300,
+      size: 1,
+      color: this.rand() < 0.5 ? '#ffe2cf' : '#ff8a5c',
+      gravity: 60,
+      drag: 0.5,
+    });
   }
 
   private updateTwinkle(dt: number) {
@@ -583,9 +629,9 @@ export class TitleRenderer {
       return;
     }
     tw.wait -= dt;
-    if (tw.wait > 0 || this.seq || this.sparkSpots.length === 0) return;
-    const [line, x, y] = this.sparkSpots[Math.floor(this.rand() * this.sparkSpots.length)];
-    Object.assign(tw, { line, x, y, t: 0, wait: 1.1 + this.rand() * 1.4 });
+    if (tw.wait > 0 || this.seq || this.logoT < 0 || this.sparkSpots.length === 0) return;
+    const [piece, x, y] = this.sparkSpots[Math.floor(this.rand() * this.sparkSpots.length)];
+    Object.assign(tw, { piece, x, y, t: 0, wait: 1.1 + this.rand() * 1.4 });
   }
 
   /** Now and then a small V of birds flaps across the sky (the battle's flocks, by day). */
@@ -738,13 +784,30 @@ export class TitleRenderer {
     return HOP[Math.min(HOP.length - 1, Math.floor((ms - SEQ.hop) / 30))];
   }
 
-  /** The button's offset (art px, + is down): breathing a pixel while idle, sunk while pressed. */
-  private buttonDrop(ms: number): number {
-    if (this.seq) return ms < SEQ.release ? 1 : 0;
-    if (this.pressed) return 1;
-    if (this.opts.reduceMotion) return 0;
-    // Like the game's .breathe: up a pixel half the time, in two steps.
-    return Math.floor(this.t / 0.55) % 2 ? -1 : 0;
+  /**
+   * How far PLAY's face is pushed into its lip (art px, + is down): sunk while pressed and as PLAY
+   * starts; idle, now and then it boings (up a pixel, squashed down one, back).
+   */
+  private buttonSink(ms: number): number {
+    if (this.seq) return ms < SEQ.release ? BUTTON_LIP - 1 : 0;
+    if (this.pressed) return BUTTON_LIP - 1;
+    if (this.opts.reduceMotion || this.t < BOING.delay) return 0;
+    const k = (this.t - BOING.delay) % BOING.period;
+    return k < 0.09 ? -1 : k < 0.18 ? 1 : 0;
+  }
+
+  /** A hop (art px, - is up) for a letter `i` of a wave that started `k` s ago, `stagger` s apart. */
+  private hop(k: number, i: number, stagger: number): number {
+    const j = Math.floor((k - i * stagger) / 0.05);
+    return j >= 0 && j < HOP_STEPS.length ? HOP_STEPS[j] : 0;
+  }
+
+  /** How far a logo piece is lifted now (art px): its letter's hop in the wave (the raccoon rides the can's). */
+  private pieceHop(i: number): number {
+    if (this.logoT < 0 || this.opts.reduceMotion || this.seq) return 0;
+    const order = this.letterOrder[i] >= 0 ? this.letterOrder[i] : this.letterOrder[this.canPiece];
+    if (order === undefined || order < 0 || this.logoT < LOGO_WAVE.delay) return 0;
+    return this.hop((this.logoT - LOGO_WAVE.delay) % LOGO_WAVE.period, order, LOGO_WAVE.stagger);
   }
 
   /** The iris's center and radius (art px), or null while it's open. */
@@ -886,35 +949,52 @@ export class TitleRenderer {
     }
   }
 
-  /** A logo line's offset (art px): bobbing a pixel, the second line a beat behind; a jolt on PLAY. */
-  private logoDy(i: number, ms: number): number {
-    // Up two, then one, then back as PLAY is pressed.
-    if (this.seq) return ms < 70 ? -2 : ms < 140 ? -1 : 0;
-    if (this.opts.reduceMotion) return 0;
-    return Math.floor((this.t - i * 0.25) / 0.8) % 2 ? -1 : 0;
+  /** The whole logo's jolt as PLAY is pressed (art px): up two, then one, then back. */
+  private logoJolt(ms: number): number {
+    if (!this.seq) return 0;
+    return ms < 70 ? -2 : ms < 140 ? -1 : 0;
   }
 
   private drawLogo(ms: number) {
     const ctx = this.ctx;
-    this.img.logo.forEach((img, i) => ctx.drawImage(img, this.logoAt[i].x, this.logoAt[i].y + this.logoDy(i, ms)));
-    if (this.seq || this.opts.reduceMotion) return;
-    // Now and then a shine sweeps across the lettering (between the button's glints).
-    const k = (((this.t - LOGO_SHINE.delay) % LOGO_SHINE.period) + LOGO_SHINE.period) % LOGO_SHINE.period / LOGO_SHINE.sweep;
-    if (this.t >= LOGO_SHINE.delay && k < 1) {
+    const a = this.art;
+    const L = this.layout.logo;
+    const jolt = this.logoJolt(ms);
+    ctx.drawImage(this.img.sticker, L.x, L.y + jolt);
+    const ox = L.x + a.pad;
+    const oy = L.y + a.pad + jolt;
+    const c = this.coon;
+    a.logo.pieces.forEach((p, i) => {
+      const lift = this.pieceHop(i);
+      if (p.kind === 'coon') {
+        ctx.drawImage(this.img.coon[c.frame] ?? this.img.pieces[i], ox + p.x, oy + p.y + lift + c.duck);
+        return;
+      }
+      // The crown rides on his head; the paws hold the rim.
+      ctx.drawImage(this.img.pieces[i], ox + p.x, oy + p.y + lift + (p.rides ? c.duck : 0));
+    });
+    if (this.logoT >= 0 && !this.opts.reduceMotion) this.drawFlies(ox, oy);
+    if (this.seq || this.opts.reduceMotion || this.logoT < 0) return;
+    // Now and then a shine sweeps across LEGEND (between the button's glints).
+    const t = this.logoT;
+    const k = ((((t - LOGO_SHINE.delay) % LOGO_SHINE.period) + LOGO_SHINE.period) % LOGO_SHINE.period) / LOGO_SHINE.sweep;
+    if (t >= LOGO_SHINE.delay && k < 1) {
       const head = Math.round(this.logoDiag.min - 4 + k * (this.logoDiag.max - this.logoDiag.min + 8));
       for (const [off, alpha] of [[0, 0.75], [1, 0.75], [2, 0.75], [4, 0.5]] as const) {
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
         this.logoFill.forEach((diag, i) => {
-          const dy = this.logoDy(i, ms);
-          for (const [x, y] of diag.get(head - off) ?? []) ctx.fillRect(this.logoAt[i].x + x, this.logoAt[i].y + y + dy, 1, 1);
+          const p = a.logo.pieces[i];
+          const lift = this.pieceHop(i);
+          for (const [x, y] of diag.get(head - off) ?? []) ctx.fillRect(ox + p.x + x, oy + p.y + y + lift, 1, 1);
         });
       }
     }
     const tw = this.twinkle;
     if (tw.t >= 0) {
       const f = Math.min(TWINKLE.length - 1, Math.floor(tw.t / 0.07));
-      const x = this.logoAt[tw.line].x + tw.x;
-      const y = this.logoAt[tw.line].y + tw.y + this.logoDy(tw.line, ms);
+      const p = a.logo.pieces[tw.piece];
+      const x = ox + p.x + tw.x;
+      const y = oy + p.y + tw.y + this.pieceHop(tw.piece);
       for (const [dx, dy] of TWINKLE[f]) {
         ctx.fillStyle = dx === 0 && dy === 0 ? '#ffffff' : '#fff6c8';
         ctx.fillRect(x + dx, y + dy, 1, 1);
@@ -922,42 +1002,72 @@ export class TitleRenderer {
     }
   }
 
+  /** Two flies: one buzzing round the can, one round the fish bone, wings flicking. */
+  private drawFlies(ox: number, oy: number) {
+    const ctx = this.ctx;
+    const t = this.logoT;
+    const lg = this.art.logo;
+    const flies = [
+      { c: lg.can, rx: 13, ry: 5, w: 2.3, ph: 0, up: 9 },
+      { c: lg.bone, rx: 8, ry: 4, w: 2.9, ph: 1.7, up: 3 },
+    ];
+    for (const f of flies) {
+      const a = t * f.w + f.ph;
+      // A figure of eight, with a little jitter.
+      const x = Math.round(ox + f.c.x + Math.sin(a) * f.rx + Math.sin(t * 13 + f.ph) * 0.6);
+      const y = Math.round(oy + f.c.y - f.up + Math.sin(a * 2) * f.ry + Math.cos(t * 11 + f.ph) * 0.6);
+      const up = Math.floor(t / 0.05 + f.ph * 3) % 2 === 0;
+      ctx.fillStyle = '#eaf6ff';
+      if (up) {
+        ctx.fillRect(x - 1, y - 1, 1, 1);
+        ctx.fillRect(x + 1, y - 1, 1, 1);
+      } else {
+        ctx.fillRect(x - 1, y, 1, 1);
+        ctx.fillRect(x + 1, y, 1, 1);
+      }
+      ctx.fillStyle = INK;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
   private drawButton(ms: number) {
     const ctx = this.ctx;
     const b = this.layout.button;
-    const drop = this.buttonDrop(ms);
-    const x = b.x;
-    const y = b.y + drop;
+    const art = this.art.button;
+    const im = this.img.button;
+    const sink = this.buttonSink(ms);
     const flash = this.seq && !this.opts.reduceFlashing && ms < SEQ.flash;
-    // Its drop shadow stays on the ground: deeper while it floats up, shallower while it's pressed.
-    ctx.fillStyle = SHADOW;
-    ctx.fillRect(x + 1, y + b.h, b.w - 2, b.y + b.h + 2 - (y + b.h));
-    // Ink border with its corners cut, then the face in flat bands.
-    ctx.fillStyle = INK;
-    ctx.fillRect(x + 1, y, b.w - 2, b.h);
-    ctx.fillRect(x, y + 1, b.w, b.h - 2);
-    const fx = x + 1;
-    const fw = b.w - 2;
-    const fy = y + 1;
-    const fh = b.h - 2;
-    ctx.fillStyle = flash ? '#ffffff' : GREEN.light;
-    ctx.fillRect(fx, fy, fw, 1);
-    ctx.fillStyle = flash ? '#ffffff' : GREEN.face;
-    ctx.fillRect(fx, fy + 1, fw, fh - 3);
-    ctx.fillStyle = flash ? '#fff28c' : GREEN.dark;
-    ctx.fillRect(fx, fy + fh - 2, fw, 2);
-    ctx.drawImage(this.img.play, fx + PAD.x, fy + PAD.y);
+    ctx.drawImage(im.sticker, b.x, b.y);
+    ctx.drawImage(im.lip, b.x + art.faceX, b.y + art.faceY);
+    const fx = b.x + art.faceX;
+    const fy = b.y + art.faceY + sink;
+    ctx.drawImage(flash ? im.flash : im.face, fx, fy);
+    const idle = !this.seq && !this.opts.reduceMotion;
+    // The arrow nudges forward half a wave after the letters.
+    let nudge = 0;
+    if (idle && this.t >= PLAY_WAVE.delay) {
+      const k = (this.t - PLAY_WAVE.delay + PLAY_WAVE.period / 2) % PLAY_WAVE.period;
+      nudge = [1, 2, 2, 1][Math.floor(k / 0.06)] ?? 0;
+    }
+    ctx.drawImage(im.arrow, b.x + art.arrow.x + nudge, b.y + art.arrow.y + sink);
+    const k = idle && this.t >= PLAY_WAVE.delay ? (this.t - PLAY_WAVE.delay) % PLAY_WAVE.period : -1;
+    art.letters.forEach((l, i) => ctx.drawImage(im.letters[i], b.x + l.x, b.y + l.y + sink + (k >= 0 ? this.hop(k, i, PLAY_WAVE.stagger) : 0)));
     // Now and then a glint sweeps across the face.
-    if (!this.seq && !this.opts.reduceMotion && this.t >= GLINT.delay) {
-      const k = ((this.t - GLINT.delay) % GLINT.period) / GLINT.sweep;
-      if (k < 1) {
-        const head = Math.round(-fh + k * (fw + fh + 6));
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    if (idle && this.t >= GLINT.delay) {
+      const g = ((this.t - GLINT.delay) % GLINT.period) / GLINT.sweep;
+      if (g < 1) {
+        const rows = this.faceRows;
+        const fh = rows.length;
+        const fw = art.face.w;
+        const head = Math.round(-fh + g * (fw + fh + 6));
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         for (let r = 0; r < fh; r++) {
+          const [r0, r1] = rows[r];
+          if (r0 < 0) continue;
           const gx = head + (fh - 1 - r);
           for (const [o, wd] of [[0, 2], [3, 1]] as const) {
-            const x0 = Math.max(0, gx + o);
-            const x1 = Math.min(fw, gx + o + wd);
+            const x0 = Math.max(r0, gx + o);
+            const x1 = Math.min(r1, gx + o + wd);
             if (x1 > x0) ctx.fillRect(fx + x0, fy + r, x1 - x0, 1);
           }
         }
@@ -965,15 +1075,15 @@ export class TitleRenderer {
     }
     // A pixel ring flies out from the border as it's pressed.
     if (this.seq && !this.opts.reduceMotion && ms < 280) {
-      const k = Math.floor(ms / 70);
-      const g = 2 + k * 3;
+      const k2 = Math.floor(ms / 70);
+      const g = 2 + k2 * 3;
       const base = ctx.globalAlpha;
-      ctx.globalAlpha = base * [0.9, 0.7, 0.45, 0.25][k];
+      ctx.globalAlpha = base * [0.9, 0.7, 0.45, 0.25][k2];
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(x - g + 1, y - g, b.w + 2 * g - 2, 1);
-      ctx.fillRect(x - g + 1, y + b.h - 1 + g, b.w + 2 * g - 2, 1);
-      ctx.fillRect(x - g, y - g + 1, 1, b.h + 2 * g - 2);
-      ctx.fillRect(x + b.w - 1 + g, y - g + 1, 1, b.h + 2 * g - 2);
+      ctx.fillRect(b.x - g + 1, b.y - g, b.w + 2 * g - 2, 1);
+      ctx.fillRect(b.x - g + 1, b.y + b.h - 1 + g, b.w + 2 * g - 2, 1);
+      ctx.fillRect(b.x - g, b.y - g + 1, 1, b.h + 2 * g - 2);
+      ctx.fillRect(b.x + b.w - 1 + g, b.y - g + 1, 1, b.h + 2 * g - 2);
       ctx.globalAlpha = base;
     }
   }

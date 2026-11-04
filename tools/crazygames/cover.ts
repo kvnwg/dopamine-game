@@ -1,13 +1,14 @@
 /**
  * CrazyGames store covers drawn from the game's own art: World 1's street and sky (titleArt), the
  * raccoon cheering, the dumpster with its lid blown off and rare finds bursting out of it in their
- * rarity colors, and the title logo (the only text a cover may carry).
+ * rarity colors, and the game's mark: the raccoon's face raising a spatula (raccoonMark.ts), no text.
  *
  * Everything is composed on a canvas of art pixels, then scaled up `k` times with no smoothing, so the
  * whole cover keeps square pixels. The raccoon, the finds and the logo use the game's Scale2x versions
  * (twice the art pixels at the same pixel size), as the reveal and showcase spots in the game do.
  */
-import { titleArt, titleLogo, TITLE } from '../../src/render/titleScene';
+import { titleArt, TITLE } from '../../src/render/titleScene';
+import { raccoonMark } from './raccoonMark';
 import { fromRows, scale2x, scale3x, type PixelBuf } from '../../src/render/pixel/buf';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
 import { FX } from '../../src/render/pixel/ui';
@@ -66,7 +67,7 @@ const P = {
 }[layout];
 
 // The logo's place (drawn last, on top); the finds keep clear of it.
-const logo = titleLogo();
+const logo = raccoonMark();
 const logoAt = { x: Math.max(2, Math.min(AW - logo.w - 2, Math.round(AW * P.logoX - logo.w / 2))), y: P.logoY };
 
 // ---- the dumpster, lid blown off, light pouring out
@@ -174,7 +175,7 @@ vg.addColorStop(1, 'rgba(8,10,30,0.45)');
 ctx.fillStyle = vg;
 ctx.fillRect(0, 0, AW, AH);
 
-// ---- the logo (the title is the only text allowed on a cover): the game's hand-lettered logo on its sticker
+// ---- the logo: the raccoon's face raising a spatula, on its sticker (no lettering)
 ctx.drawImage(cv(logo), logoAt.x, logoAt.y);
 
 // ---- scale up, crisp

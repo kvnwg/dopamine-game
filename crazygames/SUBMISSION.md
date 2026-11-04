@@ -27,10 +27,10 @@ The requirements below were checked against the official docs at <https://docs.c
 | Landscape cover | `crazygames/covers/cover-landscape-1920x1080.png` | 16:9, 1920×1080 |
 | Portrait cover | `crazygames/covers/cover-portrait-800x1200.png` | 2:3, 800×1200 |
 | Square cover | `crazygames/covers/cover-square-800x800.png` | 1:1, 800×800 |
-| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17.1 s, 30 fps, silent, opens on the cover, 21.6 MB (limit 50 MB) |
-| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17.7 s, 30 fps, silent, opens on the cover, 22.6 MB (limit 50 MB) |
+| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17.1 s, 30 fps, silent, opens on the cover, 21.5 MB (limit 50 MB) |
+| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17.7 s, 30 fps, silent, opens on the cover, 22.5 MB (limit 50 MB) |
 
-**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the game's hand-lettered logo on its sticker. The title is the only text, with no borders or icons.
+**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the game's mark, the raccoon's face raising a BBQ spatula on a die-cut sticker (`tools/crazygames/raccoonMark.ts`). There is no text at all (CrazyGames allows the title and nothing else), and no borders or icons.
 
 **Previews** are a 17-second trailer of real gameplay, each in the layout players of that format see: the landscape one in the PC layout (the battle on the left, the dumpster's reels on the right), the portrait one in the phone layout. A dozen quick shots (0.5–1.9 s) with push-ins, punch-in zooms and shakes on the hits:
 1. The cover, dissolving into a close-up brawl in Lava Landfill: CRIT!s, big numbers, coins flying, LEVEL UP!

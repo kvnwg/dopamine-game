@@ -21,7 +21,7 @@ import { registerCodex } from './codex';
 import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
-import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity } from './luck';
+import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity, spinBuildsUp } from './luck';
 import { perkBagMult, perkFx, perkSpinMult, rigSpin } from './perks';
 import { addXp } from './progression';
 import { rebirthGoldMult } from './rebirth';
@@ -278,20 +278,19 @@ export function tokenMult(mults: readonly number[]): number {
   return mults.reduce((a, b) => a * b, 1);
 }
 
-/** Starts a spin: rolls every reel's result. A Trash Bag, if there is one, pays for a faster turbo spin. */
+/**
+ * Starts a spin: rolls every reel's result. A Trash Bag, if there is one, pays for a faster turbo spin,
+ * unless the spin builds up to a rare find (spinBuildsUp): then it runs at normal speed so its riser and
+ * glow can play out, and the bag waits for the next spin (Kevin: "turbo rolls should get slowed down if
+ * ur gonna play ramp up music").
+ */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
-  const turbo = d.currencies.bags >= 1;
-  if (turbo) d.currencies.bags -= 1;
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
-  const cycle = spinCycle(d, turbo);
-  const baseSpinSeconds = cycle * spinShare();
   // The tutorial scripts two spins: the very first (rollReelItem gives the tutorial item) and, a little
   // later, beginner's luck: its first reel chains BAL.tutorial's tokens into a rare item. The reels
   // rest on either find while it waits in the bag to be put on (rollTick ends the rest when it goes).
   const scripted = !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
-  const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
-  const stepSeconds = tokenStepSeconds(baseSpinSeconds);
-  const reels: { item: Item; odds: number; mults: number[]; landAt: number; landed: boolean }[] = [];
+  const rolled: { item: Item; mults: number[] }[] = [];
   let dry = d.dumpster.dryStreak;
   // Rigged Jackpot (an Alley perk): every Nth spin, every reel lands at least its rarity.
   const rigged = scripted ? null : rigSpin(d);
@@ -315,8 +314,19 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined, floor);
     if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
-    reels.push({ item, odds: itemOddsOneIn(item), mults, landAt: baseSpinSeconds + mults.length * stepSeconds, landed: false });
+    rolled.push({ item, mults });
   }
+  // The finds decide the pace: a build-up (a scripted spin always has one) needs the spin's full length.
+  const buildsUp = scripted !== null || spinBuildsUp(rolled.map((r) => r.item), currentLuck(d, now));
+  const turbo = d.currencies.bags >= 1 && !buildsUp;
+  if (turbo) d.currencies.bags -= 1;
+  const cycle = spinCycle(d, turbo);
+  const baseSpinSeconds = cycle * spinShare();
+  const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
+  const stepSeconds = tokenStepSeconds(baseSpinSeconds);
+  const reels = rolled.map((r) => ({
+    item: r.item, odds: itemOddsOneIn(r.item), mults: r.mults, landAt: baseSpinSeconds + r.mults.length * stepSeconds, landed: false,
+  }));
   const spinSeconds = Math.max(...reels.map((r) => r.landAt));
   d.roll.current = { reels, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false, scripted };
   d.roll.timer = 0;

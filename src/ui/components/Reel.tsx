@@ -755,8 +755,9 @@ export function ReelBank() {
 }
 
 /**
- * A copy of the machine, where it was, shrinking into the mini roller's spot under the settings gear
- * in five steps (the mini roller fades in as it lands), then gone.
+ * A copy of the machine, where it was, gliding into the mini roller's spot under the settings gear as it
+ * shrinks (one smooth eased move, not steps: Kevin found the stepped one choppy), fading as it lands on
+ * the mini roller, which fades in under it; then gone.
  */
 function shrinkToMini(node: HTMLElement, reels: number) {
   const stage = document.querySelector<HTMLElement>('[data-stage]');
@@ -782,12 +783,18 @@ function shrinkToMini(node: HTMLElement, reels: number) {
   const k = Math.min(miniWidth(reels) / w, miniHeight(reels) / h);
   const tx = MINI.left + (miniWidth(reels) - w * k) / 2 - a.x;
   const ty = MINI.top + (miniHeight(reels) - h * k) / 2 - a.y;
-  const to = `translate(${Math.round(tx)}px, ${Math.round(ty)}px) scale(${k})`;
-  const anim = ghost.animate([{ transform: 'none', opacity: 1 }, { transform: to, opacity: 0.85 }], { duration: 300, easing: 'steps(5, end)', fill: 'forwards' });
+  const to = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${k.toFixed(4)})`;
+  const ms = SHRINK_MS;
+  // Quick to leave, soft to land; it stays solid most of the way and fades out over the landing.
+  ghost.animate([{ transform: 'translate(0px, 0px) scale(1)' }, { transform: to }], { duration: ms, easing: 'cubic-bezier(0.3, 0, 0.15, 1)', fill: 'forwards' });
+  const fade = ghost.animate([{ opacity: 1 }, { opacity: 1, offset: 0.62 }, { opacity: 0 }], { duration: ms, easing: 'linear', fill: 'forwards' });
   const done = () => ghost.remove();
-  anim.onfinish = done;
-  setTimeout(done, 900);
+  fade.onfinish = done;
+  setTimeout(done, ms + 600);
 }
+
+/** How long the machine takes to shrink into the corner (miniRoller.module.css fades the mini roller in to meet it). */
+const SHRINK_MS = 380;
 
 /** A run with nothing moving (the idle bank before the first spin). */
 function buildRunShell(strips: Strip[]): Run {

@@ -434,6 +434,10 @@
     "autoFlipSeconds": 0.25,
     "legendarySlowMoSeconds": 0.3,
     "rattleBeatSeconds": 0.15,
+    "buildUp": {
+      "rare": 40,
+      "veryRare": 400
+    },
     "bigRoll": {
       "big": 2500,
       "huge": 25000,

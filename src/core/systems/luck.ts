@@ -6,7 +6,7 @@
 import { BAL, RARITIES, type Rarity } from '../../data';
 import type { Rng } from '../rng';
 import type { GameState } from '../state';
-import { rarityAtLeast } from '../util';
+import { rarityAtLeast, rarityIndex } from '../util';
 import { combatEffects } from './enchants';
 import { perkLuckMult } from './perks';
 import { upgradeEffects } from './upgrades';
@@ -105,6 +105,19 @@ export function revealDrama(item: { rarity: Rarity; enchants: Array<{ tier: numb
   const l = Math.max(1, luck);
   if (luckOddsOneIn({ rarity: item.rarity, enchants: [] }, l) < BAL.feel.bigRoll.tierOneIn) return null;
   return rollDrama(itemOddsOneIn(item) / l);
+}
+
+/**
+ * Whether a spin landing these finds gets a build-up as its reels roll in: one of them gets the full
+ * reveal (the Roll tab builds up to the reel with the rarest card, rollController.ts), or its rarest
+ * find is rare enough at this luck for the smaller build-up (feel.buildUp.rare, reelDrama.ts
+ * teasePlan). A turbo spin that would carry one runs at normal speed instead (startSpin).
+ */
+export function spinBuildsUp(finds: ReadonlyArray<{ rarity: Rarity; enchants: Array<{ tier: number }> }>, luck: number): boolean {
+  if (finds.length === 0) return false;
+  const top = Math.max(...finds.map((f) => rarityIndex(f.rarity)));
+  const l = Math.max(1, luck);
+  return finds.some((f) => revealDrama(f, l) !== null || (rarityIndex(f.rarity) === top && luckOddsOneIn(f, l) >= BAL.feel.buildUp.rare));
 }
 
 /** The least a find needs for the full-screen reveal at this luck: its rarity, and its card's "1 in X". */

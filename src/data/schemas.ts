@@ -443,6 +443,12 @@ export const BalanceSchema = z.object({
      * A roll this rare at the raccoon's current luck ("1 in X" for its tier or better, see luckOddsOneIn)
      * gets the full-screen reveal; huge and insane ones get a longer, louder one.
      */
+    /**
+     * The Roll tab's smaller build-ups (reelDrama.ts): a find this rare at the raccoon's luck ("1 in X",
+     * enchantments included) gets a riser and a climbing glow (`rare`), a longer one (`veryRare`). A
+     * turbo spin carrying one runs at normal speed so it can play out (luck.ts spinBuildsUp).
+     */
+    buildUp: z.object({ rare: positive, veryRare: positive }),
     /** The big reveal: a roll's tier-or-better odds at the raccoon's luck must reach `big` (`huge`, `insane` make it bigger). */
     bigRoll: z.object({ big: positive, huge: positive, insane: positive, tierOneIn: positive }),
     /** A Scrap All worth this many minutes of fighting (see haulMinutes) gets a big, huge or mega haul moment. */

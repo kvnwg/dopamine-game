@@ -10,7 +10,7 @@
  * the machine shakes); an uncommon one sometimes gets a small glow that climbs only to its own tier.
  * A glow never climbs past the real result. Junk never glows.
  */
-import { RARITIES, type Rarity } from '../data';
+import { BAL, RARITIES, type Rarity } from '../data';
 import { luckOddsOneIn, rarityIndex, revealDrama, type Item } from '../core';
 import { hash } from './reelStrip';
 import { reelStops, stopOrder, tokenHoldMs, type SpinTiming } from './reelTiming';
@@ -49,8 +49,8 @@ type TeaseSpin = SpinTiming & {
 };
 
 /** "1 in X" thresholds at the raccoon's luck for each build-up level (the full reveal's own threshold for level 3). */
-const RARE = 40;
-const VERY_RARE = 400;
+const RARE = BAL.feel.buildUp.rare;
+const VERY_RARE = BAL.feel.buildUp.veryRare;
 /**
  * Uncommon results (1 in 6 or rarer at your luck) glow a little this often, and plain ones (1 in 2
  * or rarer) now and then: a low glow that stays low, so a glow's first color never tells.

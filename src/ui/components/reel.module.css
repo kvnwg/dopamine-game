@@ -753,4 +753,6 @@
   z-index: 22;
   pointer-events: none;
   transform-origin: 0 0;
+  will-change: transform, opacity;
+  contain: layout paint;
 }

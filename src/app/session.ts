@@ -160,10 +160,12 @@ export async function boot(snapshot?: string, opts: { hold?: boolean } = {}): Pr
   let late = false;
   if (!fromSnapshot && cloudPossible()) {
     const text = await cloudLoad(2500);
+    // (A game from before the player last started over here stays gone.)
+    const resetAt = await saveManager.resetAt();
     if (text === 'late') late = true;
     else if (text) {
       const cloud = readSave(text);
-      if (cloud && (!loaded || newer(cloud.state, loaded.state))) {
+      if (cloud && cloud.state.createdAt >= resetAt && (!loaded || newer(cloud.state, loaded.state))) {
         loaded = { state: cloud.state, source: 'cloud', fixed: cloud.fixed };
         bootNotes.push({ kind: 'cloud' });
       }
@@ -209,9 +211,9 @@ export async function boot(snapshot?: string, opts: { hold?: boolean } = {}): Pr
  * into it (rare: the boot waits for it, and the title gives it longer).
  */
 function lateCloud(): void {
-  void cloudLoadAll().then((text) => {
+  void cloudLoadAll().then(async (text) => {
     const cloud = text ? readSave(text) : null;
-    if (!cloud || !newer(cloud.state, getGame())) return;
+    if (!cloud || !newer(cloud.state, getGame()) || cloud.state.createdAt < (await saveManager.resetAt())) return;
     if (held) {
       replaceGame(cloud.state);
       bootPending = true;

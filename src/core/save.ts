@@ -19,6 +19,8 @@ export const SAVE_KEY = 'dumpster_legend_save';
 export const backupKey = (i: number) => `${SAVE_KEY}_backup_${i}`;
 /** Where a save that couldn't be loaded is kept, untouched, before anything can overwrite it. */
 export const RESCUE_KEY = `${SAVE_KEY}_rescue`;
+/** When the player last started over (ms): a copy of an older game found elsewhere isn't brought back. */
+export const RESET_KEY = `${SAVE_KEY}_reset_at`;
 
 /** Migration from version N to N+1, keyed by N. Add one for every saveVersion bump. */
 export type Migration = (save: Record<string, unknown>) => Record<string, unknown>;
@@ -331,9 +333,17 @@ export class SaveManager {
     return this.storage.get(RESCUE_KEY);
   }
 
-  async reset(): Promise<void> {
+  /** Erases the save and its backups, and notes when (resetAt). */
+  async reset(now = Date.now()): Promise<void> {
     await this.storage.remove(SAVE_KEY);
     for (let i = 0; i < this.backups; i++) await this.storage.remove(backupKey(i));
+    await this.storage.set(RESET_KEY, String(now));
+  }
+
+  /** When the player last started over (0: never, as far as this storage knows). */
+  async resetAt(): Promise<number> {
+    const v = Number(await this.storage.get(RESET_KEY));
+    return Number.isFinite(v) ? v : 0;
   }
 }
 

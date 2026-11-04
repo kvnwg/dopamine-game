@@ -7,7 +7,7 @@
  * whole cover keeps square pixels. The raccoon, the finds and the logo use the game's Scale2x versions
  * (twice the art pixels at the same pixel size), as the reveal and showcase spots in the game do.
  */
-import { titleArt, TITLE } from '../../src/render/titleScene';
+import { titleArt, titleLogo, TITLE } from '../../src/render/titleScene';
 import { fromRows, scale2x, scale3x, type PixelBuf } from '../../src/render/pixel/buf';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
 import { FX } from '../../src/render/pixel/ui';
@@ -38,7 +38,7 @@ const rnd = () => {
   return seed / 0x7fffffff;
 };
 
-const A = titleArt('Dumpster Legend', 'PLAY');
+const A = titleArt('PLAY');
 const dy = AH - TITLE.h; // bottoms aligned: the street sits at the bottom of every cover
 const groundY = FEET_ROW + TITLE.drop + dy;
 
@@ -64,6 +64,10 @@ const P = {
   port: { hero: 0.26, dump: 0.64, logoX: 0.5, logoY: 10, burstUp: 62, spread: 1 },
   square: { hero: 0.21, dump: 0.64, logoX: 0.5, logoY: 6, burstUp: 52, spread: 1.15 },
 }[layout];
+
+// The logo's place (drawn last, on top); the finds keep clear of it.
+const logo = titleLogo();
+const logoAt = { x: Math.max(2, Math.min(AW - logo.w - 2, Math.round(AW * P.logoX - logo.w / 2))), y: P.logoY };
 
 // ---- the dumpster, lid blown off, light pouring out
 const body = scale2x(fromRows(FX.dumpsterBody));
@@ -119,6 +123,7 @@ const finds: Array<[string, Rarity]> = [
   ['shield_pizza_box', 'legendary'],
   ['ring_plastic_diamond', 'museum'],
 ];
+const LAND_SPOTS: Array<[number, number]> = [[-2, -78], [-48, -50], [44, -54], [-12, -24], [80, -22], [28, -18]];
 const n = finds.length;
 finds.forEach(([id, rarity], i) => {
   const rows = ITEM_SPRITES[id];
@@ -127,8 +132,15 @@ finds.forEach(([id, rarity], i) => {
   const t = n === 1 ? 0.5 : i / (n - 1);
   const ang = Math.PI * (1.12 + t * 0.76); // a fan above the mouth
   const reach = P.burstUp * (i % 2 ? 0.78 : 1);
-  const x = Math.round(mouth.x + Math.cos(ang) * reach * P.spread - buf.w / 2);
-  const y = Math.round(mouth.y + Math.sin(ang) * reach - buf.h / 2);
+  let x = Math.round(mouth.x + Math.cos(ang) * reach * P.spread - buf.w / 2);
+  let y = Math.round(mouth.y + Math.sin(ang) * reach - buf.h / 2);
+  // On the wide cover the logo sits up left, where the fan would reach: the finds are placed by hand
+  // in the sky to its right instead (centres, art px from the dumpster's mouth).
+  const spot = layout === 'land' ? LAND_SPOTS[i] : null;
+  if (spot) {
+    x = Math.max(logoAt.x + logo.w + 3, Math.round(mouth.x + spot[0] - buf.w / 2));
+    y = Math.round(mouth.y + spot[1] - buf.h / 2);
+  }
   glow(x + buf.w / 2, y + buf.h / 2, 24, rarityColor(rarity), 0.85);
   ctx.drawImage(cv(buf), x, y);
 });
@@ -162,16 +174,8 @@ vg.addColorStop(1, 'rgba(8,10,30,0.45)');
 ctx.fillStyle = vg;
 ctx.fillRect(0, 0, AW, AH);
 
-// ---- the logo (the title is the only text allowed on a cover)
-let ly = P.logoY;
-const logoScale = layout === 'land' ? 1 : 1;
-for (const line of A.logo) {
-  const c = cv(line);
-  const w = line.w * logoScale;
-  const x = Math.round(AW * P.logoX - w / 2);
-  ctx.drawImage(c, Math.max(2, Math.min(AW - w - 2, x)), ly, w, line.h * logoScale);
-  ly += Math.round(line.h * logoScale) - 2;
-}
+// ---- the logo (the title is the only text allowed on a cover): the game's hand-lettered logo on its sticker
+ctx.drawImage(cv(logo), logoAt.x, logoAt.y);
 
 // ---- scale up, crisp
 const out = document.getElementById('c') as HTMLCanvasElement;

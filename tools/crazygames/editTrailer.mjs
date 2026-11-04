@@ -186,7 +186,7 @@ function loadMarks(key) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
-/** A mark's time in its scene: "reveal", "slams.2" (the third luck token), or absent (0). */
+/** A mark's time in its scene: "reveal", "steps.2" (the third luck token popping out), or absent (0). */
 function markTime(marks, scene, at) {
   if (!at) return 0;
   const [k, i] = at.split('.');

@@ -5,10 +5,11 @@
 // px: the battle on the left, the menus on the right), portrait on the phone stage (1080 x 1920). At the
 // default --dpr 4 every stage px is 2 x 2 captured px, so the editor's zoom-ins never upscale.
 //
-// Starts from a mid-game save made by the balance bot (trailerSave.ts). The dev cheats set scenes up
-// (which world, a forced Grail, a forced luck-token chain), and two balance values are switched off while
-// scenes that aren't about them record: random luck tokens (their slams cover the fight) and the full-screen
-// reveal for finds that are merely rare at this luck. Everything on screen is the game.
+// Starts from a fixed mid-game save made by the balance bot (trailerSave.json, from trailerSave.ts).
+// The dev cheats set scenes up (which world, a forced Grail, a forced luck-token chain), and two
+// balance values are switched off while scenes that aren't about them record: random luck tokens
+// (their flights and rows crowd the fight) and the full-screen reveal for finds that are merely rare
+// at this luck. Everything on screen is the game.
 //
 // Frame-perfect: virtualTime.js takes over the page's clock (animation frames, timers, performance.now,
 // Date, CSS animations), and every captured frame is exactly 1/30 s of game time, however slowly the
@@ -17,7 +18,7 @@
 // Needs Playwright, ffmpeg, and tsx (devDeps).
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadPlaywright, startVite } from './renderCovers.mjs';
 
@@ -42,11 +43,9 @@ const which = args[0] && !args[0].startsWith('--') ? args[0] : 'both';
 const formats = which === 'both' ? ['land', 'port'] : [which];
 
 fs.mkdirSync(OUT, { recursive: true });
-const savePath = path.join(OUT, 'save.json');
-if (!fs.existsSync(savePath)) {
-  console.log('making the mid-game save (balance bot, about half a minute)...');
-  fs.writeFileSync(savePath, execFileSync('npx', ['tsx', 'tools/crazygames/trailerSave.ts'], { cwd: ROOT, maxBuffer: 64 << 20 }));
-}
+// The trailer's save is a fixed file, so balance changes don't move the scenes (who wins where);
+// `npx tsx tools/crazygames/trailerSave.ts > tools/crazygames/trailerSave.json` makes a new one.
+const savePath = fileURLToPath(new URL('./trailerSave.json', import.meta.url));
 const save = fs.readFileSync(savePath, 'utf8');
 
 const { chromium } = loadPlaywright();
@@ -111,7 +110,8 @@ async function recordFormat(format) {
         charging: !!u.charging,
         celebrate: !!u.celebrate,
         afterBoss: !!u.afterBoss,
-        slam: u.tokenSlam?.id ?? 0,
+        flight: u.tokenFlights.at(-1)?.id ?? 0,
+        fstep: u.tokenFlights.at(-1)?.step ?? -1,
         wave: g.battle.wave,
         phase: g.battle.phase,
         foes: g.battle.enemies.length,
@@ -133,7 +133,7 @@ async function recordFormat(format) {
       await tap();
       await advance(0.5);
     }
-    await page.evaluate(() => window.__dl.ui.setState({ afterBoss: null, popup: null, tokenSlam: null }));
+    await page.evaluate(() => window.__dl.ui.setState({ afterBoss: null, popup: null }));
   };
   const equipBest = async () => {
     await tab('bag');
@@ -163,7 +163,7 @@ async function recordFormat(format) {
     let n = 0;
     const marks = {};
     let ff = null;
-    let lastSlam = 0;
+    let lastFlight = 0;
     if (!skip) {
       ff = spawn('ffmpeg', [
         '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
@@ -177,10 +177,11 @@ async function recordFormat(format) {
         marks.ko = n / FPS; // knocked out: a scene to fix
         console.warn(`[${format}] ${name}: knocked out at ${marks.ko.toFixed(1)} s`);
       }
-      if (s.slam && s.slam !== lastSlam) {
-        lastSlam = s.slam;
-        marks.slams ??= [];
-        marks.slams.push(n / FPS);
+      // Luck tokens: when each step's first token pops out of its reel (it lands in its row 0.39 s later).
+      if (s.flight && s.flight !== lastFlight) {
+        lastFlight = s.flight;
+        marks.steps ??= [];
+        if (s.fstep >= 0 && marks.steps[s.fstep] === undefined) marks.steps[s.fstep] = n / FPS;
       }
       if (guard && (s.charging || s.celebrate)) {
         if (marks.interrupt === undefined) marks.interrupt = n / FPS;
@@ -230,14 +231,13 @@ async function recordFormat(format) {
   await clean(true);
   await tab('alley');
   await advance(1);
-  // The fight: Lava Landfill, where every foe takes a few hits (crits, knockbacks, coins). It's a
-  // close match: about 8 s in he goes down, so the edit uses what comes before.
-  await scene('fight', world(10, 9));
+  // Two world intros the current edit doesn't use (Neon shows a TOO TOUGH hint at this power). They stay
+  // in the take so a re-recording plays out the same as the one the edit was cut from.
   await scene('neon', world(6, 3.5));
   await scene('dungeon', world(8, 3.5));
-  // The luck chain, on a fresh Dungeon Dumps (he wins there, and its boss comes after the reveal): one
-  // reel lands x3, x5, x10, x10 (x1500 luck) and then the Grail; the screen goes dark, the odds count up
-  // through the tiers and it lands: HOLY GRAIL!
+  // The luck chain, on a fresh Dungeon Dumps (he wins there, and its boss comes after the reveal): all
+  // three reels land x3, then x5, then x10, each a MATCH (LUCK SQUARED: x9, x225, x22.5K), and the first
+  // reel lands the Grail; the screen goes dark, the odds count up through the tiers: HOLY GRAIL!
   await scene(
     'chain',
     async (r) => {
@@ -248,7 +248,7 @@ async function recordFormat(format) {
         const { BAL } = await import('/src/data/index.ts');
         BAL.roll.multiplier.chance = 0; // only the forced chain
       });
-      await cheat({ kind: 'forceTokens', mults: [3, 5, 10, 10] });
+      await cheat({ kind: 'forceTokens', mults: [3, 5, 10], everyReel: true });
       await cheat({ kind: 'forceRarity', rarity: 'grail' });
       r.mark('go');
       if (await r.until('charging', 25)) r.mark('charge');
@@ -280,10 +280,13 @@ async function recordFormat(format) {
     if (await r.until('afterBoss', 20)) r.mark('down');
     await r.run(2);
   });
-  // Off camera: three more Grails, so he can stand in the later worlds (13 and 14; past those he is
-  // knocked out, so they stay out of the trailer).
+  // Off camera: three more Grails, so he can stand in the later worlds (10, 13 and 14; past those he
+  // is knocked out, so they stay out of the trailer).
   for (let i = 0; i < 3; i++) await grailOffCamera();
   await clean(true);
+  // The brawl: Lava Landfill from its start, now that he wins there (before the Grails it's a coin
+  // flip that he mostly loses): CRIT!s, big numbers, coins flying.
+  await scene('fight', world(10, 9));
   await scene('glacier', world(13, 4));
   await scene('mushroom', world(14, 4));
   fs.writeFileSync(marksPath, JSON.stringify(allMarks, null, 2));

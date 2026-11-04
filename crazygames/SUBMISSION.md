@@ -23,27 +23,26 @@ The requirements below were checked against the official docs at <https://docs.c
 
 | What | File | Spec (CrazyGames requirement) |
 |---|---|---|
-| Game build | `crazygames/upload/dumpster-legend-crazygames.zip` (`npm run build:crazygames`) | `index.html` at the root, relative paths only: 26 files, 3.6 MB unzipped, 1.6 MB zipped. Limits: 250 MB total, 1,500 files, 20 MB initial download for the mobile homepage |
+| Game build | `crazygames/upload/dumpster-legend-crazygames.zip` (`npm run build:crazygames`) | `index.html` at the root, relative paths only: 26 files, 3.7 MB unzipped, 1.7 MB zipped. Limits: 250 MB total, 1,500 files, 20 MB initial download for the mobile homepage |
 | Landscape cover | `crazygames/covers/cover-landscape-1920x1080.png` | 16:9, 1920×1080 |
 | Portrait cover | `crazygames/covers/cover-portrait-800x1200.png` | 2:3, 800×1200 |
 | Square cover | `crazygames/covers/cover-square-800x800.png` | 1:1, 800×800 |
-| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 18.6 s, 30 fps, silent, opens on the cover, 22.1 MB (limit 50 MB) |
-| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 18.3 s, 30 fps, silent, opens on the cover, 20.7 MB (limit 50 MB) |
+| Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17.1 s, 30 fps, silent, opens on the cover, 21.6 MB (limit 50 MB) |
+| Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17.7 s, 30 fps, silent, opens on the cover, 22.6 MB (limit 50 MB) |
 
-**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the real logo. The title is the only text, with no borders or icons.
+**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the game's hand-lettered logo on its sticker. The title is the only text, with no borders or icons.
 
-**Previews** are an 18-second trailer of real gameplay, each in the layout players of that format see: the landscape one in the PC layout (the battle on the left, the dumpster's reels on the right), the portrait one in the phone layout. Fifteen quick shots (0.5–1.8 s) with push-ins, punch-in zooms and shakes on the hits:
-1. The cover, dissolving into a close-up brawl in Lava Landfill: CRIT!s, big numbers, coins flying.
-2. A luck chain on one reel: ×3, ×5, ×10, ×10, each token slamming onto the screen, closer every time: ×15 LUCK, ×150 LUCK (LEGENDARY OR BETTER!), ×1.5K LUCK (MYTHIC OR BETTER!).
-3. The reel lands, the screen flashes, and the odds race up through every tier (1 in 6, 162, 2,776, 31K, 1.3M, 17.5M...) to HOLY GRAIL! 1 in 250M.
-4. He puts it on: the Grail slams onto him and his POWER counts up past 470K.
-5. The boss, Gator Vinnie: his health bar drains under CRIT!s and LID FLURRY!, then WORLD CLEARED!
-6. New worlds in quick cuts: Neon Night Market, Glacier Gulch, Mushroom Marsh.
-7. It ends on a Mushroom Marsh fight with hits in the tens of millions.
+**Previews** are a 17-second trailer of real gameplay, each in the layout players of that format see: the landscape one in the PC layout (the battle on the left, the dumpster's reels on the right), the portrait one in the phone layout. A dozen quick shots (0.5–1.9 s) with push-ins, punch-in zooms and shakes on the hits:
+1. The cover, dissolving into a close-up brawl in Lava Landfill: CRIT!s, big numbers, coins flying, LEVEL UP!
+2. A luck chain on all three reels at once. Each reel lands ×3, then ×5, then ×10, and every token flies up into its row over the battle. All three reels match every time, so the luck is squared: MATCH! LUCK SQUARED, ×9, then ×225 (LEGENDARY OR BETTER!), then ×22.5K (MYTHIC OR BETTER!).
+3. The reel lands, the screen flashes, and the odds race up through every tier (1 in 57, 1,128, 14,695, 130K, 3.6M...) to HOLY GRAIL! 1 in 250M.
+4. He puts it on: the finds slam onto him and his POWER counts up.
+5. The boss, Gator Vinnie: his health bar drains under CRIT!s, then WORLD CLEARED!
+6. New worlds in quick cuts: Glacier Gulch, then Mushroom Marsh with hits in the millions.
 
-Every shot plays at real speed (no fast-forward), with no cursor, no black screens or bars and no "play now" text. Every frame is new motion (checked: 555 of 557 landscape frames and 547 of 550 portrait ones differ from the one before; the rest are the cover's first beat).
+Every shot plays at real speed (no fast-forward), with no cursor, no black screens or bars and no "play now" text. Every frame is new motion (checked: 512 of 514 landscape frames and 530 of 532 portrait ones differ from the one before; the rest are the cover's first beat).
 
-How it's made: `tools/crazygames/recordTrailer.mjs` loads a mid-game save made by the game's balance bot (`trailerSave.ts`: about 90 minutes in, 3 rebirths). It records each format in its own layout at twice the output's resolution, so the zooms never upscale. It takes over the page's clock (`virtualTime.js`), so every frame is exactly 1/30 s of game time however slowly the headless browser renders. The dev cheats only set scenes up: which world, a forced luck chain and Grail. While other scenes record, random luck tokens and surprise reveals are switched off so nothing pops over the fights. `tools/crazygames/editTrailer.mjs` then cuts the trailers from `tools/crazygames/trailerShots.json`. It lists each shot's scene and in point (relative to moments the recorder marks, like each luck token's slam), its length, and per format its camera, punch-ins, shakes and flashes. To check an edit without rendering video, run `node tools/crazygames/editTrailer.mjs --storyboard land` (or `port`): it renders the first, middle and last frame of every shot.
+How it's made: `tools/crazygames/recordTrailer.mjs` plays from a fixed mid-game save, `tools/crazygames/trailerSave.json`, made by the game's balance bot with `trailerSave.ts`: about 90 minutes in, 3 rebirths. The save is a file because a balance change makes the bot's save different, and the edit is cut to who wins where with this one. It records each format in its own layout at twice the output's resolution, so the zooms never upscale. It takes over the page's clock (`virtualTime.js`), so every frame is exactly 1/30 s of game time however slowly the headless browser renders. The dev cheats only set scenes up: which world, a forced matched luck chain and Grail. While other scenes record, random luck tokens and surprise reveals are switched off so nothing pops over the fights. `tools/crazygames/editTrailer.mjs` then cuts the trailers from `tools/crazygames/trailerShots.json`. It lists each shot's scene and in point (relative to moments the recorder marks, like each step of the luck chain), its length, and per format its camera, punch-ins, shakes and flashes. To check an edit without rendering video, run `node tools/crazygames/editTrailer.mjs --storyboard land` (or `port`): it renders the first, middle and last frame of every shot.
 
 ---
 

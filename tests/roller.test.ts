@@ -72,20 +72,21 @@ describe('luck odds ("1 in X")', () => {
     expect(luckOddsOneIn(legendary, 1)).toBeGreaterThan(BAL.rarityOdds.legendary * 0.9);
     expect(luckOddsOneIn(legendary, 1)).toBeLessThanOrEqual(BAL.rarityOdds.legendary);
     expect(luckOddsOneIn(legendary, 10)).toBeLessThan(luckOddsOneIn(legendary, 1) / 9);
-    // The reveal is for 1 in 37,500 or rarer at your luck: no Legendary or Mythic, but a Limited
-    // Edition at low luck.
+    // The reveal is for 1 in 2,500 or rarer at your luck: no Legendary, but a Mythic at low luck
+    // (not at x10), and a Limited Edition until high luck.
     const limited = { rarity: 'limited' as const, enchants: [] };
     expect(rollDrama(luckOddsOneIn(legendary, 1))).toBeNull();
-    expect(rollDrama(luckOddsOneIn(mythic, 1))).toBeNull();
-    expect(rollDrama(luckOddsOneIn(limited, 1))).toBe('big');
+    expect(rollDrama(luckOddsOneIn(mythic, 1))).toBe('big');
+    expect(rollDrama(luckOddsOneIn(mythic, 10))).toBeNull();
+    expect(rollDrama(luckOddsOneIn(limited, 1))).toBe('huge');
     expect(rollDrama(luckOddsOneIn(limited, 50))).toBeNull();
     // Enchantments make it rarer at any luck.
     expect(luckOddsOneIn({ rarity: 'legendary', enchants: [{ tier: 1 }] }, 10)).toBeGreaterThan(luckOddsOneIn(legendary, 10));
     // Bigger deals for rarer rolls.
     const b = BAL.feel.bigRoll;
     expect([rollDrama(b.big - 1), rollDrama(b.big), rollDrama(b.huge), rollDrama(b.insane)]).toEqual([null, 'big', 'huge', 'insane']);
-    expect(rollDrama(luckOddsOneIn({ rarity: 'mint', enchants: [] }, 1))).toBe('huge');
-    expect(rollDrama(luckOddsOneIn({ rarity: 'gemMint', enchants: [] }, 1))).toBe('insane');
+    expect(rollDrama(luckOddsOneIn({ rarity: 'vintage', enchants: [] }, 1))).toBe('huge');
+    expect(rollDrama(luckOddsOneIn({ rarity: 'prototype', enchants: [] }, 1))).toBe('insane');
   });
 
   it('a Scrap All haul is measured in minutes of fighting; long ones get a big, huge or mega moment', () => {

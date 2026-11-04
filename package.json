@@ -15,7 +15,11 @@
     "android:debug": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
     "android:open": "cap open android",
     "ios:open": "cap open ios",
-    "build:artifact": "tsc --noEmit && vite build --mode artifact && node tools/buildArtifact.mjs"
+    "build:artifact": "tsc --noEmit && vite build --mode artifact && node tools/buildArtifact.mjs",
+    "dev:crazygames": "vite --host --mode crazygames",
+    "build:crazygames": "tsc --noEmit && vite build --mode crazygames && node tools/crazygames/zip.mjs",
+    "crazygames:covers": "node tools/crazygames/renderCovers.mjs",
+    "crazygames:preview": "node tools/crazygames/recordPreview.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",

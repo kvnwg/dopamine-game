@@ -42,6 +42,16 @@ npm run build:artifact
 
 It writes `artifact/dumpster-legend.html` (one self-contained page: fonts and code inlined).
 
+### CrazyGames
+
+A web build for [CrazyGames](https://www.crazygames.com/) with their SDK v3: real rewarded ads, saves through their Data module, and their mute setting. The phone apps and other builds are untouched.
+
+```bash
+npm run build:crazygames
+```
+
+It writes `dist-crazygames/` and the upload zip in `crazygames/upload/`. Run `npm run dev:crazygames` to play it locally (the SDK runs in "local" mode). The covers, the preview videos, the listing text, the form answers and what to fix before submitting are in [`crazygames/SUBMISSION.md`](crazygames/SUBMISSION.md).
+
 ### Dev cheat panel
 
 The **Dev tools** button in Settings (dev and playtest builds only) opens a cheat panel that can add coins, Gems, bags and XP, jump to any world (as if the ones before it were beaten) or straight to a world's boss wave, set the Dumpster Level, force the next roll's rarity (or, from the dev console, a luck token chain with the `forceTokens` cheat), start a Luck Potion, skip time by 30 min to 24 h (to test offline rewards and upgrade timers), and reset the save. It also shows your live stats, luck and roll count.

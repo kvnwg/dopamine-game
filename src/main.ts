@@ -6,6 +6,7 @@ import './ui/global.css';
 import './ui/pixel.css';
 import { DATA } from './data'; // validates every JSON file at boot
 import { boot } from './app/session';
+import { crazyGamesAfterBoot, crazyGamesBeforeBoot } from './app/crazygames';
 import { dispatch, getGame } from './app/store';
 import { serialize } from './core';
 import { App } from './ui/App';
@@ -38,9 +39,11 @@ async function main(data?: unknown) {
   applyPaletteToCss();
   const save = (data as { save?: unknown } | undefined)?.save;
   const handedOver = typeof save === 'string';
+  crazyGamesBeforeBoot();
   await boot(handedOver ? save : undefined, { hold: showTitle(handedOver) });
   hot?.snapshot?.(() => ({ save: serialize(getGame()) }));
   createRoot(document.getElementById('root')!).render(createElement(App));
+  crazyGamesAfterBoot();
   // Test hook for browser automation in dev builds only.
   if (import.meta.env.DEV) (window as unknown as { __dl: unknown }).__dl = { getGame, dispatch, ui: useUi };
 }

@@ -89,6 +89,7 @@
   "toast.dumpsterUpgraded": "Dumpster upgraded to level {level}!",
   "toast.clockBackward": "Your clock went backward, so no offline rewards this time.",
   "ads.mockPlaying": "Mock ad playing...",
+  "ads.unavailable": "No ad available right now. Try again in a bit!",
   "ads.mockPlacement": "placement: {placement} (real ads arrive in Milestone 4)",
   "common.later": "Later",
   "battle.crit": "CRIT!",

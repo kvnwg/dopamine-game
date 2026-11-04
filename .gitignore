@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-artifact/
+dist-crazygames/
 artifact/
 *.log
 .DS_Store

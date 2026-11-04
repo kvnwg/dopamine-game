@@ -164,6 +164,69 @@ export const HeistBalanceSchema = z.object({
 });
 export type HeistBalance = z.infer<typeof HeistBalanceSchema>;
 
+// ---------------------------------------------------------------- Alley perks (bought with Half-Eaten Bread Loaves)
+/** The perk trees on the Upgrades screen's Perks page (names and lines in strings.en.json perkTree.*). */
+export const PERK_TREE_IDS = ['crew', 'chaos', 'reels', 'bread'] as const;
+export const PerkTreeIdSchema = z.enum(PERK_TREE_IDS);
+export type PerkTreeId = z.infer<typeof PerkTreeIdSchema>;
+
+/**
+ * What an Alley perk does, as numbers core reads (src/core/systems/perks.ts adds them up over the perks
+ * owned: a `...Mult` multiplies, an `...Every` interval takes the shortest, the rest add). Each key:
+ * - the crew (the Alley battle only), helpers hitting through DEF, no crits:
+ *   pigeonAtkPct / pigeonEvery: a pigeon pecks the front enemy for a % of ATK every N s;
+ *   ratAtkPct / ratEvery: every enemy on screen loses a % of ATK every N s;
+ *   healPct / healEvery: heals % of max HP every N s in a fight;
+ *   gullAtkPct / gullEvery: every N s, every enemy takes a % of ATK;
+ *   recruitAtkPct / recruitEvery / recruitMax: each regular enemy beaten joins until the world ends (at most
+ *   recruitMax), each hitting the front enemy for a % of ATK every N s;
+ *   golemAtkPct / golemEvery: every N s the front enemy takes a % of ATK per loaf earned this run;
+ * - bad decisions: atkSpdPct (+% attack speed), hpCutPct (-% max HP), atkMult and hpMult (ATK and max HP x),
+ *   secondWindPct (once per world the first knockout leaves the raccoon at this % HP), rageBelowPct /
+ *   rageMult (below this HP % the raccoon's hits deal x damage), bossDmgMult (bosses take x damage),
+ *   regularAtkPct (+% regular enemies' ATK);
+ * - the reels: spinSpeedMult (reels x as fast), bossAtkPct (+% bosses' ATK), tokenChanceMult (luck tokens
+ *   x as often), bagCutPct (-% bag space), scrapGoldMult (scrap gold x), extraReels (+reels),
+ *   spinTimePct (+% spin time), jackpotEvery (every Nth spin every reel lands at least the perk's `rarity`);
+ * - the bread: bonusLoafEvery (every Nth world beaten this run pays a bonus loaf), heldLoafLuckPct (+% luck
+ *   per uneaten loaf), extraLoaves (more loaves per world), bossHpPct (+% bosses' HP), eatenLoafPct (+% ATK
+ *   and max HP per loaf eaten this run).
+ */
+export const ALLEY_PERK_KEYS = [
+  'pigeonAtkPct', 'pigeonEvery', 'ratAtkPct', 'ratEvery', 'healPct', 'healEvery', 'gullAtkPct', 'gullEvery',
+  'recruitAtkPct', 'recruitEvery', 'recruitMax', 'golemAtkPct', 'golemEvery',
+  'atkSpdPct', 'hpCutPct', 'atkMult', 'hpMult', 'secondWindPct', 'rageBelowPct', 'rageMult', 'bossDmgMult', 'regularAtkPct',
+  'spinSpeedMult', 'bossAtkPct', 'tokenChanceMult', 'bagCutPct', 'scrapGoldMult', 'extraReels', 'spinTimePct', 'jackpotEvery',
+  'bonusLoafEvery', 'heldLoafLuckPct', 'extraLoaves', 'bossHpPct', 'eatenLoafPct',
+] as const;
+export type AlleyPerkKey = (typeof ALLEY_PERK_KEYS)[number];
+
+export const AlleyPerkSchema = z.object({
+  id: z.string().min(1),
+  tree: PerkTreeIdSchema,
+  /** Half-Eaten Bread Loaves: 1 for a tree's root, more the deeper it sits. */
+  cost: z.number().int().min(1).max(4),
+  /** Owning any one of these opens it (none: a tree's root). */
+  requires: z.array(z.string().min(1)),
+  /** Its icon: a UI icon name (src/render/pixel/ui.ts). */
+  icon: z.string().min(1),
+  effect: z.partialRecord(z.enum(ALLEY_PERK_KEYS), positive),
+  /** jackpotEvery: the rarity its rigged spins land at least. */
+  rarity: RaritySchema.optional(),
+});
+export type AlleyPerkDef = z.infer<typeof AlleyPerkSchema>;
+
+export const PerksBalanceSchema = z.object({
+  /** The Perks page opens with this many rebirths (the first runs are plain). */
+  unlockRebirths: z.number().int().nonnegative(),
+  /** Loaves for each world whose boss falls for the first time in a run. */
+  loavesPerWorld: z.number().int().positive(),
+  /** The trees, in the order the Perks page shows them, each with its icon. */
+  trees: z.array(z.object({ id: PerkTreeIdSchema, icon: z.string().min(1) })).length(PERK_TREE_IDS.length),
+  list: z.array(AlleyPerkSchema).min(1),
+});
+export type PerksBalance = z.infer<typeof PerksBalanceSchema>;
+
 // ---------------------------------------------------------------- balance.json
 export const BalanceSchema = z.object({
   tickRate: positive,
@@ -406,6 +469,8 @@ export const BalanceSchema = z.object({
   }),
   mockAds: z.object({ watchSeconds: nonNeg }),
   heist: HeistBalanceSchema,
+  /** Alley perks: a run's Half-Eaten Bread Loaves buy them on the Upgrades screen's Perks page (core/systems/perks.ts). */
+  perks: PerksBalanceSchema,
   /**
    * The first-run tutorial (new games only). Beginner's luck: one scripted spin early on, its first
    * reel chaining `beginnerTokens` into a `beginnerRarity` item. It comes once the raccoon has put

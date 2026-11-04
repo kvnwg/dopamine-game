@@ -820,11 +820,115 @@ const PIGEON: Rows = [
   '................',
 ];
 
+/**
+ * A Half-Eaten Bread Loaf: the Alley perks' currency. A crusty loaf with its score marks, a bite out of
+ * the top-right end showing the soft crumb.
+ */
+const BREAD: Rows = [
+  '................',
+  '................',
+  '................',
+  '.....kkkkk......',
+  '...kkTTTWk......',
+  '..kTWTTWtWk.....',
+  '.kTWTtWtWWk.....',
+  '.kTttWtttWWkk...',
+  '.kttttttttNWWkk.',
+  '.ktttttttttNWWk.',
+  '.ktttttNNNNNNNk.',
+  '..knnnnnnnnnnk..',
+  '...kkkkkkkkkk...',
+  '................',
+  '................',
+  '................',
+];
+
+/** A sewer rat: big pink ear, pink nose, a tail curling up (Sewer Cousins). */
+const RAT: Rows = [
+  '................',
+  '................',
+  '................',
+  '.....kk.........',
+  '....kP5k.....k..',
+  '....kPPk....kqk.',
+  '...k544kkkkkqk..',
+  '..k5k4455543kqk.',
+  '.kq4444444443qk.',
+  '..kk544444443qk.',
+  '....kk5444433k..',
+  '.....kk3333kk...',
+  '....kPkkkkPk....',
+  '.....k....k.....',
+  '................',
+  '................',
+];
+
+/** A seagull with a stolen fry crosswise in its beak (Seagull Air Strike). */
+const GULL: Rows = [
+  '................',
+  '................',
+  '................',
+  '....kkk.........',
+  '..kkwwwk........',
+  '.kYkwkWwkkk.....',
+  '.kyywWWWWW5kkk..',
+  '.kYkkwWW444443k.',
+  '.kYk.kWW444433k.',
+  '..k..kWWWWWW11k.',
+  '.....k5555555k..',
+  '......kOkkOkk...',
+  '.......k..k.....',
+  '................',
+  '................',
+  '................',
+];
+
+/** A gangster's fedora with a red band (Raccoon Mafia). */
+const FEDORA: Rows = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '......kkkkk.....',
+  '.....k33122k....',
+  '.....k32121k....',
+  '.....keRRRrk....',
+  '..kk333222111kk.',
+  '.k332222221111k.',
+  '..kkkkkkkkkkkk..',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+
+/** A golem of stale bread flexing, score marks on its belly, brows down (Gluten Golem). */
+const GOLEM: Rows = [
+  '................',
+  '................',
+  '......kkkk......',
+  '.....kTTTtk.....',
+  '....kTnTtntk....',
+  '....kTkttkNk....',
+  '..kkkkTttNkkkk..',
+  '.kTTTkktNkkttNk.',
+  '.kTttTtWtttNtNk.',
+  '..kTktWttWNkNk..',
+  '...kktttWtNkk...',
+  '....kNttttNk....',
+  '.....kNNNNk.....',
+  '....knnkknnk....',
+  '.....kk..kk.....',
+  '................',
+];
+
 export type UiIcon =
   | 'coin' | 'gem' | 'bag' | 'heart' | 'sword' | 'shield' | 'clover' | 'bolt' | 'power' | 'gear'
   | 'lock' | 'trash' | 'arrowUp' | 'arrowDown' | 'hand' | 'rebirth' | 'dumpster' | 'potion' | 'dice' | 'book' | 'chart' | 'cart'
   | 'star' | 'check' | 'clock' | 'skull' | 'globe' | 'reel' | 'reelGold' | 'backpack' | 'drop' | 'target' | 'tv'
-  | 'arrowRight' | 'heist' | 'ticket' | 'choice' | 'treasure' | 'shop' | 'shrine' | 'trap' | 'wheel' | 'flame' | 'pigeon';
+  | 'arrowRight' | 'heist' | 'ticket' | 'choice' | 'treasure' | 'shop' | 'shrine' | 'trap' | 'wheel' | 'flame' | 'pigeon'
+  | 'bread' | 'rat' | 'gull' | 'fedora' | 'golem';
 
 /** Rows turned a quarter turn clockwise (an up arrow points right; light from the left lands on top). */
 function turnRows(rows: Rows): Rows {
@@ -878,6 +982,11 @@ export const UI_SPRITES: Record<UiIcon, Rows> = {
   wheel: WHEEL,
   flame: FLAME,
   pigeon: PIGEON,
+  bread: BREAD,
+  rat: RAT,
+  gull: GULL,
+  fedora: FEDORA,
+  golem: GOLEM,
 };
 
 /*
@@ -1046,6 +1155,13 @@ export const UI_XS: Partial<Record<UiIcon, Rows>> = {
     'kCcNk',
     'kcUyk',
     'kkkkk',
+  ],
+  bread: [
+    '.kk..',
+    'kTWk.',
+    'kttWk',
+    'knnnk',
+    '.kkk.',
   ],
 };
 
@@ -1388,6 +1504,15 @@ export const UI_SM: Partial<Record<UiIcon, Rows>> = {
     'kttGtNk',
     'kttNNNk',
     '.kkkkk.',
+  ],
+  bread: [
+    '.......',
+    '.kkk...',
+    'kTWWkk.',
+    'kWttWWk',
+    'kttNNWk',
+    '.knnnk.',
+    '..kkk..',
   ],
 };
 
@@ -1771,6 +1896,66 @@ export const UI_MD: Partial<Record<UiIcon, Rows>> = {
     'ktttGGGtNk',
     '.kttNGNNk.',
     '..kkkkkk..',
+  ],
+  bread: [
+    '..........',
+    '...kkkk...',
+    '.kkTTWk...',
+    'kTWTtWWkk.',
+    'kTtWtttWWk',
+    'ktttttNWWk',
+    'kttttNNNNk',
+    '.knnnnnnk.',
+    '..kkkkkk..',
+    '..........',
+  ],
+  rat: [
+    '..........',
+    '...kk.....',
+    '..kP5k..k.',
+    '..k54kkkqk',
+    '.kk44543qk',
+    'kq4444443k',
+    '.kkk44433k',
+    '..kPk3Pkk.',
+    '...k.kk...',
+    '..........',
+  ],
+  gull: [
+    '..........',
+    '.k.kk.....',
+    'kYkkwk....',
+    'kywWWkkkk.',
+    'kYkwW4444k',
+    '.kkWWW441k',
+    '...k5555k.',
+    '...kOkOk..',
+    '....k.k...',
+    '..........',
+  ],
+  fedora: [
+    '..........',
+    '..........',
+    '...kkkk...',
+    '..k3312k..',
+    '..k3211k..',
+    '..keRRrk..',
+    'kk332211kk',
+    'k33222211k',
+    '.kkkkkkkk.',
+    '..........',
+  ],
+  golem: [
+    '..kkkkkk..',
+    '.kTTTTTtk.',
+    '.kTkTtktk.',
+    '.kkTttNkk.',
+    'kTkTtWtkNk',
+    'kTkWtttkNk',
+    '.kkNtWNkk.',
+    '..kNNNNk..',
+    '..knkknk..',
+    '..kk..kk..',
   ],
 };
 

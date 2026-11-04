@@ -24,7 +24,7 @@
  */
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
-import { battleMaxHp, battleStats, computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type GameState, type Item } from '../core';
+import { battleMaxHp, battleStats, computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type CrewHelper, type GameState, type Item } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
@@ -160,6 +160,15 @@ const SPARK: BitStyle = { speed: [27, 58], life: [200, 360], drag: 2, colors: [0
 const BIG_SPARK: BitStyle = {
   speed: [40, 96], life: [380, 680], drag: 2.5, colors: [0xffe14a, 0xffffff, 0xffb300], fade: [0xffb300], sizes: [2, 2, 1],
 };
+/** The Alley crew's sparks and damage numbers, in each helper's colors (feathers, fur, gull white, the mob's red, crust). */
+const CREW_SPARKS: Record<CrewHelper, Pick<BitStyle, 'colors' | 'fade'>> = {
+  pigeon: { colors: [0xcfcedb, 0xffffff], fade: [0x7f7c94] },
+  rats: { colors: [0xa7a5b8, 0xffa5a5], fade: [0x5b5870] },
+  gull: { colors: [0xffffff, 0xf5c638], fade: [0xcfcedb] },
+  mafia: { colors: [0xee6150, 0xffffff], fade: [0x7d1d2c] },
+  golem: { colors: [0xecc596, 0xf4efe1], fade: [0x995b3a] },
+};
+const CREW_NUMBER: Record<CrewHelper, string> = { pigeon: '#cfe8ff', rats: '#e5cfff', gull: '#fff6a8', mafia: '#ffb4a8', golem: '#ffd9a0' };
 /** Glimmer boxes for pieces drawn into his body's texture (half sizes in art px around where the slot sits). */
 const GLIMMER_BOX: Partial<Record<Slot, { w: number; h: number }>> = {
   jacket: { w: 4, h: 3 }, gloves: { w: 5, h: 2 }, sneakers: { w: 4, h: 1 }, bling: { w: 3, h: 2 }, ring: { w: 4, h: 2 },
@@ -487,7 +496,7 @@ export class BattleScene extends Phaser.Scene {
   private gearImgs = new Map<Slot, Phaser.GameObjects.Image>();
   /** Scene time until which he stays squashed a pixel under an equip slam. */
   private squashUntil = 0;
-  private hpCache: { key: unknown; hp: number } = { key: null, hp: 1 };
+  private hpCache: { key: unknown; perks: unknown; hp: number } = { key: null, perks: null, hp: 1 };
   private healAcc = 0;
   private healTimer = 0;
   private coinsFlying = 0;
@@ -1972,6 +1981,7 @@ export class BattleScene extends Phaser.Scene {
     // Kills arrive with the blow that caused them; remember them so the death plays when the blow lands.
     this.noteKills(events);
     this.heistEvents(events);
+    this.perkEvents(events);
     let lastSwing: Swing | null = null;
     for (const e of blowsFirst(events)) {
       if (e.type === 'spinStart') this.showLuckChains(e);
@@ -2207,6 +2217,41 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  // ------------------------------------------------------------------ Alley perks
+
+  /**
+   * The Alley perks in the battle (core/systems/perks.ts): the crew's blows land as a heist helper's do
+   * (sparks in the helper's colors, a flash and the damage), Playing Possum's second wind stamps the
+   * hero, and a world paying its Half-Eaten Bread Loaves pops "+1 LOAF" over him.
+   */
+  private perkEvents(events: CoreEvent[]) {
+    for (const e of events) {
+      switch (e.type) {
+        case 'crewHit': {
+          const f = this.foes.get(e.enemyUid);
+          if (!f) break;
+          const p = this.foeHitPoint(f);
+          this.bits.burst(e.helper === 'gull' ? 8 : 5, p.x, p.y, { ...SPARK, ...CREW_SPARKS[e.helper] });
+          this.flash(f.spr, 0xffffff, 60);
+          this.number(p.x + 4 * P, p.y - 4 * P, formatNumber(e.amount), { fill: CREW_NUMBER[e.helper], life: 600, floor: this.barTop(f) });
+          if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
+          break;
+        }
+        case 'secondWind':
+          this.stamp(this.hero.x, FEET_Y - 30 * P, t('battle.secondWind'), '#9dff9a');
+          this.bits.burst(12, this.hero.x, FEET_Y - 14 * P, BIG_SPARK);
+          this.cheer(1);
+          break;
+        case 'breadEarned':
+          this.time.delayedCall(900, () => {
+            const text = t(e.loaves === 1 ? 'battle.loaf' : 'battle.loaves', { n: e.loaves });
+            this.number(this.hero.x, FEET_Y - 36 * P, text, { big: true, fill: bands(['#fff3c4', '#d4862a']), life: 1200, floor: this.heroBarTop() });
+          });
+          break;
+      }
+    }
+  }
+
   /** The heist's badge, and a new run's title card in place of the one for the world it borrows. */
   private updateHeist(g: GameState) {
     const run = g.heist.run;
@@ -2393,7 +2438,10 @@ export class BattleScene extends Phaser.Scene {
   private maxHp(g: GameState): number {
     // A heist's bar shows the run's HP.
     if (g.heist.run) return battleMaxHp(g);
-    if (this.hpCache.key !== g.equipped || this.hpCache.hp <= 0) this.hpCache = { key: g.equipped, hp: computeStats(g).HP };
+    // (Alley perks change max HP too: Glass Cannon halves it.)
+    if (this.hpCache.key !== g.equipped || this.hpCache.perks !== g.perks.owned || this.hpCache.hp <= 0) {
+      this.hpCache = { key: g.equipped, perks: g.perks.owned, hp: computeStats(g).HP };
+    }
     return this.hpCache.hp;
   }
 

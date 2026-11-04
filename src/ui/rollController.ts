@@ -5,7 +5,8 @@
  * (black screen, the item shining, its "1 in X" counting up). A smaller build-up (a couple of rattles
  * and a short riser) plays under the reels' glow for any other rare result (reelDrama.ts). With
  * several reels, sounds play once per spin for the best result. Also toasts for level-ups, luck
- * boosts, upgrades and rebirths (with the items each rebirth unlocks).
+ * boosts, upgrades and rebirths (with the items each rebirth unlocks), the Half-Eaten Bread Loaves a
+ * world pays, and Rigged Jackpot's rigged spins.
  */
 import { BAL, DATA } from '../data';
 import { currentLuck, formatNumber, haulMinutes, haulSize, luckOddsOneIn, rarityIndex, revealDrama, type CoreEvent, type Item } from '../core';
@@ -147,6 +148,8 @@ export function installRollController(): () => void {
   return bus.on((events: CoreEvent[]) => {
     const ui = useUi.getState();
     popped = null;
+    // Loaves a boss paid in this batch (the "again or next?" card lists them).
+    let loavesNow: { world: number; loaves: number } | null = null;
     for (const e of events) {
       switch (e.type) {
         case 'spinStart': {
@@ -165,6 +168,11 @@ export function installRollController(): () => void {
             if (plan && plan.level >= 1) buildUpSmall(plan);
           }
           if (e.golden) audio.jingle(5);
+          // Rigged Jackpot (an Alley perk): this spin's every reel lands its rarity or better.
+          if (e.rigged) {
+            ui.toast(t('toast.rigged', { rarity: t(`rarity.${e.rigged}`).toUpperCase() }), 'good');
+            audio.jingle(5);
+          }
           spinBest = null;
           break;
         }
@@ -235,7 +243,16 @@ export function installRollController(): () => void {
           haptics.impact('heavy');
           break;
         case 'bossChoice':
-          if (!e.firstTime) useUi.setState({ afterBoss: { world: e.world, firstTime: false, gems: 0 } });
+          if (!e.firstTime) {
+            const loaves = loavesNow?.world === e.world ? loavesNow.loaves : 0;
+            useUi.setState({ afterBoss: { world: e.world, firstTime: false, gems: 0, loaves } });
+          }
+          break;
+        case 'breadEarned':
+          // A world fell for the first time this run: Half-Eaten Bread Loaves for the Perks page.
+          ui.toast(t(e.loaves === 1 ? 'toast.breadOne' : 'toast.breadMany', { n: e.loaves }), 'good');
+          loavesNow = { world: e.world, loaves: e.loaves };
+          useUi.setState((u) => (u.afterBoss?.world === e.world && u.afterBoss.firstTime ? { afterBoss: { ...u.afterBoss, loaves: e.loaves } } : {}));
           break;
         case 'clockWentBackward':
           ui.toast(t('toast.clockBackward'), 'warn');

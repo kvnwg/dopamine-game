@@ -2,7 +2,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { BAL } from '../../data';
 import {
-  canRebirth, formatNumber, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
+  canRebirth, formatNumber, perksOpen, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
 } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
@@ -46,6 +46,8 @@ function Req({ label, have, need, done }: { label: string; have: number; need: n
 
 export function RebirthPanel() {
   const n = useGame((g) => g.rebirths);
+  // With perks open, a rebirth also eats the run's loaves and perks.
+  const perks = useGame(perksOpen);
   const highest = useGame((g) => g.stage.highestCleared);
   const coins = useGame((g) => g.currencies.coins);
   const ready = useGame(canRebirth);
@@ -85,7 +87,7 @@ export function RebirthPanel() {
           <Reward icon={<SwordIcon size="md" />} color="#ef5350" label={t('rebirth.rPower')} from={`+${n * BAL.rebirth.statPctPer}%`} to={`+${(n + 1) * BAL.rebirth.statPctPer}%`} />
           <Reward icon={<ArrowUpIcon size="md" />} color="#42a5f5" label={t('rebirth.rCost')} from={discount(n) > 0 ? `-${discount(n)}%` : '0%'} to={`-${discount(n + 1)}%`} />
         </div>
-        <span className={s.rbNote}>{t('rebirth.resets')}</span>
+        <span className={s.rbNote}>{t(perks ? 'rebirth.resetsPerks' : 'rebirth.resets')}</span>
         <span className={s.rbNote}>{t('rebirth.keeps')}</span>
       </div>
       <div className={`${s.rbCard} card`}>

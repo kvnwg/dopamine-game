@@ -7,6 +7,7 @@ import { BAL, DATA } from '../../data';
 import type { GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { computeDamage, startStage } from './combat';
+import { perkFx, type PerkFx } from './perks';
 import { defConstant, growth, scaledEnemyStats, worldCount, worldDef } from './stages';
 import { computeStats } from './stats';
 
@@ -48,15 +49,31 @@ export interface WorldThreat {
 }
 
 /**
+ * The Alley crew's steady damage on one enemy, in ATK per second (the pigeon, the rats, the seagull and
+ * the golem; Raccoon Mafia's recruits come and go, so they don't count).
+ */
+export function crewAtkPerSecond(state: Pick<GameState, 'perks'>, fx: Readonly<PerkFx> = perkFx(state)): number {
+  const per = (pct: number, every: number) => (every > 0 ? pct / 100 / every : 0);
+  return (
+    per(fx.pigeonAtkPct, fx.pigeonEvery) + per(fx.ratAtkPct, fx.ratEvery) + per(fx.gullAtkPct, fx.gullEvery)
+    + per(fx.golemAtkPct * state.perks.earned, fx.golemEvery)
+  );
+}
+
+/**
  * How a world matches up against the raccoon's current stats (no randomness; dodge, lifesteal and
  * regen are ignored, so it errs on the safe side). ONE-SHOT means a single regular hit is lethal.
+ * Alley perks count: the crew's damage, bosses taking more, and the enemies they make tougher.
  */
 export function worldThreat(state: GameState, world: number): WorldThreat {
   const stats = computeStats(state);
+  const fx = perkFx(state);
   const w = worldDef(world);
   const k = defConstant(world);
   const critAvg = 1 + (Math.min(stats.CRIT, 100) / 100) * (stats.CRIT_DMG / 100 - 1);
-  const yourDps = (def: number) => computeDamage(stats.ATK, def, false, 100, 1, k) * critAvg * stats.ATK_SPD;
+  const crew = crewAtkPerSecond(state, fx);
+  const yourDps = (def: number) => computeDamage(stats.ATK, def, false, 100, 1, k) * (critAvg * stats.ATK_SPD + crew);
+  const regularAtk = 1 + fx.regularAtkPct / 100;
   let hp = 0;
   let def = 0;
   let dps = 0;
@@ -65,8 +82,8 @@ export function worldThreat(state: GameState, world: number): WorldThreat {
     const sc = scaledEnemyStats(DATA.enemiesById.get(foe.id)!, world, false);
     hp += sc.hp;
     def += sc.def;
-    dps += computeDamage(sc.atk, stats.DEF, false, 100, 1, k) * sc.atkSpd;
-    maxAtk = Math.max(maxAtk, sc.atk);
+    dps += computeDamage(sc.atk * regularAtk, stats.DEF, false, 100, 1, k) * sc.atkSpd;
+    maxAtk = Math.max(maxAtk, sc.atk * regularAtk);
   }
   const n = w.enemies.length;
   hp /= n;
@@ -77,11 +94,13 @@ export function worldThreat(state: GameState, world: number): WorldThreat {
 
   const bossDef = DATA.enemiesById.get(w.boss.id)!;
   const b = scaledEnemyStats(bossDef, world, true);
+  b.atk *= 1 + fx.bossAtkPct / 100;
+  b.hp *= 1 + fx.bossHpPct / 100;
   let bossDps = computeDamage(b.atk, stats.DEF, false, 100, 1, k) * b.atkSpd;
   const sp = bossDef.special;
   if (sp?.type === 'heavyHit') bossDps += (computeDamage(b.atk, stats.DEF, false, 100, 1, k) * sp.damageMult) / sp.everySeconds;
   if (sp?.type === 'enrage') bossDps *= 1 + (sp.belowHpPct / 100) * (sp.atkMult * sp.atkSpdMult - 1);
-  const bossMargin = (stats.HP * yourDps(b.def)) / (b.hp * bossDps);
+  const bossMargin = (stats.HP * yourDps(b.def) * fx.bossDmgMult) / (b.hp * bossDps);
 
   const enemyHit = computeDamage(maxAtk, stats.DEF, false, 100, 1, k);
   const margin = Math.min(waveMargin, bossMargin);

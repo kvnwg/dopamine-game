@@ -2,15 +2,23 @@
  * Headless balance simulator: plays the real core logic with a bot.
  * The wheel spins on its own and the battle pushes through worlds by itself. Like an attentive
  * player, the bot drags every upgrade it finds onto the raccoon, buys the cheapest unlocked node of
- * the upgrade tree it can afford, upgrades the dumpster, rebirths as soon as it is allowed, and
- * jumps ahead to the hardest world that reads Easy. After a boss it taps Next within a second and a
- * half (when a push fails, the raccoon falls back on its own).
+ * the upgrade tree it can afford, eats its Half-Eaten Bread Loaves on the cheapest perk it can
+ * afford, upgrades the dumpster, rebirths as soon as it is allowed, and jumps ahead to the hardest
+ * world that reads Easy. After a boss it taps Next within a second and a half (when a push fails, the
+ * raccoon falls back on its own).
  */
 import {
-  affordableUpgrades, applyAction, canRebirth, computeStats, createInitialState, currentLuck, isUpgrade, Rng, tick, upgradeCost,
-  upgradePrice, worldCount, worldThreat, TICK_MS, type CoreEvent, type GameAction, type GameState,
+  affordablePerks, affordableUpgrades, applyAction, canRebirth, computeStats, createInitialState, currentLuck, isUpgrade, perkNodeState,
+  perkTrees, Rng, tick, upgradeCost, upgradePrice, worldCount, worldThreat, TICK_MS, type CoreEvent, type GameAction, type GameState,
 } from '../src/core';
-import { BAL, RARITIES } from '../src/data';
+import { BAL, RARITIES, type AlleyPerkDef } from '../src/data';
+
+/**
+ * How the bot spends its loaves: 'cheapest' (the cheapest perk it can afford, whenever it can),
+ * 'focus' (each run picks one tree, the next in turn, and saves up to climb it to its top perk before
+ * buying anything else) or 'none' (perks never bought).
+ */
+export type PerkStrategy = 'cheapest' | 'focus' | 'none';
 
 export interface SimOptions {
   minutes: number;
@@ -19,8 +27,28 @@ export interface SimOptions {
   rebirth?: boolean;
   /** Jump ahead to the hardest world that looks easy (default true). */
   jump?: boolean;
+  /** Default 'cheapest'. */
+  perks?: PerkStrategy;
   startTime?: number;
   sampleEverySeconds?: number;
+}
+
+/** The perk the bot buys next, or null to wait. */
+function pickPerk(state: GameState, strategy: PerkStrategy): AlleyPerkDef | null {
+  if (strategy === 'none') return null;
+  const options = affordablePerks(state);
+  if (options.length === 0) return null;
+  // (A stable sort: equal prices go in catalog order.)
+  const cheapest = [...options].sort((a, b) => a.cost - b.cost)[0];
+  if (strategy === 'cheapest') return cheapest;
+  const trees = perkTrees();
+  const tree = trees[(state.rebirths - BAL.perks.unlockRebirths) % trees.length];
+  const left = tree.perks.filter((p) => perkNodeState(state, p.id) !== 'owned');
+  if (left.length === 0) return cheapest;
+  // Straight up the focused tree: the dearest perk open in it (the next step toward its top), saving up
+  // for it when it isn't affordable yet.
+  const next = left.filter((p) => perkNodeState(state, p.id) === 'open').sort((a, b) => b.cost - a.cost)[0];
+  return next && options.includes(next) ? next : null;
 }
 
 export interface SimSample {
@@ -44,6 +72,10 @@ export interface SimResult {
   /** Minute at which each world was first cleared (any rebirth). */
   clearedAt: Record<number, number>;
   rebirthAt: number[];
+  /** Perks bought, per run (index: rebirths when bought), with the minute. */
+  perksBought: { run: number; id: string; minute: number }[];
+  /** Loaves earned per run (index: rebirths). */
+  breadByRun: Record<number, number>;
   deaths: number;
   jumps: number;
   bossWins: number;
@@ -60,6 +92,9 @@ export function simulate(opts: SimOptions): SimResult {
   state = applyAction(state, { type: 'openDumpster' }, rng, now).state;
   const clearedAt: Record<number, number> = {};
   const rebirthAt: number[] = [];
+  const perksBought: SimResult['perksBought'] = [];
+  const breadByRun: Record<number, number> = {};
+  const strategy = opts.perks ?? 'cheapest';
   const samples: SimSample[] = [];
   const rarityCounts: Record<string, number> = Object.fromEntries(RARITIES.map((r) => [r, 0]));
   let deaths = 0;
@@ -79,6 +114,8 @@ export function simulate(opts: SimOptions): SimResult {
       if (e.type === 'bossWin') bossWins++;
       if (e.type === 'roll') rarityCounts[e.item.rarity]++;
       if (e.type === 'rebirth') rebirthAt.push(elapsed / 60000);
+      if (e.type === 'breadEarned') breadByRun[state.rebirths] = (breadByRun[state.rebirths] ?? 0) + e.loaves;
+      if (e.type === 'perkBought') perksBought.push({ run: state.rebirths, id: e.id, minute: elapsed / 60000 });
     }
   };
   const act = (a: GameAction) => {
@@ -114,6 +151,12 @@ export function simulate(opts: SimOptions): SimResult {
         if (options.length === 0) break;
         options.sort((a, b) => upgradePrice(state, a) - upgradePrice(state, b));
         act({ type: 'buyUpgrade', id: options[0].id });
+      }
+      // Eat the loaves on perks (they open with the second rebirth).
+      for (let guard = 0; guard < 30; guard++) {
+        const perk = pickPerk(state, strategy);
+        if (!perk) break;
+        act({ type: 'buyPerk', id: perk.id });
       }
     }
 
@@ -160,5 +203,5 @@ export function simulate(opts: SimOptions): SimResult {
       });
     }
   }
-  return { samples, clearedAt, rebirthAt, deaths, jumps, bossWins, final: state, rarityCounts };
+  return { samples, clearedAt, rebirthAt, perksBought, breadByRun, deaths, jumps, bossWins, final: state, rarityCounts };
 }

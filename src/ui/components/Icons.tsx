@@ -62,3 +62,5 @@ export const TvIcon = (p: P) => <Pix name="tv" {...p} />;
 export const ReelIcon = ({ gold, ...p }: P & { gold?: boolean }) => <Pix name={gold ? 'reelGold' : 'reel'} {...p} />;
 /** Points right (Next, onward): drawn that way, so nothing has to rotate an arrow. */
 export const ArrowRightIcon = (p: P) => <Pix name="arrowRight" {...p} />;
+/** A Half-Eaten Bread Loaf: the currency Alley perks are bought with. */
+export const BreadIcon = (p: P) => <Pix name="bread" {...p} />;

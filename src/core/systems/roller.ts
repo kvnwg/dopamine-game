@@ -22,6 +22,7 @@ import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
 import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity } from './luck';
+import { perkBagMult, perkFx, perkSpinMult, rigSpin } from './perks';
 import { addXp } from './progression';
 import { rebirthGoldMult } from './rebirth';
 import { computeStats } from './stats';
@@ -29,12 +30,18 @@ import { upgradeEffects } from './upgrades';
 import { combatEffects } from './enchants';
 import { itemTierFor } from './worlds';
 
-/** Seconds for one spin cycle (spin + rest) at the current Spin Speed; turbo spins are faster. */
-export function spinCycle(state: Pick<GameState, 'upgrades'>, turbo = false): number {
+type PerkPick = Partial<Pick<GameState, 'perks'>>;
+
+/**
+ * Seconds for one spin cycle (spin + rest) at the current Spin Speed; turbo spins are faster. Alley perks
+ * go on top, past the usual floor (Greased Gears doubles the speed, Bootleg Reel slows every spin).
+ */
+export function spinCycle(state: Pick<GameState, 'upgrades'> & PerkPick, turbo = false): number {
   const r = BAL.roll;
   const levels = upgradeEffects(state).rollSpeed;
   const cycle = Math.max(r.minCycleSeconds, (r.spinSeconds + r.restSeconds) * Math.pow(1 - r.speedPerLevel, levels));
-  return turbo ? Math.max(r.minTurboCycleSeconds, cycle / (r.turboSpeedMult + upgradeEffects(state).turboPower)) : cycle;
+  const base = turbo ? Math.max(r.minTurboCycleSeconds, cycle / (r.turboSpeedMult + upgradeEffects(state).turboPower)) : cycle;
+  return base * perkSpinMult(state);
 }
 
 /** The share of a cycle spent spinning (the rest is the pause on the result). */
@@ -42,8 +49,9 @@ export function spinShare(): number {
   return BAL.roll.spinSeconds / (BAL.roll.spinSeconds + BAL.roll.restSeconds);
 }
 
-export function inventoryCapacity(state: GameState): number {
-  return BAL.inventory.baseCapacity + upgradeEffects(state).capacity;
+/** Bag space: the base plus Bag Space upgrades (Four-Leaf Litter, an Alley perk, cuts it). */
+export function inventoryCapacity(state: Pick<GameState, 'upgrades'> & PerkPick): number {
+  return Math.max(1, Math.floor((BAL.inventory.baseCapacity + upgradeEffects(state).capacity) * perkBagMult(state)));
 }
 
 export function enchantChance(state: GameState): number {
@@ -85,11 +93,11 @@ function lowestUnlockedIndex(bag: Item[]): number {
   return idx;
 }
 
-/** Gold and XP for scrapping an item (enchanted items are worth more; gold multipliers apply). */
+/** Gold and XP for scrapping an item (enchanted items are worth more; gold multipliers and Pawn Shop Hustle apply). */
 export function scrapValue(state: GameState, item: Item): { coins: number; xp: number } {
   const r = recycleRewards(item);
   const enchantBonus = 1 + 0.5 * item.enchants.reduce((s, e) => s + e.tier, 0);
-  const scrapBonus = 1 + upgradeEffects(state).scrapPct / 100;
+  const scrapBonus = (1 + upgradeEffects(state).scrapPct / 100) * perkFx(state).scrapGoldMult;
   return {
     coins: Math.round(r.coins * enchantBonus * goldMult(state) * scrapBonus * BAL.economy.scrapGoldMult),
     xp: Math.round(r.xp * enchantBonus * BAL.economy.scrapXpMult * xpMult(state)),
@@ -104,6 +112,20 @@ export function scrapItem(d: GameState, item: Item, ev: CoreEvent[], auto: boole
   d.lifetime.itemsRecycled += 1;
   ev.push({ type: 'scrap', item: snap(item), xp, coins, auto });
   addXp(d, xp, ev);
+}
+
+/** A bag over its space (Four-Leaf Litter halved it) scraps its weakest unlocked items until it fits. */
+export function trimBag(d: GameState, ev: CoreEvent[]): number {
+  const cap = inventoryCapacity(d);
+  let n = 0;
+  while (d.inventory.length > cap) {
+    const worst = lowestUnlockedIndex(d.inventory);
+    if (worst < 0) break;
+    const [out] = d.inventory.splice(worst, 1);
+    scrapItem(d, snap(out), ev, true);
+    n++;
+  }
+  return n;
 }
 
 /** Puts an item in the bag, keeping it sorted by power. When full, the weakest unlocked item is scrapped. */
@@ -150,9 +172,9 @@ function decidePlacement(d: GameState, item: Item): RollPlacement {
   return worst >= 0 && item.power > d.inventory[worst].power ? 'bag' : 'scrapped';
 }
 
-/** How many reels roll at once (1, plus the Extra Reel upgrade). */
-export function reelCount(state: Pick<GameState, 'upgrades'>): number {
-  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels)));
+/** How many reels roll at once (1, plus the Extra Reel upgrade and Bootleg Reel, an Alley perk). */
+export function reelCount(state: Pick<GameState, 'upgrades'> & PerkPick): number {
+  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels) + Math.round(perkFx(state).extraReels)));
 }
 
 /** Lucky and golden are decided once per spin and cover every reel. The tutorial spin is neither. */
@@ -224,14 +246,23 @@ export function chainFloor(mult: number): Rarity | null {
 
 /**
  * The luck tokens a reel lands on before its item, in order (usually none). The first comes with
- * `chance`; once one has landed, every re-roll lands another with `chainChance`.
+ * `chance` (times `chanceMult`: Four-Leaf Litter, an Alley perk); once one has landed, every re-roll
+ * lands another with `chainChance`.
  */
-export function rollTokens(rng: Rng): number[] {
+export function rollTokens(rng: Rng, chanceMult = 1): number[] {
   const m = BAL.roll.multiplier;
   const pool = m.values.map((v) => [String(v.x), v.weight] as const);
+  const first = Math.min(0.5, m.chance * chanceMult);
   const out: number[] = [];
-  while (out.length < m.maxSteps && rng.chance(out.length === 0 ? m.chance : m.chainChance)) out.push(Number(rng.weighted(pool)));
+  while (out.length < m.maxSteps && rng.chance(out.length === 0 ? first : m.chainChance)) out.push(Number(rng.weighted(pool)));
   return out;
+}
+
+/** The rarer of two floors (either may be null). */
+function higherFloor(a: Rarity | null, b: Rarity | null): Rarity | null {
+  if (!a) return b;
+  if (!b) return a;
+  return rarityAtLeast(a, b) ? a : b;
 }
 
 /**
@@ -262,9 +293,12 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
   const reels: { item: Item; odds: number; mults: number[]; landAt: number; landed: boolean }[] = [];
   let dry = d.dumpster.dryStreak;
+  // Rigged Jackpot (an Alley perk): every Nth spin, every reel lands at least its rarity.
+  const rigged = scripted ? null : rigSpin(d);
+  const tokenChance = perkFx(d).tokenChanceMult;
   for (let i = 0, n = reelCount(d); i < n; i++) {
     // No tokens on the tutorial spin or a forced (debug) roll; dev cheats can force a chain.
-    let mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng) : [];
+    let mults = d.dumpster.firstDiveDone && !d.dumpster.forcedRarity ? rollTokens(rng, tokenChance) : [];
     if (d.dumpster.forcedTokens) {
       mults = d.dumpster.forcedTokens;
       d.dumpster.forcedTokens = null;
@@ -277,7 +311,8 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     // Beginner's luck lands in the tutorial item's slot: it upgrades what the raccoon got first.
     const tut = BAL.dumpster.tutorialItem.baseId;
     const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
-    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined, chainFloor(tokenMult(mults)));
+    const floor = higherFloor(chainFloor(tokenMult(mults)), rigged);
+    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined, floor);
     if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     reels.push({ item, odds: itemOddsOneIn(item), mults, landAt: baseSpinSeconds + mults.length * stepSeconds, landed: false });
@@ -290,6 +325,7 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt })),
     lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds,
     ...(scripted ? { scripted } : {}),
+    ...(rigged ? { rigged } : {}),
   });
 }
 

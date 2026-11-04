@@ -61,6 +61,10 @@ interface UiState {
   drag: DragState | null;
   /** Selected hex on the upgrade map (`${line id}:${tier}`). */
   upgradeSel: string;
+  /** Which page of the Upgrades screen shows: the upgrade map, or the Perks page (Alley perks, from the second rebirth). */
+  upgradePage: 'upgrades' | 'perks';
+  /** The perk selected on the Perks page (its id), or '' for the first one open. */
+  perkSel: string;
   /** The tab to go back to when the full-screen upgrade map closes. */
   prevTab: Tab;
   /** Where the upgrade map was panned and zoomed to (kept while the app runs). */
@@ -71,8 +75,11 @@ interface UiState {
   haul: { id: number; coins: number; minutes: number; count: number; size: HaulSize } | null;
   /** Bumped when coins land on the gold counter (it pulses). */
   goldPulse: number;
-  /** The last boss win, for the "again or next?" card (first clears list their rewards). */
-  afterBoss: { world: number; firstTime: boolean; gems: number } | null;
+  /**
+   * The last boss win, for the "again or next?" card (first clears list their rewards, and a world
+   * beaten for the first time this run with perks open its Half-Eaten Bread Loaves).
+   */
+  afterBoss: { world: number; firstTime: boolean; gems: number; loaves?: number } | null;
   /** Items the last rebirth unlocked (shown after the rebirth burst). */
   unlocked: { count: number; ids: string[] } | null;
   /** A luck token just landed on reel `reel`: it flies out of that reel and slams onto the screen, on any tab (TokenSlam, tokenFx.ts). */
@@ -99,6 +106,8 @@ export const useUi = create<UiState>((set) => ({
   newCodexKeys: [],
   drag: null,
   upgradeSel: 'luck:1',
+  upgradePage: 'upgrades',
+  perkSel: '',
   prevTab: 'alley',
   mapView: null,
   haul: null,

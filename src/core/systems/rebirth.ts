@@ -1,14 +1,15 @@
 /**
  * Rebirth: once you beat the required world and hold enough gold, start over from scratch in
  * World 1 with permanent multipliers (luck, gold, ATK/HP, cheaper upgrades). Wipes world progress,
- * gold, the upgrade tree, every item (equipped and in the bag), and level/XP. Keeps the Dumpster
- * Level, Codex, Gems and best-find record. Each rebirth also unlocks more items for the dumpster
- * (unlocks.ts).
+ * gold, the upgrade tree, every item (equipped and in the bag), level/XP, and the run's Half-Eaten
+ * Bread Loaves and Alley perks. Keeps the Dumpster Level, Codex, Gems and best-find record. Each
+ * rebirth also unlocks more items for the dumpster (unlocks.ts).
  */
 import { BAL } from '../../data';
 import { emptyEquipment, type GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { startStage } from './combat';
+import { resetPerks } from './perks';
 import { growth, worldCount } from './stages';
 import { unlocksAt } from './unlocks';
 
@@ -53,6 +54,8 @@ export function doRebirth(d: GameState, ev: CoreEvent[]): boolean {
   d.stage.losses = 0;
   d.offline.buckets = [];
   d.offline.trackingSince = null;
+  // The run's loaves and perks go with it: the next run builds its own.
+  resetPerks(d);
   // A tutorial still waiting for beginner's luck to go on ends here (the bag it was in is gone).
   if (d.dumpster.beginner.state !== 'done') d.dumpster.beginner = { state: 'done', uid: null };
   ev.push({ type: 'rebirth', count: d.rebirths, unlocked: unlocksAt(d.rebirths).map((i) => i.id) });

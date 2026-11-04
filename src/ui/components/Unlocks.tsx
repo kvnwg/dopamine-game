@@ -10,6 +10,7 @@ import { useGame } from '../../app/store';
 import { audio } from '../../services/audio';
 import { itemArt } from '../../render/icons';
 import { HeistNavIcon } from './heistShared';
+import { BreadIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
@@ -33,13 +34,15 @@ export function UnlockPreview() {
   const next = rebirths + 1;
   if (rebirths >= finalUnlock()) return <div className={s.preview}><span className={s.title}>{t('rebirth.allUnlocked')}</span></div>;
   const ids = unlocksAt(next).map((i) => i.id);
-  // The first rebirth also opens Heists (BAL.heist.unlockRebirths).
+  // The first rebirth also opens Heists (BAL.heist.unlockRebirths), the second the Perks page (BAL.perks.unlockRebirths).
   const heists = next === BAL.heist.unlockRebirths;
+  const perks = next === BAL.perks.unlockRebirths;
   return (
     <div className={s.preview}>
       <span className={s.title}>
         {t('rebirth.unlocksNext', { n: ids.length })}
         {heists && ` ${t('rebirth.opensHeists')}`}
+        {perks && ` ${t('rebirth.opensPerks')}`}
       </span>
       <Strip ids={ids} />
     </div>
@@ -68,6 +71,12 @@ export function UnlockedFx() {
           <span className={s.heistsOpen}>
             <HeistNavIcon size="md" />
             {t('rebirth.heistsOpen')}
+          </span>
+        )}
+        {unlocked.count === BAL.perks.unlockRebirths && (
+          <span className={s.heistsOpen}>
+            <BreadIcon size="md" />
+            {t('rebirth.perksOpen')}
           </span>
         )}
       </div>

@@ -1,28 +1,34 @@
 /**
- * The upgrade map (Roblox style): a full-screen honeycomb that grows out of Luck I. Every tier of
- * every upgrade line is one hex. Owned hexes are bright, the next buyable ones are dark with their
- * price, the ones just past those show "?", and everything further out stays hidden until you get
- * close. Gold hexes are one-off specials. Drag to pan, pinch or scroll to zoom, tap a hex for its
- * details, and hold Buy to keep buying up a line.
+ * The Upgrades screen. Its first page is the upgrade map (Roblox style): a full-screen honeycomb that
+ * grows out of Luck I. Every tier of every upgrade line is one hex. Owned hexes are bright, the next
+ * buyable ones are dark with their price, the ones just past those show "?", and everything further
+ * out stays hidden until you get close. Gold hexes are one-off specials. Drag to pan, pinch or scroll
+ * to zoom, tap a hex for its details, and hold Buy to keep buying up a line.
+ *
+ * From the second rebirth a switch at the top leads to its second page, the Perks page (PerksPage.tsx:
+ * Alley perks bought with Half-Eaten Bread Loaves). After the first rebirth the switch shows it locked,
+ * as a taste of what's coming; before that the screen is just the map.
  *
  * Zooming scales the map (hex shapes, lines and words) but never the pixel art: the hexes' icons live
  * in their own layer on top that only moves, by whole stage px, so they stay 6 px per art pixel at
  * every zoom (and hide when the map is zoomed far out).
  */
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { BAL, DATA, nodeKey, type HexNode } from '../../data';
-import { computeStats, drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
+import { affordablePerks, computeStats, drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, perksOpen, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
 import { dispatch, getGame, useGame } from '../../app/store';
 import { uiIcon } from '../../render/icons';
 import type { UiIcon } from '../../render/pixel/ui';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
+import { featureView, seeFeature } from '../features';
 import { useCountUp } from '../hooks';
 import { t } from '../i18n';
 import { stagePoint } from '../drag';
 import { useUi } from '../uiStore';
 import { Chunky } from './Chunky';
-import { CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
+import { BreadIcon, CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
+import { PerksPage } from './PerksPage';
 import { PixelArt } from './PixelArt';
 import s from './hexmap.module.css';
 
@@ -353,7 +359,80 @@ interface View {
   k: number;
 }
 
+/* ---------------------------------------------------------------- the switch between the two pages */
+
+/**
+ * How the Perks tab shows: 'hidden' in a run before the first rebirth (nothing new yet), 'locked' (a
+ * taste of what's coming after the first rebirth, or waiting for its turn to be introduced), 'intro'
+ * (just opened: it blinks until tapped) or 'open'.
+ */
+type PerksTab = 'hidden' | 'locked' | 'intro' | 'open';
+
+function perksTab(g: GameState): PerksTab {
+  if (!perksOpen(g)) return g.rebirths >= 1 ? 'locked' : 'hidden';
+  return featureView(g, 'perks');
+}
+
+function PageTabs({ page, perks }: { page: 'upgrades' | 'perks'; perks: PerksTab }) {
+  const bread = useGame((g) => g.perks.bread);
+  const canBuy = useGame((g) => affordablePerks(g).length > 0);
+  const [nope, setNope] = useState(false);
+  const open = (p: 'upgrades' | 'perks') => {
+    if (p === 'perks' && perks === 'locked') {
+      haptics.impact('light');
+      setNope(true);
+      setTimeout(() => setNope(false), 400);
+      useUi.getState().toast(perksOpen(getGame()) ? t('nav.locked') : t('perks.lockedToast', { n: BAL.perks.unlockRebirths }), 'info');
+      return;
+    }
+    haptics.impact('light');
+    if (p === 'perks') seeFeature('perks');
+    useUi.setState({ upgradePage: p });
+  };
+  return (
+    <div className={s.tabs} data-ui>
+      <button className={s.tab} data-on={page === 'upgrades' || undefined} onClick={() => open('upgrades')}>
+        {t('upgrades.tab')}
+      </button>
+      <button
+        className={s.tab}
+        data-on={page === 'perks' || undefined}
+        data-perks
+        data-locked={perks === 'locked' || undefined}
+        data-new={perks === 'intro' || undefined}
+        data-nope={nope || undefined}
+        onClick={() => open('perks')}
+      >
+        {perks === 'locked' ? <LockIcon size="sm" /> : <BreadIcon size="sm" />}
+        {t('perks.tab')}
+        {perks !== 'locked' && page !== 'perks' && bread > 0 && (
+          <span className={s.tabBread} data-buy={canBuy || undefined}>
+            {bread}
+          </span>
+        )}
+      </button>
+      {perks === 'locked' && !perksOpen(getGame()) && <span className={s.tabNote}>{t('perks.lockedTab', { n: BAL.perks.unlockRebirths })}</span>}
+    </div>
+  );
+}
+
+/** The Upgrades screen: the upgrade map, or (from the second rebirth) the Perks page. */
 export function UpgradeMap() {
+  const page = useUi((u) => u.upgradePage);
+  const perks = useGame(perksTab);
+  const tabs = perks === 'hidden' ? null : <PageTabs page={page === 'perks' && perks !== 'locked' ? 'perks' : 'upgrades'} perks={perks} />;
+  const close = () => {
+    audio.tap();
+    const ui = useUi.getState();
+    ui.setTab(ui.prevTab === 'upgrades' ? 'alley' : ui.prevTab);
+  };
+  if (page === 'perks' && (perks === 'open' || perks === 'intro')) return <PerksPage tabs={tabs} onClose={close} />;
+  return <HexMapPage tabs={tabs} onClose={close} />;
+}
+
+/* ---------------------------------------------------------------- the map page */
+
+function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void }) {
   const upgrades = useGame((g) => g.upgrades);
   const coins = useGame((g) => g.currencies.coins);
   const rebirths = useGame((g) => g.rebirths);
@@ -600,11 +679,6 @@ export function UpgradeMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel]);
 
-  const close = () => {
-    audio.tap();
-    const ui = useUi.getState();
-    ui.setTab(ui.prevTab === 'upgrades' ? 'alley' : ui.prevTab);
-  };
   const center = () => {
     audio.tap();
     const n = BY_KEY.get(sel) ?? BY_KEY.get(nodeKey(BAL.upgrades[0].id, 1))!;
@@ -694,7 +768,7 @@ export function UpgradeMap() {
 
       <div className={s.head}>
         <div className={s.titles}>
-          <Chunky text={t('upgrades.title')} size={64} grad="blue" />
+          {tabs ?? <Chunky text={t('upgrades.title')} size={64} grad="blue" />}
           <span className={s.sub}>
             {rebirths > 0 ? t('upgrades.subOff', { pct: discount }) : t('upgrades.sub')}
           </span>
@@ -716,7 +790,7 @@ export function UpgradeMap() {
             <CoinIcon size="md" />
             {formatNumber(shownCoins)}
           </span>
-          <button className={`btn red ${s.close}`} data-ui onClick={close}>
+          <button className={`btn red ${s.close}`} data-ui onClick={onClose}>
             {t('upgrades.close')}
           </button>
           <span className={s.barRight} data-ui>

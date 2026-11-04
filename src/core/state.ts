@@ -41,9 +41,9 @@ export const ItemSchema = z.object({
 /**
  * What a new game opens one by one (src/core/systems/features.ts): the dumpster itself (the player's
  * tap knocks its padlock off), then the Bag, luck, Upgrades, Worlds, the Codex, the dumpster's own
- * upgrades, Rebirth and Heists.
+ * upgrades, Rebirth, Heists and the Upgrades screen's Perks page.
  */
-export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist'] as const;
+export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks'] as const;
 export const FeatureSchema = z.enum(FEATURES);
 export type Feature = z.infer<typeof FeatureSchema>;
 
@@ -266,6 +266,45 @@ export const HeistStateSchema = z.object({
   bestWorld: z.number().int().nonnegative(),
 });
 
+// ---------------------------------------------------------------- Alley perks
+
+const count = z.number().int().nonnegative();
+const seconds = z.number().nonnegative().default(0);
+
+/**
+ * The run's Alley perks (src/core/systems/perks.ts): its Half-Eaten Bread Loaves (one, or more, for each
+ * world whose boss falls for the first time this run) and the perks they bought. A rebirth wipes it all.
+ */
+export const PerkStateSchema = z.object({
+  /** Loaves in the raccoon's pocket, to spend on perks. */
+  bread: count.default(0),
+  /** Loaves earned this run (bonus loaves included), and eaten (spent on perks). */
+  earned: count.default(0),
+  eaten: count.default(0),
+  /** The worlds whose boss fell this run: each paid its loaves once. */
+  worlds: z.array(z.number().int().positive()).default(() => []),
+  /** Perks bought this run, in order. */
+  owned: z.array(z.string()).default(() => []),
+  /** Spins since Rigged Jackpot last rigged one. */
+  jackpotSpins: count.default(0),
+  /** This world attempt: Playing Possum's second wind is spent; Raccoon Mafia's recruits. */
+  windUsed: z.boolean().default(false),
+  recruits: count.default(0),
+  /** Seconds toward each crew member's next move in the Alley battle. */
+  timers: z
+    .object({ pigeon: seconds, rats: seconds, heal: seconds, gull: seconds, mafia: seconds, golem: seconds })
+    .default(() => ({ pigeon: 0, rats: 0, heal: 0, gull: 0, mafia: 0, golem: 0 })),
+});
+export type PerkState = z.infer<typeof PerkStateSchema>;
+
+/** A run with no loaves and no perks (a new game, and every rebirth). */
+export function freshPerks(): PerkState {
+  return {
+    bread: 0, earned: 0, eaten: 0, worlds: [], owned: [], jackpotSpins: 0, windUsed: false, recruits: 0,
+    timers: { pigeon: 0, rats: 0, heal: 0, gull: 0, mafia: 0, golem: 0 },
+  };
+}
+
 export const GameStateSchema = z.object({
   saveVersion: z.number().int(),
   createdAt: z.number(),
@@ -357,6 +396,8 @@ export const GameStateSchema = z.object({
   features: z
     .object({ unlocked: z.array(FeatureSchema), seen: z.array(FeatureSchema) })
     .default(() => ({ unlocked: [...FEATURES], seen: [...FEATURES] })),
+  /** This run's loaves and perks. Saves from before perks start with none (save.ts counts the worlds already beaten). */
+  perks: PerkStateSchema.default(freshPerks),
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
@@ -437,5 +478,6 @@ export function createInitialState(now: number, seed: number): GameState {
     settings: { haptics: true, sound: true, music: true, soundVolume: 1, musicVolume: 1, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
     features: { unlocked: [], seen: [] },
+    perks: freshPerks(),
   };
 }

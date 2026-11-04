@@ -2,7 +2,50 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A mini roller off the Roll tab, a token's number out of the wheel, the machine shrinking away (Nov 4, newest)
+## Perks: Half-Eaten Bread Loaves and four perk trees (Nov 4, newest)
+
+Kevin: "within upgrades, allow player to unlock a seperste page in upgrades for perks, unlocked sfter 2 rebirths. perk trees are CREATIVE and fun augments that drastically change ur game, making it more of a roguelike, they can only be purchased with half eaten bread loaves, and u get on each time u defeat a world in that run".
+
+| # | Decision | Why |
+|---|---|---|
+| A1 | A run (rebirth to rebirth) earns **Half-Eaten Bread Loaves**: one (`perks.loavesPerWorld`) for each world whose boss falls for the first time in that run. Beating it again pays nothing; a world jumped past on the way up pays when its boss first falls. Loaves are only earned once perks are open, so the first two runs are exactly as before. A toast, a "+1 LOAF" over the raccoon and a line on the "again or next?" card announce them; the Perks page shows the pocket. | Kevin's request ("u get one each time u defeat a world in that run"). |
+| A2 | A rebirth eats every loaf and perk (`state.perks`, reset in rebirth.ts), so each run builds its own combination. | The roguelike part. |
+| A3 | The Upgrades screen gets a switch at the top, UPGRADES and PERKS. Before the first rebirth nothing changes; after it PERKS shows padlocked with "Opens at Rebirth 2" (tapped, it shakes and says so). With the second rebirth the `perks` feature opens (features.ts) and is introduced like the others: the gold NEW bubble, the hand and a blinking outline on the Upgrades tab, which then opens straight onto the Perks page. While the map page shows, the PERKS tab carries the pocket's loaves (green when a perk is affordable), and the Upgrades tab's "!" also counts affordable perks. Saves from before the locked start have every feature, Perks too; the page itself only exists from the second rebirth (`perksOpen`). | One new thing at a time, as L3; the switch is where Kevin asked for it. |
+| A4 | Four trees of five perks, all on one page: a root for 1 loaf, two 2-loaf perks hanging off it, a 3-loaf perk opened by either of those, and a 4-loaf top. Every perk is visible (owned ones glow in their tree's color, the ones open now show their price, green when affordable, the rest are dim) so a run can be planned; tap one for its card: its name, one punchy line, and its exact numbers, filled in from balance.json. Numbers in balance.json `perks` (validated by schemas.ts: every tree rooted and reachable, a perk dearer than the perks that open it, no unknown effect); text in strings.en.json (`perk.*`, `perkLine.*`, `perkFx.*`). | "Perk trees"; deeper is pricier. A test checks every number appears in its line. |
+| A5 | Where perks act: perks on the raccoon's stats (Energy Drink, Glass Cannon, Holy Crust) are in computeStats, so they count everywhere, heists included; the crew, the second wind, the rage and the changed enemies act in the Alley battle only (heists keep their own perks); the reel perks act on the reels and on offline rolls alike. The Worlds tab's threat counts the crew's damage, bosses taking more and the enemies perks make tougher. | Alley perks, distinct from heist perks, but honest numbers everywhere they show. |
+| A6 | The crew reuses the heist helpers' machinery (a share of ATK through DEF, no crits) with its own event (`crewHit`), drawn like a heist helper's peck in each helper's colors; Playing Possum's second wind stamps NOT TODAY!; Dr. Squeaks's heals pop green numbers. The battle's HP bar follows perks that change max HP. | Visible on the battle, no new sprites needed. |
+| A7 | Art: a 16 x 16 Half-Eaten Bread Loaf (a crusty loaf with score marks, a bite out of one end showing the crumb) with 10, 7 and 5 pixel versions, and four new icons (16 x 16 and 10 x 10): a sewer rat, a seagull with a stolen fry, a gangster fedora and a stale-bread golem. The other perks reuse icons (pigeon, heart, bolt, burst, potion, flame, skull, clover, coin, reel, gear, dice, backpack, target, star). | |
+| A8 | Balance (`npx tsx tools/sim.ts --minutes 240 --seeds 3`; the bot now eats its loaves on the cheapest perk it can afford). Before: rebirths at 21.7, 58.9, 102.9, 148.3, 185.5, 221.3 / 18.3, 41.8, 76.3, 109.5, 147.4, 183.8 / 29.2, 59.3, 107.1, 142.9, 182.4, 228.8 minutes, best world 16, 16, 15. After: 21.7, 58.9, 106.6, 143.4, 171.6, 199.5, 228.9 / 18.3, 41.8, 76.8, 109.7, 130.1, 162.3, 209.2 / 29.2, 59.3, 90.8, 130.8, 162.9, 196.6, best world 17, 17, 16, World 20 never. The first two runs are identical; from the third, runs average 33.9 minutes against 39.5 (about 14% shorter; a full run earns 11 to 22 loaves and eats 6 to 12 perks). A bot that instead climbs one tree to its top each run (`--perks focus`) gets best world 17 or 18, World 20 never. | "Make perks strong", but "World 20 in under 3 hours is too fast". |
+| A9 | Tuning notes (8 seeds, runs 3 and 4 replayed from the same state): doubling the reel speed alone made runs 0.77 times as long even with bosses hitting twice as hard (every roll-driven gain doubles: gear, scrap gold and XP), so Greased Gears is the reels tree's 3-loaf perk, not its root; a 25% pigeon and a 1% heal barely mattered (0.97), so the crew hits harder (40%, 2%). With every perk as first drafted (Greased Gears at the root, Glass Cannon x2.5) runs took half as long and World 20 fell at 3h57. | |
+| A10 | A save from before perks loads with an empty pocket; if it is already past the second rebirth, every world beaten this run counts as paid (one loaf each, save.ts `backfillBread`), so a raccoon mid-run can try perks at once. | Kevin plays an existing save. |
+| A11 | The dev panel adds +5 bread and shows the pocket and the perks; the simulator takes `--perks cheapest|focus|none` and prints each run's loaves and perks. | |
+
+The perks (loaves; what opens it; what it does, with today's numbers):
+
+| Tree | Perk | Loaves | Opens with | Does |
+|---|---|---|---|---|
+| THE ALLEY CREW ("Friends from the bottom of the bin.") | Pigeon Wingman | 1 | (root) | A pigeon pecks the front enemy for 40% of ATK every 1s. |
+| | Sewer Cousins | 2 | Pigeon Wingman | Rats gnaw every enemy on screen for 12% of ATK every 1s. |
+| | Dr. Squeaks | 2 | Pigeon Wingman | Heals 2% of max HP every 1s in a fight. |
+| | Seagull Air Strike | 3 | Sewer Cousins or Dr. Squeaks | Every 6s it dive-bombs every enemy for 150% of ATK. |
+| | Raccoon Mafia | 4 | Seagull Air Strike | Each regular beaten joins until the world ends (up to 4), each hitting for 30% of ATK every 1s. |
+| BAD DECISIONS ("Every raccoon's favorite life coach: nobody.") | Expired Energy Drink | 1 | (root) | +50% attack speed, -25% max HP. |
+| | Glass Cannon | 2 | Energy Drink | x2 ATK, x0.5 max HP. |
+| | Playing Possum | 2 | Energy Drink | Once per world attempt, the first knockout leaves the raccoon standing at 40% HP. |
+| | Hold My Soda | 3 | Glass Cannon or Playing Possum | Below 35% HP, his hits deal x2.5 damage. |
+| | YOLO | 4 | Hold My Soda | Bosses take x2 damage from everything, but regular enemies hit 60% harder. |
+| RIGGED REELS ("The house always wins. You're the house now.") | Four-Leaf Litter | 1 | (root) | Luck tokens land x3 as often, but the bag holds 50% less (a full bag scraps its weakest unlocked items at once). |
+| | Pawn Shop Hustle | 2 | Four-Leaf Litter | Scrapped items sell for x2 gold. |
+| | Bootleg Reel | 2 | Four-Leaf Litter | +1 reel on every spin, but every spin takes 50% longer. |
+| | Greased Gears | 3 | Pawn Shop Hustle or Bootleg Reel | The reels spin x2 as fast (past the usual floor), but bosses hit 100% harder. |
+| | Rigged Jackpot | 4 | Greased Gears | One spin in every 25 is rigged: every reel lands Legendary or better. |
+| THE BREAD CULT ("Praise the Loaf.") | Sourdough Starter | 1 | (root) | Every 3 worlds beaten this run bake a bonus loaf. |
+| | Carb Loading | 2 | Sourdough Starter | +10% luck for every uneaten loaf in the pocket. |
+| | Bread Bait | 2 | Sourdough Starter | Every world pays +1 loaf, but bosses have +50% HP. |
+| | Holy Crust | 3 | Carb Loading or Bread Bait | +4% ATK and max HP for every loaf eaten this run. |
+| | Gluten Golem | 4 | Holy Crust | Every 2s a stale-bread golem slams the front enemy for 15% of ATK per loaf earned this run. |
+
+## A mini roller off the Roll tab, a token's number out of the wheel, the machine shrinking away (Nov 4)
 
 Kevin: "when ur not on the rolling page, there should still be a mini roller on the top left of ur screen under the settings, that plays the sound and still shows u rolls", "when u hit a multiplier, the number should come out of wheel, get big, and then slam down into the middle of ur screen. whereever the wheel might be. u dont need a mini roller if ur on the roller tab. add a little animation of the roller shrinking into the top left when u leave the tab".
 
@@ -11,6 +54,7 @@ Kevin: "when ur not on the rolling page, there should still be a mini roller on 
 | M1 | Off the Roll tab (once the dumpster is open), a mini roller sits under the settings gear (MiniRoller.tsx): a 16 x 16 window per reel, two to a row with an odd last one centred. While a reel spins, black silhouettes of unlocked items flick past, slower as its stop comes; a luck token shows its clover with a green rim for the token's hold; the find lands in color with a rim in its rarity's light. It plays the reels' own sounds (start, ticks, re-spins, landings; the token's chime still comes from tokenFx.ts, once). It runs on core's roll timer like the big reels, so it shows the same spin at the same moment, and comes back showing what it last showed. Tap it to go to the Roll tab. Not shown on the Roll tab. | Kevin's request. Item pictures as drawn (no Scale2x) to stay small. Two to a row keeps it to the corner (at most 228 x 336 stage px for 5 reels) and clear of the luck chains across the top of the battle up to four tokens long; three in a row covered a three-token chain. |
 | M2 | A luck token's slam now starts in its reel (TokenSlam.tsx): it pops up out of the reel it landed on (the Roll tab's reels, or the mini roller's window on any other tab) at the size it's drawn there, flies to the middle of the screen growing a size at a time to its Scale3x picture (0.32 s, easing out), hangs there a beat, then slams down as before (T2, R3). Its three sizes are in place from the start, so no size is ever blank while it loads. Reduced motion: no flight, the slam simply shows. | "The number should come out of the wheel, get big, and then slam down into the middle of the screen, wherever the wheel might be." |
 | M3 | Leaving the Roll tab, a copy of the machine shrinks in five steps (0.3 s) from where it was into the mini roller's spot, which fades in as it lands. Not with reduced motion. The copy is only a picture: a token landing meanwhile flies out of the mini roller, and the tutorial's hand doesn't point at it. | "A little animation of the roller shrinking into the top left when u leave the tab." |
+
 
 ## Big chains pay off, a loss retries the world, volume sliders, sound that always starts (Nov 4)
 

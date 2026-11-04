@@ -7,7 +7,8 @@
  *  - luck and the Codex, once the tutorial is over;
  *  - Upgrades and the dumpster's own upgrade, once the tutorial is over and one is affordable;
  *  - Worlds, once World 1's boss is beaten; Rebirth, a couple of worlds before the first rebirth's;
- *  - Heists, with the first rebirth (BAL.heist.unlockRebirths).
+ *  - Heists, with the first rebirth (BAL.heist.unlockRebirths);
+ *  - the Upgrades screen's Perks page, with the second rebirth (BAL.perks.unlockRebirths).
  * Core decides when each opens; the UI introduces them one at a time (the tutorial points at it) and
  * marks each `seen`. Saves from before this have everything (state.ts).
  */
@@ -15,6 +16,7 @@ import { BAL } from '../../data';
 import { FEATURES, type Feature, type GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { upgradeCost as dumpsterUpgradeCost } from './dumpster';
+import { perksOpen } from './perks';
 import { rebirthRequirement } from './rebirth';
 import { affordableUpgrades } from './upgrades';
 
@@ -61,6 +63,8 @@ function ready(d: GameState, f: Feature): boolean {
       return d.stage.highestCleared >= rebirthTabWorld() || d.rebirths > 0;
     case 'heist':
       return d.rebirths >= BAL.heist.unlockRebirths;
+    case 'perks':
+      return perksOpen(d);
   }
 }
 

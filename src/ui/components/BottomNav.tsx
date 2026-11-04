@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DATA } from '../../data';
-import { affordableUpgrades, canRebirth, inventoryCapacity, isUpgrade, worldThreat, type Feature } from '../../core';
+import { affordablePerks, affordableUpgrades, canRebirth, inventoryCapacity, isUpgrade, worldThreat, type Feature } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
@@ -57,7 +57,10 @@ export function BottomNav() {
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewKey]);
-  const affordable = useGame((g) => affordableUpgrades(g).length > 0);
+  // An upgrade, or (once the Perks page is introduced) a perk, the raccoon can buy now.
+  const affordable = useGame((g) => affordableUpgrades(g).length > 0 || (featureView(g, 'perks') === 'open' && affordablePerks(g).length > 0));
+  // The Perks page is being introduced: it lives on the Upgrades screen, so that tab blinks too.
+  const perksIntro = useGame((g) => featureView(g, 'perks') === 'intro');
   const rebirth = useGame(canRebirth);
   const bagBadge = useGame((g) => g.inventory.length >= inventoryCapacity(g) || g.inventory.some((it) => isUpgrade(g, it)));
   const easyNext = useGame((g) => {
@@ -80,7 +83,7 @@ export function BottomNav() {
             aria-label={t(`tab.${d.id}`)}
             aria-disabled={locked || undefined}
             className={[s.tab, active ? s.active : '', locked ? s.locked : '', nope === d.id ? s.nope : ''].join(' ')}
-            data-new={view === 'intro' || undefined}
+            data-new={view === 'intro' || (d.id === 'upgrades' && perksIntro) || undefined}
             onClick={() => {
               if (locked) {
                 haptics.impact('light');
@@ -91,6 +94,11 @@ export function BottomNav() {
               }
               haptics.impact('light');
               if (f) seeFeature(f);
+              // The Perks page being introduced: the Upgrades screen opens straight onto it.
+              if (d.id === 'upgrades' && perksIntro) {
+                seeFeature('perks');
+                useUi.setState({ upgradePage: 'perks' });
+              }
               useUi.getState().setTab(d.id);
             }}
           >

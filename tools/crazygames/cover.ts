@@ -1,15 +1,18 @@
 /**
  * CrazyGames store covers and the logo, in the style of the store's tiles: the raccoon big in the frame,
- * all of him, his BBQ Spatula raised in his paw toward the top corner, over a soft, blurred view of the
- * town (World 1's sky, clouds and houses, as the title screen shows them), with a few flecks of light
- * and the game's sparkles on the blade. No text, no border.
+ * all of him, his BBQ Spatula raised in his paw toward the top corner, over a soft, blurred view of
+ * Lava Landfill (World 10: its orange sunset sky, clouds, red trees and houses), with a few flecks of
+ * light and the game's sparkles on the blade. No text, no border.
  *
  * The raccoon (his cheer pose, frame 13, as the battle shows him: hero.ts composeHero) and the spatula
  * (the game's BBQ Spatula item art) are the game's own pixels, both at one big pixel size and never
  * smoothed. Only the background is soft.
  *   ?w=800&h=800 : the output size.
  */
-import { titleArt, TITLE } from '../../src/render/titleScene';
+import { TITLE } from '../../src/render/titleScene';
+import { CLOUD_SCROLL0, LAYER_NAMES, layerRow, viewAtmo, worldArt, worldSeed } from '../../src/render/worldLook';
+import { glowOverlay, paintClouds, paintSky } from '../../src/render/pixel/atmosphere';
+import { DATA } from '../../src/data';
 import { blank, blit, fromRows, type PixelBuf } from '../../src/render/pixel/buf';
 import { composeHero } from '../../src/render/pixel/hero';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
@@ -48,8 +51,10 @@ const rnd = () => {
   return seed / 0x7fffffff;
 };
 
-// ---- the town behind, soft
-const A = titleArt('PLAY');
+// ---- the world behind, soft: built the way the title screen builds World 1 (titleScene.ts titleArt),
+// for any world, its sky stretched down to the title's height so the same windows fit.
+/** The world behind him: Lava Landfill, its orange sunset and red trees (eye-catching on the grid). */
+const WORLD = 10;
 const scene = document.createElement('canvas');
 scene.width = TITLE.w;
 scene.height = TITLE.h;
@@ -60,10 +65,25 @@ function tile(buf: PixelBuf, y: number, scroll: number) {
   const start = -(((scroll % buf.w) + buf.w) % buf.w);
   for (let x = start; x < TITLE.w; x += buf.w) sc.drawImage(c, x, y);
 }
-tile(A.sky, 0, 0);
-if (A.glow) sc.drawImage(cv(A.glow.buf), A.glow.x, A.glow.y);
-for (const cl of A.clouds) tile(cl.buf, cl.y, cl.scroll0);
-for (const name of ['far', 'mid', 'ground', 'fg'] as const) tile(A.layers[name].buf, A.layers[name].y, A.layers[name].scroll0);
+{
+  const world = worldArt(WORLD);
+  const { set } = world;
+  const wseed = worldSeed(WORLD);
+  const base = viewAtmo(DATA.worlds[WORLD - 1].look.atmo, set);
+  const d = TITLE.drop;
+  const atmo = {
+    ...base,
+    sky: [base.sky[0], ...base.sky],
+    horizon: base.horizon + d,
+    body: base.body && { ...base.body, y: base.body.y + d },
+    clouds: base.clouds && { ...base.clouds, y: base.clouds.y + d },
+  };
+  tile(paintSky(atmo, TITLE.w, TITLE.h, wseed, world.scale), 0, 0);
+  const glow = glowOverlay(atmo, wseed);
+  if (glow) sc.drawImage(cv(glow.buf), glow.x, glow.y);
+  paintClouds(atmo, wseed, world.scale).forEach((c, i) => tile(c.buf, c.y, CLOUD_SCROLL0[i] ?? 0));
+  for (const name of LAYER_NAMES) tile(world.layers[name], layerRow(set, name) + d, set.scroll0[name]);
+}
 
 {
   // The window onto the scene, widened to the cover's shape, drawn over the whole cover and blurred.
@@ -79,11 +99,11 @@ for (const name of ['far', 'mid', 'ground', 'fg'] as const) tile(A.layers[name].
   ctx.restore();
 }
 
-// A deeper blue toward the edges, so he stands out.
+// A deeper red toward the edges, so he stands out.
 {
   const g = ctx.createRadialGradient(W * 0.45, H * 0.55, Math.min(W, H) * 0.25, W * 0.45, H * 0.55, Math.hypot(W, H) * 0.65);
-  g.addColorStop(0, 'rgba(20,60,140,0)');
-  g.addColorStop(1, 'rgba(20,60,140,0.38)');
+  g.addColorStop(0, 'rgba(110,15,5,0)');
+  g.addColorStop(1, 'rgba(110,15,5,0.4)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }

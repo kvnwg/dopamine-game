@@ -16,7 +16,11 @@
     </style>
 
 
+    <!-- Launch: the game's navy with the raccoon in the middle (all Android versions, through
+         androidx core-splashscreen). The art comes from `npm run boot-art`. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

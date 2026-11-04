@@ -151,6 +151,43 @@ function logoLine(text: string, fill: readonly string[], depth: string): PixelBu
   return bordered(bordered(paintRows(letters, fill), depth, 0, 2), INK, 2, 2);
 }
 
+/** Where the title draws a logo `w` art px wide (titleLogo's buffer): its top-left in title art px, for the current shape. */
+export function titleLogoAt(w: number): { x: number; y: number } {
+  return { x: Math.floor((TITLE.w - w) / 2), y: LOGO_TOP };
+}
+
+/** The title's sky colors, top to bottom (world 1's banded sky under a deeper zenith). The loading screen paints the same bands. */
+export function titleSky(): string[] {
+  return [ZENITH, ...viewAtmo(DATA.worlds[0].look.atmo, worldArt(1).set).sky];
+}
+
+/**
+ * The whole logo for a game name ("Dumpster Legend": a line per word) in one buffer, laid out as the
+ * title shows it: lines centred, each overlapping the one above by its outline and drop. The loading
+ * screen and the app's splash images use it (src/boot/bootArt.ts).
+ */
+export function titleLogo(name: string): PixelBuf {
+  const words = name.trim().split(/\s+/);
+  const lines = (words.length > 1 ? [words[0], words.slice(1).join(' ')] : words).map((l, i) =>
+    logoLine(l, i === 0 ? LOGO_GOLD : LOGO_ICE, i === 0 ? LOGO_DEPTH.gold : LOGO_DEPTH.ice),
+  );
+  const w = Math.max(...lines.map((l) => l.w));
+  const h = lines.reduce((n, l) => n + l.h - 4, 4);
+  const out = blank(w, h);
+  let y = 0;
+  for (const l of lines) {
+    const x0 = Math.floor((w - l.w) / 2);
+    for (let yy = 0; yy < l.h; yy++) {
+      for (let xx = 0; xx < l.w; xx++) {
+        const i = (yy * l.w + xx) * 4;
+        if (l.px[i + 3]) out.px.set(l.px.subarray(i, i + 4), ((y + yy) * w + x0 + xx) * 4);
+      }
+    }
+    y += l.h - 4;
+  }
+  return out;
+}
+
 /** The PLAY label: the logo's bold face made finer, white with a one-pixel ink outline and drop (like .btn text). */
 function playLabel(text: string): PixelBuf {
   const plain = renderText(text, { face: 'huge', fill: '#ffffff', ink: null });

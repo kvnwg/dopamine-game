@@ -2,7 +2,21 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A PC version: the wide layout, mouse and keyboard (Nov 4, newest)
+## A loading screen worth looking at (Nov 4, newest)
+
+Kevin: "loading screen doesnt look good, make it better".
+
+| # | Decision | Why |
+|---|---|---|
+| B1 | What the player saw before: the page is one 3.8 MB script, and nothing of the game can draw until it has run. Until then the screen was plain navy: about 1 to 3 s on a PC and several seconds on a slow phone (9 s with the CPU slowed 4x in tests). The phone apps first showed Capacitor's stock splash: its blue logo on white. | |
+| B2 | The loading screen is plain HTML and CSS at the top of the page (`src/boot/boot.html`, put in by a Vite plugin and by tools/buildArtifact.mjs). It paints in about 0.2 s, before the script. It shows the title's banded sky and drifting clouds, the logo, a loading bar, a joke line and the raccoon walking along his street. Everything on it moves by transform and opacity, which browsers animate off the busy main thread, so it keeps moving while the script loads. | A screen that is up at once and keeps moving reads as loading, not broken. |
+| B3 | Its art is the game's own: the title's logo (`titleLogo`), sky and clouds, the hero's walk, world 1's sidewalk with the lampposts patched out, and the pixel font. `npm run boot-art` (src/boot/bootArt.ts) draws it into PNG data URLs. A test fails when boot.html no longer matches the art. | It stays the game's look without anyone redrawing it. |
+| B4 | The bar can't know how far the script has got (no code runs while it loads). It eases toward 95% over 14 s, then fills to the end once the title is up. A joke line changes every 2.5 s (`boot.line1` to `boot.line4`: "Digging through the trash...", "Bribing the pigeons..."). | |
+| B5 | The hand-off (src/ui/boot.ts) waits until the title is on screen under the loading screen and frames come steadily again; the battle engine starts just after the title. Then the bar fills, and the logo glides and shrinks (or grows) onto the title's own logo while the bar folds away. Only then do the sky, clouds and street fade, showing the title with its logo exactly where the other one stopped. The glide moves things by transform only. With `?notitle` it just fades; with reduced motion it goes at once. | In tests, a fade could hold the browser up for a quarter second; doing it after the glide keeps the glide smooth. |
+| B6 | Sizes use two art-pixel units that follow the screen: one for the logo, bar and text, a bigger one for the sky, street and raccoon. On 1x screens they are whole CSS pixels, so art pixels stay even; on phones' 2x to 3x screens they follow the screen's size. | |
+| B7 | Phone apps: Android's launch screen is the game's navy with the raccoon in the middle on every Android version, through androidx core-splashscreen (`windowSplashScreenBackground`, `windowSplashScreenAnimatedIcon`, inside the 192 dp circle Android 12+ shows). Capacitor's stretched splash PNGs are gone. iOS shows the logo with the raccoon under it on navy (the Splash images, aspect-filled). The app icon is still Capacitor's. | Not built on a device here: rebuild the apps to see it. |
+
+## A PC version: the wide layout, mouse and keyboard (Nov 4)
 
 Kevin: "make a PC version for this as well"; he picked a wide layout at the same link, with phones unchanged.
 

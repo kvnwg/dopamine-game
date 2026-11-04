@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launch screen's background: the game's navy (src/boot/bootArt.ts SPLASH_NAVY). -->
+    <color name="splash_background">#0D0F19</color>
+</resources>

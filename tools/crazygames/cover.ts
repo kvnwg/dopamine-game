@@ -1,15 +1,13 @@
 /**
  * CrazyGames store covers drawn from the game's own art: World 1's street and sky (titleArt), the
  * raccoon cheering, the dumpster with its lid blown off and rare finds bursting out of it in their
- * rarity colors, and the game's mark: the raccoon's face as the game draws him, raising his spatula
- * (raccoonMark.ts), no text.
+ * rarity colors. No text and no logo (the logo is its own image: raccoonMark.ts, renderLogo.ts).
  *
  * Everything is composed on a canvas of art pixels, then scaled up `k` times with no smoothing, so the
- * whole cover keeps square pixels. The raccoon, the finds and the logo use the game's Scale2x versions
- * (twice the art pixels at the same pixel size), as the reveal and showcase spots in the game do.
+ * whole cover keeps square pixels. The raccoon and the finds use the game's Scale3x and Scale2x versions
+ * (three and two times the art pixels at the same pixel size), as the reveal and showcase spots in the game do.
  */
 import { titleArt, TITLE } from '../../src/render/titleScene';
-import { raccoonFace } from './raccoonMark';
 import { fromRows, scale2x, scale3x, type PixelBuf } from '../../src/render/pixel/buf';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
 import { FX } from '../../src/render/pixel/ui';
@@ -62,14 +60,10 @@ for (const name of ['far', 'mid', 'ground', 'fg'] as const) {
 // ---- where things go (art px)
 // hero / dump: centre x as a fraction of the width; burstUp: how far the finds fly (art px).
 const P = {
-  land: { hero: 0.29, dump: 0.7, logoX: 0.25, logoY: 8, burstUp: 70, spread: 1.35 },
-  port: { hero: 0.26, dump: 0.64, logoX: 0.5, logoY: 10, burstUp: 62, spread: 1 },
-  square: { hero: 0.21, dump: 0.64, logoX: 0.5, logoY: 6, burstUp: 52, spread: 1.15 },
+  land: { hero: 0.29, dump: 0.7, burstUp: 70, spread: 1.35 },
+  port: { hero: 0.26, dump: 0.64, burstUp: 62, spread: 1 },
+  square: { hero: 0.21, dump: 0.64, burstUp: 52, spread: 1.15 },
 }[layout];
-
-// The logo's place (drawn last, on top); the finds keep clear of it.
-const logo = raccoonFace(layout === 'square' ? 3 : 4); // the game's pixels, straight on the cover's street
-const logoAt = { x: Math.max(2, Math.min(AW - logo.w - 2, Math.round(AW * P.logoX - logo.w / 2))), y: P.logoY };
 
 // ---- the dumpster, lid blown off, light pouring out
 const body = scale2x(fromRows(FX.dumpsterBody));
@@ -125,7 +119,6 @@ const finds: Array<[string, Rarity]> = [
   ['shield_pizza_box', 'legendary'],
   ['ring_plastic_diamond', 'museum'],
 ];
-const LAND_SPOTS: Array<[number, number]> = [[-2, -78], [-48, -50], [44, -54], [-12, -24], [80, -22], [28, -18]];
 const n = finds.length;
 finds.forEach(([id, rarity], i) => {
   const rows = ITEM_SPRITES[id];
@@ -134,15 +127,8 @@ finds.forEach(([id, rarity], i) => {
   const t = n === 1 ? 0.5 : i / (n - 1);
   const ang = Math.PI * (1.12 + t * 0.76); // a fan above the mouth
   const reach = P.burstUp * (i % 2 ? 0.78 : 1);
-  let x = Math.round(mouth.x + Math.cos(ang) * reach * P.spread - buf.w / 2);
-  let y = Math.round(mouth.y + Math.sin(ang) * reach - buf.h / 2);
-  // On the wide cover the logo sits up left, where the fan would reach: the finds are placed by hand
-  // in the sky to its right instead (centres, art px from the dumpster's mouth).
-  const spot = layout === 'land' ? LAND_SPOTS[i] : null;
-  if (spot) {
-    x = Math.max(logoAt.x + logo.w + 3, Math.round(mouth.x + spot[0] - buf.w / 2));
-    y = Math.round(mouth.y + spot[1] - buf.h / 2);
-  }
+  const x = Math.round(mouth.x + Math.cos(ang) * reach * P.spread - buf.w / 2);
+  const y = Math.round(mouth.y + Math.sin(ang) * reach - buf.h / 2);
   glow(x + buf.w / 2, y + buf.h / 2, 24, rarityColor(rarity), 0.85);
   ctx.drawImage(cv(buf), x, y);
 });
@@ -175,9 +161,6 @@ vg.addColorStop(0, 'rgba(0,0,0,0)');
 vg.addColorStop(1, 'rgba(8,10,30,0.45)');
 ctx.fillStyle = vg;
 ctx.fillRect(0, 0, AW, AH);
-
-// ---- the logo: the raccoon's face raising a spatula, on its sticker (no lettering)
-ctx.drawImage(cv(logo), logoAt.x, logoAt.y);
 
 // ---- scale up, crisp
 const out = document.getElementById('c') as HTMLCanvasElement;

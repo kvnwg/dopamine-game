@@ -1,5 +1,5 @@
 /**
- * The game's logo as its own image: the raccoon's face raising his spatula in front of the street
+ * The game's logo as its own image: the raccoon's face raising his spatula in front of the town
  * (raccoonMark.ts), a square with no outline, scaled up by whole pixels.
  *   npx tsx tools/crazygames/renderLogo.ts   ->  crazygames/logo/logo-720x720.png  (needs ffmpeg)
  */
@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { MARK, raccoonMark } from './raccoonMark';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const n = 10;
+const n = 20;
 const b = raccoonMark(n);
 const out = path.join(ROOT, 'crazygames', 'logo', `logo-${MARK.size * n}x${MARK.size * n}.png`);
 fs.mkdirSync(path.dirname(out), { recursive: true });

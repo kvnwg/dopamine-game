@@ -30,9 +30,9 @@ The requirements below were checked against the official docs at <https://docs.c
 | Landscape preview | `crazygames/video/preview-landscape-1920x1080.mp4` | 1080p 16:9, 17.1 s, 30 fps, silent, opens on the cover, 21.4 MB (limit 50 MB) |
 | Portrait preview | `crazygames/video/preview-portrait-1080x1620.mp4` | 1080p 2:3, 17.7 s, 30 fps, silent, opens on the cover, 22.5 MB (limit 50 MB) |
 
-**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, the dumpster with rare finds bursting out, and the game's mark. The mark is the raccoon's face exactly as the game draws him, raising his BBQ Spatula (his cheer pose, cropped to his face, paw and spatula, whole-pixel scaled: `tools/crazygames/raccoonMark.ts`), straight on the cover's street with no outline. There is no text at all (CrazyGames allows the title and nothing else), and no borders or icons.
+**Covers** are drawn from the game's own pixel art: World 1's street, the raccoon cheering, and the dumpster with rare finds bursting out. There is no text and no logo on them (CrazyGames allows the title and nothing else), and no borders or icons.
 
-**Logo** on its own: `crazygames/logo/logo-720x720.png`. It shows the same face in front of the street the game opens on, as a square with no outline.
+**Logo** on its own: `crazygames/logo/logo-720x720.png`. It shows the raccoon's face exactly as the game draws him, raising his BBQ Spatula, in front of the town on the hill behind World 1's street. He and the town are the same pixel size, in a square with no outline (`tools/crazygames/raccoonMark.ts`).
 
 **Previews** are a 17-second trailer of real gameplay, each in the layout players of that format see: the landscape one in the PC layout (the battle on the left, the dumpster's reels on the right), the portrait one in the phone layout. A dozen quick shots (0.5–1.9 s) with push-ins, punch-in zooms and shakes on the hits:
 1. The cover, dissolving into a close-up brawl in Lava Landfill: CRIT!s, big numbers, coins flying, LEVEL UP!

@@ -33,6 +33,13 @@
 .viewport:active {
   cursor: grabbing;
 }
+/* The faint honeycomb behind the hexes: one screen of it, its tile moved and scaled with the map. */
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: repeat;
+}
 .content {
   position: absolute;
   left: 0;
@@ -46,11 +53,6 @@
   position: absolute;
   overflow: visible;
   pointer-events: none;
-}
-.gridHex {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.045);
-  stroke-width: 3;
 }
 .linkEdge {
   stroke: var(--ink);

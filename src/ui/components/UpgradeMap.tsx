@@ -62,6 +62,21 @@ function hexPoints(r: number): string {
     .join(' ');
 }
 const OUTER = hexPoints(R * DRAW);
+/**
+ * The faint honeycomb behind the map, one tile of it (3R x 2HH, like the old SVG pattern) as a picture
+ * the map's window repeats under the hexes. It used to be a giant SVG inside the zoomed layer, padded
+ * 2400 px all round so it reached the screen's edges zoomed out: one huge layer the browser had to
+ * hold whole, which crashed phones (Kevin's tester, in landscape).
+ */
+const GRID_URL = (() => {
+  const w = 3 * R;
+  const h = 2 * HH;
+  const hexes = [[0, 0], [w, 0], [0, h], [w, h], [1.5 * R, HH]]
+    .map(([x, y]) => `<polygon points="${OUTER}" transform="translate(${x} ${y})"/>`)
+    .join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h.toFixed(2)}" viewBox="0 0 ${w} ${h.toFixed(2)}"><g fill="none" stroke="rgba(255,255,255,0.045)" stroke-width="3">${hexes}</g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+})();
 const INNER = hexPoints(R * DRAW - 12);
 const SHINE = `M${(-R * DRAW + 40).toFixed(1)} ${(-HH * DRAW + 22).toFixed(1)} L${(R * DRAW - 58).toFixed(1)} ${(-HH * DRAW + 22).toFixed(1)}`;
 
@@ -499,10 +514,17 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   };
   const iconsRef = useRef<HTMLDivElement>(null);
   const iconsK = useRef(-1);
+  const gridRef = useRef<HTMLDivElement>(null);
   const apply = () => {
     const v = viewRef.current;
     clamp(v);
     if (contentRef.current) contentRef.current.style.transform = `translate3d(${v.x}px, ${v.y}px, 0) scale(${v.k})`;
+    // The honeycomb behind: the map's tile, scaled with it, its origin on the map's (0, 0).
+    const grid = gridRef.current;
+    if (grid) {
+      grid.style.backgroundSize = `${3 * R * v.k}px ${2 * HH * v.k}px`;
+      grid.style.backgroundPosition = `${v.x}px ${v.y}px`;
+    }
     // The icons only move, by whole px; on a zoom each one moves to its hex's new spot.
     const layer = iconsRef.current;
     if (!layer) return;
@@ -694,7 +716,8 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const selNode = BY_KEY.get(sel) && shown.has(sel) ? BY_KEY.get(sel)! : undefined;
   const discount = Math.round((1 - Math.pow(1 - BAL.rebirth.upgradeDiscountPer, rebirths)) * 100);
   const links = hexes.filter((h) => h.node.prev && shown.has(h.node.prev));
-  const pad = 2400;
+  /** Room round the hexes for the links' strokes (they run between hex centers, inside the bounds). */
+  const pad = 40;
 
   return (
     <div className={s.overlay} data-calm={calm || undefined}>
@@ -716,20 +739,10 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
             <stop offset="0" stopColor="#2c3152" />
             <stop offset="1" stopColor="#181b30" />
           </linearGradient>
-          <pattern id="hxGrid" width={3 * R} height={2 * HH} patternUnits="userSpaceOnUse">
-            {[
-              [0, 0],
-              [3 * R, 0],
-              [0, 2 * HH],
-              [3 * R, 2 * HH],
-              [1.5 * R, HH],
-            ].map(([x, y]) => (
-              <polygon key={`${x},${y}`} points={OUTER} transform={`translate(${x} ${y})`} className={s.gridHex} />
-            ))}
-          </pattern>
         </defs>
       </svg>
       <div className={s.viewport} ref={viewportRef}>
+        <div className={s.grid} ref={gridRef} style={{ backgroundImage: GRID_URL }} aria-hidden />
         <div className={s.content} ref={contentRef}>
           <svg
             className={s.links}
@@ -739,7 +752,6 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
             viewBox={`${bounds.minX - pad} ${bounds.minY - pad} ${bounds.maxX - bounds.minX + 2 * pad} ${bounds.maxY - bounds.minY + 2 * pad}`}
             aria-hidden
           >
-            <rect x={bounds.minX - pad} y={bounds.minY - pad} width={bounds.maxX - bounds.minX + 2 * pad} height={bounds.maxY - bounds.minY + 2 * pad} fill="url(#hxGrid)" />
             {links.map(({ node, view }) => {
               const p = BY_KEY.get(node.prev!)!;
               return (

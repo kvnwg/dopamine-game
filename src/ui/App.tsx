@@ -37,6 +37,12 @@ import { STAGE_TALL, STAGE_WIDE, useUi } from './uiStore';
 /** A screen this much wider than tall gets the wide stage. */
 const WIDE_ASPECT = 1.25;
 
+/** The Upgrades screen failed: back to the tab under it. */
+function leaveUpgrades(): void {
+  const u = useUi.getState();
+  u.setTab(u.prevTab === 'upgrades' ? 'alley' : u.prevTab);
+}
+
 export function App() {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
@@ -82,7 +88,11 @@ export function App() {
             </div>
           </div>
           <div className={styles.nav}><BottomNav /></div>
-          {tab === 'upgrades' && <UpgradeMap />}
+          {tab === 'upgrades' && (
+            <SafeLayer name="upgrades" onError={leaveUpgrades}>
+              <UpgradeMap />
+            </SafeLayer>
+          )}
           <SafeLayer name="mini"><MiniRoller /></SafeLayer>
           <SafeLayer name="tokens"><TokenFlights /></SafeLayer>
           <SafeLayer name="drag"><DragLayer /></SafeLayer>

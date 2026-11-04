@@ -2,7 +2,17 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A world first, then the dumpster (Nov 4, newest)
+## The landscape Upgrades crash (Nov 4, newest)
+
+A tester: "it crashed a few times whenever i pressed upgrade but i turned my game into like portrait mode instead of landscape and it was fine".
+
+| # | Decision | Why |
+|---|---|---|
+| X1 | The upgrade map's faint background honeycomb is now one screen-sized background whose tile moves and scales with the map. It was a giant SVG inside the zoomed map layer, padded 2400 px on every side so it reached the screen's edges zoomed out: a 5300 x 5349 px layer even for a new player's eight hexes. With the map open, the page's compositing layers drop by about 60% (about 1.5 GB to 0.55 GB of pixels if fully drawn, on a 3x phone held sideways). | Too much graphics memory is what crashes or reloads a page on phones and in Safari, and that's the map's biggest cost. |
+| X2 | The Upgrades screen is guarded like every other full-screen layer (SafeLayer): if it throws while drawing, it is logged and closed (back to the tab under it) and the game keeps running. It was the only one without a guard, so any error in it took the whole game down. | |
+| X3 | The crash itself didn't happen here in Chromium: pressing Upgrades, hexes and Buy, and the dumpster's Upgrade, over and over on a fresh and a mid-game save, at laptop and sideways-phone sizes, gave no errors. Safari's engine isn't available here to try. | So X1 and X2 are the likely causes and a safety net, not a confirmed reproduction. |
+
+## A world first, then the dumpster (Nov 4)
 
 Kevin: "i think the best order is to have them start on a world, and then unlock the roller".
 

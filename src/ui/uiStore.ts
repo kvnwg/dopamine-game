@@ -3,6 +3,13 @@ import { create } from 'zustand';
 import type { HaulSize, Item, RollDrama, RollPlacement } from '../core';
 import type { AdPlacement } from '../services';
 
+/**
+ * The stage in stage px: tall on phones (the battle over the menus), wide on PC screens (the battle on
+ * the left, the menus and tabs on the right). App.tsx picks one from the screen's shape.
+ */
+export const STAGE_TALL = { w: 1080, h: 1920 } as const;
+export const STAGE_WIDE = { w: 2160, h: 960 } as const;
+
 export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll';
 export type Tab = 'alley' | 'heist' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
@@ -61,6 +68,8 @@ interface UiState {
   drag: DragState | null;
   /** Selected hex on the upgrade map (`${line id}:${tier}`). */
   upgradeSel: string;
+  /** The wide stage (PC screens, App.tsx): the battle on the left, the menus on the right. */
+  wide: boolean;
   /** Which page of the Upgrades screen shows: the upgrade map, or the Perks page (Alley perks, from the second rebirth). */
   upgradePage: 'upgrades' | 'perks';
   /** The perk selected on the Perks page (its id), or '' for the first one open. */
@@ -106,6 +115,7 @@ export const useUi = create<UiState>((set) => ({
   newCodexKeys: [],
   drag: null,
   upgradeSel: 'luck:1',
+  wide: false,
   upgradePage: 'upgrades',
   perkSel: '',
   prevTab: 'alley',
@@ -125,3 +135,8 @@ export const useUi = create<UiState>((set) => ({
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), Math.max(3500, 1400 + text.length * 55));
   },
 }));
+
+/** The stage's size right now (stage px). */
+export function stageSize(): { w: number; h: number } {
+  return useUi.getState().wide ? STAGE_WIDE : STAGE_TALL;
+}

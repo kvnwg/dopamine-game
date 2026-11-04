@@ -11,7 +11,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  currentLuck, drySpell, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
+  currentLuck, drySpell, dumpsterUpgradeReady, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
 } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
@@ -115,11 +115,7 @@ function LastRoll() {
           {itemName(it)}
         </span>
         <div className={s.chips}>
-          {upgrade ? (
-            <span className={`${s.chip} ${s.chipUpgrade}`}>{t('roll.dragHint')}</span>
-          ) : (
-            last.placed !== 'bag' && <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>
-          )}
+          {last.placed !== 'bag' && <span className={`${s.chip} ${s[`placed_${last.placed}`]}`}>{t(`roll.placed.${last.placed}`)}</span>}
           {last.scripted === 'beginner' && <span className={`${s.chip} ${s.chipBeginner}`}>{t('reveal.beginner')}</span>}
           {last.mult > 1 && <span className={`${s.chip} ${s.chipLucky}`}>{t('reel.token', { x: formatNumber(last.mult) })}</span>}
           {last.golden && <span className={`${s.chip} ${s.chipGold}`}>{t('reel.golden')}</span>}
@@ -197,6 +193,8 @@ export function AlleyPanel() {
   const bl = BAL.dumpster.badLuck;
   const pityOn = level >= bl.minDumpsterLevel;
   const maxed = level >= BAL.dumpster.maxLevel;
+  // Green (go) only when it can be bought now; grey while it can't, so it never asks for gold he doesn't have.
+  const canUpgrade = useGame(dumpsterUpgradeReady);
   // A new game shows these one at a time, as the tutorial introduces them (features.ts).
   const dumpsterView = useFeatureView('dumpster');
   const luckView = useFeatureView('luck');
@@ -210,7 +208,7 @@ export function AlleyPanel() {
   const title = <span className={s.binTitle}>{dumpsterView === 'locked' ? t('roll.dumpsterPlain') : t('roll.dumpster', { level })}</span>;
   const upgradeBtn = dumpsterView !== 'locked' && (
     <button
-      className={`btn small ${endsAt === null && !maxed ? '' : 'gray'}`}
+      className={`btn small ${canUpgrade ? '' : 'gray'}`}
       onClick={() => open('upgrade')}
       data-intro="dumpster"
       data-new={dumpsterView === 'intro' || undefined}

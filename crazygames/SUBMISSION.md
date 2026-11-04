@@ -15,10 +15,7 @@ The requirements below were checked against the official docs at <https://docs.c
 
    Confirm each license allows commercial web distribution, or replace that art.
 2. **Brand name:** the item **"Crocs"** (`src/data/items.json`) is a real trademark. Rename it, for example "Croc-Clogs" or "Swamp Clogs". `CONTENT_TODO.md` already marks names for a rewrite.
-3. **Desktop readability (risk).** The game is a 9:16 portrait layout. In CrazyGames' 16:9 desktop frame it shows as a centered column. It reads fine at 1216×684 and up, but at their smallest desktop sizes (around 800×450) the small UI text is roughly 6–8 px tall. CrazyGames requires text to be legible at those sizes. Choose one:
-   - Submit for **mobile only** at first.
-   - Submit for desktop too and see what their QA says.
-   - Build a landscape layout for desktop, with the battle on the left and the panels on the right. That's a bigger UI job.
+3. **Desktop readability: resolved.** The game now has a wide PC layout (battle on the left, the dumpster and tabs on the right). It reads well even in CrazyGames' smallest desktop frame (800×450, checked), so you can submit for desktop and mobile.
 
 ---
 
@@ -100,8 +97,8 @@ Enter or Space: PLAY on the title screen
 | Setting | Answer |
 |---|---|
 | Engine / type | HTML5 |
-| Platforms | Mobile, plus Desktop if you accept the readability risk in section 0 |
-| Orientation | **Portrait** |
+| Platforms | Desktop **and** Mobile |
+| Orientation | Both: the wide layout on desktop, portrait on phones |
 | Language | English |
 | **Progress Save** | **"Yes, using the Data Module from the CrazyGames SDK"**. Required, or the Data module is turned off and saves fall back to local storage on one device |
 | Multiplayer | No |

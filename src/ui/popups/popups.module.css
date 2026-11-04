@@ -27,6 +27,27 @@
 .wide {
   width: 1000px;
 }
+/* The wide stage (PC) is 960 px tall: popups keep a slim margin and scroll inside. */
+:global([data-layout='wide']) .overlay {
+  padding: 30px 40px;
+}
+:global([data-layout='wide']) .card {
+  max-height: 900px;
+}
+/* ...and its buttons stay in view at the bottom while the rest scrolls under them. */
+:global([data-layout='wide']) .body:has(> .actions) {
+  padding-bottom: 0;
+}
+:global([data-layout='wide']) .body > .actions {
+  position: sticky;
+  bottom: 0;
+  /* Over the item tiles' banners (ItemIcon, up to 6) that scroll under it. */
+  z-index: 8;
+  margin: calc(3 * var(--px)) calc(-6 * var(--px)) 0;
+  padding: calc(6 * var(--px)) calc(6 * var(--px)) calc(5 * var(--px));
+  /* What scrolls under it fades out over its top three art pixels. */
+  background: linear-gradient(180deg, rgba(255, 247, 230, 0) 0, var(--cream) calc(3 * var(--px)));
+}
 /* Slides up into place (no growing: everything in it stays on the pixel grid). */
 /* A popup drops in from above, overshoots a pixel and settles (whole pixels, held per keyframe). */
 @keyframes pop {

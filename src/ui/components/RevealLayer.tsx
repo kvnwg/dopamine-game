@@ -15,7 +15,7 @@ import { DRAMA_LEVEL, revealPhases } from '../revealTiming';
 import { stagePoint } from '../drag';
 import { RAINBOW, raysUrl } from '../rays';
 import { t } from '../i18n';
-import { useUi, type RollView } from '../uiStore';
+import { stageSize, useUi, type RollView } from '../uiStore';
 import { enchantLabel, fmtOdds } from './AlleyPanel';
 import { Chunky, type Grad } from './Chunky';
 import { enchantColor, ItemIcon } from './ItemIcon';
@@ -50,7 +50,7 @@ function Confetti({ n }: { n: number }) {
           key={i}
           data-tall={b.tall || undefined}
           style={{
-            left: `${Math.round((b.left / 100) * (1080 / UI_PX)) * UI_PX}px`,
+            left: `${Math.round((b.left / 100) * (stageSize().w / UI_PX)) * UI_PX}px`,
             background: b.color,
             animationDelay: `${b.delay}ms, ${b.delay}ms`,
             animationDuration: `${b.dur}ms, ${b.flip}ms`,

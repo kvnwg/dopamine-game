@@ -399,3 +399,56 @@
     animation: none !important;
   }
 }
+
+/*
+ * The wide stage (PC, 2160 x 960): the header's words beside the Upgrades/Perks switch, the four trees
+ * in one row, and the selected perk's card beside the Close bar along the bottom.
+ */
+:global([data-layout='wide']) .head {
+  height: auto;
+  padding: 20px 30px 0;
+}
+:global([data-layout='wide']) .titles {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 36px;
+  align-items: center;
+}
+:global([data-layout='wide']) .titles > :first-child {
+  grid-row: 1 / span 2;
+}
+:global([data-layout='wide']) .sub {
+  max-width: 1300px;
+}
+:global([data-layout='wide']) .grid {
+  grid-template-columns: repeat(4, 1fr);
+  top: 136px;
+}
+:global([data-layout='wide']) .tree {
+  align-items: center;
+}
+:global([data-layout='wide']) .treeHead {
+  align-self: stretch;
+}
+:global([data-layout='wide']) .foot {
+  left: 24px;
+  right: 24px;
+  padding: 0 0 12px;
+  display: grid;
+  grid-template-columns: 1fr 700px;
+  align-items: center;
+  gap: 4px 28px;
+  background: none;
+}
+:global([data-layout='wide']) .foot > .card {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+:global([data-layout='wide']) .bar {
+  grid-column: 2;
+  grid-row: 1;
+}
+:global([data-layout='wide']) .wipes {
+  grid-column: 2;
+  grid-row: 2;
+}

@@ -4,7 +4,8 @@ import { isHeld, startGame } from '../../app/session';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { P } from '../../render/pixel';
-import { TitleRenderer, titleLayout } from '../../render/titleScene';
+import { setTitleShape, TITLE, TitleRenderer, titleLayout } from '../../render/titleScene';
+import { useUi } from '../uiStore';
 import { t } from '../i18n';
 import s from './title.module.css';
 
@@ -27,7 +28,12 @@ function Title({ onClose }: { onClose: () => void }) {
   const titleRef = useRef<TitleRenderer | null>(null);
   const name = t('title.name');
   const label = t('title.play');
-  const button = useMemo(() => titleLayout(label).button, [label]);
+  // Tall (phones) or wide (PC): the picture is laid out for the stage it fills.
+  const wide = useUi((u) => u.wide);
+  const button = useMemo(() => {
+    setTitleShape(wide);
+    return titleLayout(label).button;
+  }, [label, wide]);
 
   // Before the first paint, so the canvas never shows empty.
   useLayoutEffect(() => {
@@ -35,6 +41,7 @@ function Title({ onClose }: { onClose: () => void }) {
     if (!canvas) return;
     const { reduceMotion, reduceFlashing } = getGame().settings;
     try {
+      setTitleShape(wide);
       titleRef.current = new TitleRenderer(canvas, { name, label, reduceMotion, reduceFlashing });
     } catch (err) {
       startAnyway(err);
@@ -45,7 +52,7 @@ function Title({ onClose }: { onClose: () => void }) {
       titleRef.current?.destroy();
       titleRef.current = null;
     };
-  }, [name, label, onClose]);
+  }, [name, label, onClose, wide]);
 
   const play = useCallback(() => {
     const title = titleRef.current;
@@ -89,13 +96,14 @@ function Title({ onClose }: { onClose: () => void }) {
     <div
       ref={rootRef}
       className={s.title}
+      data-title
       onClick={play}
       onPointerDown={() => press(true)}
       onPointerUp={() => press(false)}
       onPointerCancel={() => press(false)}
       onPointerLeave={() => press(false)}
     >
-      <canvas ref={canvasRef} className={s.canvas} aria-hidden />
+      <canvas ref={canvasRef} className={s.canvas} style={{ width: TITLE.w * P, height: TITLE.h * P }} aria-hidden />
       <h1 className={s.name}>{name}</h1>
       <button
         type="button"

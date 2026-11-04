@@ -2,7 +2,49 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Heist fixes: red Leave buttons, +max HP shops, named traps, shops that wait for money, pigeons (Nov 4, newest)
+## No drag hint on the last roll, the dumpster asks only with the gold, a roomier upgrade map on PC (Nov 4, newest)
+
+Kevin: "get rid of the upgrade, drag it text", "don't ask the player to upgrade dumpster when they don't have enough money", "manage the space better, there's barely any space to move and look around" (the upgrade map on a PC).
+
+| # | Decision | Why |
+|---|---|---|
+| D1 | The Roll tab's last roll no longer carries "▲ UPGRADE! Drag it onto him to wear it". Its tile's green ▲ and the +N POWER badge say it already; drag and Equip best work as before. | Kevin's request. |
+| D2 | The dumpster's upgrade is introduced (its NEW bubble, the hand, its button appearing) only while it can be started: gold for it, no upgrade running, not maxed (`dumpsterUpgradeReady`). Until then the features after it are introduced first (`introFeature`). After that, the Roll tab's Upgrade button is green only when it can be started, grey otherwise (it still opens the card with the price and the wait). | It pointed at the upgrade when the gold had gone to the upgrade map first. |
+| D3 | The upgrade map on a PC: the selected hex's card, the gold, ATK/DEF and Close stand in a 600 px panel down the right; the page's words run in one strip along the top. The map has the rest (1560 x 960, its middle at 780, 520) and opens at 0.85 zoom, still at full detail. The wheel over the panel leaves the map alone. Phones keep their layout. | The header and the card/bar block left about 290 of the 960 px for the map. |
+
+## A loading screen worth looking at (Nov 4)
+
+Kevin: "loading screen doesnt look good, make it better".
+
+| # | Decision | Why |
+|---|---|---|
+| B1 | What the player saw before: the page is one 3.8 MB script, and nothing of the game can draw until it has run. Until then the screen was plain navy: about 1 to 3 s on a PC and several seconds on a slow phone (9 s with the CPU slowed 4x in tests). The phone apps first showed Capacitor's stock splash: its blue logo on white. | |
+| B2 | The loading screen is plain HTML and CSS at the top of the page (`src/boot/boot.html`, put in by a Vite plugin and by tools/buildArtifact.mjs). It paints in about 0.2 s, before the script. It shows the title's banded sky and drifting clouds, the logo, a loading bar, a joke line and the raccoon walking along his street. Everything on it moves by transform and opacity, which browsers animate off the busy main thread, so it keeps moving while the script loads. | A screen that is up at once and keeps moving reads as loading, not broken. |
+| B3 | Its art is the game's own: the title's logo (`titleLogo`), sky and clouds, the hero's walk, world 1's sidewalk with the lampposts patched out, and the pixel font. `npm run boot-art` (src/boot/bootArt.ts) draws it into PNG data URLs. A test fails when boot.html no longer matches the art. | It stays the game's look without anyone redrawing it. |
+| B4 | The bar can't know how far the script has got (no code runs while it loads). It eases toward 95% over 14 s, then fills to the end once the title is up. A joke line changes every 2.5 s (`boot.line1` to `boot.line4`: "Digging through the trash...", "Bribing the pigeons..."). | |
+| B5 | The hand-off (src/ui/boot.ts) waits until the title is on screen under the loading screen and frames come steadily again; the battle engine starts just after the title. Then the bar fills, and the logo glides and shrinks (or grows) onto the title's own logo while the bar folds away. Only then do the sky, clouds and street fade, showing the title with its logo exactly where the other one stopped. The glide moves things by transform only. With `?notitle` it just fades; with reduced motion it goes at once. | In tests, a fade could hold the browser up for a quarter second; doing it after the glide keeps the glide smooth. |
+| B6 | Sizes use two art-pixel units that follow the screen: one for the logo, bar and text, a bigger one for the sky, street and raccoon. On 1x screens they are whole CSS pixels, so art pixels stay even; on phones' 2x to 3x screens they follow the screen's size. | |
+| B7 | Phone apps: Android's launch screen is the game's navy with the raccoon in the middle on every Android version, through androidx core-splashscreen (`windowSplashScreenBackground`, `windowSplashScreenAnimatedIcon`, inside the 192 dp circle Android 12+ shows). Capacitor's stretched splash PNGs are gone. iOS shows the logo with the raccoon under it on navy (the Splash images, aspect-filled). The app icon is still Capacitor's. | Not built on a device here: rebuild the apps to see it. |
+
+## A PC version: the wide layout, mouse and keyboard (Nov 4)
+
+Kevin: "make a PC version for this as well"; he picked a wide layout at the same link, with phones unchanged.
+
+| # | Decision | Why |
+|---|---|---|
+| W1 | One game, one link: the screen's shape picks the stage. Wider than 1.25 : 1, it is the wide stage (2160 x 960 px): the tall stage's two halves side by side, the battle (1080 x 960) on the left, the menus (1080 x 800) over the tabs (1080 x 160) on the right. Otherwise it is the phone stage (1080 x 1920). It switches live when the window is resized (App.tsx, `useUi.wide`, `data-layout="wide"` on the stage). | Every panel keeps its exact size, so none is laid out twice. Phones in portrait are unchanged; phones held sideways and tablets in landscape get the wide stage, which shows them bigger than the tall one would. |
+| W2 | The wide stage keeps its 2.25 : 1 shape and is letterboxed: in a browser window on a 16:9 monitor the bars are about 2 to 8% of the height; fullscreen on 16:9 they are about 10% each. | The battle is a fixed 1080 x 960 Phaser scene (180 x 160 art pixels). A taller stage would need a taller battle view throughout the renderer. |
+| W3 | On the wide stage, the title is a panoramic street, 360 x 160 art pixels, with the logo, PLAY and the raccoon in the middle (`setTitleShape`). | |
+| W4 | Full-screen moments (rare finds, hauls, the rebirth burst, the tutorial's finale) are centred on the whole stage, and their confetti spans it. The rare find's hint sits at the bottom edge, enchantments run in a row, and the shock wave starts at the item. The power count after an equip and the toasts sit over the battle, where the raccoon is. | The 960 px height had the reveal's lines overlapping and the power count cut off. |
+| W5 | Popups keep a 30 px margin (at most 900 px tall) and scroll inside. Their buttons (Collect, START THE FIGHT!, Scrap all, Lock) stay pinned at the bottom while the rest scrolls under them. | The offline report and the World popup are taller than 960 px; their buttons were out of sight. |
+| W6 | The upgrade map fills the wide stage, centred on its middle. On the Perks page, the four trees are in one row, the page's words sit beside the Upgrades/Perks switch, and the perk card sits beside the Close bar. | The 2 x 2 trees and the card didn't fit 960 px. |
+| W7 | Drag-to-equip on the wide stage: drop anywhere over the battle (the left half), onto a gear panel, or after a clear drag to the left. Hints no longer say "up" ("Drag it onto him"). | The raccoon is to the left of the menus there. |
+| W8 | The tutorial's bubble sits over the battle. The hand points down at tabs, as on phones, and near the right edge (the Worlds tab) it turns around so its palm isn't cut off. This applies on phones too. | |
+| W9 | With a mouse (a fine pointer that can hover, `pointer.ts`), every string's "tap" reads "click" ("Click the dumpster to bust it open!", "CLICK AGAIN!"), and "pinch to zoom" reads "scroll to zoom" (i18n.ts `forMouse`, with a test). Touch screens keep "tap". | |
+| W10 | Hover info: resting the mouse on a piece of gear (bag, worn slots, finds) shows a card over it after a quarter second. It gives the name, rarity, "1 in X", slot and power, and what wearing it would change (+N or -N power, or "He's wearing it"). A click, drag, scroll or key hides it (HoverInfo.tsx). Buttons brighten under the mouse. Touch screens never see the card. | Gear can be compared without opening each item. |
+| W11 | Keys (keyboard.ts): 1 to 6 open the tabs in the bar's order (Roll, Heist, Bag, Upgrades, Rebirth, Worlds; a locked tab answers as a tap would), and E is Equip best, from any tab once the Bag is open. Esc closes a popup, or else the upgrade map. Enter or Space press PLAY on the title. Keys wait while the title or a popup is up, except Esc. | |
+
+## Heist fixes: red Leave buttons, +max HP shops, named traps, shops that wait for money, pigeons (Nov 4)
 
 Kevin: "leave button in heist should be red if clickable, greyed out means unclickable", "less heals in shop for heists, more +max health", "don't just say 'a trap' for heist, detail what kind of trap and make it silly and funny", "if i barely got any money from the first few rounds, stop giving me so many shops", "get rid of the text between the actual heist icons and the start heist button", "heist said a gang of pigeons want a fight, and it was 2 raccoons", "add little pigeons when u get them in heist".
 

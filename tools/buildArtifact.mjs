@@ -26,6 +26,10 @@ if (/<\/style/i.test(css)) throw new Error('Stylesheet contains </style>');
 // Inlined data: URLs and in-page references (url(#gradient) for SVG fills) are fine; anything else is a file.
 if (/url\((?!["']?(data:|#))/.test(css)) throw new Error('Stylesheet still references external files');
 
+// The loading screen (src/boot/boot.html): before the big stylesheet and script, so it paints first.
+const boot = readFileSync('src/boot/boot.html', 'utf8');
+if (!boot.includes('id="boot"')) throw new Error('src/boot/boot.html has no loading screen (run npm run boot-art)');
+
 const page = `<meta charset="utf-8">
 <title>Dumpster Legend</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -34,7 +38,7 @@ const page = `<meta charset="utf-8">
   :root { color-scheme: dark; --gutter-x: 16px; }
   html, body { height: 100%; background: #0d0f19; color: #f6efe2; }
 </style>
-<style>
+${boot}<style>
 ${css}
 </style>
 <div id="root"></div>

@@ -204,7 +204,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Up to two rows of chips (their pixel edges stay inside the clip). */
+/* Up to two rows of chips (their pixel edges stay inside the clip); none, no row (the name sits alone). */
+.chips:empty {
+  display: none;
+}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -232,9 +235,6 @@
 }
 .placed_scrapped {
   background: #9a9aa6;
-}
-.chipUpgrade {
-  background: #5bc236;
 }
 .chipGold {
   background: linear-gradient(180deg, #fff3a0 0 50%, #ffc233 50% 100%);

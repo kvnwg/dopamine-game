@@ -33,12 +33,16 @@ import { FEET_ROW, VIEW, type LayerName } from './pixel/sceneryTypes';
 import { glowOverlay, paintClouds, paintSky, paintVignette } from './pixel/atmosphere';
 import { CLOUD_SCROLL0, LAYER_NAMES, layerRow, viewAtmo, worldArt, worldSeed } from './worldLook';
 
-/** The title in art pixels (the whole 1080 x 1920 stage at P), and how far down the battle view's rows sit. */
-export const TITLE = { w: VIEW.w, h: 320, drop: 320 - VIEW.h } as const;
+/**
+ * The title in art pixels, and how far down the battle view's rows sit: the whole stage at P, tall
+ * (phones: 1080 x 1920, the street under a tall sky) or wide (PC: 2160 x 960, twice the battle view's
+ * width at its height, the street right across). setTitleShape picks one before the title is built.
+ */
+export const TITLE: { w: number; h: number; drop: number; wide: boolean } = { w: VIEW.w, h: 320, drop: 320 - VIEW.h, wide: false };
 
 /** The raccoon's feet column and the row he stands on (the battle's ground row, moved down). */
-const HERO_COL = 74;
-const HERO_FEET = FEET_ROW + TITLE.drop;
+let HERO_COL = 74;
+let HERO_FEET = FEET_ROW + TITLE.drop;
 /** Where the battle shows him (BattleScene HERO_WALK_X, FEET_ROW): the iris opens on him there. */
 const BATTLE_HERO = { x: 52, y: FEET_ROW - 8 } as const;
 
@@ -51,11 +55,28 @@ const WALK_SPEED = HERO_WALK.stride * HERO_WALK.fps;
 const FRAME = { up: 2, squash: 4, cheer: [13, 14] } as const;
 
 /** Rows: the logo's top, the higher cloud strips' top and the PLAY button's top. */
-const LOGO_TOP = 40;
-const HIGH_CLOUDS = 104;
-const BUTTON_TOP = 152;
+let LOGO_TOP = 40;
+let HIGH_CLOUDS = 104;
+let BUTTON_TOP = 152;
 /** Rows the dust motes drift in: over the yards and the sidewalk. */
-const MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 } as const;
+let MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 };
+
+/**
+ * Lays the title out for the tall stage (phones) or the wide one (PC): wide, the logo sits in the sky
+ * over the middle, the PLAY button just under it, and the raccoon walks the sidewalk in the middle.
+ */
+export function setTitleShape(wide: boolean): void {
+  TITLE.wide = wide;
+  TITLE.w = wide ? VIEW.w * 2 : VIEW.w;
+  TITLE.h = wide ? VIEW.h : 320;
+  TITLE.drop = TITLE.h - VIEW.h;
+  HERO_COL = wide ? VIEW.w - 8 : 74;
+  HERO_FEET = FEET_ROW + TITLE.drop;
+  LOGO_TOP = wide ? 6 : 40;
+  HIGH_CLOUDS = wide ? 8 : 104;
+  BUTTON_TOP = wide ? 58 : 152;
+  MOTES = { top: TITLE.drop + 62, bottom: TITLE.drop + 134 };
+}
 /** The button's face around its label (art px). */
 const PAD = { x: 12, y: 5 } as const;
 
@@ -128,6 +149,43 @@ function bordered(b: PixelBuf, color: string, r: number, drop: number): PixelBuf
 function logoLine(text: string, fill: readonly string[], depth: string): PixelBuf {
   const letters = scale2x(renderText(text, { face: 'huge', fill: '#ffffff', ink: null }));
   return bordered(bordered(paintRows(letters, fill), depth, 0, 2), INK, 2, 2);
+}
+
+/** Where the title draws a logo `w` art px wide (titleLogo's buffer): its top-left in title art px, for the current shape. */
+export function titleLogoAt(w: number): { x: number; y: number } {
+  return { x: Math.floor((TITLE.w - w) / 2), y: LOGO_TOP };
+}
+
+/** The title's sky colors, top to bottom (world 1's banded sky under a deeper zenith). The loading screen paints the same bands. */
+export function titleSky(): string[] {
+  return [ZENITH, ...viewAtmo(DATA.worlds[0].look.atmo, worldArt(1).set).sky];
+}
+
+/**
+ * The whole logo for a game name ("Dumpster Legend": a line per word) in one buffer, laid out as the
+ * title shows it: lines centred, each overlapping the one above by its outline and drop. The loading
+ * screen and the app's splash images use it (src/boot/bootArt.ts).
+ */
+export function titleLogo(name: string): PixelBuf {
+  const words = name.trim().split(/\s+/);
+  const lines = (words.length > 1 ? [words[0], words.slice(1).join(' ')] : words).map((l, i) =>
+    logoLine(l, i === 0 ? LOGO_GOLD : LOGO_ICE, i === 0 ? LOGO_DEPTH.gold : LOGO_DEPTH.ice),
+  );
+  const w = Math.max(...lines.map((l) => l.w));
+  const h = lines.reduce((n, l) => n + l.h - 4, 4);
+  const out = blank(w, h);
+  let y = 0;
+  for (const l of lines) {
+    const x0 = Math.floor((w - l.w) / 2);
+    for (let yy = 0; yy < l.h; yy++) {
+      for (let xx = 0; xx < l.w; xx++) {
+        const i = (yy * l.w + xx) * 4;
+        if (l.px[i + 3]) out.px.set(l.px.subarray(i, i + 4), ((y + yy) * w + x0 + xx) * 4);
+      }
+    }
+    y += l.h - 4;
+  }
+  return out;
 }
 
 /** The PLAY label: the logo's bold face made finer, white with a one-pixel ink outline and drop (like .btn text). */

@@ -596,3 +596,60 @@
     animation: none !important;
   }
 }
+
+/*
+ * The wide stage (PC, 2160 x 960): the map gets the whole left side at full height (Kevin: "manage the
+ * space better, there's barely any space to move and look around"). The page's words run in one strip
+ * along its top; the selected upgrade's card, the gold, ATK/DEF and Close stand in a panel down the
+ * right side (UpgradeMap.tsx centres the map in what is left: FOCUS_WIDE).
+ */
+:global([data-layout='wide']) .head {
+  right: 600px;
+  height: auto;
+  padding: 20px 26px 40px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0.92) 0%, rgba(9, 12, 28, 0.55) 70%, rgba(9, 12, 28, 0) 100%);
+}
+:global([data-layout='wide']) .titles {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 32px;
+  align-items: center;
+}
+:global([data-layout='wide']) .titles > :first-child {
+  grid-row: 1 / span 2;
+}
+:global([data-layout='wide']) .sub {
+  max-width: none;
+}
+:global([data-layout='wide']) .foot {
+  left: auto;
+  right: 0;
+  top: 0;
+  width: 600px;
+  padding: 30px 30px 26px;
+  gap: 24px;
+  background: linear-gradient(90deg, rgba(9, 12, 28, 0.9), rgba(9, 12, 28, 0.97) 40px);
+  box-shadow: inset var(--px) 0 0 rgba(255, 255, 255, 0.06);
+  /* Over the map: a drag or the wheel here doesn't move it. */
+  pointer-events: auto;
+}
+:global([data-layout='wide']) .card {
+  flex-wrap: wrap;
+}
+:global([data-layout='wide']) .cardBody {
+  flex: 1 1 260px;
+}
+:global([data-layout='wide']) .buy {
+  flex: 1 1 100%;
+}
+:global([data-layout='wide']) .bar {
+  margin-top: auto;
+  flex-wrap: wrap;
+  height: auto;
+  row-gap: 22px;
+}
+:global([data-layout='wide']) .close {
+  order: 3;
+  flex: 1 1 100%;
+  width: auto;
+}

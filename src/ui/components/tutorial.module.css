@@ -18,6 +18,11 @@
   display: flex;
   justify-content: center;
 }
+/* The wide stage (PC): over the bottom of the battle, which is the left half. */
+:global([data-layout='wide']) .bubbleWrap {
+  right: auto;
+  width: 1080px;
+}
 .bubble {
   display: flex;
   align-items: center;
@@ -96,6 +101,14 @@
   bottom: 0;
   transform: scaleY(-1);
   filter: drop-shadow(0 calc(-2 * var(--px)) 0 rgba(10, 6, 20, 0.45));
+}
+/* Near the right edge: turned around on its fingertip, the palm to the left. */
+.hand[data-mirror] .handIcon {
+  transform-origin: calc(7 * var(--px)) 50%;
+  transform: scaleX(-1);
+}
+.hand[data-mirror][data-flip] .handIcon {
+  transform: scale(-1, -1);
 }
 .ghost {
   position: absolute;

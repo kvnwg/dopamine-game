@@ -23,11 +23,16 @@ import { rebirthRequirement } from './rebirth';
 import { affordableUpgrades } from './upgrades';
 
 /**
- * The order features are introduced in when several are waiting: as the tutorial ends, Luck (the
- * rarity odds) and the Codex (every item) come first, then Worlds, where the player picks the first
- * world and the fighting starts (stage.chosen).
+ * The order features are introduced in when several are waiting: as the tutorial ends, Worlds, where
+ * the player picks the first world and the fighting starts (stage.chosen).
  */
-export const FEATURE_ORDER: readonly Feature[] = ['roll', 'bag', 'luck', 'codex', 'worlds', 'upgrades', 'dumpster', 'rebirth', 'heist', 'perks'];
+export const FEATURE_ORDER: readonly Feature[] = ['roll', 'bag', 'worlds', 'luck', 'codex', 'upgrades', 'dumpster', 'rebirth', 'heist', 'perks'];
+
+/**
+ * Features that open quietly, without the tutorial walking through them (no bubble, hand or popup;
+ * Kevin: "in tutorial, no more walking through luck and codex"): their buttons just appear.
+ */
+const QUIET: readonly Feature[] = ['luck', 'codex'];
 
 export function hasFeature(state: Pick<GameState, 'features'>, f: Feature): boolean {
   return state.features.unlocked.includes(f);
@@ -83,6 +88,7 @@ export function checkFeatures(d: GameState, ev: CoreEvent[]): void {
   for (const f of FEATURE_ORDER) {
     if (open.includes(f) || !ready(d, f)) continue;
     open.push(f);
+    if (QUIET.includes(f) && !featureSeen(d, f)) d.features.seen.push(f);
     ev.push({ type: 'featureUnlocked', feature: f });
   }
 }

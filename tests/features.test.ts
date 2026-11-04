@@ -67,13 +67,15 @@ describe('a new game opens its features one by one', () => {
     st.lifetime.itemsEquipped = 1;
     r = step(st);
     expect(r.opened).toEqual(['bag']);
-    // The tutorial ends: luck (the odds), the Codex (the items) and Worlds, introduced in that order (a
-    // new game's raccoon waits there for his first world); Upgrades and the dumpster wait for gold.
+    // The tutorial ends: Worlds (a new game's raccoon waits there for his first world), and luck and the
+    // Codex, which open quietly (already seen: no walkthrough); Upgrades and the dumpster wait for gold.
     st = r.st;
     st.dumpster.beginner = { state: 'done', uid: null };
     st.currencies.coins = 0;
     r = step(st);
-    expect(r.opened).toEqual(['luck', 'codex', 'worlds']);
+    expect(r.opened).toEqual(['worlds', 'luck', 'codex']);
+    expect(r.st.features.seen).toEqual(expect.arrayContaining(['luck', 'codex']));
+    expect(r.st.features.seen).not.toContain('worlds');
     // Gold for the cheapest upgrade (and the dumpster's).
     st = r.st;
     st.currencies.coins = Math.max(upgradeCost(st.dumpster.level), 1e6);

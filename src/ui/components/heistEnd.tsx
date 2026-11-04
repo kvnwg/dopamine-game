@@ -207,8 +207,9 @@ function SecondChance({ run }: { run: HeistRun }) {
             {formatNumber(Math.floor((r.coins * LOSS_KEEP_PCT) / 100))}
           </span>
         </div>
+        {/* Walking away (keeping part of the loot) can always be tapped here: red. */}
         <button
-          className={`btn gray small ${s.giveUp}`}
+          className={`btn red small ${s.giveUp}`}
           onClick={() => {
             haptics.impact('light');
             heistDispatch({ type: 'heistDecline' });

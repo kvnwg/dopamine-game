@@ -45,7 +45,7 @@ describe('the first world (a calm start)', () => {
     expect(applyAction(r.st, { type: 'travel', world: 1 }, rng, T0).events.some((e) => e.type === 'stageStart')).toBe(false);
   });
 
-  it('Worlds opens with the tutorial over, after Luck and the Codex are introduced', () => {
+  it('Worlds opens with the tutorial over and is introduced at once; Luck and the Codex open quietly', () => {
     const st = clone(newGame().st);
     st.lifetime.itemsEquipped = 1;
     st.features.unlocked.push('bag');
@@ -53,13 +53,11 @@ describe('the first world (a calm start)', () => {
     st.dumpster.beginner = { state: 'done', uid: null };
     const r = applyAction(st, { type: 'featureSeen', feature: 'bag' }, new Rng(1), T0);
     expect(r.state.features.unlocked).toEqual(expect.arrayContaining(['luck', 'codex', 'worlds']));
-    let s = r.state;
-    expect(introFeature(s)).toBe('luck');
-    s = applyAction(s, { type: 'featureSeen', feature: 'luck' }, new Rng(1), T0).state;
-    expect(introFeature(s)).toBe('codex');
-    s = applyAction(s, { type: 'featureSeen', feature: 'codex' }, new Rng(1), T0).state;
+    const s = r.state;
+    expect(s.features.seen).toEqual(expect.arrayContaining(['luck', 'codex']));
     expect(introFeature(s)).toBe('worlds');
     expect(featureView(s, 'worlds')).toBe('intro');
+    expect(featureView(s, 'luck')).toBe('open');
   });
 
   it('no fighting means no offline fight rewards, and a reload keeps him waiting', () => {

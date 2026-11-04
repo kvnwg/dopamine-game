@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyAction, canRebirth, dayKey, deserialize, gainCurse, gainPerk, generateAct, GameStateSchema, heistAbandon, heistBoot, heistsOpen,
-  heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistOptionAvailable, heistRevive, heistTick, itemTierFor, makeOffer,
-  optionPreview, performSpin, refreshTickets, rollActNodes, runEffects, runStats, Rng, serialize, startHeist, tick,
+  heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistOptionAvailable, heistRevive, heistTick, heistTrapAt, itemTierFor,
+  makeOffer, optionPreview, performSpin, refreshTickets, rollActNodes, runEffects, runStats, Rng, serialize, shopMinCoins, startHeist, tick,
   TICK_SECONDS, travelTo, type CoreEvent, type GameState, type HeistRun,
 } from '../src/core';
-import { BAL, DATA, HEIST_ROLLED_KINDS, type HeistNodeKind } from '../src/data';
+import { BAL, DATA, HEIST_ROLLED_KINDS, LOCATION_IDS, type HeistEventDef, type HeistNodeKind, type LocationId } from '../src/data';
 import { simulateHeists } from '../tools/heistSimCore';
 import { simulate } from '../tools/simCore';
 import { freshState, T0 } from './helpers';
@@ -38,6 +38,11 @@ function tickUntil(d: GameState, rng: Rng, ev: CoreEvent[], done: (run: HeistRun
     heistTick(d, rng, T0, ev, TICK_SECONDS);
   }
   throw new Error('condition never met');
+}
+
+/** The stock of the shop the run is in. */
+function shopStock(run: HeistRun) {
+  return (run.pending as Extract<HeistRun['pending'], { kind: 'shop' }>).stock;
 }
 
 /** Makes the next stop a fight (or `kind`) and walks into it. */
@@ -142,15 +147,15 @@ describe('heist stops', () => {
     }
   });
 
-  it('open with a fight, always have a shop in act 2, enough fights, no elites in act 1, and end with the boss', () => {
+  it('open with a fight, have a shop in act 2 when the run can pay, enough fights, no elites in act 1, and end with the boss', () => {
     const rng = new Rng(5);
-    const none = { perks: [], absorbed: [], curses: [] };
+    const rich = { perks: [], absorbed: [], curses: [], coins: shopMinCoins(), nodes: [] as HeistNodeKind[][] };
     let golden = 0;
     let treasures = 0;
     for (let i = 0; i < 3000; i++) {
-      const a1 = generateAct(none, 1, rng);
-      const a2 = generateAct(none, 2, rng);
-      const a3 = generateAct(none, 3, rng);
+      const a1 = generateAct(rich, 1, rng);
+      const a2 = generateAct(rich, 2, rng);
+      const a3 = generateAct({ ...rich, nodes: [a1, a2] }, 3, rng);
       expect(a1).toHaveLength(H.nodesPerAct);
       expect(a1[0]).toBe('fight');
       expect(a1).not.toContain('elite');
@@ -168,11 +173,58 @@ describe('heist stops', () => {
     expect(golden / treasures).toBeLessThan(0.025);
   });
 
+  it('wait for money: no shop in an act laid out before the run can pay for a perk, and the sure shop moves on to act 3', () => {
+    const rng = new Rng(12);
+    const min = shopMinCoins();
+    expect(min).toBe(Math.min(H.shop.prices.common, H.shop.prices.rare, H.shop.prices.epic));
+    // A run starts short of it, so act 1 never has a shop.
+    expect(H.coins.start).toBeLessThan(min);
+    const broke = { perks: [], absorbed: [], curses: [], coins: min - 1, nodes: [] as HeistNodeKind[][] };
+    const rich = { ...broke, coins: min };
+    let richShops = 0;
+    for (let i = 0; i < 2000; i++) {
+      for (const act of [1, 2, 3]) expect(generateAct(broke, act, rng)).not.toContain('shop');
+      // Broke in act 2, saved up by act 3: act 3 gets the run's sure shop.
+      const a2 = generateAct(broke, 2, rng);
+      expect(generateAct({ ...rich, nodes: [[], a2] }, 3, rng)).toContain('shop');
+      // A shop in act 2 already: act 3's shops are only the rolled ones.
+      richShops += generateAct({ ...rich, nodes: [[], ['shop']] }, 3, rng).filter((k) => k === 'shop').length;
+    }
+    const w = H.nodeWeights[2];
+    const share = w.shop / HEIST_ROLLED_KINDS.reduce((s, k) => s + w[k], 0);
+    expect(richShops / 2000).toBeGreaterThan(share * H.nodesPerAct * 0.7);
+    expect(richShops / 2000).toBeLessThan(share * H.nodesPerAct * 1.3);
+  });
+
+  it('a whole run lays acts out with its coins: act 1 never has a shop, act 2 has one exactly when the run could pay', () => {
+    const seen = { rich: 0, broke: 0 };
+    for (let seed = 0; seed < 40; seed++) {
+      const { d, rng, ev, run } = started(raccoon(10), 'pizza', 200 + seed);
+      expect(run.nodes[0]).not.toContain('shop');
+      run.difficulty = 0.05;
+      // Play act 1 out; the step that ends it lays act 2 out with the coins the run has right then.
+      for (let guard = 0; guard < 20_000 && run.act === 1; guard++) {
+        if (run.pending) {
+          if (run.pending.kind === 'shop') heistLeaveShop(d, rng);
+          else if (!heistChoose(d, run.pending.kind === 'shrine' ? 1 : 0, rng, ev)) heistChoose(d, 1, rng, ev);
+        } else if (run.status === 'ready' && d.battle.phase !== 'walking') heistGo(d, rng, ev);
+        else heistTick(d, rng, T0, ev, TICK_SECONDS);
+      }
+      expect(run.act).toBe(2);
+      const rich = run.coins >= shopMinCoins();
+      seen[rich ? 'rich' : 'broke'] += 1;
+      expect(run.nodes[1].includes('shop'), `seed ${seed}: ${run.coins} coins`).toBe(rich);
+    }
+    // (Both cases came up.)
+    expect(seen.rich).toBeGreaterThan(0);
+    expect(seen.broke).toBeGreaterThan(0);
+  });
+
   it('Bin Diver adds a treasure to every act, Smelly a fight', () => {
     const count = (perks: string[], curses: string[], kind: string) => {
       const rng = new Rng(6);
       let n = 0;
-      for (let i = 0; i < 2000; i++) n += generateAct({ perks, absorbed: [], curses }, 2, rng).filter((k) => k === kind).length;
+      for (let i = 0; i < 2000; i++) n += generateAct({ perks, absorbed: [], curses, coins: 100, nodes: [] }, 2, rng).filter((k) => k === kind).length;
       return n / 2000;
     };
     expect(count(['bin_diver'], [], 'treasure') - count([], [], 'treasure')).toBeGreaterThan(0.8);
@@ -379,7 +431,7 @@ describe('heist perk offers and evolutions', () => {
     expect(makeOffer(run, rng).some((o) => o.evolution)).toBe(false);
   });
 
-  it('Pigeon Air Force takes Pigeon Pal and any other crew perk; there are 6 evolutions, 24 perks and 3 curses', () => {
+  it('Pigeon Air Force takes Pigeon Pal and any other crew perk; there are 6 evolutions, 27 perks (3 sold only in shops) and 3 curses', () => {
     const { d, rng, ev, run } = started();
     gainPerk(d, run, 'pigeon_pal', rng, ev);
     expect(makeOffer(run, rng).some((o) => o.evolution)).toBe(false);
@@ -388,7 +440,8 @@ describe('heist perk offers and evolutions', () => {
     gainPerk(d, run, 'pigeon_air_force', rng, ev);
     expect(runEffects(run).pigeons).toBe(3);
     expect(DATA.heistPerks.filter((p) => p.recipe)).toHaveLength(6);
-    expect(DATA.heistPerks.filter((p) => !p.recipe)).toHaveLength(24);
+    expect(DATA.heistPerks.filter((p) => !p.recipe)).toHaveLength(27);
+    expect(DATA.heistPerks.filter((p) => p.shopOnly)).toHaveLength(3);
     expect(DATA.heistCurses).toHaveLength(3);
   });
 
@@ -477,12 +530,12 @@ describe('heist choices', () => {
     expect(b.run.log.some((l) => l.key === 'heist.log.savedHeal')).toBe(true);
   });
 
-  it('shops sell heals and perks for run coins and stay open until left; shrines trade max HP for an Epic perk', () => {
+  it('shops sell perks for run coins and stay open until left; shrines trade max HP for an Epic perk', () => {
     const { d, rng, ev, run } = started();
     run.coins = 200;
     goTo(d, rng, ev, 'shop');
     const shop = run.pending as Extract<HeistRun['pending'], { kind: 'shop' }>;
-    expect(shop.stock.map((s) => s.kind)).toEqual(['heal', 'perk', 'perk', 'reroll']);
+    expect(shop.stock.map((s) => s.kind).slice(1)).toEqual(['perk', 'perk', 'reroll']);
     const perk = shop.stock[1];
     expect(heistChoose(d, 1, rng, ev)).toBe(true);
     expect(run.perks).toContain(perk.id);
@@ -498,6 +551,195 @@ describe('heist choices', () => {
     expect(s.run.maxHp).toBeCloseTo(max * (1 - H.shrine.maxHpPct / 100));
     const offer = s.run.pending as Extract<HeistRun['pending'], { kind: 'perk' }>;
     for (const o of offer.options) expect(DATA.heistPerksById.get(o.id)!.rarity).toBe('epic');
+  });
+
+  it('a shop\'s first card is mostly a +max HP perk and only sometimes a Snack; its other perks are never +max HP ones', () => {
+    const maxHp = (id: string) => (DATA.heistPerksById.get(id)?.effect.hpPct ?? 0) > 0;
+    const n = 600;
+    let heals = 0;
+    let maxHps = 0;
+    const sold = new Set<string>();
+    const { d, rng, ev, run } = started();
+    for (let i = 0; i < n; i++) {
+      run.pending = null;
+      goTo(d, rng, ev, 'shop');
+      const stock = shopStock(run);
+      const first = stock[0];
+      if (first.kind === 'heal') heals += 1;
+      else {
+        expect(first.kind).toBe('perk');
+        expect(maxHp(first.id), first.id).toBe(true);
+        maxHps += 1;
+        sold.add(first.id);
+      }
+      for (const s of stock.slice(1)) if (s.kind === 'perk') expect(maxHp(s.id), s.id).toBe(false);
+    }
+    // It was a Snack every time before; now it's one shop in four.
+    expect(Math.abs(heals / n - (1 - H.shop.maxHpChance))).toBeLessThan(0.05);
+    expect(maxHps / n).toBeGreaterThan(0.65);
+    // Thick Fur and the shop-only ones all come up.
+    for (const p of DATA.heistPerks.filter((x) => !x.recipe && maxHp(x.id))) expect(sold.has(p.id), p.id).toBe(true);
+  });
+
+  it('a shop sells a Snack when it has no +max HP perk to sell, and Fresh Stock keeps its +max HP card one', () => {
+    // Every perk slot full: a +max HP perk couldn't be bought, so the counter has the Snack.
+    const full = started();
+    full.run.perks = DATA.heistPerks.filter((p) => !p.recipe && !p.shopOnly).slice(0, H.maxPerks).map((p) => p.id);
+    for (let i = 0; i < 30; i++) {
+      full.run.pending = null;
+      goTo(full.d, full.rng, full.ev, 'shop');
+      expect(shopStock(full.run)[0].kind).toBe('heal');
+    }
+    // Every +max HP perk held: the Snack again.
+    const fat = started();
+    fat.run.perks = DATA.heistPerks.filter((p) => (p.effect.hpPct ?? 0) > 0 && !p.recipe).map((p) => p.id);
+    goTo(fat.d, fat.rng, fat.ev, 'shop');
+    expect(shopStock(fat.run)[0].kind).toBe('heal');
+    // Fresh Stock: the +max HP card becomes another +max HP perk, the others other perks.
+    for (let seed = 0; seed < 40; seed++) {
+      const { d, rng, ev, run } = started(raccoon(), 'pizza', 3000 + seed);
+      run.coins = 500;
+      goTo(d, rng, ev, 'shop');
+      const stock = shopStock(run);
+      if (stock[0].kind !== 'perk') continue;
+      const before = stock.map((s) => s.id);
+      expect(heistChoose(d, stock.length - 1, rng, ev)).toBe(true);
+      expect(stock[0].id).not.toBe(before[0]);
+      expect(DATA.heistPerksById.get(stock[0].id)!.effect.hpPct).toBeGreaterThan(0);
+      for (const s of stock.slice(1, 3)) expect(DATA.heistPerksById.get(s.id)!.effect.hpPct ?? 0).toBe(0);
+    }
+  });
+
+  it('shop-only perks are never offered at a level-up, a shrine, the wheel or a choice', () => {
+    const rng = new Rng(77);
+    const none = { perks: [] as string[], absorbed: [] as string[] };
+    for (let i = 0; i < 3000; i++) {
+      for (const o of makeOffer(none, rng)) expect(DATA.heistPerksById.get(o.id)!.shopOnly, o.id).toBeFalsy();
+      for (const o of makeOffer(none, rng, 'common')) expect(DATA.heistPerksById.get(o.id)!.shopOnly, o.id).toBeFalsy();
+    }
+    // A choice's random tank perk (Wear a box) isn't one either.
+    for (let i = 0; i < 200; i++) {
+      const s = started(raccoon(), 'pizza', 500 + i);
+      s.run.pending = { kind: 'choice', eventId: 'evt_cardboard_fort', options: 2 };
+      heistChoose(s.d, 1, s.rng, s.ev);
+      for (const id of s.run.perks) expect(DATA.heistPerksById.get(id)!.shopOnly, id).toBeFalsy();
+    }
+  });
+});
+
+describe('heist traps', () => {
+  const at = (id: LocationId) => DATA.heistTraps.filter((tr) => !tr.locations || tr.locations.includes(id));
+
+  it('come in at least 15 named kinds, each with its line, and plenty fit each location', () => {
+    expect(DATA.heistTraps.length).toBeGreaterThanOrEqual(15);
+    for (const tr of DATA.heistTraps) {
+      expect(tr.name).toBe(DATA.strings[`heist.trap.${tr.id}.name`]);
+      expect(tr.text).toBe(DATA.strings[`heist.trap.${tr.id}.text`]);
+    }
+    for (const id of LOCATION_IDS) expect(at(id).length, id).toBeGreaterThanOrEqual(10);
+  });
+
+  it('a trap stop names its trap in the log, sprung or seen coming, one that fits the place, the same after a reload', () => {
+    const { d, rng, ev, run } = started(raccoon(), 'mall');
+    goTo(d, rng, ev, 'trap');
+    const trap = heistTrapAt(run, 1, 0);
+    expect(at('mall')).toContainEqual(trap);
+    expect(run.log).toContainEqual({ key: 'heist.log.trapSprung', params: { trap: trap.name, text: trap.text } });
+    // Saved and loaded, the stop it passed still names the same trap.
+    const loaded = deserialize(serialize(d))!;
+    expect(heistTrapAt(loaded.heist.run!, 1, 0)).toEqual(trap);
+    // One seen coming (a choice took the act's traps away) is named too, and it's the next one in line.
+    run.flags.noTrapsAct = run.act;
+    goTo(d, rng, ev, 'trap');
+    const next = heistTrapAt(run, 1, 1);
+    expect(next.id).not.toBe(trap.id);
+    expect(run.log.at(-1)).toEqual({ key: 'heist.log.trapSpotted', params: { trap: next.name } });
+  });
+
+  it('come in a new order each run, none twice in a run until the place runs out, and only reached stops count', () => {
+    const trapsOnly = (): HeistNodeKind[][] => [Array(6).fill('trap'), Array(6).fill('trap'), [...Array(6).fill('trap'), 'boss']];
+    for (const location of LOCATION_IDS) {
+      const run = { location, startedAt: T0, nodes: trapsOnly() };
+      const ids = [1, 2, 3].flatMap((act) => [0, 1, 2, 3, 4, 5].map((i) => heistTrapAt(run, act, i).id));
+      const n = at(location).length;
+      expect(new Set(ids.slice(0, n)).size).toBe(n);
+      // What comes after a stop doesn't change it.
+      const changed = { ...run, nodes: trapsOnly() };
+      changed.nodes[0][4] = 'fight';
+      expect(heistTrapAt(changed, 1, 3)).toEqual(heistTrapAt(run, 1, 3));
+    }
+    const firsts = new Set(Array.from({ length: 40 }, (_, i) => heistTrapAt({ location: 'pizza', startedAt: T0 + i * 7919, nodes: [] }, 1, 0).id));
+    expect(firsts.size).toBeGreaterThan(5);
+  });
+
+  it('still curse half the time and otherwise hurt by heist.trap.damagePct, whichever trap it is', () => {
+    let curses = 0;
+    const n = 300;
+    for (let i = 0; i < n; i++) {
+      const s = started(raccoon(), 'pizza', 4000 + i);
+      const max = s.run.maxHp;
+      goTo(s.d, s.rng, s.ev, 'trap');
+      if (s.run.curses.length > 0) curses += 1;
+      else expect(s.run.hp).toBeCloseTo(max * (1 - H.trap.damagePct / 100));
+    }
+    expect(Math.abs(curses / n - H.trap.curseChance)).toBeLessThan(0.08);
+  });
+});
+
+describe('heist fight events', () => {
+  const NAMED: Array<[string, RegExp]> = [['rat', /\brats?\b/i], ['pigeon', /\bpigeons?\b/i], ['raccoon', /\braccoons?\b/i]];
+  const fightOptions = (e: HeistEventDef) =>
+    e.options.map((o, i) => ({ o, i })).filter(({ o }) => o.outcomes.some((x) => x.type === 'fight' || x.type === 'eliteFight'));
+  const shape = (id: string) => DATA.assets.placeholders.enemies[id]?.shape;
+
+  it('an event that names a rat, pigeon or raccoon and can start a fight promises that foe (and only such events do)', () => {
+    let named = 0;
+    for (const e of DATA.heistEvents) {
+      const fights = fightOptions(e);
+      if (fights.length === 0) continue;
+      const words = [e.text, ...fights.map(({ o }) => o.label)].join(' ');
+      const kinds = NAMED.filter(([, re]) => re.test(words)).map(([k]) => k);
+      expect(kinds.length, e.id).toBeLessThanOrEqual(1);
+      expect(e.foe, e.id).toBe(kinds[0]);
+      if (kinds.length > 0) named += 1;
+    }
+    expect(named).toBeGreaterThanOrEqual(4);
+  });
+
+  it('a fight such an event starts brings only that foe, at every location (the pigeon gang brings pigeons)', () => {
+    for (const e of DATA.heistEvents.filter((x) => x.foe)) {
+      const opt = fightOptions(e)[0].i;
+      for (const location of e.locations ?? LOCATION_IDS) {
+        let fights = 0;
+        for (let seed = 0; seed < 40 && fights < 3; seed++) {
+          const s = started(raccoon(), location, 700 + seed);
+          s.run.coins = 100;
+          s.run.nodes[0][0] = 'choice';
+          s.run.seen.push(e.id);
+          s.run.pending = { kind: 'choice', eventId: e.id, options: e.options.length };
+          expect(heistChoose(s.d, opt, s.rng, s.ev)).toBe(true);
+          // (An option that only might come to a fight.)
+          if (s.run.status !== 'fighting') continue;
+          tickUntil(s.d, s.rng, s.ev, () => s.d.battle.phase === 'fighting');
+          const regulars = s.d.battle.enemies.filter((x) => x.kind === 'regular');
+          expect(regulars.length).toBeGreaterThan(0);
+          for (const x of regulars) expect(shape(x.enemyId), `${e.id} at ${location}: ${x.enemyId}`).toBe(e.foe);
+          fights += 1;
+        }
+        expect(fights, `${e.id} at ${location}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('a plain fight stop still brings any of the place\'s enemies', () => {
+    const kinds = new Set<string | undefined>();
+    for (let seed = 0; seed < 20; seed++) {
+      const s = started(raccoon(), 'pizza', 800 + seed);
+      goTo(s.d, s.rng, s.ev);
+      tickUntil(s.d, s.rng, s.ev, () => s.d.battle.phase === 'fighting');
+      for (const x of s.d.battle.enemies) kinds.add(shape(x.enemyId));
+    }
+    expect([...kinds].sort()).toEqual(['pigeon', 'raccoon', 'rat']);
   });
 });
 

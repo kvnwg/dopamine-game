@@ -21,7 +21,7 @@ import {
   AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, HeistEventsSchema, HeistFileSchema, ItemsSchema,
   WorldsSchema, LOCATION_IDS, PERK_TREE_IDS, RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
   type Affix, type AlleyPerkDef, type Assets, type Balance, type BaseItem, type CurseDef, type EnchantDef, type EnemyDef, type HeistEventDef,
-  type HeistLocationDef, type LocationId, type MintPerk, type PerkDef, type WorldDef, type Theme,
+  type HeistLocationDef, type HeistTrapDef, type LocationId, type MintPerk, type PerkDef, type WorldDef, type Theme,
 } from './schemas';
 import type { z } from 'zod';
 import { layoutUpgradeMap, type HexNode } from './hexLayout';
@@ -48,13 +48,14 @@ export interface GameData {
   enchantsById: Map<string, EnchantDef>;
   /** Every tier of every upgrade line, placed on the hex map. */
   upgradeMap: HexNode[];
-  /** Heists: the three locations (in unlock order), perks (evolutions included), curses and choice events. */
+  /** Heists: the three locations (in unlock order), perks (evolutions included), curses, traps and choice events. */
   heistLocations: HeistLocationDef[];
   heistLocationsById: Map<LocationId, HeistLocationDef>;
   heistPerks: PerkDef[];
   heistPerksById: Map<string, PerkDef>;
   heistCurses: CurseDef[];
   heistCursesById: Map<string, CurseDef>;
+  heistTraps: HeistTrapDef[];
   heistEvents: HeistEventDef[];
   heistEventsById: Map<string, HeistEventDef>;
   /** Alley perks (the Upgrades screen's Perks page), in balance.json order. */
@@ -170,7 +171,7 @@ export function buildGameData(raw: {
   }
 
   const heist = buildHeistData(raw.heist ?? heistJson, raw.heistEvents ?? heistEventsJson, {
-    balance, itemsById, enemiesById, worlds, assets,
+    balance, itemsById, enemiesById, worlds, assets, strings,
   });
   const alleyPerksById = checkAlleyPerks(balance);
 
@@ -235,18 +236,22 @@ function checkAlleyPerks(balance: Balance): Map<string, AlleyPerkDef> {
 
 type HeistData = Pick<
   GameData,
-  'heistLocations' | 'heistLocationsById' | 'heistPerks' | 'heistPerksById' | 'heistCurses' | 'heistCursesById' | 'heistEvents' | 'heistEventsById'
+  | 'heistLocations' | 'heistLocationsById' | 'heistPerks' | 'heistPerksById' | 'heistCurses' | 'heistCursesById' | 'heistTraps'
+  | 'heistEvents' | 'heistEventsById'
 >;
 
-/** Validates heist.json and heistEvents.json, and every id they share with the rest of the data. */
+/** Validates heist.json and heistEvents.json, and every id they share with the rest of the data (traps' strings too). */
 function buildHeistData(
   rawHeist: unknown,
   rawEvents: unknown,
-  ctx: { balance: Balance; itemsById: Map<string, BaseItem>; enemiesById: Map<string, EnemyDef>; worlds: WorldDef[]; assets: Assets },
+  ctx: {
+    balance: Balance; itemsById: Map<string, BaseItem>; enemiesById: Map<string, EnemyDef>; worlds: WorldDef[]; assets: Assets;
+    strings: Record<string, string>;
+  },
 ): HeistData {
   const file = parse('heist.json', HeistFileSchema, rawHeist);
   const events = parse('heistEvents.json', HeistEventsSchema, rawEvents);
-  const { balance, itemsById, enemiesById, worlds, assets } = ctx;
+  const { balance, itemsById, enemiesById, worlds, assets, strings } = ctx;
 
   const heistLocationsById = new Map<LocationId, HeistLocationDef>();
   for (const loc of file.locations) {
@@ -285,6 +290,8 @@ function buildHeistData(
     if (heistPerksById.has(p.id)) fail(`duplicate perk id ${p.id}`);
     heistPerksById.set(p.id, p);
     if ((p.rarity === 'evolution') !== !!p.recipe) fail(`perk ${p.id}: evolutions (and only they) have a recipe`);
+    // A shop's health counter is the only place a shop-only perk is sold, and it sells +max HP perks.
+    if (p.shopOnly && (p.recipe || !((p.effect.hpPct ?? 0) > 0))) fail(`perk ${p.id}: a shop-only perk must be a +max HP perk`);
   }
   for (const p of file.perks) {
     for (const id of p.recipe?.perks ?? []) {
@@ -298,10 +305,31 @@ function buildHeistData(
     heistCursesById.set(c.id, c);
   }
 
+  const trapIds = new Set<string>();
+  const heistTraps: HeistTrapDef[] = file.traps.map((trap) => {
+    if (trapIds.has(trap.id)) fail(`duplicate heist trap ${trap.id}`);
+    trapIds.add(trap.id);
+    const name = strings[`heist.trap.${trap.id}.name`];
+    const text = strings[`heist.trap.${trap.id}.text`];
+    if (!name || !text) fail(`heist trap ${trap.id} needs strings heist.trap.${trap.id}.name and .text`);
+    return { ...trap, name, text };
+  });
+  for (const id of LOCATION_IDS) if (!heistTraps.some((tr) => !tr.locations || tr.locations.includes(id))) fail(`no heist trap springs at ${id}`);
+
+  /** What a regular enemy looks like (an event's `foe` is checked against it). */
+  const shapeOf = (enemyId: string) => assets.placeholders.enemies[enemyId]?.shape;
   const heistEventsById = new Map<string, HeistEventDef>();
   for (const ev of events) {
     if (heistEventsById.has(ev.id)) fail(`duplicate heist event ${ev.id}`);
     heistEventsById.set(ev.id, ev);
+    if (ev.foe) {
+      const fights = ev.options.some((opt) => opt.outcomes.some((o) => o.type === 'fight' || o.type === 'eliteFight'));
+      if (!fights) fail(`heist event ${ev.id} names a foe but starts no fight`);
+      for (const id of ev.locations ?? LOCATION_IDS) {
+        const loc = heistLocationsById.get(id)!;
+        if (!loc.enemies.some((e) => shapeOf(e) === ev.foe)) fail(`heist event ${ev.id} promises a ${ev.foe} fight, but ${id} has no ${ev.foe}`);
+      }
+    }
     ev.options.forEach((opt, i) => {
       let chance = 0;
       for (const o of opt.outcomes) {
@@ -326,6 +354,7 @@ function buildHeistData(
     heistPerksById,
     heistCurses: file.curses,
     heistCursesById,
+    heistTraps,
     heistEvents: events,
     heistEventsById,
   };

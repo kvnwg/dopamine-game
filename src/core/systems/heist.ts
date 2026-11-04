@@ -12,11 +12,11 @@
  * run's HP); the main battle waits untouched in `run.main` and comes back when the run ends.
  */
 import {
-  BAL, DATA, HEIST_ROLLED_KINDS, PERK_EFFECT_KEYS, STAT_IDS,
-  type EnemyDef, type HeistEventDef, type HeistLocationDef, type HeistNodeKind, type LocationId, type OutcomeDef, type PerkDef,
-  type PerkEffectKey, type PerkTag,
+  BAL, DATA, HEIST_ROLLED_KINDS, LOCATION_IDS, PERK_EFFECT_KEYS, STAT_IDS,
+  type EnemyDef, type HeistEventDef, type HeistLocationDef, type HeistNodeKind, type HeistTrapDef, type LocationId, type OutcomeDef,
+  type PerkDef, type PerkEffectKey, type PerkTag,
 } from '../../data';
-import type { Rng } from '../rng';
+import { Rng } from '../rng';
 import type { BattleState, EnemyState, GameState, HeistFight, HeistLogLine, HeistRewards, HeistRun, ShopItem } from '../state';
 import { dayKey, MS_PER_MINUTE } from '../time';
 import type { CoreEvent, Item, Stats } from '../types';
@@ -351,11 +351,21 @@ const isFightKind = (k: HeistNodeKind) => k === 'fight' || k === 'elite';
 
 // ------------------------------------------------------------------ stops
 
-/** One act's stops straight from the act's weights (no guarantees). */
-export function rollActNodes(act: number, rng: Rng): HeistNodeKind[] {
+/** One act's stops straight from the act's weights (no guarantees); with `shops` false, never a shop. */
+export function rollActNodes(act: number, rng: Rng, shops = true): HeistNodeKind[] {
   const w = H.nodeWeights[act - 1];
-  const entries = HEIST_ROLLED_KINDS.map((k) => [k, w[k]] as const);
+  const entries = HEIST_ROLLED_KINDS.map((k) => [k, k === 'shop' && !shops ? 0 : w[k]] as const);
   return Array.from({ length: H.nodesPerAct }, () => rng.weighted(entries));
+}
+
+/**
+ * Run coins an act needs when it's laid out to get shop stops: the cheapest perk a shop sells. A shop
+ * the run can't buy anything in is a wasted stop, so a broke run doesn't meet one (a run starts with
+ * fewer, so act 1 has none).
+ */
+export function shopMinCoins(): number {
+  const P = H.shop.prices;
+  return Math.min(P.common, P.rare, P.epic);
 }
 
 /**
@@ -375,13 +385,16 @@ function convertStop(nodes: HeistNodeKind[], kind: HeistNodeKind, rng: Rng, from
 
 /**
  * An act's stops: rolled from the act's weights; the run opens with a fight; at least `minFights`
- * fights; act 2 always has a shop; Bin Diver and Smelly add treasures and fights; a treasure is a
- * Golden Dumpster 1% of the time; act 3 ends with the boss.
+ * fights; Bin Diver and Smelly add treasures and fights; a treasure is a Golden Dumpster 1% of the
+ * time; act 3 ends with the boss. Shops wait for money: an act laid out while the run's coins are under
+ * shopMinCoins gets none, and the run's one sure shop comes in act 2, or in act 3 when act 2 had none.
  */
-export function generateAct(run: Pick<HeistRun, 'perks' | 'absorbed' | 'curses'>, act: number, rng: Rng): HeistNodeKind[] {
-  const nodes = rollActNodes(act, rng);
+export function generateAct(run: Pick<HeistRun, 'perks' | 'absorbed' | 'curses' | 'coins' | 'nodes'>, act: number, rng: Rng): HeistNodeKind[] {
+  const shops = run.coins >= shopMinCoins();
+  const nodes = rollActNodes(act, rng, shops);
   if (act === 1) nodes[0] = 'fight';
-  if (act === 2 && !nodes.includes('shop')) {
+  const sureShop = shops && (act === 2 || (act === 3 && !run.nodes[1]?.includes('shop')));
+  if (sureShop && !nodes.includes('shop')) {
     let idx = nodes.map((k, i) => (!isFightKind(k) ? i : -1)).filter((i) => i >= 0);
     if (idx.length === 0) idx = nodes.map((_, i) => i);
     nodes[rng.pick(idx)] = 'shop';
@@ -450,8 +463,21 @@ export function availableEvolutions(run: Pick<HeistRun, 'perks'>): string[] {
   return DATA.heistPerks.filter((p) => p.recipe && !run.perks.includes(p.id) && recipeIngredients(run.perks, p)).map((p) => p.id);
 }
 
+/** Perks that can be offered (never the shop-only ones), of a rarity, not in `taken`. */
 function perkPool(rarity: OfferRarity, taken: ReadonlySet<string>, tag?: PerkTag): PerkDef[] {
-  return DATA.heistPerks.filter((p) => p.rarity === rarity && !taken.has(p.id) && (!tag || p.tag === tag));
+  return DATA.heistPerks.filter((p) => p.rarity === rarity && !p.shopOnly && !taken.has(p.id) && (!tag || p.tag === tag));
+}
+
+/** The +max HP perks (Thick Fur and the shop-only ones): what a shop's health counter sells. */
+const MAX_HP_PERKS: readonly PerkDef[] = DATA.heistPerks.filter((p) => !p.recipe && (p.effect.hpPct ?? 0) > 0);
+const MAX_HP_IDS: readonly string[] = MAX_HP_PERKS.map((p) => p.id);
+
+/** A +max HP perk not in `taken`, more often the commoner ones (heist.rarityWeights); null when none is left. */
+function rollMaxHpPerk(rng: Rng, taken: ReadonlySet<string>): PerkDef | null {
+  const pool = MAX_HP_PERKS.filter((p) => !taken.has(p.id));
+  if (pool.length === 0) return null;
+  const id = rng.weighted(pool.map((p) => [p.id, Math.max(1, H.rarityWeights[p.rarity as OfferRarity] ?? 1)] as const));
+  return DATA.heistPerksById.get(id) ?? null;
 }
 
 /** A random perk not in `taken`: rarity by heist.rarityWeights (or `only`), falling back to what is left. */
@@ -589,20 +615,39 @@ function startFight(d: GameState, run: HeistRun, kind: HeistFight['kind'], rewar
   else log(run, kind === 'elite' ? 'heist.log.elite' : 'heist.log.fight');
 }
 
+/** The choice event the run's current stop is playing (a fight it starts happens on its stop), if any. */
+function currentEvent(run: HeistRun): HeistEventDef | undefined {
+  if (run.nodes[run.act - 1]?.[run.index] !== 'choice') return undefined;
+  return heistEventDef(run.seen[run.seen.length - 1] ?? '');
+}
+
+/**
+ * The regular enemies a fight brings: the location's, or, for a fight a choice event started, only
+ * those drawn as the foe its text names ("A gang of pigeons..." brings pigeons).
+ */
+function fightRoster(run: HeistRun): readonly string[] {
+  const loc = locationOf(run);
+  const foe = currentEvent(run)?.foe;
+  if (!foe) return loc.enemies;
+  const named = loc.enemies.filter((id) => DATA.assets.placeholders.enemies[id]?.shape === foe);
+  return named.length > 0 ? named : loc.enemies;
+}
+
 /** The fight's enemies step in: a few regulars, an elite with its adds, or the boss. */
 function spawnFight(d: GameState, run: HeistRun, rng: Rng, ev: CoreEvent[]): void {
   const f = run.fight!;
   const loc = locationOf(run);
+  const roster = fightRoster(run);
   const b = d.battle;
   const ids: string[] = [];
   if (f.kind === 'boss') ids.push(loc.boss);
   else if (f.kind === 'elite') {
-    for (let i = 0; i < H.enemies.eliteAdds[run.act - 1]; i++) ids.push(rng.pick(loc.enemies));
+    for (let i = 0; i < H.enemies.eliteAdds[run.act - 1]; i++) ids.push(rng.pick(roster));
     ids.push(rng.pick(loc.elites));
   } else {
     const size = H.enemies.fightSize[run.act - 1];
     const n = rng.int(size.min, size.max);
-    for (let i = 0; i < n; i++) ids.push(rng.pick(loc.enemies));
+    for (let i = 0; i < n; i++) ids.push(rng.pick(roster));
   }
   b.enemies = ids.map((id) => makeRunEnemy(run, id, b.nextEnemyUid++));
   b.phase = 'fighting';
@@ -936,29 +981,61 @@ function treasure(run: HeistRun, rng: Rng): void {
   }
 }
 
+/**
+ * The trap at stop `index` of act `act` (for a Trap stop; the UI names the ones passed). A location's
+ * traps come in an order fixed by when the run started, its n-th Trap stop taking the n-th, so a trap
+ * never changes on a reload and none comes twice before the location's list runs out. Only reached
+ * stops count (what's ahead can still change), so it is final once its stop is reached.
+ */
+export function heistTrapAt(run: Pick<HeistRun, 'location' | 'startedAt' | 'nodes'>, act: number, index: number): HeistTrapDef {
+  const pool = DATA.heistTraps.filter((tr) => !tr.locations || tr.locations.includes(run.location));
+  const order = new Rng(Rng.hashSeed((run.startedAt % 2 ** 32) ^ Math.imul(LOCATION_IDS.indexOf(run.location) + 1, 0x9e3779b1)));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = order.int(0, i);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  let n = 0;
+  for (let a = 1; a <= act; a++) {
+    const nodes = run.nodes[a - 1] ?? [];
+    n += (a < act ? nodes : nodes.slice(0, index)).filter((k) => k === 'trap').length;
+  }
+  return pool[n % pool.length];
+}
+
+/** A Trap stop: a named trap (heist.trap.*) that curses or hurts, or that the run saw coming. */
 function trap(d: GameState, run: HeistRun, rng: Rng, ev: CoreEvent[]): void {
+  const which = heistTrapAt(run, run.act, run.index);
   if (run.flags.noTrapsAct === run.act) {
-    log(run, 'heist.log.trapDisarmed');
+    log(run, 'heist.log.trapSpotted', { trap: which.name });
     return;
   }
-  log(run, 'heist.log.trap');
+  log(run, 'heist.log.trapSprung', { trap: which.name, text: which.text });
   if (rng.chance(H.trap.curseChance) && gainCurse(d, run, undefined, rng, ev)) return;
   const hp = hurt(d, run, H.trap.damagePct);
   log(run, 'heist.log.damage', { hp: Math.round(hp) });
 }
 
+/**
+ * A shop's stock. First its health counter: a +max HP perk (shop.maxHpChance of the time), otherwise a
+ * Snack, as also when it has no +max HP perk to sell (all held, or no free perk slot). Then random
+ * perks (never +max HP ones), a Hot Bath when cursed, and Fresh Stock.
+ */
 function openShop(run: HeistRun, rng: Rng): void {
-  const P = H.shop.prices;
-  const stock: ShopItem[] = [{ id: 'heal', kind: 'heal', price: P.heal, sold: false }];
-  const taken = new Set([...run.perks, ...run.absorbed]);
-  for (let i = 0; i < H.shop.perks; i++) {
+  const S = H.shop;
+  const held = [...run.perks, ...run.absorbed];
+  const maxHp = run.perks.length < H.maxPerks && rng.chance(S.maxHpChance) ? rollMaxHpPerk(rng, new Set(held)) : null;
+  const stock: ShopItem[] = [
+    maxHp ? { id: maxHp.id, kind: 'perk', price: perkPrice(maxHp), sold: false } : { id: 'heal', kind: 'heal', price: S.prices.heal, sold: false },
+  ];
+  const taken = new Set([...held, ...MAX_HP_IDS]);
+  for (let i = 0; i < S.perks; i++) {
     const p = rollPerk(rng, taken);
     if (!p) break;
     taken.add(p.id);
     stock.push({ id: p.id, kind: 'perk', price: perkPrice(p), sold: false });
   }
-  if (run.curses.length > 0) stock.push({ id: 'removeCurse', kind: 'removeCurse', price: P.removeCurse, sold: false });
-  stock.push({ id: 'reroll', kind: 'reroll', price: P.reroll, sold: false });
+  if (run.curses.length > 0) stock.push({ id: 'removeCurse', kind: 'removeCurse', price: S.prices.removeCurse, sold: false });
+  stock.push({ id: 'reroll', kind: 'reroll', price: S.prices.reroll, sold: false });
   run.pending = { kind: 'shop', stock };
 }
 
@@ -1201,7 +1278,8 @@ function buy(d: GameState, run: HeistRun, index: number, rng: Rng, ev: CoreEvent
       const taken = new Set([...run.perks, ...run.absorbed, ...stock.filter((s) => s.kind === 'perk').map((s) => s.id)]);
       for (const s of stock) {
         if (s.kind !== 'perk' || s.sold) continue;
-        const p = rollPerk(rng, taken);
+        // The health counter's +max HP perk restocks as another one; the others as any perk but those.
+        const p = MAX_HP_IDS.includes(s.id) ? rollMaxHpPerk(rng, taken) : rollPerk(rng, new Set([...taken, ...MAX_HP_IDS]));
         if (!p) continue;
         taken.add(p.id);
         s.id = p.id;

@@ -111,9 +111,26 @@ export function markFeatureSeen(d: GameState, f: Feature): boolean {
 
 export type FeatureView = 'locked' | 'intro' | 'open';
 
-/** The opened feature being introduced now: the first opened and not yet seen (one at a time), or null. */
-export function introFeature(state: Pick<GameState, 'features'>): Feature | null {
-  for (const f of FEATURE_ORDER) if (state.features.unlocked.includes(f) && !state.features.seen.includes(f)) return f;
+/** What the introductions look at: the features, and for the dumpster's upgrade, the gold and the dumpster. */
+type IntroState = Pick<GameState, 'features' | 'currencies' | 'dumpster'>;
+
+/** The dumpster's upgrade can be started right now: affordable, none running, not maxed. */
+export function dumpsterUpgradeReady(state: Pick<GameState, 'currencies' | 'dumpster'>): boolean {
+  const dz = state.dumpster;
+  return dz.upgradeEndsAt === null && dz.level < BAL.dumpster.maxLevel && state.currencies.coins >= dumpsterUpgradeCost(dz.level);
+}
+
+/**
+ * The opened feature being introduced now: the first opened and not yet seen (one at a time), or
+ * null. The dumpster's upgrade waits its turn until the player can pay for it (Kevin: "don't ask
+ * the player to upgrade dumpster when they don't have enough money"); the ones after it go first.
+ */
+export function introFeature(state: IntroState): Feature | null {
+  for (const f of FEATURE_ORDER) {
+    if (!state.features.unlocked.includes(f) || state.features.seen.includes(f)) continue;
+    if (f === 'dumpster' && !dumpsterUpgradeReady(state)) continue;
+    return f;
+  }
   return null;
 }
 
@@ -121,7 +138,7 @@ export function introFeature(state: Pick<GameState, 'features'>): Feature | null
  * How a feature shows: 'open' once introduced, 'intro' while it is the one being introduced, else
  * 'locked' (not open yet, or waiting for the one before it to be introduced).
  */
-export function featureView(state: Pick<GameState, 'features'>, f: Feature): FeatureView {
+export function featureView(state: IntroState, f: Feature): FeatureView {
   if (state.features.seen.includes(f)) return 'open';
   if (!state.features.unlocked.includes(f)) return 'locked';
   return introFeature(state) === f ? 'intro' : 'locked';

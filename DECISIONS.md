@@ -2,7 +2,17 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A loading screen worth looking at (Nov 4, newest)
+## No drag hint on the last roll, the dumpster asks only with the gold, a roomier upgrade map on PC (Nov 4, newest)
+
+Kevin: "get rid of the upgrade, drag it text", "don't ask the player to upgrade dumpster when they don't have enough money", "manage the space better, there's barely any space to move and look around" (the upgrade map on a PC).
+
+| # | Decision | Why |
+|---|---|---|
+| D1 | The Roll tab's last roll no longer carries "▲ UPGRADE! Drag it onto him to wear it". Its tile's green ▲ and the +N POWER badge say it already; drag and Equip best work as before. | Kevin's request. |
+| D2 | The dumpster's upgrade is introduced (its NEW bubble, the hand, its button appearing) only while it can be started: gold for it, no upgrade running, not maxed (`dumpsterUpgradeReady`). Until then the features after it are introduced first (`introFeature`). After that, the Roll tab's Upgrade button is green only when it can be started, grey otherwise (it still opens the card with the price and the wait). | It pointed at the upgrade when the gold had gone to the upgrade map first. |
+| D3 | The upgrade map on a PC: the selected hex's card, the gold, ATK/DEF and Close stand in a 600 px panel down the right; the page's words run in one strip along the top. The map has the rest (1560 x 960, its middle at 780, 520) and opens at 0.85 zoom, still at full detail. The wheel over the panel leaves the map alone. Phones keep their layout. | The header and the card/bar block left about 290 of the 960 px for the map. |
+
+## A loading screen worth looking at (Nov 4)
 
 Kevin: "loading screen doesnt look good, make it better".
 

@@ -136,6 +136,24 @@ describe('a new game opens its features one by one', () => {
     expect(introFeature(st)).toBeNull();
   });
 
+  it("the dumpster's upgrade is only introduced while it can be paid for; the ones after it go first", () => {
+    const st = freshState();
+    st.features.unlocked.push('dumpster', 'rebirth');
+    st.currencies.coins = upgradeCost(st.dumpster.level) - 1;
+    // Can't pay: no NEW bubble pointing at it, no button yet, and Rebirth's turn comes first.
+    expect(introFeature(st)).toBe('rebirth');
+    expect(featureView(st, 'dumpster')).toBe('locked');
+    st.features.seen.push('rebirth');
+    expect(introFeature(st)).toBeNull();
+    // Enough gold: now it is introduced.
+    st.currencies.coins = upgradeCost(st.dumpster.level);
+    expect(introFeature(st)).toBe('dumpster');
+    expect(featureView(st, 'dumpster')).toBe('intro');
+    // Not while an upgrade is already running.
+    st.dumpster.upgradeEndsAt = T0 + 60_000;
+    expect(introFeature(st)).toBeNull();
+  });
+
   it('saves from before this have everything open and introduced', () => {
     const old = clone(freshState()) as unknown as Record<string, unknown>;
     delete old.features;

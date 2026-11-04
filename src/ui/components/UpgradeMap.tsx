@@ -47,8 +47,11 @@ const K_MAX = 1.7;
 /** Where the map centers things: the middle of the area between the header and the buy card. */
 /** Where the map's focus sits on screen (stage px): tall stage, or wide (PC: the middle, above the card). */
 const FOCUS_TALL = { x: 540, y: 800 };
-const FOCUS_WIDE = { x: 1080, y: 390 };
+/** The wide stage: the middle of the map's room, left of the 600 px panel and under the page's words. */
+const FOCUS_WIDE = { x: 780, y: 520 };
 const focusPoint = () => (useUi.getState().wide ? FOCUS_WIDE : FOCUS_TALL);
+/** The zoom it opens at (and the target button returns to): a little further out on a PC, with room to show more. */
+const homeZoom = () => (useUi.getState().wide ? 0.85 : 1);
 
 function hexPoints(r: number): string {
   return [0, 60, 120, 180, 240, 300]
@@ -481,7 +484,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   /* ----- pan and zoom (applied straight to the DOM; React re-renders only when the game changes) */
   const contentRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<View>(useUi.getState().mapView ?? { x: focusPoint().x, y: focusPoint().y, k: 1 });
+  const viewRef = useRef<View>(useUi.getState().mapView ?? { x: focusPoint().x, y: focusPoint().y, k: homeZoom() });
   const boundsRef = useRef(bounds);
   boundsRef.current = bounds;
   const animRef = useRef(0);
@@ -685,7 +688,7 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
   const center = () => {
     audio.tap();
     const n = BY_KEY.get(sel) ?? BY_KEY.get(nodeKey(BAL.upgrades[0].id, 1))!;
-    glideTo(nodeX(n), nodeY(n), 1);
+    glideTo(nodeX(n), nodeY(n), homeZoom());
   };
 
   const selNode = BY_KEY.get(sel) && shown.has(sel) ? BY_KEY.get(sel)! : undefined;

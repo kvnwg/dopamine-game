@@ -130,6 +130,25 @@
     transform: translate(0, 0);
   }
 }
+/* Tapped before a world is picked: it rattles side to side, no (two names, so each tap replays it). */
+.lock[data-phase='idle'][data-nope='a'] .padlock > img {
+  animation: nopeA 0.36s both;
+}
+.lock[data-phase='idle'][data-nope='b'] .padlock > img {
+  animation: nopeB 0.36s both;
+}
+@keyframes nopeA {
+  0% { transform: translateX(calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  25% { transform: translateX(calc(2 * var(--px))); animation-timing-function: steps(1, end); }
+  50% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  75%, 100% { transform: translateX(0); }
+}
+@keyframes nopeB {
+  0% { transform: translateX(calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  25% { transform: translateX(calc(2 * var(--px))); animation-timing-function: steps(1, end); }
+  50% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  75%, 100% { transform: translateX(0); }
+}
 /* The tap: a jolt. */
 .lock[data-phase='hit'] .padlock > img {
   animation: jolt 0.17s both;

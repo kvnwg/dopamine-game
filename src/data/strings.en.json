@@ -134,6 +134,8 @@
   "roll.odds": "Odds",
   "roll.codex": "Codex",
   "roll.firstRoll": "Bust it open: it rolls loot all by itself!",
+  "roll.firstWorld": "Pick a world first, then bust it open!",
+  "toast.pickWorldFirst": "Pick a world first: he needs somewhere to fight!",
   "luck.title": "Luck",
   "luck.total": "×{luck} Luck",
   "luck.base": "Base luck",

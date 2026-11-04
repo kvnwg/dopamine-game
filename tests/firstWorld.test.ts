@@ -67,6 +67,20 @@ describe('the first world (a calm start)', () => {
     expect(featureView(r.state, 'luck')).toBe('open');
   });
 
+  it('starting on a world before the dumpster is open, he never falls during the tutorial; after it, he can', () => {
+    const rng = new Rng(9);
+    let st = applyAction(freshState(9, T0, true), { type: 'travel', world: 1 }, rng, T0).state;
+    // A minute and a half of fighting, gear-less: he holds on at 1 HP.
+    const r = run(st, rng, 900);
+    expect(r.events.some((e) => e.type === 'playerDeath')).toBe(false);
+    expect(r.events.filter((e) => e.type === 'enemyHit').length).toBeGreaterThan(20);
+    // With the tutorial over, the same gear-less raccoon falls in time.
+    st = clone(r.st);
+    st.dumpster.beginner = { state: 'done', uid: null };
+    const after = run(st, rng, 1800, 900);
+    expect(after.events.some((e) => e.type === 'playerDeath')).toBe(true);
+  });
+
   it('no fighting means no offline fight rewards, and a reload keeps him waiting', () => {
     const { st, rng } = newGame();
     expect(currentRate(st, T0)).toEqual({ bags: 0, coins: 0, xp: 0 });

@@ -2,7 +2,18 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Worlds from the start, beginner's luck at about 45 s, the level bar's numbers whole (Nov 4, newest)
+## A world first, then the dumpster (Nov 4, newest)
+
+Kevin: "i think the best order is to have them start on a world, and then unlock the roller".
+
+| # | Decision | Why |
+|---|---|---|
+| F1 | A new game opens on the Worlds tab. The tutorial's first step is "Tap World 1: he starts fighting there!" (the hand on World 1's card). Picked, the raccoon fights there, and the game goes back to the Roll tab, where the next step is busting the padlocked dumpster; then the rest of the tutorial as before. The bubble has four pips now: a world, the dumpster, Equip best, beginner's luck. | Kevin's order. The player sees him fight before anything else, then gets the loot machine. |
+| F2 | The padlock waits for a world. Tapped before one is picked, it rattles and says "Pick a world first: he needs somewhere to fight!", and the caption under it says the same. The core still opens it whenever asked (old saves, tests); the screen keeps the order. | |
+| F3 | During the tutorial the raccoon can't fall in World 1: he holds on at 1 HP. He fights there undressed until the dumpster's first finds go on, and with only the tutorial's first gear he could still fall at its boss before beginner's luck. Sent further on his own, he falls and tries again as ever. | Gear-less, he fell about 14 s in. In bot runs of the new first minute, he now never falls and beats World 1 within two minutes. |
+| F4 | Beginner's luck still counts from the padlock (P2), so it lands about 45 s after the dumpster opens (47.5 s in a quick run through the new order). | |
+
+## Worlds from the start, beginner's luck at about 45 s, the level bar's numbers whole (Nov 4)
 
 Kevin: "text for the level bar is cut off"; "it's not quite believable to get a 1 in 150k within 10 seconds of the game... push that down a bit to 45 seconds"; "worlds should automatically be accessible, so they can fight instantly if they want to and not have to sit there and wait for the first 4 rolls".
 

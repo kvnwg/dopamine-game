@@ -61,6 +61,8 @@ function buildUp(view: RollView, ms: number) {
   }
   setTimeout(() => audio.riser(Math.max(0.3, (ms * 0.5) / 1000), tier, true), ms * 0.4);
   setTimeout(() => audio.silenceDrop(0.15), Math.max(0, ms - 160));
+  // Nothing of the build-up rings on past the find landing (on any tab).
+  setTimeout(() => audio.endRamp(), ms);
 }
 
 /**
@@ -81,6 +83,7 @@ function buildUpSmall(plan: Tease) {
   const top = plan.tiers[plan.tiers.length - 1];
   setTimeout(() => audio.riser(Math.max(0.3, (dur * 0.85) / 1000), Math.max(0, top - 3)), plan.from + dur * 0.1);
   if (plan.level >= 2) setTimeout(() => audio.silenceDrop(0.08), Math.max(0, plan.land - 100));
+  setTimeout(() => audio.endRamp(), plan.land);
 }
 
 /**

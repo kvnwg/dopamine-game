@@ -539,6 +539,8 @@ export function ReelBank() {
           } else {
             const tier = rarityIndex(st.cells[stop.idx].rarity);
             const last = r.reached.every((m, j) => m >= r.strips[j].stops.length);
+            // The find a build-up was for lands: its sounds stop here (even a small glow's).
+            if (plan?.reel === i) audio.endRamp();
             audio.reelLand(tier, last);
             haptics.impact('light');
             if (!calm) {

@@ -111,6 +111,8 @@ class AudioEngine {
   private recs = new Map<string, Recording>();
   private loading: Promise<void> | null = null;
   private loaded = false;
+  /** What a build-up's sounds play through, so they all stop as its find lands (endRamp). */
+  private rampBus: GainNode | null = null;
 
   private rnd(): number {
     this.seed = (this.seed + 0x6d2b79f5) >>> 0;
@@ -157,7 +159,7 @@ class AudioEngine {
    * climb). `fit` (seconds) makes it end then, for a riser whose top must land on a moment: a longer
    * one starts partway in (faded in), a shorter one waits.
    */
-  private rec(name: string, at: number, o: { semis?: number; gain?: number; fit?: number } = {}): boolean {
+  private rec(name: string, at: number, o: { semis?: number; gain?: number; fit?: number; bus?: AudioNode } = {}): boolean {
     const r = this.recs.get(name);
     const ctx = this.ctx;
     if (!r || !ctx) return false;
@@ -179,9 +181,35 @@ class AudioEngine {
       } else start += o.fit - len;
     }
     src.connect(g);
-    g.connect(this.sfx);
+    g.connect(o.bus ?? this.sfx);
     src.start(start, from);
     return true;
+  }
+
+  /** The bus for the build-up under way (risers, shake, crawl, glow): a fresh one after each landing. */
+  private ramp(): AudioNode {
+    if (!this.rampBus) {
+      this.rampBus = this.ctx!.createGain();
+      this.rampBus.connect(this.sfx);
+    }
+    return this.rampBus;
+  }
+
+  /**
+   * The find lands: everything its build-up was playing (the risers, the shake, the crawl, the glow)
+   * stops with it, faded over 80 ms so nothing clicks (Kevin: "sound for ramp up should not play past
+   * the item landing").
+   */
+  endRamp(): void {
+    const ctx = this.ctx;
+    const g = this.rampBus;
+    if (!ctx || !g) return;
+    this.rampBus = null;
+    const now = ctx.currentTime;
+    g.gain.cancelScheduledValues(now);
+    g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.linearRampToValueAtTime(0, now + 0.08);
+    setTimeout(() => g.disconnect(), 400);
   }
 
   /** Call from a user gesture. Creates and resumes the audio context and starts the music. */
@@ -411,14 +439,15 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    const bus = this.ramp();
     if (rare && this.recs.has('reel_creep')) {
-      if (step === 0) this.rec('reel_creep', at);
+      if (step === 0) this.rec('reel_creep', at, { bus });
       return;
     }
     if (!this.gate('reelCreep', 60)) return;
     const n = LADDER[Math.min(LADDER.length - 1, 3 + step)];
-    this.tone(midi(n), at, 0.06, { type: 'square', gain: 0.03 + Math.min(0.03, step * 0.004), filter: 3200 });
-    this.noise(at, 0.02, { freq: 2600, q: 5, gain: 0.04 });
+    this.tone(midi(n), at, 0.06, { type: 'square', gain: 0.03 + Math.min(0.03, step * 0.004), filter: 3200, bus });
+    this.noise(at, 0.02, { freq: 2600, q: 5, gain: 0.04, bus });
   }
 
   /**
@@ -446,12 +475,13 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx || !this.gate('glowUp', 60)) return;
     const at = ctx.currentTime;
-    if (this.rec('glow_up', at, { semis: climb(step) })) return;
+    const bus = this.ramp();
+    if (this.rec('glow_up', at, { semis: climb(step), bus })) return;
     const n = LADDER[Math.min(LADDER.length - 2, 3 + tier)];
-    this.tone(midi(n - 5), at, 0.08, { type: 'triangle', gain: 0.04, freqEnd: midi(n) });
-    this.bell(midi(n), at + 0.05, 0.35, 0.045);
-    this.bell(midi(LADDER[Math.min(LADDER.length - 1, 4 + tier)]), at + 0.1, 0.3, 0.03);
-    this.noise(at, 0.12, { type: 'highpass', freq: 6000, gain: 0.025, attack: 0.02 });
+    this.tone(midi(n - 5), at, 0.08, { type: 'triangle', gain: 0.04, freqEnd: midi(n), bus });
+    this.bell(midi(n), at + 0.05, 0.35, 0.045, bus);
+    this.bell(midi(LADDER[Math.min(LADDER.length - 1, 4 + tier)]), at + 0.1, 0.3, 0.03, bus);
+    this.noise(at, 0.12, { type: 'highpass', freq: 6000, gain: 0.025, attack: 0.02, bus });
   }
 
   /** The dumpster lid clunk on a manual dive. */
@@ -511,14 +541,15 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx) return;
     const at = ctx.currentTime;
+    const bus = this.ramp();
     if (this.recs.has('rattle')) {
-      if (beat === 0) this.rec('rattle', at, { fit: Math.max(0.3, landIn) });
+      if (beat === 0) this.rec('rattle', at, { fit: Math.max(0.3, landIn), bus });
       return;
     }
     const k = (beat + 1) / beats;
-    this.noise(at, 0.07, { freq: 1900 + beat * 320, q: 6, gain: 0.05 + 0.1 * k });
-    this.tone(150 + beat * 28, at, 0.06, { type: 'square', gain: 0.02 + 0.03 * k, filter: 1300 });
-    if (heartbeat) this.tone(62, at, 0.2, { gain: 0.28, freqEnd: 40 });
+    this.noise(at, 0.07, { freq: 1900 + beat * 320, q: 6, gain: 0.05 + 0.1 * k, bus });
+    this.tone(150 + beat * 28, at, 0.06, { type: 'square', gain: 0.02 + 0.03 * k, filter: 1300, bus });
+    if (heartbeat) this.tone(62, at, 0.2, { gain: 0.28, freqEnd: 40, bus });
   }
 
   /**
@@ -530,7 +561,8 @@ class AudioEngine {
     const ctx = this.live;
     if (!ctx || seconds <= 0) return;
     const at = ctx.currentTime;
-    if (this.rec(long ? 'riser_long' : 'riser_short', at, { fit: seconds })) return;
+    const bus = this.ramp();
+    if (this.rec(long ? 'riser_long' : 'riser_short', at, { fit: seconds, bus })) return;
     const top = 2 + tierIndex * 0.25;
     for (const [base, g] of [[180, 0.05], [360, 0.035]] as const) {
       const osc = ctx.createOscillator();
@@ -547,7 +579,7 @@ class AudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.0001, at + seconds + 0.05);
       osc.connect(f);
       f.connect(gain);
-      gain.connect(this.sfx);
+      gain.connect(bus);
       osc.start(at);
       osc.stop(at + seconds + 0.1);
     }

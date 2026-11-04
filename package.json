@@ -19,7 +19,7 @@
     "boot-art": "tsx tools/bootArt.ts",
     "dev:crazygames": "vite --host --mode crazygames",
     "build:crazygames": "tsc --noEmit && vite build --mode crazygames && node tools/crazygames/zip.mjs",
-    "crazygames:covers": "node tools/crazygames/renderCovers.mjs",
+    "crazygames:covers": "node tools/crazygames/renderCovers.mjs && tsx tools/crazygames/renderLogo.ts",
     "crazygames:trailer": "node tools/crazygames/recordTrailer.mjs && node tools/crazygames/editTrailer.mjs",
     "crazygames:recut": "node tools/crazygames/editTrailer.mjs"
   },

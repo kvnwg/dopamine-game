@@ -9,7 +9,7 @@
  * (twice the art pixels at the same pixel size), as the reveal and showcase spots in the game do.
  */
 import { titleArt, TITLE } from '../../src/render/titleScene';
-import { raccoonMark } from './raccoonMark';
+import { raccoonFace } from './raccoonMark';
 import { fromRows, scale2x, scale3x, type PixelBuf } from '../../src/render/pixel/buf';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
 import { FX } from '../../src/render/pixel/ui';
@@ -68,7 +68,7 @@ const P = {
 }[layout];
 
 // The logo's place (drawn last, on top); the finds keep clear of it.
-const logo = raccoonMark(layout === 'land' ? 5 : layout === 'port' ? 4 : 3); // the game's own pixels, whole-pixel scaled
+const logo = raccoonFace(layout === 'square' ? 3 : 4); // the game's pixels, straight on the cover's street
 const logoAt = { x: Math.max(2, Math.min(AW - logo.w - 2, Math.round(AW * P.logoX - logo.w / 2))), y: P.logoY };
 
 // ---- the dumpster, lid blown off, light pouring out

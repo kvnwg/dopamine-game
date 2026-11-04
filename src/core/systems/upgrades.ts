@@ -28,7 +28,20 @@ export function upgradeUnlocked(state: Pick<GameState, 'upgrades'>, def: Upgrade
 /** Cost of the next tier when `level` tiers are owned: base x growth^level, discounted by rebirths. */
 export function upgradeCostAt(def: UpgradeDef, level: number, rebirths = 0): number {
   const discount = Math.pow(1 - BAL.rebirth.upgradeDiscountPer, rebirths);
-  return Math.max(1, Math.round(def.cost.base * Math.pow(def.cost.growth, level) * discount));
+  return Math.max(1, Math.round(def.cost.base * tierGrowth(def.cost.growth, level) * discount));
+}
+
+/**
+ * How much tier `level + 1` costs over tier 1. A line on the standard curve (growth 100) climbs by the
+ * economy's tierGrowth steps (x10 to start, x300 at the top), so its first tiers come quickly and its
+ * last are as rare as ever; any other line multiplies by its own growth each tier.
+ */
+function tierGrowth(growth: number, level: number): number {
+  const steps = BAL.economy.tierGrowth;
+  if (growth !== 100 || !steps) return Math.pow(growth, level);
+  let m = 1;
+  for (let k = 0; k < level; k++) m *= steps[Math.min(k, steps.length - 1)];
+  return m;
 }
 
 /** The price of the next tier of `def` for this player. */

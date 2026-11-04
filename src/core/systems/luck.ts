@@ -90,7 +90,27 @@ export function luckOddsOneIn(item: { rarity: Rarity; enchants: Array<{ tier: nu
 
 export type RollDrama = 'big' | 'huge' | 'insane';
 
-/** How big a deal a roll is, from its odds at the raccoon's luck (feel.bigRoll); null for an everyday roll. */
+/**
+ * The full-screen reveal, and how big: a find gets it when its rarity is uncommon for your luck (its
+ * tier-or-better odds at your luck, enchantments aside, at least 1 in feel.bigRoll.tierOneIn) and its
+ * card's "1 in X" (enchantments included) is at least feel.bigRoll.big x your luck (10x and 100x that
+ * make it huge and insane). Enchantments can't turn a common find into a reveal, and it comes about as
+ * often at any luck (once in roughly 900 to 1,600 rolls).
+ */
+export function revealDrama(item: { rarity: Rarity; enchants: Array<{ tier: number }> }, luck: number): RollDrama | null {
+  const l = Math.max(1, luck);
+  if (luckOddsOneIn({ rarity: item.rarity, enchants: [] }, l) < BAL.feel.bigRoll.tierOneIn) return null;
+  return rollDrama(itemOddsOneIn(item) / l);
+}
+
+/** The least a find needs for the full-screen reveal at this luck: its rarity, and its card's "1 in X". */
+export function revealBar(luck: number): { rarity: Rarity; oneIn: number } {
+  const l = Math.max(1, luck);
+  const rarity = RARITIES.find((r) => luckOddsOneIn({ rarity: r, enchants: [] }, l) >= BAL.feel.bigRoll.tierOneIn) ?? RARITIES[RARITIES.length - 1];
+  return { rarity, oneIn: Math.round(BAL.feel.bigRoll.big * l) };
+}
+
+/** How big a deal odds of 1 in `luckOdds` (for the raccoon's luck) are (feel.bigRoll); null for everyday ones. */
 export function rollDrama(luckOdds: number): RollDrama | null {
   const b = BAL.feel.bigRoll;
   if (luckOdds >= b.insane) return 'insane';

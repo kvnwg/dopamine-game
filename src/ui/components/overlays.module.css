@@ -207,6 +207,10 @@
   color: rgba(255, 255, 255, 0.65);
   animation: fadeUp 400ms ease-out 1200ms both;
 }
+/* A haul's hint shows once its coins are in (it waits for a tap, like the reveal). */
+.tapNow {
+  animation-delay: 0ms;
+}
 /* Confetti: pieces of 2 x 1 art pixels falling straight down, flipping to 1 x 2 and back. */
 .confetti {
   position: absolute;

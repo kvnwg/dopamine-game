@@ -86,4 +86,6 @@ export const slamBridge: {
   dive?: (item: Item, tier: number, ms: number) => void;
   /** It hits: the impact, then the worn piece glimmers. */
   impact?: (item: Item, tier: number) => void;
+  /** A small sideways kick of the battle view (`px` art px at most, dying away over `ms`): a luck token's slam. */
+  shake?: (ms: number, px: number) => void;
 } = {};

@@ -10,8 +10,8 @@
  * the machine shakes); an uncommon one sometimes gets a small glow that climbs only to its own tier.
  * A glow never climbs past the real result. Junk never glows.
  */
-import { BAL, RARITIES, type Rarity } from '../data';
-import { luckOddsOneIn, rarityIndex, type Item } from '../core';
+import { RARITIES, type Rarity } from '../data';
+import { luckOddsOneIn, rarityIndex, revealDrama, type Item } from '../core';
 import { hash } from './reelStrip';
 import { reelStops, stopOrder, tokenHoldMs, type SpinTiming } from './reelTiming';
 
@@ -74,7 +74,8 @@ export function teasePlan(spin: TeaseSpin, luck: number): Tease | null {
   const u = hash(item.uid * 31 + 7);
   const u2 = hash(item.uid * 53 + 11);
   let level: TeaseLevel;
-  if (odds >= BAL.feel.bigRoll.big || spin.scripted) level = 3;
+  // (The full reveal's own rule: rare for your luck, by its rarity and its card's "1 in X".)
+  if (revealDrama(item, luck) || spin.scripted) level = 3;
   else if (odds >= VERY_RARE) level = 2;
   else if (odds >= RARE) level = 1;
   else if (odds >= 6 && u < HOPE_CHANCE) level = 0;

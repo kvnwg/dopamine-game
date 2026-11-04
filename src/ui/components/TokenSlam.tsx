@@ -1,8 +1,8 @@
 /**
  * A luck token slamming onto the screen (Kevin: "if i landed a luck booster it should play the sound,
  * also it should slam onto the screen like the items do"). Over the battle, on every tab: the clover
- * drops in big (its Scale3x picture), slams down to its Scale2x picture with a jolt of the whole
- * screen, a ring and clover bits, green rays behind it and the reel's new luck ("×6 LUCK") stamped
+ * drops in big (its Scale3x picture), slams down to its Scale2x picture with a small kick of the
+ * battle, a ring and clover bits, green rays behind it and the reel's new luck ("×6 LUCK") stamped
  * under it; then it lifts away. tokenFx.ts says when (and plays the chime).
  */
 import { useEffect, useRef, type CSSProperties } from 'react';
@@ -10,6 +10,7 @@ import { useGame } from '../../app/store';
 import { formatNumber } from '../../core';
 import { luckTokenArt, UI_PX } from '../../render/icons';
 import { t } from '../i18n';
+import { slamBridge } from '../../render/equipSlam';
 import { raysUrl } from '../rays';
 import { useUi } from '../uiStore';
 import { PixelArt } from './PixelArt';
@@ -41,20 +42,9 @@ export function TokenSlam() {
     if (!slam) return;
     const id = slam.id;
     const list = timers.current;
-    // The hit jolts the whole screen, in whole art pixels.
-    if (!calm) {
-      list.push(
-        setTimeout(() => {
-          const stage = document.querySelector<HTMLElement>('[data-stage]');
-          const at = (y: number) => ({ translate: `0 ${y}px`, easing: 'steps(1, end)' });
-          try {
-            stage?.animate([at(12), at(-6), at(6), at(0)], { duration: 220 });
-          } catch {
-            /* no individual transform properties: no jolt */
-          }
-        }, IMPACT_MS),
-      );
-    }
+    // The hit gives the battle a small kick that dies away (its own shake, as a blow's), not the whole
+    // screen a jolt (Kevin: "the screen shake on the luck multipliers is too violent and unsmooth").
+    if (!calm) list.push(setTimeout(() => slamBridge.shake?.(240, 1), IMPACT_MS));
     list.push(setTimeout(() => useUi.setState((u) => (u.tokenSlam?.id === id ? { tokenSlam: null } : {})), SHOW_MS + 50));
     return () => {
       list.forEach(clearTimeout);

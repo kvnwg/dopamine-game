@@ -534,11 +534,14 @@ export class BattleScene extends Phaser.Scene {
     const impact = (item: Item, tier: number) => this.slamImpact(item, tier);
     slamBridge.dive = dive;
     slamBridge.impact = impact;
+    const kick = (ms: number, px: number) => this.shake(ms, (px * P) / BATTLE_W, 1);
+    slamBridge.shake = kick;
     const done = () => {
       this.unsub?.();
       this.texts.destroy();
       if (slamBridge.dive === dive) slamBridge.dive = undefined;
       if (slamBridge.impact === impact) slamBridge.impact = undefined;
+      if (slamBridge.shake === kick) slamBridge.shake = undefined;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, done);
     this.events.once(Phaser.Scenes.Events.DESTROY, done);

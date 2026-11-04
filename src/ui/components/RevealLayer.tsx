@@ -364,13 +364,15 @@ const HAUL_LEVEL = { big: 0, huge: 1, mega: 2 } as const;
 
 /**
  * A big Scrap All haul: gold rays, the haul counting up from zero, what it is worth in fighting,
- * and a burst of coins that fly into the gold counter (which pulses as they land). Tap to close.
+ * and a burst of coins that fly into the gold counter (which pulses as they land). It stays until the
+ * player taps it away.
  */
 function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['haul']> }) {
   const calm = useGame((g) => g.settings.reduceMotion);
   const lvl = HAUL_LEVEL[haul.size];
   const dur = [2600, 3200, 4000][lvl];
   const [shown, setShown] = useState(0);
+  const [done, setDone] = useState(false);
   useEffect(() => {
     const t0 = performance.now();
     const ms = dur * 0.5;
@@ -381,11 +383,12 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
       if (k < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
-    const close = setTimeout(() => useUi.setState({ haul: null }), dur);
+    // (No timer closes it: the hint shows once the count and the coins are done.)
+    const ready = setTimeout(() => setDone(true), dur);
     const pulses = [950, 1150, 1350, 1600].map((ms2) => setTimeout(() => useUi.setState((u) => ({ goldPulse: u.goldPulse + 1 })), ms2));
     return () => {
       cancelAnimationFrame(raf);
-      clearTimeout(close);
+      clearTimeout(ready);
       pulses.forEach(clearTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -425,6 +428,7 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
         <span className={s.haulSub}>{worth}</span>
         <span className={s.haulCount}>{t('haul.items', { n: haul.count })}</span>
       </div>
+      {done && <span className={`${s.tap} ${s.tapNow}`}>{t('reveal.tap')}</span>}
       {!calm &&
         coins.map((c, i) => (
           <span

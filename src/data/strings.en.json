@@ -149,6 +149,7 @@
   "luck.badLuck": "Bad luck protection: from Dumpster Level {level}, after {n} spins in a row without Epic or better, the next spin is guaranteed Epic or better.",
   "luck.slots": "Each spin picks one of the 10 gear slots with equal chance. An item's \"1 in X\" is the chance of its rarity and enchantments at base luck.",
   "luck.enchantChance": "Enchant chance: {pct}% per spin.",
+  "luck.revealBar": "Full-screen reveal: {rarity} or rarer, and 1 in {x} or rarer. Both rise with your luck, so it stays special.",
   "luck.potionDrop": "Luck Potions (×{mult} luck for {s}s) drop from mini-bosses, bosses, and rarely from any wave.",
   "bag.title": "BAG",
   "bag.capacity": "{n}/{cap}",

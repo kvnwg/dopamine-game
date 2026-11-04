@@ -436,7 +436,8 @@
     "bigRoll": {
       "big": 2500,
       "huge": 25000,
-      "insane": 250000
+      "insane": 250000,
+      "tierOneIn": 30
     },
     "haul": {
       "big": 10,
@@ -564,7 +565,8 @@
   },
   "economy": {
     "scrapGoldMult": 0.5,
-    "scrapXpMult": 0.15
+    "scrapXpMult": 0.15,
+    "tierGrowth": [10, 30, 100, 300, 300, 300, 300]
   },
   "rebirth": {
     "baseWorld": 5,

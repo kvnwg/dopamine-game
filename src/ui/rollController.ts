@@ -1,6 +1,6 @@
 /**
  * Turns core events into UI moments: every reel's result pops in; Epic and up get a burst. A roll
- * that is rare for the raccoon's current luck (see luckOddsOneIn and feel.bigRoll) gets a build-up
+ * that is rare for the raccoon's current luck (see revealDrama and feel.bigRoll) gets a build-up
  * while the reels roll (glow, rattle, riser, silence drop) and the full-screen reveal when it lands
  * (black screen, the item shining, its "1 in X" counting up). A smaller build-up (a couple of rattles
  * and a short riser) plays under the reels' glow for any other rare result (reelDrama.ts). With
@@ -8,14 +8,13 @@
  * boosts, upgrades and rebirths (with the items each rebirth unlocks).
  */
 import { BAL, DATA } from '../data';
-import { currentLuck, formatNumber, haulMinutes, haulSize, luckOddsOneIn, rarityIndex, rollDrama, type CoreEvent, type Item } from '../core';
+import { currentLuck, formatNumber, haulMinutes, haulSize, luckOddsOneIn, rarityIndex, revealDrama, type CoreEvent, type Item } from '../core';
 import { getGame } from '../app/store';
 import { saveNow } from '../app/session';
 import { bus } from '../app/eventBus';
 import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
 import { t } from './i18n';
-import { revealTotalMs } from './revealTiming';
 import { teasePlan, type Tease } from './reelDrama';
 import { itemStopMs, multOf } from './reelTiming';
 import { useUi, type RollView } from './uiStore';
@@ -23,7 +22,6 @@ import { useUi, type RollView } from './uiStore';
 let rollId = 1;
 /** Big rolls that land while another reveal is showing wait their turn (at most a few). */
 const queue: RollView[] = [];
-let revealTimer: ReturnType<typeof setTimeout> | null = null;
 
 function revealBusy(): boolean {
   return useUi.getState().celebrate !== null;
@@ -39,8 +37,10 @@ function next(): void {
  * (feel.bigRoll). The tutorial's scripted rolls (the first, beginner's luck) always get the reveal.
  */
 function rareness(item: Item, scripted?: 'first' | 'beginner'): Pick<RollView, 'luckOdds' | 'drama'> {
-  const luckOdds = luckOddsOneIn(item, currentLuck(getGame(), Date.now()));
-  return { luckOdds, drama: rollDrama(luckOdds) ?? (scripted ? 'big' : null) };
+  const luck = currentLuck(getGame(), Date.now());
+  const luckOdds = luckOddsOneIn(item, luck);
+  // Rare for your luck, by its rarity and its card's "1 in X" (revealDrama, revealBar).
+  return { luckOdds, drama: revealDrama(item, luck) ?? (scripted ? 'big' : null) };
 }
 
 /**
@@ -93,18 +93,13 @@ function buildUpSmall(plan: Tease) {
 const HOLD_AFTER_REVEAL_MS = 3500;
 let revealClosedAt = -Infinity;
 
-/** The full-screen reveal for a big roll, as its reel lands (RareReveal plays it and its sounds). */
+/**
+ * The full-screen reveal for a big roll, as its reel lands (RareReveal plays it and its sounds). It
+ * stays until the player taps it away (Kevin: "let the player decide when to tap and end it").
+ */
 function celebrate(view: RollView) {
   useUi.setState({ charging: null, celebrate: view });
   haptics.impact('heavy');
-  if (revealTimer) clearTimeout(revealTimer);
-  revealTimer = setTimeout(() => {
-    if (useUi.getState().celebrate?.id === view.id) {
-      useUi.setState({ celebrate: null });
-      revealClosedAt = performance.now();
-      next();
-    }
-  }, revealTotalMs(view, getGame().settings.reduceMotion));
 }
 
 /** RareReveal calls this when the counter lands: the item's own material and rarity sting. */
@@ -114,9 +109,8 @@ export function revealLanded(view: RollView): void {
   [0, 140, 280, 420].forEach((ms) => setTimeout(() => haptics.impact(ms ? 'light' : 'heavy'), ms));
 }
 
+/** The player taps the landed reveal away: the next big roll waiting, if any, takes its turn. */
 export function skipReveal(): void {
-  if (revealTimer) clearTimeout(revealTimer);
-  revealTimer = null;
   useUi.setState({ celebrate: null });
   revealClosedAt = performance.now();
   next();

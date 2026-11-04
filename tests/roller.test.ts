@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, canRebirth, combatEffects, luckOddsOneIn, rollDrama, haulMinutes, haulSize, currentRate, createItem, currentLuck, goldMult, inventoryCapacity, computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng, performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick, sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item, bestUpgrades,
+  applyAction, canRebirth, combatEffects, luckOddsOneIn, rollDrama, revealBar, revealDrama, haulMinutes, haulSize, currentRate, createItem, currentLuck, goldMult, inventoryCapacity, computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng, performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick, sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item, bestUpgrades,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
 import { freshState, histogram, T0 } from './helpers';
@@ -87,6 +87,42 @@ describe('luck odds ("1 in X")', () => {
     expect([rollDrama(b.big - 1), rollDrama(b.big), rollDrama(b.huge), rollDrama(b.insane)]).toEqual([null, 'big', 'huge', 'insane']);
     expect(rollDrama(luckOddsOneIn({ rarity: 'vintage', enchants: [] }, 1))).toBe('huge');
     expect(rollDrama(luckOddsOneIn({ rarity: 'prototype', enchants: [] }, 1))).toBe('insane');
+  });
+
+  it('the full-screen reveal needs a rarity uncommon for your luck and a card "1 in X" of 2,500 x your luck: no enchanted junk, and as rare at any luck', () => {
+    const e = (...tiers: number[]) => tiers.map((tier) => ({ tier }));
+    // An enchanted Junk, Decent or Shiny never gets it, however rare its enchantments make its card.
+    for (const rarity of ['junk', 'decent', 'shiny'] as const) {
+      expect(itemOddsOneIn({ rarity, enchants: e(3, 3, 3) })).toBeGreaterThan(BAL.feel.bigRoll.big);
+      expect(revealDrama({ rarity, enchants: e(3, 3, 3) }, 1)).toBeNull();
+    }
+    // An Epic with two enchantments (Kevin's Crocs: its card says 1 in 53,839) gets a huge one at x2
+    // luck (over 25,000 x 2), and none at x10 (Epics are common there).
+    const crocs = { rarity: 'epic' as const, enchants: e(2, 1) };
+    expect(itemOddsOneIn(crocs)).toBe(53839);
+    expect(revealDrama(crocs, 2)).toBe('huge');
+    expect(revealDrama(crocs, 10)).toBeNull();
+    // A plain Legendary's card (1 in 1,000) is under the bar; a plain Mythic's (1 in 25,001) is a huge
+    // one at luck 1, and under the bar at x20.
+    expect(revealDrama({ rarity: 'legendary', enchants: [] }, 1)).toBeNull();
+    expect(revealDrama({ rarity: 'mythic', enchants: [] }, 1)).toBe('huge');
+    expect(revealDrama({ rarity: 'mythic', enchants: [] }, 20)).toBeNull();
+    // What the Luck popup says it takes.
+    expect(revealBar(1)).toEqual({ rarity: 'epic', oneIn: 2500 });
+    expect(revealBar(10)).toEqual({ rarity: 'legendary', oneIn: 25000 });
+    // About as rare at x2 as at x25: within 3x of each other over 400,000 rolls.
+    const rate = (luck: number) => {
+      const rng = new Rng(99);
+      let n = 0;
+      for (let i = 0; i < 400000; i++) {
+        const item = { rarity: rollRarity(luck, rng), enchants: rollEnchants(rng, BAL.enchant.baseChance) };
+        if (revealDrama(item, luck)) n++;
+      }
+      return n;
+    };
+    const [a, b] = [rate(2), rate(25)];
+    expect(a).toBeGreaterThan(100);
+    expect(Math.max(a, b) / Math.min(a, b)).toBeLessThan(3);
   });
 
   it('a Scrap All haul is measured in minutes of fighting; long ones get a big, huge or mega moment', () => {
@@ -336,11 +372,20 @@ describe('"1 in X" item odds', () => {
 });
 
 describe('upgrade map', () => {
-  it('costs grow geometrically per tier and buying applies the effect', () => {
+  it('costs climb by the tier steps (x10, x30, x100, then x300 a tier) and buying applies the effect', () => {
     const rng = new Rng(8);
     const def = upgradeDef('rollSpeed')!;
     expect(upgradeCostAt(def, 0)).toBe(def.cost.base);
-    expect(upgradeCostAt(def, 3)).toBe(Math.round(def.cost.base * def.cost.growth ** 3));
+    expect(upgradeCostAt(def, 1)).toBe(def.cost.base * 10);
+    expect(upgradeCostAt(def, 3)).toBe(def.cost.base * 10 * 30 * 100);
+    expect(upgradeCostAt(def, 7)).toBe(def.cost.base * 10 * 30 * 100 * 300 ** 4);
+    // Early tiers come far sooner than at x100 a tier; the top ones cost about what they did.
+    expect(upgradeCostAt(def, 2) * 30).toBeLessThan(def.cost.base * 100 ** 2);
+    expect(upgradeCostAt(def, 7) / (def.cost.base * 100 ** 7)).toBeGreaterThan(1);
+    expect(upgradeCostAt(def, 7) / (def.cost.base * 100 ** 7)).toBeLessThan(3);
+    // A one-tier special keeps its own price.
+    const clover = upgradeDef('clover')!;
+    expect(upgradeCostAt(clover, 0)).toBe(clover.cost.base);
     let st = rollingState();
     st.currencies.coins = 1e7;
     const before = spinCycle(st);

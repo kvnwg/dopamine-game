@@ -314,7 +314,7 @@ export const BalanceSchema = z.object({
     potion: z.object({ mult: positive, seconds: positive, waveDropChance: z.number().min(0).max(1) }),
   }),
   inventory: z.object({ baseCapacity: z.number().int().positive() }),
-  economy: z.object({ scrapGoldMult: nonNeg, scrapXpMult: nonNeg }),
+  economy: z.object({ scrapGoldMult: nonNeg, scrapXpMult: nonNeg, tierGrowth: z.array(positive).min(1).optional() }),
   rebirth: z.object({
     baseWorld: z.number().int().positive(),
     worldPer: z.number().int().nonnegative(),
@@ -377,7 +377,7 @@ export const BalanceSchema = z.object({
      * gets the full-screen reveal; huge and insane ones get a longer, louder one.
      */
     /** The big reveal: a roll's tier-or-better odds at the raccoon's luck must reach `big` (`huge`, `insane` make it bigger). */
-    bigRoll: z.object({ big: positive, huge: positive, insane: positive }),
+    bigRoll: z.object({ big: positive, huge: positive, insane: positive, tierOneIn: positive }),
     /** A Scrap All worth this many minutes of fighting (see haulMinutes) gets a big, huge or mega haul moment. */
     haul: z.object({ big: positive, huge: positive, mega: positive }),
     rattleBeatsByRarity: rarityRecord(z.number().int().positive()),

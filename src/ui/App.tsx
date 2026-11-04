@@ -115,16 +115,22 @@ export function App() {
             </SafeLayer>
           </div>
           <div className={styles.lower}>
-            {/* A new tab's panel slides up with a little bounce (keyed so it plays on every switch). */}
-            <div key={lowerTab === 'upgrades' ? 'alley' : lowerTab} className={styles.panelIn}>
-              <SafeLayer name={`panel ${lowerTab}`} retryMs={1000}>
-                {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
-                {lowerTab === 'heist' && <HeistPanel />}
-                {lowerTab === 'bag' && <InventoryPanel />}
-                {lowerTab === 'rebirth' && <RebirthPanel />}
-                {lowerTab === 'worlds' && <WorldsPanel />}
-              </SafeLayer>
-            </div>
+            {/*
+              A new tab's panel slides up with a little bounce (keyed so it plays on every switch). Under
+              the Upgrades screen there's none: hidden, the Roll tab still built reels, hundreds of
+              pictures a minute, for nobody.
+            */}
+            {tab !== 'upgrades' && (
+              <div key={lowerTab} className={styles.panelIn}>
+                <SafeLayer name={`panel ${lowerTab}`} retryMs={1000}>
+                  {lowerTab === 'alley' && <AlleyPanel />}
+                  {lowerTab === 'heist' && <HeistPanel />}
+                  {lowerTab === 'bag' && <InventoryPanel />}
+                  {lowerTab === 'rebirth' && <RebirthPanel />}
+                  {lowerTab === 'worlds' && <WorldsPanel />}
+                </SafeLayer>
+              </div>
+            )}
           </div>
           <div className={styles.nav}>
             <SafeLayer name="nav" retryMs={1000}>
@@ -137,14 +143,14 @@ export function App() {
             </SafeLayer>
           )}
           <SafeLayer name="mini"><MiniRoller /></SafeLayer>
-          <SafeLayer name="tokens"><TokenFlights /></SafeLayer>
-          <SafeLayer name="drag"><DragLayer /></SafeLayer>
-          <SafeLayer name="reveal"><RevealLayer /></SafeLayer>
-          <SafeLayer name="unlocks"><UnlockedFx /></SafeLayer>
-          <SafeLayer name="popups"><PopupLayer /></SafeLayer>
+          <SafeLayer name="tokens" reset={{ tokenFlights: [] }}><TokenFlights /></SafeLayer>
+          <SafeLayer name="drag" reset={{ drag: null }}><DragLayer /></SafeLayer>
+          <SafeLayer name="reveal" reset={{ celebrate: null, charging: null, haul: null, rebirthFx: null }}><RevealLayer /></SafeLayer>
+          <SafeLayer name="unlocks" reset={{ unlocked: null }}><UnlockedFx /></SafeLayer>
+          <SafeLayer name="popups" reset={{ popup: null }}><PopupLayer /></SafeLayer>
           <SafeLayer name="tutorial"><TutorialLayer /></SafeLayer>
           <SafeLayer name="equip"><EquipFlight /></SafeLayer>
-          <SafeLayer name="toasts"><Toasts /></SafeLayer>
+          <SafeLayer name="toasts" reset={{ toasts: [] }}><Toasts /></SafeLayer>
           <SafeLayer name="hover"><HoverInfo /></SafeLayer>
           <SafeLayer name="ad"><AdOverlay /></SafeLayer>
           {SHOW_DEV && <DevPanel />}

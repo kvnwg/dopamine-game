@@ -307,7 +307,12 @@ export function TutorialLayer() {
 
   useEffect(() => {
     if (!fightUntil) return;
-    const id = setInterval(() => setNow(Date.now()), 500);
+    // (Ticks only until its time is up: it used to tick every half second for the rest of the session.)
+    const id = setInterval(() => {
+      const t0 = Date.now();
+      setNow(t0);
+      if (t0 > fightUntil) clearInterval(id);
+    }, 500);
     return () => clearInterval(id);
   }, [fightUntil]);
 

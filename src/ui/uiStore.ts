@@ -60,7 +60,7 @@ export interface Toast {
   tone: 'good' | 'info' | 'warn';
 }
 
-interface UiState {
+export interface UiState {
   tab: Tab;
   popup: PopupKind | null;
   /** Item uid (bag or equipped) for the detail popup, or the world number for the world popup. */

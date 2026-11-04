@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { DATA, SLOTS, type Rarity } from '../../data';
 import { enchantRarity, formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
-import { dispatch, useGame } from '../../app/store';
+import { dispatch, useGameWhen } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { uiBitArt } from '../../render/icons';
 import { haptics } from '../../services';
@@ -34,7 +34,8 @@ const TONE: Partial<Record<Rarity, 'gold' | 'purple' | 'red' | 'green' | 'blue'>
 };
 
 export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => void }) {
-  const g = useGame((x) => x);
+  // Redrawn when what it shows changes, not with every battle tick.
+  const g = useGameWhen((x) => [x.inventory, x.equipped, x.upgrades, x.perks, x.rebirths, x.player.level, x.stage, x.battle.stage]);
   const equippedMap = g.equipped;
   const bag = g.inventory;
   const { item, equipped } = findItem(equippedMap, bag, uid);

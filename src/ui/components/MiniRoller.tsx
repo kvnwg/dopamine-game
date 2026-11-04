@@ -40,9 +40,9 @@ export function MiniRoller() {
   const prevTab = useUi((u) => u.prevTab);
   const lower = tab === 'upgrades' ? prevTab : tab;
   const open = useGame((g) => g.features.unlocked.includes('roll'));
-  if (!open || lower === 'alley') return null;
-  // The full-screen Upgrades screen covers the corner (and the HUD): it keeps rolling and sounding unseen.
-  return <MiniBank hidden={tab === 'upgrades'} />;
+  // (Not under the full-screen Upgrades screen either: nobody sees it there.)
+  if (!open || lower === 'alley' || tab === 'upgrades') return null;
+  return <MiniBank hidden={false} />;
 }
 
 interface Plan {

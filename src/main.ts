@@ -5,7 +5,7 @@ import '@fontsource/pixelify-sans/latin-700.css';
 import './ui/global.css';
 import './ui/pixel.css';
 import { DATA } from './data'; // validates every JSON file at boot
-import { boot } from './app/session';
+import { boot, saveNow } from './app/session';
 import { dispatch, getGame } from './app/store';
 import { serialize } from './core';
 import { App } from './ui/App';
@@ -42,7 +42,19 @@ async function main(data?: unknown) {
   const handedOver = typeof save === 'string';
   await boot(handedOver ? save : undefined, { hold: showTitle(handedOver) });
   hot?.snapshot?.(() => ({ save: serialize(getGame()) }));
-  createRoot(document.getElementById('root')!).render(createElement(App));
+  const el = document.getElementById('root')!;
+  // An error no part of the screen caught (each has its own guard) would leave a black page: the game
+  // is saved and a card offers to reload instead.
+  createRoot(el, {
+    onUncaughtError: (error) => {
+      console.error('Uncaught render error', error);
+      void saveNow();
+      el.innerHTML =
+        '<div style="position:fixed;inset:0;display:grid;place-items:center;background:#14121f;color:#fff;font:600 18px system-ui,sans-serif;text-align:center;padding:24px">' +
+        '<div><p style="margin:0 0 16px">Oops, the game tripped over a trash can.<br>Your progress is saved.</p>' +
+        '<button style="font:700 18px system-ui,sans-serif;padding:12px 28px;border:0;border-radius:10px;background:#5bc236;color:#fff" onclick="location.reload()">Tap to reload</button></div></div>';
+    },
+  }).render(createElement(App));
   dismissBoot();
   // Test hook for browser automation in dev builds only.
   if (import.meta.env.DEV) (window as unknown as { __dl: unknown }).__dl = { getGame, dispatch, ui: useUi, audio };

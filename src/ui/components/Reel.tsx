@@ -482,7 +482,11 @@ export function ReelBank() {
   const addFx = (f: Omit<Fx, 'id'>, ms: number) => {
     const id = fxId++;
     setFx((cur) => [...cur.slice(-7), { ...f, id }]);
-    timers.current.push(setTimeout(() => setFx((cur) => cur.filter((x) => x.id !== id)), ms));
+    const tid = setTimeout(() => {
+      timers.current = timers.current.filter((x) => x !== tid);
+      setFx((cur) => cur.filter((x) => x.id !== id));
+    }, ms);
+    timers.current.push(tid);
   };
 
   useEffect(

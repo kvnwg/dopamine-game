@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findScore, judgeFinds, judgeHaul, performSpin, revealBar, rollEnchants, rollRarity, Rng, tick, type CoreEvent, type GameState } from '../src/core';
+import { deserialize, findScore, judgeFinds, judgeHaul, performSpin, revealBar, rollEnchants, rollRarity, Rng, serialize, tick, type CoreEvent, type GameState } from '../src/core';
 import { BAL, type Rarity } from '../src/data';
 import { HYPER_LOCK_MS, revealPhases } from '../src/ui/revealTiming';
 import { freshState, T0 } from './helpers';
@@ -269,6 +269,35 @@ describe('big hauls: well above the run\'s usual ones', () => {
     judgeHaul(st, 1000);
     expect(st.haulTrend.run).toBe(4);
     expect(st.haulTrend.n).toBe(1);
+  });
+
+  it('a Scrap All right after another never sends the trend off (it overflowed into the save and reset it)', () => {
+    const st = clone(freshState(6));
+    st.rebirths = 1;
+    const rng = new Rng(21);
+    let big = 0;
+    const n = 3000;
+    for (let i = 0; i < n; i++) {
+      // A full bag sold, then a few new finds sold a second or two later, then a couple of minutes' play.
+      st.playTimeMs += i % 2 ? 2_000 : 120_000;
+      if (judgeHaul(st, (i % 2 ? 3 : 60) * 1000 * (0.5 + rng.next())).size) big++;
+      expect(Number.isFinite(st.haulTrend.level) && Number.isFinite(st.haulTrend.slope)).toBe(true);
+    }
+    expect(Math.abs(st.haulTrend.slope)).toBeLessThanOrEqual(1);
+    // And the save still loads.
+    const back = deserialize(serialize(st));
+    expect(back?.haulTrend.slope).toBe(st.haulTrend.slope);
+    // A few-item sale right after a big one is never a big haul; the big ones aren't every other sale.
+    expect(big / n).toBeLessThan(0.1);
+  });
+
+  it('a save whose trend had already gone wrong starts the trend over', () => {
+    const st = clone(freshState(6));
+    st.rebirths = 2;
+    st.haulTrend = { ...st.haulTrend, run: 2, n: 50, level: 1e300, slope: -1e200 };
+    judgeHaul(st, 5000);
+    expect(st.haulTrend.n).toBe(1);
+    expect(st.haulTrend.level).toBeCloseTo(Math.log(5000), 6);
   });
 
   it('over a noisy, fast-growing run, only some hauls get the cutscene', () => {

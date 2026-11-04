@@ -14,6 +14,7 @@ import { computeStats } from './stats';
 /** Sends the raccoon to `world`. Beaten worlds are farmed in place; unbeaten ones are pushed. */
 export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean {
   const w = Math.round(world);
+  if (!Number.isFinite(w)) return false;
   // The raccoon is out on a heist: the Alley waits.
   if (d.heist?.run) return false;
   // (Before the first pick he stands in World 1 without fighting: picking it starts the fight.)

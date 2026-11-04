@@ -1,12 +1,17 @@
 import { Component, type ReactNode } from 'react';
-import { useUi } from '../uiStore';
+import { useUi, type UiState } from '../uiStore';
 
 /**
- * Keeps an overlay's error from taking the whole game down: if a full-screen moment (reveal, haul,
- * rebirth, popups, the Upgrades screen...) throws while rendering, it is logged and closed (`onError`
- * closes what the store can't), and the game keeps running.
+ * Keeps a part of the screen's error from taking the whole game down: if it throws while rendering,
+ * it is logged, what it was showing is closed (`reset`, the UI state it shows; `onError` for what the
+ * store can't close), and it is tried again a moment later (`retryMs`, doubling each time it fails
+ * again, up to 10 s). Only its own state is closed: a glitch in one part no longer closes a running
+ * reveal or an open popup elsewhere.
  */
-export class SafeLayer extends Component<{ name: string; children: ReactNode; onError?: () => void; retryMs?: number }, { failed: number }> {
+export class SafeLayer extends Component<
+  { name: string; children: ReactNode; onError?: () => void; retryMs?: number; reset?: Partial<UiState> },
+  { failed: number }
+> {
   state = { failed: 0 };
   /** Errors in a row (a part that keeps failing waits longer each time before it's tried again). */
   private streak = 0;
@@ -22,12 +27,10 @@ export class SafeLayer extends Component<{ name: string; children: ReactNode; on
     this.streak = now - this.lastAt < 15_000 ? this.streak + 1 : 1;
     this.lastAt = now;
     if (this.streak <= 3) console.error(`[${this.props.name}] error, closed it:`, error);
-    // Close whatever was showing so it can't throw again on the next render.
-    useUi.setState({ haul: null, celebrate: null, charging: null, rebirthFx: null, unlocked: null, popup: null, drag: null });
+    // Close what it was showing so it can't throw again on the next render.
+    if (this.props.reset) useUi.setState(this.props.reset);
     this.props.onError?.();
-    // Overlays come back at once (closed); a part of the screen that's always there (the battle, a
-    // tab's panel) is tried again after `retryMs`, longer each time it fails again (up to 10 s).
-    const wait = this.props.retryMs ? Math.min(10_000, this.props.retryMs * 2 ** (this.streak - 1)) : 0;
+    const wait = Math.min(10_000, (this.props.retryMs ?? 250) * 2 ** (this.streak - 1));
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.timer = null;

@@ -2,7 +2,7 @@
  * Save/load with versioned migrations and rotating backups.
  * Storage is injected (localStorage on web, @capacitor/preferences on native, memory in tests).
  */
-import { BAL } from '../data';
+import { BAL, DATA } from '../data';
 import { createInitialState, GameStateSchema, initialHeist, SAVE_VERSION, type GameState } from './state';
 import { sanitizeUpgrades } from './systems/upgrades';
 import { fitToPower } from './systems/loot';
@@ -277,6 +277,11 @@ export function readSave(text: string | null, migrations: Record<number, Migrati
     const parsed = GameStateSchema.safeParse(migrated);
     const out = parsed.success ? { state: parsed.data, fixed: [] as string[] } : repairSave(migrated);
     if (!out) return null;
+    // A dumpster theme the data doesn't know (renamed, removed) would make every roll throw.
+    if (!DATA.themes.some((th) => th.id === out.state.dumpster.theme)) {
+      out.state.dumpster.theme = BAL.dumpster.defaultTheme;
+      out.fixed.push('dumpster.theme');
+    }
     sanitizeUpgrades(out.state);
     // A save from before Alley perks: the worlds already beaten this run pay their loaves.
     if (!hadPerks) backfillBread(out.state);
@@ -297,9 +302,17 @@ export class SaveManager {
     private readonly backups = 2,
   ) {}
 
-  /** Writes the save, shifting the previous saves into the backup slots. */
+  /**
+   * Writes the save, shifting the previous saves into the backup slots. A save that wouldn't load
+   * cleanly is still written (the load mends it) but doesn't push the good ones out of the backups.
+   */
   async save(state: GameState): Promise<void> {
     const text = serialize(state);
+    if (!GameStateSchema.safeParse(JSON.parse(text)).success) {
+      console.warn('Saving a game that needs mending: the backups are kept as they are.');
+      await this.storage.set(SAVE_KEY, text);
+      return;
+    }
     for (let i = this.backups - 1; i >= 1; i--) {
       const prev = await this.storage.get(backupKey(i - 1));
       if (prev !== null) await this.storage.set(backupKey(i), prev);

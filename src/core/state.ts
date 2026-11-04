@@ -385,7 +385,9 @@ export const GameStateSchema = z.object({
         /** The rarest find of the whole game (findScore), for HYPER RARE. */
         best: z.number().default(0),
       })
-      .default(() => ({ since: null, hist: [], best: 0 })),
+      .default(() => ({ since: null, hist: [], best: 0 }))
+      // (What it's judging with, not progress: a bad one starts over rather than failing the save.)
+      .catch(() => ({ since: null, hist: [], best: 0 })),
   }),
   upgrades: z.record(z.string(), z.number().int().nonnegative()),
   rebirths: z.number().int().nonnegative(),
@@ -405,7 +407,9 @@ export const GameStateSchema = z.object({
    */
   haulTrend: z
     .object({ run: z.number().int().nonnegative(), n: z.number().int().nonnegative(), level: z.number(), slope: z.number(), atMs: z.number() })
-    .default(() => ({ run: 0, n: 0, level: 0, slope: 0, atMs: 0 })),
+    .default(() => ({ run: 0, n: 0, level: 0, slope: 0, atMs: 0 }))
+    // (Only for judging hauls: a bad one starts over rather than failing the save.)
+    .catch(() => ({ run: 0, n: 0, level: 0, slope: 0, atMs: 0 })),
   lifetime: z.object({
     kills: z.number().int().nonnegative(),
     wavesCleared: z.number().int().nonnegative(),

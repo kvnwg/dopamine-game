@@ -124,6 +124,15 @@ function useFont(ctx: CanvasRenderingContext2D, px: number): void {
 }
 const widths = new Map<string, number>();
 
+/**
+ * The canvas was resized, which resets its font: set it afresh on the next draw, and measure prices
+ * again (they were measured in the reset font: a rotated phone drew tiny numerals).
+ */
+export function fontReset(ctx: CanvasRenderingContext2D): void {
+  (ctx as CanvasRenderingContext2D & { __px?: number }).__px = undefined;
+  widths.clear();
+}
+
 /** Words with the page's dark outline: the outline drawn first, the letters over it. */
 function outlined(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, px: number, stroke: number, fill: string): void {
   useFont(ctx, px);
@@ -234,6 +243,8 @@ function drawHex(ctx: CanvasRenderingContext2D, h: DrawHex, zoom: Zoom, selected
       let tw = widths.get(h.price);
       if (tw === undefined) {
         tw = ctx.measureText(plain(h.price)).width;
+        // (A new price every tier and every rebirth: never more than a few thousand kept.)
+        if (widths.size > 3000) widths.clear();
         widths.set(h.price, tw);
       }
       const bw = tw + 24 + 8;

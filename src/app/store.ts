@@ -2,6 +2,7 @@
  * Zustand store holding the one GameState. All changes go through core's pure
  * functions; the store only swaps in the new state and broadcasts events.
  */
+import { useRef, useSyncExternalStore } from 'react';
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import {
@@ -26,6 +27,25 @@ export function getGame(): GameState {
 
 export function useGame<T>(selector: (g: GameState) => T): T {
   return useStore(gameStore, (s) => selector(s.game));
+}
+
+/**
+ * The whole game, for a screen that reads a lot of it but only needs to redraw when one of `deps(g)`
+ * changes (compared one by one: unchanged parts of the state keep their identity). A screen that took
+ * the whole game redrew ten times a second with every battle tick (the Bag, Worlds, an item's card).
+ */
+export function useGameWhen(deps: (g: GameState) => readonly unknown[]): GameState {
+  const last = useRef<{ g: GameState; d: readonly unknown[] } | null>(null);
+  const snapshot = () => {
+    const g = gameStore.getState().game;
+    const prev = last.current;
+    if (prev && prev.g === g) return g;
+    const d = deps(g);
+    if (prev && d.length === prev.d.length && d.every((v, i) => Object.is(v, prev.d[i]))) return prev.g;
+    last.current = { g, d };
+    return g;
+  };
+  return useSyncExternalStore(gameStore.subscribe, snapshot, snapshot);
 }
 
 export function replaceGame(state: GameState): void {

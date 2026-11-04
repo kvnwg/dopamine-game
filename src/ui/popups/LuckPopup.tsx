@@ -1,5 +1,5 @@
 import { BAL, RARITIES } from '../../data';
-import { enchantChance, formatDuration, formatNumber, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances, formatPct, revealBar } from '../../core';
+import { currentLuck, enchantChance, formatDuration, formatNumber, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances, formatPct, revealBar } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { fmtOdds } from '../components/AlleyPanel';
@@ -14,7 +14,9 @@ import s from './popups.module.css';
 export function LuckPopup({ onClose }: { onClose: () => void }) {
   const now = useNow(500);
   const g = useGame((x) => x);
-  const b = luckBreakdown(g, now);
+  const raw = luckBreakdown(g, now);
+  // (The total the rolls use: currentLuck's, never NaN.)
+  const b = { ...raw, total: currentLuck(g, now) };
   const bar = revealBar(b.total);
   const chances = rarityChances(b.total);
   const lucky = rarityChances(b.total * BAL.roll.luckyRollMult);

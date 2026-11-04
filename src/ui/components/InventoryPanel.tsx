@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { formatNumber, formatPower, inventoryCapacity, isUpgrade, playerPower, scrapValue } from '../../core';
-import { dispatch, useGame } from '../../app/store';
+import { dispatch, useGameWhen } from '../../app/store';
 import { haptics } from '../../services';
 import { useCountUp } from '../hooks';
 import { t } from '../i18n';
@@ -38,7 +38,8 @@ function PowerTag({ power }: { power: number }) {
 }
 
 export function InventoryPanel() {
-  const g = useGame((x) => x);
+  // Redrawn when what it shows changes, not with every battle tick.
+  const g = useGameWhen((x) => [x.inventory, x.equipped, x.upgrades, x.perks, x.rebirths, x.player.level, x.stage, x.battle.stage]);
   const bag = g.inventory;
   const cap = inventoryCapacity(g);
   const power = playerPower(g);

@@ -31,7 +31,8 @@ export function tokenLanded(key: string, step: number, x: number, reel: number, 
   audio.token(step, x);
   haptics.impact('medium');
   const calm = gameStore.getState().game.settings.reduceMotion;
-  if (!calm && row >= 0) {
+  // (Nothing flies under a full-screen moment: nobody would see it.)
+  if (!calm && row >= 0 && !useUi.getState().blackout) {
     const id = flightId++;
     useUi.setState((u) => ({ tokenFlights: [...u.tokenFlights.slice(-5), { id, key, x, reel, row, step }] }));
   } else {

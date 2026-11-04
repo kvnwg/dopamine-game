@@ -30,7 +30,7 @@ import { Chunky } from './Chunky';
 import { BreadIcon, CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
 import { PerksPage } from './PerksPage';
 import { PixelArt } from './PixelArt';
-import { drawMap, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
+import { drawMap, fontReset, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
 import s from './hexmap.module.css';
 
 /* ---------------------------------------------------------------- geometry */
@@ -472,6 +472,9 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
       if (c.width !== w || c.height !== h) {
         c.width = w;
         c.height = h;
+        const ctx = c.getContext('2d');
+        if (ctx) fontReset(ctx);
+        NAME_LINES.clear();
       }
       requestDraw();
     };
@@ -483,6 +486,9 @@ function HexMapPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => void })
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', fit);
+      // Its pixels (up to 17 MB) go now, not whenever the canvas is collected.
+      c.width = 0;
+      c.height = 0;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

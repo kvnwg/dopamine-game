@@ -149,8 +149,14 @@ export const HeistBalanceSchema = z.object({
   treasure: z.object({ coins: range, bags: range, bagsChance: unitInterval }),
   trap: z.object({ damagePct: nonNeg, curseChance: unitInterval }),
   shrine: z.object({ maxHpPct: nonNeg }),
+  /**
+   * A shop's first card is its health counter: a +max HP perk `maxHpChance` of the time, otherwise
+   * (or when it has no +max HP perk to sell) a Snack that heals `healPct`. Then `perks` random perks.
+   * An act laid out while the run's coins can't cover the cheapest perk price gets no shop stops.
+   */
   shop: z.object({
     healPct: positive,
+    maxHpChance: unitInterval,
     perks: z.number().int().nonnegative(),
     prices: z.object({ heal: nonNeg, common: nonNeg, rare: nonNeg, epic: nonNeg, removeCurse: nonNeg, reroll: nonNeg }),
   }),
@@ -638,17 +644,31 @@ export const PerkSchema = z.object({
   effect: PerkEffectSchema,
   /** Evolutions only: the perks to hold (plus, with `anyTag`, any other perk with that tag). They merge into the evolution. */
   recipe: z.object({ perks: z.array(z.string().min(1)).min(1), anyTag: PerkTagSchema.optional() }).optional(),
+  /** Sold only at a shop's health counter (+max HP perks): never offered at a level-up, a shrine, the wheel or a choice. */
+  shopOnly: z.boolean().optional(),
 });
 export type PerkDef = z.infer<typeof PerkSchema>;
 
 export const CurseSchema = z.object({ id: z.string().min(1), name: z.string().min(1), text: z.string().min(1), effect: PerkEffectSchema });
 export type CurseDef = z.infer<typeof CurseSchema>;
 
+/**
+ * A kind of trap a Trap stop can be (what it does stays the trap's: heist.trap). Its name and line are
+ * strings.en.json `heist.trap.<id>.name` and `.text`; it springs only at `locations` (default: everywhere).
+ */
+export const HeistTrapSchema = z.object({ id: z.string().min(1), locations: z.array(LocationIdSchema).min(1).optional() });
+
 export const HeistFileSchema = z.object({
   locations: z.array(HeistLocationSchema).length(LOCATION_IDS.length),
   perks: z.array(PerkSchema).min(1),
   curses: z.array(CurseSchema).min(1),
+  traps: z.array(HeistTrapSchema).min(1),
 });
+/** A trap with its name and line (from strings.en.json). */
+export type HeistTrapDef = z.infer<typeof HeistTrapSchema> & { name: string; text: string };
+
+/** Kinds of foe a choice event can promise to fight, as they're drawn (assets.json enemy shapes). */
+export const HEIST_FOES = ['rat', 'pigeon', 'raccoon'] as const;
 
 /** What a choice option does. Outcomes with a `chance` are one roll between them; the others always happen. */
 export const OUTCOME_TYPES = [
@@ -681,6 +701,11 @@ export const HeistEventSchema = z.object({
   weight: positive,
   /** Only at these locations (default: everywhere). */
   locations: z.array(LocationIdSchema).optional(),
+  /**
+   * The foe its text names: a fight it starts brings only the location's regular enemies drawn as this
+   * (an elite fight, only such adds). Any event whose text names a rat, pigeon or raccoon and starts a fight has one.
+   */
+  foe: z.enum(HEIST_FOES).optional(),
   options: z
     .array(
       z.object({

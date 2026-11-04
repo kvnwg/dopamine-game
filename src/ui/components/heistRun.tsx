@@ -6,7 +6,7 @@
  * of the log and the button until it's made.
  */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { formatNumber } from '../../core';
+import { formatNumber, heistTrapAt } from '../../core';
 import { useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
@@ -32,6 +32,12 @@ function pipOf(run: HeistRun, i: number): { kind: HeistNodeKind | null; state: '
   return { kind: i === TOTAL_NODES - 1 ? 'boss' : null, state: 'ahead' };
 }
 
+/** A reached Trap stop's trap, by name (the pip says which one it was). */
+function trapName(run: HeistRun, i: number): string {
+  const act = Math.min(ACTS - 1, Math.floor(i / NODES_PER_ACT));
+  return heistTrapAt(run, act + 1, i % NODES_PER_ACT).name;
+}
+
 /** 19 pips: three acts of six stops and the boss, each shown once it's reached. */
 function Pips({ run }: { run: HeistRun }) {
   const groups = [0, 1, 2].map((a) => Array.from({ length: NODES_PER_ACT }, (_, k) => a * NODES_PER_ACT + k));
@@ -42,8 +48,9 @@ function Pips({ run }: { run: HeistRun }) {
         <div key={gi} className={s.pipGroup} data-act={gi + 1} data-on={gi === run.act - 1 || undefined}>
           {g.map((i) => {
             const p = pipOf(run, i);
+            const trap = p.kind === 'trap' ? trapName(run, i) : undefined;
             return (
-              <span key={i} className={s.pip} data-state={p.state} data-kind={p.kind ?? undefined}>
+              <span key={i} className={s.pip} data-state={p.state} data-kind={p.kind ?? undefined} title={trap} aria-label={trap}>
                 {p.kind ? <NodeIcon kind={p.kind} /> : <span className={s.pipDot} />}
               </span>
             );
@@ -107,6 +114,10 @@ function RunHead({ run }: { run: HeistRun }) {
   const [have, need] = levelProgress(run);
   const [open, setOpen] = useState<{ id: string; curse: boolean } | null>(null);
   const [armed, setArmed] = useState(false);
+  // The run can be walked away from at any stop, but not while the Jackpot Wheel's reel is still turning
+  // (core has paid out already; leaving would cut the spin short).
+  const spinning = useWheelSpin((w) => w.spin !== null);
+  const canLeave = !spinning;
   // A decision coming up closes the note (it would cover it).
   const waitingOn = run.pending?.kind ?? run.status;
   useEffect(() => setOpen(null), [waitingOn]);
@@ -115,11 +126,15 @@ function RunHead({ run }: { run: HeistRun }) {
     const id = setTimeout(() => setArmed(false), 3000);
     return () => clearTimeout(id);
   }, [armed]);
+  useEffect(() => {
+    if (!canLeave) setArmed(false);
+  }, [canLeave]);
   const toggle = (id: string, curse: boolean) => {
     haptics.impact('light');
     setOpen((o) => (o && o.id === id && o.curse === curse ? null : { id, curse }));
   };
   const abandon = () => {
+    if (!canLeave) return;
     if (!armed) {
       haptics.impact('medium');
       setArmed(true);
@@ -139,7 +154,13 @@ function RunHead({ run }: { run: HeistRun }) {
           <CoinIcon size="md" />
           {formatNumber(run.coins)}
         </span>
-        <button className={s.abandon} data-armed={armed || undefined} onClick={abandon}>
+        {/* Red while it can be tapped (bobbing once armed: the second tap leaves), grey while it can't. */}
+        <button
+          className={`btn small ${canLeave ? 'red' : 'gray'} ${armed ? 'breathe' : ''} ${s.abandon}`}
+          disabled={!canLeave}
+          data-armed={armed || undefined}
+          onClick={abandon}
+        >
           {armed ? t('heistUi.abandonSure') : t('heistUi.abandon')}
         </button>
       </div>
@@ -184,7 +205,7 @@ const LOG_ICON: Record<string, UiIcon> = {
   nothing: 'arrowRight', treasureCoins: 'treasure', treasureBags: 'treasure', golden: 'treasure', ring: 'star', bags: 'bag',
   coinsGain: 'coin', coinsPay: 'coin', paid: 'coin', noPerkCoins: 'coin', flipHeads: 'coin', flipTails: 'coin', shop: 'shop',
   leftShop: 'shop', restock: 'shop', reroll: 'dice', shrine: 'shrine', shrineAccept: 'shrine', shrineDecline: 'shrine', trap: 'trap',
-  trapDisarmed: 'trap', noTraps: 'trap', wheel: 'wheel', wheelCoins: 'wheel', wheelBags: 'wheel', wheelGems: 'wheel', wheelHeal: 'wheel',
+  trapDisarmed: 'trap', trapSprung: 'trap', trapSpotted: 'trap', noTraps: 'trap', wheel: 'wheel', wheelCoins: 'wheel', wheelBags: 'wheel', wheelGems: 'wheel', wheelHeal: 'wheel',
   wheelPerk: 'wheel', perk: 'star', evolved: 'star', perksFull: 'star', levelUp: 'arrowUp', curse: 'skull', curseRemoved: 'check',
   paperCuts: 'drop', damage: 'drop', heal: 'heart', snack: 'heart', savedHeal: 'heart', savedHealSet: 'heart', maxHp: 'heart',
   nineLives: 'heart', truce: 'check', truceSkip: 'check', skipped: 'arrowRight', skipNextSet: 'arrowRight', skipFightSet: 'arrowRight',

@@ -24,7 +24,10 @@
  */
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
-import { battleMaxHp, battleStats, computeStats, enemyName, formatNumber, rarityAtLeast, worldDef, type CoreEvent, type CrewHelper, type GameState, type Item } from '../core';
+import {
+  battleMaxHp, battleStats, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, runEffects, worldDef, type CoreEvent, type CrewHelper,
+  type GameState, type Item,
+} from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
 import { t } from '../ui/i18n';
@@ -41,11 +44,12 @@ import { SLAM_FROM, SLAM_HEIGHT, slamAnchor, slamBridge } from './equipSlam';
 import { reelStops } from '../ui/reelTiming';
 import { P, toCanvas } from './pixel';
 import { linePixels, mix } from './pixel/buf';
-import { blank, setPx } from './pixel/buf';
+import { blank, fromRows, setPx } from './pixel/buf';
 import { FACES, TEXT_INK, gradientRows, lineWidth, renderPlate, renderText, type FaceName, type TextStyle } from './pixel/font';
 import { SPRITE_SLOTS } from './pixel/hero';
 import { CHARACTER_OUTLINE, PAL } from './pixel/palette';
 import { FEET_ROW, VIEW, VIEW_MARGIN, frameTop, type LayerName } from './pixel/sceneryTypes';
+import { UI_MD, UI_SPRITES } from './pixel/ui';
 import type { FxName } from './pixel/packs/fx';
 import { CLOUD_SCROLL0, layerY, scenerySet, scroll0, worldArt, worldSeed } from './worldLook';
 import { Ambience } from './ambience';
@@ -169,6 +173,31 @@ const CREW_SPARKS: Record<CrewHelper, Pick<BitStyle, 'colors' | 'fade'>> = {
   golem: { colors: [0xecc596, 0xf4efe1], fade: [0x995b3a] },
 };
 const CREW_NUMBER: Record<CrewHelper, string> = { pigeon: '#cfe8ff', rats: '#e5cfff', gull: '#fff6a8', mafia: '#ffb4a8', golem: '#ffd9a0' };
+/**
+ * The crew's pigeons by the raccoon (a heist's Pigeon Pal and Pigeon Air Force, the Alley's Pigeon
+ * Wingman): the crew perk's 10 x 10 pigeon, drawn facing left (ui.ts UI_MD), in the characters' outline.
+ */
+const PIGEON_ROWS = UI_MD.pigeon ?? UI_SPRITES.pigeon;
+const PIGEON_W = PIGEON_ROWS[0].length;
+const PIGEON_H = PIGEON_ROWS.length;
+/** Where each pigeon waits: art px from the raccoon's feet column back to its left edge, and up (the third one flies). */
+const PIGEON_PERCH = [
+  { back: 24, up: 0 },
+  { back: 36, up: 0 },
+  { back: 30, up: 13 },
+] as const;
+/** A peck (seconds): the flight out to the foe, the peck, the flight home; and how high the hop arcs (art px). */
+const PIGEON_TRIP = { out: 0.16, peck: 0.14, back: 0.32, arc: 8 } as const;
+
+/** A crew pigeon's picture, facing right (at the foes) or left (on its way home). */
+function pigeonTex(scene: Phaser.Scene, right: boolean): string {
+  const key = right ? 'crew_pigeon_r' : 'crew_pigeon_l';
+  if (!scene.textures.exists(key)) {
+    const rows = right ? PIGEON_ROWS.map((r) => [...r].reverse().join('')) : PIGEON_ROWS;
+    scene.textures.addCanvas(key, toCanvas(fromRows(rows, { k: CHARACTER_OUTLINE }), 1));
+  }
+  return key;
+}
 /** Glimmer boxes for pieces drawn into his body's texture (half sizes in art px around where the slot sits). */
 const GLIMMER_BOX: Partial<Record<Slot, { w: number; h: number }>> = {
   jacket: { w: 4, h: 3 }, gloves: { w: 5, h: 2 }, sneakers: { w: 4, h: 1 }, bling: { w: 3, h: 2 }, ring: { w: 4, h: 2 },
@@ -263,6 +292,21 @@ interface Swing {
   killed: boolean;
   /** Effects that ride on this blow (chain lightning, explosions). */
   riders: Array<() => void>;
+}
+
+/** A crew pigeon: its picture, which way it faces, and its peck in progress (null: on its perch). */
+interface Pigeon {
+  img: Phaser.GameObjects.Image;
+  right: boolean;
+  trip: {
+    /** Seconds into the trip, and the foe it flies at (its last spot, should the foe go). */
+    t: number;
+    uid: number;
+    to: { x: number; y: number };
+    /** The peck's sparks and number: they show as it lands. */
+    land: () => void;
+    landed: boolean;
+  } | null;
 }
 
 type Movable = Phaser.GameObjects.GameObject & { x: number; y: number };
@@ -500,6 +544,9 @@ export class BattleScene extends Phaser.Scene {
   private healAcc = 0;
   private healTimer = 0;
   private coinsFlying = 0;
+  /** The crew's pigeons (updatePigeons) and the clock their bobbing keeps time with. */
+  private pigeons: Pigeon[] = [];
+  private pigeonClock = 0;
   private unsub?: () => void;
 
   constructor() {
@@ -2205,12 +2252,18 @@ export class BattleScene extends Phaser.Scene {
           break;
         }
         case 'heistHelper': {
-          const f = this.foes.get(e.enemyUid);
-          if (!f) break;
-          const p = this.foeHitPoint(f);
-          this.bits.burst(5, p.x, p.y, { ...SPARK, colors: [0xcfcedb, 0xffffff], fade: [0x7f7c94] });
-          this.flash(f.spr, 0xffffff, 60);
-          this.number(p.x + 4 * P, p.y - 4 * P, formatNumber(e.amount), { fill: '#cfe8ff', life: 600, floor: this.barTop(f) });
+          const hit = () => {
+            const f = this.foes.get(e.enemyUid);
+            if (!f) return;
+            const p = this.foeHitPoint(f);
+            this.bits.burst(5, p.x, p.y, { ...SPARK, colors: [0xcfcedb, 0xffffff], fade: [0x7f7c94] });
+            this.flash(f.spr, 0xffffff, 60);
+            this.number(p.x + 4 * P, p.y - 4 * P, formatNumber(e.amount), { fill: '#cfe8ff', life: 600, floor: this.barTop(f) });
+            // A foe a peck killed falls as the peck lands.
+            if (e.helper === 'pigeon' && this.kills.has(f.uid) && f.pending === 0) this.die(f);
+          };
+          if (e.helper === 'pigeon') this.pigeonPeck(e.enemyUid, hit);
+          else hit();
           break;
         }
       }
@@ -2228,13 +2281,18 @@ export class BattleScene extends Phaser.Scene {
     for (const e of events) {
       switch (e.type) {
         case 'crewHit': {
-          const f = this.foes.get(e.enemyUid);
-          if (!f) break;
-          const p = this.foeHitPoint(f);
-          this.bits.burst(e.helper === 'gull' ? 8 : 5, p.x, p.y, { ...SPARK, ...CREW_SPARKS[e.helper] });
-          this.flash(f.spr, 0xffffff, 60);
-          this.number(p.x + 4 * P, p.y - 4 * P, formatNumber(e.amount), { fill: CREW_NUMBER[e.helper], life: 600, floor: this.barTop(f) });
-          if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
+          const hit = () => {
+            const f = this.foes.get(e.enemyUid);
+            if (!f) return;
+            const p = this.foeHitPoint(f);
+            this.bits.burst(e.helper === 'gull' ? 8 : 5, p.x, p.y, { ...SPARK, ...CREW_SPARKS[e.helper] });
+            this.flash(f.spr, 0xffffff, 60);
+            this.number(p.x + 4 * P, p.y - 4 * P, formatNumber(e.amount), { fill: CREW_NUMBER[e.helper], life: 600, floor: this.barTop(f) });
+            if (this.kills.has(f.uid) && f.pending === 0) this.die(f);
+          };
+          // The Pigeon Wingman's pigeon flies over and pecks; the rest of the crew hits from off screen.
+          if (e.helper === 'pigeon') this.pigeonPeck(e.enemyUid, hit);
+          else hit();
           break;
         }
         case 'secondWind':
@@ -2250,6 +2308,104 @@ export class BattleScene extends Phaser.Scene {
           break;
       }
     }
+  }
+
+  // ------------------------------------------------------------------ the crew's pigeons
+
+  /**
+   * A crew pigeon flies to foe `uid` and pecks it: `land` (the peck's sparks, number and a kill) runs as
+   * it lands, and the foe stays up until then. With no pigeon free (or reduced motion) it lands at once.
+   */
+  private pigeonPeck(uid: number, land: () => void) {
+    const f = this.foes.get(uid);
+    const p = !f || this.reduceMotion ? undefined : this.pigeons.find((x) => !x.trip);
+    if (!f || !p) {
+      land();
+      return;
+    }
+    f.pending++;
+    p.trip = {
+      t: 0,
+      uid,
+      to: this.foeHitPoint(f),
+      landed: false,
+      land: () => {
+        f.pending = Math.max(0, f.pending - 1);
+        land();
+      },
+    };
+  }
+
+  /**
+   * One little pigeon per pigeon the run has (Pigeon Pal, three with Pigeon Air Force), or the Alley's
+   * Pigeon Wingman, waits behind the raccoon: the two on the ground peck at it now and then and hop
+   * along on the walk, the third flutters a pixel up and down. A peck is a hop out to the foe (its beak
+   * on the foe's hit point), a dip, and a hop home facing back. All in whole art pixels.
+   */
+  private updatePigeons(g: GameState, walking: boolean, dt: number) {
+    const run = g.heist.run;
+    const n = run ? Math.round(runEffects(run).pigeons) : perkFx(g).pigeonAtkPct > 0 ? 1 : 0;
+    const want = Math.max(0, Math.min(PIGEON_PERCH.length, n));
+    while (this.pigeons.length > want) {
+      const p = this.pigeons.pop()!;
+      if (p.trip && !p.trip.landed) p.trip.land();
+      p.img.destroy();
+    }
+    while (this.pigeons.length < want) {
+      this.pigeons.push({ img: this.add.image(0, 0, pigeonTex(this, true)).setOrigin(0, 0).setScale(P).setDepth(19), right: true, trip: null });
+    }
+    this.pigeonClock += dt;
+    const beat = (seconds: number, i: number) => Math.floor(this.pigeonClock / seconds + i * 0.5) % 2;
+    const T = PIGEON_TRIP;
+    this.pigeons.forEach((p, i) => {
+      const perch = PIGEON_PERCH[i];
+      const homeX = this.heroX - perch.back * P;
+      const homeY = FEET_Y - (PIGEON_H + perch.up) * P;
+      let x = homeX;
+      let y = homeY;
+      let right = true;
+      const tr = p.trip;
+      if (tr) {
+        tr.t += dt;
+        const f = this.foes.get(tr.uid);
+        if (f && !f.dying) tr.to = this.foeHitPoint(f);
+        if (tr.t >= T.out && !tr.landed) {
+          tr.landed = true;
+          tr.land();
+        }
+        // The beak (its right column, third row) on the foe.
+        const tx = tr.to.x - (PIGEON_W - 1) * P;
+        const ty = tr.to.y - 2 * P;
+        const hop = (k: number) => Math.round(Math.sin(Math.PI * k) * T.arc) * P;
+        if (tr.t < T.out) {
+          const k = easeOutQuad(tr.t / T.out);
+          x = lerp(homeX, tx, k);
+          y = lerp(homeY, ty, k) - hop(k) - beat(0.05, i) * P;
+        } else if (tr.t < T.out + T.peck) {
+          const k = (tr.t - T.out) / T.peck;
+          x = tx + (k > 0.2 && k < 0.7 ? P : 0);
+          y = ty + (k > 0.2 && k < 0.7 ? P : 0);
+        } else if (tr.t < T.out + T.peck + T.back) {
+          const k = easeInQuad((tr.t - T.out - T.peck) / T.back);
+          x = lerp(tx, homeX, k);
+          y = lerp(ty, homeY, k) - hop(k) - beat(0.05, i) * P;
+          right = false;
+        } else p.trip = null;
+      } else if (!this.reduceMotion) {
+        if (perch.up > 0) y -= beat(0.12, i) * P;
+        else if (walking) y -= beat(0.16, i) * P;
+        // Now and then it pecks at the ground: a pixel forward and down.
+        else if (Math.floor(this.pigeonClock / 0.4 + i * 1.3) % 5 === 0) {
+          x += P;
+          y += P;
+        }
+      }
+      if (right !== p.right) {
+        p.right = right;
+        p.img.setTexture(pigeonTex(this, right));
+      }
+      p.img.setPosition(snap(x), snap(y)).setDepth(p.trip ? 21 : 19);
+    });
   }
 
   /** The heist's badge, and a new run's title card in place of the one for the world it borrows. */
@@ -2550,6 +2706,7 @@ export class BattleScene extends Phaser.Scene {
     void time;
 
     this.syncFoes(g, dt);
+    this.updatePigeons(g, walking, dt);
     if (this.releaseLater) this.releaseLater = releaseWorlds(this, this.worldShown, this.foeTextures()) > 0;
 
     // Lifesteal heals are batched into one number.

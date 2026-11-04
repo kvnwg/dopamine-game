@@ -59,6 +59,9 @@
     { "id": "pocket_sand", "name": "Pocket Sand", "tag": "chaos", "rarity": "rare", "text": "15% chance on hit to stun for 1 second.", "effect": { "stunChance": 0.15, "stunSeconds": 1 } },
     { "id": "rabid", "name": "Rabid", "tag": "chaos", "rarity": "epic", "text": "10% chance on hit to deal triple damage. Foaming optional.", "effect": { "rabidChance": 0.1, "rabidMult": 3 } },
     { "id": "double_or_nothing", "name": "Double or Nothing", "tag": "chaos", "rarity": "common", "text": "Each fight starts with a coin flip: +50% ATK or -25% ATK.", "effect": { "flipUpPct": 50, "flipDownPct": 25 } },
+    { "id": "extra_cheese", "name": "Extra Cheese", "tag": "tank", "rarity": "common", "text": "+15% max HP. Load-bearing cheese.", "effect": { "hpPct": 15 }, "shopOnly": true },
+    { "id": "second_breakfast", "name": "Second Breakfast", "tag": "tank", "rarity": "common", "text": "+15% max HP. Then second lunch.", "effect": { "hpPct": 15 }, "shopOnly": true },
+    { "id": "family_size_lasagna", "name": "Family-Size Lasagna", "tag": "tank", "rarity": "rare", "text": "+30% max HP. The whole tray.", "effect": { "hpPct": 30 }, "shopOnly": true },
     {
       "id": "five_alarm_raccoon", "name": "Five-Alarm Raccoon", "tag": "fire", "rarity": "evolution",
       "text": "Burns spread to all enemies and deal double damage.",
@@ -100,5 +103,29 @@
     { "id": "paper_cuts", "name": "Paper Cuts", "text": "Lose 1% HP at every stop.", "effect": { "paperCutsPct": 1 } },
     { "id": "sticky_paws", "name": "Sticky Paws", "text": "-15% attack speed.", "effect": { "atkSpdPct": -15 } },
     { "id": "smelly", "name": "Smelly", "text": "+1 fight per act. They can smell you coming.", "effect": { "extraFights": 1 } }
+  ],
+  "traps": [
+    { "id": "box_on_a_stick" },
+    { "id": "wet_floor_sign" },
+    { "id": "glitter_bomb" },
+    { "id": "robot_vacuum" },
+    { "id": "floss_tripwire" },
+    { "id": "marble_hallway" },
+    { "id": "sprinkler", "locations": ["pizza", "hotel"] },
+    { "id": "lawn_rake", "locations": ["pizza", "hotel"] },
+    { "id": "flour_avalanche", "locations": ["pizza"] },
+    { "id": "dough_mixer", "locations": ["pizza"] },
+    { "id": "hot_pizza_stone", "locations": ["pizza"] },
+    { "id": "rolling_pin", "locations": ["pizza"] },
+    { "id": "perfume_ambush", "locations": ["mall"] },
+    { "id": "wrong_way_escalator", "locations": ["mall"] },
+    { "id": "nacho_cheese_pump", "locations": ["mall"] },
+    { "id": "demo_drone", "locations": ["mall"] },
+    { "id": "segway", "locations": ["mall"] },
+    { "id": "revolving_door", "locations": ["hotel"] },
+    { "id": "luggage_cart", "locations": ["hotel"] },
+    { "id": "silver_platter", "locations": ["hotel"] },
+    { "id": "front_desk_bell", "locations": ["hotel"] },
+    { "id": "velvet_rope", "locations": ["hotel"] }
   ]
 }

@@ -32,7 +32,7 @@
 }
 .sub {
   margin: calc(-1 * var(--px)) 0 0;
-  font-size: 23px;
+  font-size: 30px;
   line-height: 1.25;
   color: #a9b6dc;
 }
@@ -61,7 +61,7 @@
   paint-order: stroke fill;
 }
 .lockedText {
-  font-size: 26px;
+  font-size: 30px;
   line-height: 1.3;
   color: #c3cbea;
 }
@@ -71,7 +71,7 @@
   align-items: center;
   justify-content: center;
   gap: calc(2 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
   color: #a9b6dc;
 }
 
@@ -105,7 +105,7 @@
   color: #c3c8e6;
 }
 .ticketRefill {
-  font-size: 22px;
+  font-size: 30px;
   color: #a9b6dc;
   white-space: nowrap;
 }
@@ -187,7 +187,7 @@
   border: var(--px) solid var(--ink);
   background: linear-gradient(180deg, #fff6c2 0 var(--px), #ffd23f var(--px) 100%);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: var(--ink);
 }
 .locInfo {
@@ -215,7 +215,7 @@
   align-items: center;
   gap: var(--px);
   background: rgba(16, 12, 30, 0.78);
-  font-size: 22px;
+  font-size: 30px;
   color: #ffd0c0;
   white-space: nowrap;
 }
@@ -224,7 +224,7 @@
   align-items: center;
   gap: var(--px);
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   color: #6d5f57;
 }
 .locNeed {
@@ -232,7 +232,7 @@
   align-items: center;
   min-height: calc(7 * var(--px));
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: 30px;
   line-height: 1.1;
   color: #b52f35;
 }
@@ -240,7 +240,7 @@
 .blurb {
   margin: 0;
   padding: 0 var(--px);
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1.25;
   color: #c3cbea;
 }
@@ -250,24 +250,6 @@
   color: #ffd23f;
 }
 
-/* What a run is made of: the stops and their pictures. */
-.legend {
-  display: grid;
-  grid-template-columns: repeat(4, max-content);
-  justify-content: space-around;
-  gap: calc(2 * var(--px)) calc(4 * var(--px));
-  padding: calc(2 * var(--px)) calc(4 * var(--px));
-  background: rgba(8, 10, 24, 0.45);
-  box-shadow: var(--pixel-edge);
-}
-.legendItem {
-  display: flex;
-  align-items: center;
-  gap: var(--px);
-  font-size: 22px;
-  color: #d5dbf5;
-  white-space: nowrap;
-}
 .lobbyActions {
   margin-top: auto;
   display: flex;
@@ -292,7 +274,8 @@
   height: calc(9 * var(--px));
   padding: 0 calc(2 * var(--px)) 0 var(--px);
   background: rgba(26, 19, 38, 0.35);
-  font-size: 0.8em;
+  /* (Never under 30 px: a small button's 0.8em would be.) */
+  font-size: max(30px, 0.8em);
 }
 
 /* ------------------------------------------------------------ a run */
@@ -332,7 +315,7 @@
   border: var(--px) solid var(--ink);
   background: linear-gradient(180deg, #fff28c 0 var(--px), #f5c638 var(--px) calc(100% - var(--px)), #ef8a22 calc(100% - var(--px)) 100%);
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -340,7 +323,7 @@
 }
 .stopCount {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   color: #a9b6dc;
   white-space: nowrap;
 }
@@ -354,22 +337,13 @@
   -webkit-text-stroke: 6px var(--ink);
   paint-order: stroke fill;
 }
+/* Walking away: a small red button (global .btn.red) while it can be tapped, grey while it can't. */
 .abandon {
-  height: calc(7 * var(--px));
-  padding: 0 calc(2 * var(--px));
+  flex: none;
+  min-height: calc(10 * var(--px));
   margin-left: calc(2 * var(--px));
-  background: #3a3e60;
-  box-shadow: var(--pixel-edge);
-  font-size: 22px;
-  color: #c9cbe0;
+  padding: 0 calc(3 * var(--px));
   white-space: nowrap;
-}
-.abandon:active {
-  transform: translateY(var(--px));
-}
-.abandon[data-armed] {
-  background: #b52f35;
-  color: #fff;
 }
 
 /* 19 pips: each act's six stops, then the boss. A pip shows its stop once it's reached. */
@@ -470,7 +444,7 @@
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 30px;
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -483,7 +457,7 @@
   background: linear-gradient(180deg, #9edcf7 0 var(--px), #3fa1e3 var(--px) calc(100% - var(--px)), #2f56a6 calc(100% - var(--px)) 100%);
   box-shadow: var(--pixel-edge);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: #fff;
   -webkit-text-stroke: 5px var(--ink);
   paint-order: stroke fill;
@@ -532,7 +506,7 @@
   background: rgba(255, 255, 255, 0.16);
 }
 .noPerks {
-  font-size: 22px;
+  font-size: 30px;
   color: #6f7aa6;
 }
 @keyframes evoGlow {
@@ -593,14 +567,14 @@
   background: var(--tc);
   font-style: normal;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 26px;
   color: #fff;
   -webkit-text-stroke: 4px var(--ink);
   paint-order: stroke fill;
   white-space: nowrap;
 }
 .detailBody {
-  font-size: 25px;
+  font-size: 30px;
   line-height: 1.2;
   color: #5d4f47;
 }
@@ -630,7 +604,7 @@
   display: flex;
   align-items: flex-start;
   gap: calc(2 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
   line-height: 42px;
   color: #6d5f57;
 }
@@ -680,7 +654,7 @@
 }
 .decideSub {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: #7a6a60;
 }
 .rerollBtn {
@@ -742,7 +716,7 @@
   border: var(--px) solid var(--ink);
   background: linear-gradient(180deg, #fff28c 0 var(--px), #ffd23f var(--px) 100%);
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 30px;
   color: var(--ink);
   white-space: nowrap;
 }
@@ -765,7 +739,7 @@
 }
 .perkText {
   padding: 0 calc(2 * var(--px));
-  font-size: 22px;
+  font-size: 30px;
   line-height: 1.2;
   color: #5d4f47;
 }
@@ -810,7 +784,7 @@
 }
 /* What it can lead to, in small print under the label. */
 .optionHint {
-  font-size: 22px;
+  font-size: 30px;
   line-height: 1.15;
   text-shadow: none;
   -webkit-text-stroke: 4px var(--ink);
@@ -867,12 +841,12 @@
 }
 .stockName {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1.05;
 }
 .stockText {
   flex: 1;
-  font-size: 21px;
+  font-size: 27px;
   line-height: 1.15;
   color: #7a6a60;
 }
@@ -884,7 +858,7 @@
   gap: var(--px);
   background: var(--ink);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: #ffd23f;
 }
 .stockItem[data-broke] .stockPrice {
@@ -957,7 +931,7 @@
 .reelCell b {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 26px;
+  font-size: 30px;
   line-height: 30px;
   color: var(--ink);
 }
@@ -995,7 +969,7 @@
   gap: calc(2 * var(--px));
   height: calc(7 * var(--px));
   padding: 0 var(--px);
-  font-size: 24px;
+  font-size: 30px;
   color: #5d4f47;
 }
 .oddsLabel {
@@ -1114,7 +1088,7 @@
   animation: fadeIn 300ms steps(3) 200ms both;
 }
 .endNote {
-  font-size: 26px;
+  font-size: 30px;
   color: #c3c8e6;
 }
 .rewards {
@@ -1162,7 +1136,7 @@
 }
 .rewardText i {
   font-style: normal;
-  font-size: 21px;
+  font-size: 27px;
   color: #7a6a60;
 }
 @keyframes rewardIn {
@@ -1191,7 +1165,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: calc(2 * var(--px));
-  font-size: 26px;
+  font-size: 30px;
   color: #d5dbf5;
 }
 .keepLoot {
@@ -1202,7 +1176,7 @@
   height: calc(8 * var(--px));
   background: rgba(0, 0, 0, 0.35);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 30px;
   color: #fff;
 }
 .giveUp {

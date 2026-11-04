@@ -149,8 +149,9 @@ function Shop({ run, pending }: { run: HeistRun; pending: Pending<'shop'> }) {
           <CoinIcon size="md" />
           {formatNumber(run.coins)}
         </span>
+        {/* Leave can always be tapped while the shop is open, so it is always red (grey means it can't be). */}
         <button
-          className={`btn gray small ${s.leaveBtn}`}
+          className={`btn red small ${s.leaveBtn}`}
           onClick={() => {
             haptics.impact('light');
             heistDispatch({ type: 'heistLeaveShop' });
@@ -315,6 +316,8 @@ export function Wheel({ spin }: { spin: Spin | null }) {
 
 function Shrine({ run }: { run: HeistRun }) {
   const cost = Math.round((run.maxHp * SHRINE_HP_PCT) / 100);
+  // Its Epic perk needs a free slot (core turns the offer down without one).
+  const canOffer = run.perks.length < BAL.heist.maxPerks;
   return (
     <div className={s.decide}>
       <div className={s.shrineBody}>
@@ -326,7 +329,8 @@ function Shrine({ run }: { run: HeistRun }) {
       </div>
       <div className={s.shrineBtns}>
         <button
-          className={`btn ${s.shrineYes}`}
+          className={`btn ${canOffer ? s.shrineYes : 'gray'}`}
+          disabled={!canOffer}
           onClick={() => {
             haptics.impact('heavy');
             heistDispatch({ type: 'heistChoose', index: 0 });
@@ -335,7 +339,7 @@ function Shrine({ run }: { run: HeistRun }) {
           {t('heistUi.shrineAccept', { hp: formatNumber(cost) })}
         </button>
         <button
-          className="btn gray"
+          className="btn red"
           onClick={() => {
             haptics.impact('light');
             heistDispatch({ type: 'heistChoose', index: 1 });

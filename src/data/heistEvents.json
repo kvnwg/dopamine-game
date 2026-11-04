@@ -1,7 +1,7 @@
 [
   {
     "id": "evt_cat_staring_contest",
-    "text": "A cat challenges you to a staring contest.",
+    "text": "The guard's cat challenges you to a staring contest.",
     "acts": [1, 2, 3],
     "weight": 10,
     "options": [
@@ -79,6 +79,7 @@
     "text": "A rat offers a truce.",
     "acts": [1, 2, 3],
     "weight": 10,
+    "foe": "rat",
     "options": [
       { "label": "Accept", "outcomes": [{ "type": "truce", "value": 2 }] },
       { "label": "Refuse", "outcomes": [{ "type": "fight", "rewardMult": 1.5 }] }
@@ -99,6 +100,7 @@
     "text": "A raccoon union rep asks if you've paid your dues.",
     "acts": [1, 2, 3],
     "weight": 8,
+    "foe": "raccoon",
     "options": [
       { "label": "Pay up", "outcomes": [{ "type": "runCoins", "value": -15 }, { "type": "gainPerk", "rarity": "common" }] },
       { "label": "Flash a fake card", "outcomes": [{ "chance": 0.5, "type": "runCoins", "value": 20 }, { "chance": 0.5, "type": "damagePct", "value": 10 }] },
@@ -128,9 +130,10 @@
   },
   {
     "id": "evt_possum",
-    "text": "A possum is playing dead in your path. Badly.",
+    "text": "A possum is playing dead in your path. Badly. Two rats are selling tickets.",
     "acts": [1, 2, 3],
     "weight": 8,
+    "foe": "rat",
     "options": [
       { "label": "Play dead too", "outcomes": [{ "type": "healPct", "value": 20 }] },
       { "label": "Poke it", "outcomes": [{ "chance": 0.5, "type": "gainPerk", "rarity": "common" }, { "chance": 0.5, "type": "fight" }] },
@@ -194,6 +197,7 @@
     "text": "A gang of pigeons wants a cut.",
     "acts": [1, 2, 3],
     "weight": 8,
+    "foe": "pigeon",
     "options": [
       { "label": "Pay them", "outcomes": [{ "type": "runCoins", "value": -25 }, { "type": "gainPerk", "perkId": "pigeon_pal" }] },
       { "label": "Fight them", "outcomes": [{ "type": "fight", "rewardMult": 1.5 }] },
@@ -212,7 +216,7 @@
   },
   {
     "id": "evt_dog_bowl",
-    "text": "A guard dog's food bowl. No guard dog in sight.",
+    "text": "A food bowl that says GUARD on it. No guard in sight.",
     "acts": [1, 2, 3],
     "weight": 8,
     "options": [
@@ -255,6 +259,7 @@
     "text": "A raccoon blocks the air vent. \"Toll's ten coins.\"",
     "acts": [1, 2, 3],
     "weight": 8,
+    "foe": "raccoon",
     "options": [
       { "label": "Pay the toll", "outcomes": [{ "type": "runCoins", "value": -10 }, { "type": "skipFight" }] },
       { "label": "Shove past", "outcomes": [{ "type": "fight" }] }

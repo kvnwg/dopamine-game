@@ -59,6 +59,31 @@ export function reelStops(spin: SpinTiming, i: number): ReelStop[] {
   return stops;
 }
 
+/** A luck token a spin lands on: which reel, its place among that reel's stops, when, and its value. */
+export interface TokenStop {
+  reel: number;
+  /** Its index among the reel's stops (0 for the first token): a chain climbs with it. */
+  step: number;
+  at: number;
+  x: number;
+  /** The reel's multiplier once it lands (this token times the ones before it on that reel). */
+  total: number;
+}
+
+/** Every luck token of a spin, in the order they land. */
+export function tokenStops(spin: SpinTiming): TokenStop[] {
+  const out: TokenStop[] = [];
+  spin.reels.forEach((_, reel) => {
+    let total = 1;
+    reelStops(spin, reel).forEach((stop, step) => {
+      if (stop.token === null) return;
+      total *= stop.token;
+      out.push({ reel, step, at: stop.at, x: stop.token, total });
+    });
+  });
+  return out.sort((a, b) => a.at - b.at);
+}
+
 /** When reel `i` stops on its item (ms after the spin starts). */
 export function itemStopMs(spin: SpinTiming, i: number): number {
   const stops = reelStops(spin, i);

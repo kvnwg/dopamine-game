@@ -14,6 +14,7 @@ import { PopupLayer } from './popups/PopupLayer';
 import { RevealLayer } from './components/RevealLayer';
 import { DragLayer } from './components/DragLayer';
 import { EquipFlight } from './components/EquipFlight';
+import { TokenSlam } from './components/TokenSlam';
 import { TutorialLayer } from './components/TutorialLayer';
 import { Toasts } from './components/Toasts';
 import { AdOverlay } from './components/AdOverlay';
@@ -22,6 +23,7 @@ import { DevPanel } from '../dev/DevPanel';
 import { SHOW_DEV } from '../dev/flags';
 import { installRollController } from './rollController';
 import { installSound } from './soundController';
+import { installTokenFx } from './tokenFx';
 import { useUi } from './uiStore';
 
 const W = 1080;
@@ -47,6 +49,7 @@ export function App() {
 
   useEffect(() => installRollController(), []);
   useEffect(() => installSound(), []);
+  useEffect(() => installTokenFx(), []);
 
   return (
     <div className={styles.viewport}>
@@ -65,6 +68,7 @@ export function App() {
           </div>
           <div className={styles.nav}><BottomNav /></div>
           {tab === 'upgrades' && <UpgradeMap />}
+          <SafeLayer name="tokens"><TokenSlam /></SafeLayer>
           <SafeLayer name="drag"><DragLayer /></SafeLayer>
           <SafeLayer name="reveal"><RevealLayer /></SafeLayer>
           <SafeLayer name="unlocks"><UnlockedFx /></SafeLayer>

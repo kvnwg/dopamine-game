@@ -1,0 +1,279 @@
+/*
+ * A luck token slamming onto the screen (TokenSlam.tsx): over the battle, on any tab, above the upgrade
+ * map and under popups and the reveal. 1.4 s; it hits at 100 ms (7.14%). Whole pixels only: the art
+ * steps from its Scale3x picture to its Scale2x one as it lands, and everything moves in whole art
+ * pixel steps (var(--px) = 6 stage px).
+ */
+.slam {
+  position: absolute;
+  left: 540px;
+  top: 560px;
+  width: 0;
+  height: 0;
+  z-index: 25;
+  pointer-events: none;
+  animation: away 1.4s both;
+}
+/* It hangs there, then lifts away and fades in quarter steps. */
+@keyframes away {
+  0%,
+  78% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: steps(1, end);
+  }
+  84% {
+    opacity: 0.75;
+    transform: translateY(calc(-2 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  90% {
+    opacity: 0.5;
+    transform: translateY(calc(-4 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  95% {
+    opacity: 0.25;
+    transform: translateY(calc(-6 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(-8 * var(--px)));
+  }
+}
+
+/* Green rays behind it from the hit, slowly turning (they're drawn light, not pixel art). */
+.rays {
+  position: absolute;
+  left: -330px;
+  top: -330px;
+  width: 660px;
+  height: 660px;
+  background: center / 100% 100% no-repeat;
+  animation: raysIn 1.4s both, raySpin 12s linear infinite;
+}
+@keyframes raysIn {
+  0%,
+  7% {
+    opacity: 0;
+    animation-timing-function: steps(1, end);
+  }
+  10% {
+    opacity: 0.6;
+    animation-timing-function: steps(1, end);
+  }
+  14%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes raySpin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* The drop: its Scale3x picture falls two steps, then is gone as the Scale2x one lands. */
+.big {
+  position: absolute;
+  left: -144px;
+  top: -144px;
+  animation: drop 1.4s both;
+}
+@keyframes drop {
+  0% {
+    opacity: 1;
+    transform: translateY(calc(-10 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  3.5% {
+    opacity: 1;
+    transform: translateY(calc(-4 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  7.1%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+/* The landing: it hits a pixel low, kicks up one and settles. */
+.small {
+  position: absolute;
+  left: -96px;
+  top: -96px;
+  animation: land 1.4s both;
+}
+@keyframes land {
+  0%,
+  7% {
+    opacity: 0;
+    transform: translateY(calc(2 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  7.1% {
+    opacity: 1;
+    transform: translateY(calc(2 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  11% {
+    opacity: 1;
+    transform: translateY(calc(-1 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  15%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A square ring kicked out from the hit, in three steps. */
+.ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border: var(--px) solid #7ef08f;
+  box-shadow: 0 0 0 var(--px) var(--ink);
+  opacity: 0;
+  animation: ring 1.4s both;
+}
+@keyframes ring {
+  0%,
+  7% {
+    opacity: 0;
+    margin: -120px;
+    width: 240px;
+    height: 240px;
+    animation-timing-function: steps(1, end);
+  }
+  7.1% {
+    opacity: 1;
+    margin: -120px;
+    width: 240px;
+    height: 240px;
+    animation-timing-function: steps(1, end);
+  }
+  11% {
+    opacity: 0.75;
+    margin: -168px;
+    width: 336px;
+    height: 336px;
+    animation-timing-function: steps(1, end);
+  }
+  15% {
+    opacity: 0.4;
+    margin: -216px;
+    width: 432px;
+    height: 432px;
+    animation-timing-function: steps(1, end);
+  }
+  19%,
+  100% {
+    opacity: 0;
+    margin: -216px;
+    width: 432px;
+    height: 432px;
+  }
+}
+
+/* Clover bits thrown out on the hit, a third of the way per step. */
+.bits i {
+  position: absolute;
+  left: calc(-1 * var(--px));
+  top: calc(-1 * var(--px));
+  width: calc(2 * var(--px));
+  height: calc(2 * var(--px));
+  background: #7cff6b;
+  box-shadow: 0 0 0 var(--px) var(--ink);
+  opacity: 0;
+  animation: bit 1.4s both;
+}
+@keyframes bit {
+  0%,
+  7% {
+    opacity: 0;
+    transform: none;
+    animation-timing-function: steps(1, end);
+  }
+  7.1% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) / 3), calc(var(--dy) / 3));
+    animation-timing-function: steps(1, end);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 2 / 3), calc(var(--dy) * 2 / 3));
+    animation-timing-function: steps(1, end);
+  }
+  17% {
+    opacity: 0.6;
+    transform: translate(var(--dx), var(--dy));
+    animation-timing-function: steps(1, end);
+  }
+  22%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy));
+  }
+}
+
+/* The reel's new luck, stamped under it: big, then down to size in two steps. */
+.text {
+  position: absolute;
+  left: -450px;
+  width: 900px;
+  top: 108px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  color: #7ef08f;
+  -webkit-text-stroke: 12px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+  animation: stamp 1.4s both;
+}
+@keyframes stamp {
+  0%,
+  7% {
+    opacity: 0;
+    font-size: 132px;
+    animation-timing-function: steps(1, end);
+  }
+  7.1% {
+    opacity: 1;
+    font-size: 132px;
+    animation-timing-function: steps(1, end);
+  }
+  11% {
+    opacity: 1;
+    font-size: 108px;
+    animation-timing-function: steps(1, end);
+  }
+  15%,
+  100% {
+    opacity: 1;
+    font-size: 96px;
+  }
+}
+
+/* Reduced motion: no drop, ring, bits or turning rays; it simply shows, then fades. */
+.slam[data-calm] .big,
+.slam[data-calm] .ring,
+.slam[data-calm] .bits {
+  display: none;
+}
+.slam[data-calm] .small,
+.slam[data-calm] .text {
+  animation: none;
+}
+.slam[data-calm] .text {
+  font-size: 96px;
+}
+.slam[data-calm] .rays {
+  animation: raysIn 1.4s both;
+}

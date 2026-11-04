@@ -75,6 +75,8 @@ interface UiState {
   afterBoss: { world: number; firstTime: boolean; gems: number } | null;
   /** Items the last rebirth unlocked (shown after the rebirth burst). */
   unlocked: { count: number; ids: string[] } | null;
+  /** A luck token just landed on a reel: it slams onto the screen, on any tab (TokenSlam, tokenFx.ts). */
+  tokenSlam: { id: number; x: number; total: number } | null;
   setTab: (t: Tab) => void;
   openPopup: (p: PopupKind | null, detailUid?: number) => void;
   toast: (text: string, tone?: Toast['tone']) => void;
@@ -103,6 +105,7 @@ export const useUi = create<UiState>((set) => ({
   goldPulse: 0,
   afterBoss: null,
   unlocked: null,
+  tokenSlam: null,
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
   openPopup: (p, detailUid) => set({ popup: p, detailUid: detailUid ?? null }),

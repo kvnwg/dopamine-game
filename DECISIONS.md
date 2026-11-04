@@ -2,7 +2,16 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Recorded sounds (Nov 3, newest)
+## Luck tokens land on every tab (Nov 4, newest)
+
+Kevin: "even if im not on the rolling page, if i landed a luck booster it should play the sound, also it should slam onto the screen like the items do".
+
+| # | Decision | Why |
+|---|---|---|
+| T1 | A luck token's chime plays on every tab. src/ui/tokenFx.ts times each spin's tokens from its start (reelTiming.ts tokenStops, on core's roll timer, as the reels do), so they land whether or not the reels are on screen; the Roll tab's reels report the same tokens as they show them, and each plays once, whichever comes first. A token already past (the game was away, or loaded mid-spin) isn't played late. | Off the Roll tab the reels aren't there to play it. |
+| T2 | Every token also slams onto the screen, on every tab (TokenSlam.tsx): over the battle, its Scale3x clover drops two steps and lands as its Scale2x picture, the whole screen jolts (2, -1, 1 art pixels), a square ring and eight clover bits fly out, green rays turn behind it, and the reel's new luck is stamped under it ("x15 LUCK" for a x5 then a x3); after a second it lifts away in quarter-step fades (1.4 s in all). It hits 0.1 s after the chime starts, with the chime's impact. Reduced motion: no drop, jolt, ring or bits. It sits above the upgrade map and under popups and the full-screen reveal. | "Slam onto the screen like the items do." |
+
+## Recorded sounds (Nov 3)
 
 Kevin sent WAVs for sounds on the sound list (a page with every sound in the game, its file name and a button to hear it), one message per sound: "play sounds", "button click", "padlock tap", "these together, is the lock breaks", "reel stop", "rare crawl", "luck token, these three audios stacked. increase pitch each time it goes up", "glow climbs, increase pitch as it goes", "for the shake", "riser long", "riser short", "long jingle", "short jingle", "heartbeat, feel free to speed up etc etc", "these stacked together for slam"; and "reel tick is good, make it a bit louder", then "replace current reel stops with this" (a cash register ding for the level-up chime) and "these three together for when u sell like a big haul", "normal hitting sound for raccoon".
 

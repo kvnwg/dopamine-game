@@ -45,6 +45,7 @@ import { RAINBOW, raysUrl } from '../rays';
 import { flickerMs, glowAt, landFx, teasePlan, tierLight, type Tease } from '../reelDrama';
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
 import { tokenHoldMs } from '../reelTiming';
+import { tokenKey, tokenLanded } from '../tokenFx';
 import { useUi } from '../uiStore';
 import { Chunky, type Grad } from './Chunky';
 import { PixelArt } from './PixelArt';
@@ -528,11 +529,11 @@ export function ReelBank() {
           r.reached[i] += 1;
           cellRefs.current.get(`${r.key}:${i}:${stop.idx}`)?.setAttribute('data-revealed', '');
           if (stop.token !== null) {
-            // A luck token: chime, burst, and the reel spins on with its luck multiplied.
-            audio.token(k, stop.token);
-            setTimeout(() => audio.respin(), tokenHoldMs());
-            haptics.impact('medium');
+            // A luck token: chime, burst and its slam onto the screen (tokenFx.ts: once, on any tab),
+            // and the reel spins on with its luck multiplied.
             const x = chainOf(st, r.reached[i]);
+            tokenLanded(tokenKey(r.key.split(',')[i], k), k, stop.token, x);
+            setTimeout(() => audio.respin(), tokenHoldMs());
             setChain((c) => c.map((cur, j) => (j === i ? x : cur)));
             addFx({ kind: 'token', reel: i, tier: 0 }, 900);
           } else {

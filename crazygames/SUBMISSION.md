@@ -32,6 +32,8 @@ The requirements below were checked against the official docs at <https://docs.c
 
 **Covers** are close-ups in the style of the store's tiles. The raccoon is big and low in the frame, cropped by the bottom edge, with his BBQ Spatula raised toward the top corner. Behind him is a soft, blurred view of World 1's town, with flecks of light, sunlight from the corner and the game's sparkles on the blade. He is his cheer pose and the spatula is its item art, both the game's own pixels at one big pixel size, never smoothed; only the background is soft (`tools/crazygames/cover.ts`). There is no text (CrazyGames allows the title and nothing else), and no borders or icons. The square cover is the tile players see in the game grid.
 
+**Logo**, in the style of the reference tile: `crazygames/logo/logo-1024x1024.png` and `logo-512x512.png`. It shows the raccoon close up, his BBQ Spatula raised to the top corner, over the soft blue blurred town. He and the spatula are the game's own pixels; there's no text or outline.
+
 **Previews** are a 17-second trailer of real gameplay, each in the layout players of that format see: the landscape one in the PC layout (the battle on the left, the dumpster's reels on the right), the portrait one in the phone layout. A dozen quick shots (0.5–1.9 s) with push-ins, punch-in zooms and shakes on the hits:
 1. The cover, dissolving into a close-up brawl in Lava Landfill: CRIT!s, big numbers, coins flying, LEVEL UP!
 2. A luck chain on all three reels at once. Each reel lands ×3, then ×5, then ×10, and every token flies up into its row over the battle. All three reels match every time, so the luck is squared: MATCH! LUCK SQUARED, ×9, then ×225 (LEGENDARY OR BETTER!), then ×22.5K (MYTHIC OR BETTER!).
@@ -166,7 +168,7 @@ The CrazyGames build is its own Vite mode, so the phone apps and other web build
 
 ```bash
 npm run dev:crazygames      # play the CrazyGames build locally (SDK "local" mode)
-npm run crazygames:covers   # re-render the 3 covers from the game art   (needs Playwright)
+npm run crazygames:covers   # re-render the 3 covers and the logo from the game art   (needs Playwright)
 npm run crazygames:trailer  # re-record the scenes and cut both previews  (Playwright + ffmpeg, ~30 min)
 npm run crazygames:recut    # re-cut only, after editing trailerShots.json (~4 min)
 npm run build:crazygames    # the upload zip

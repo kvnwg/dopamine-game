@@ -1,4 +1,4 @@
-// Renders the CrazyGames store covers from the game's own pixel art (tools/crazygames/cover.ts).
+// Renders the CrazyGames store covers and the logo from the game's own pixel art (tools/crazygames/cover.ts).
 //   node tools/crazygames/renderCovers.mjs
 // Needs Playwright with Chromium: npm i -D playwright && npx playwright install chromium
 import fs from 'node:fs';
@@ -9,6 +9,12 @@ import { createServer } from 'vite';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const OUT = path.join(ROOT, 'crazygames', 'covers');
+
+/** The logo: the square close-up on its own (crazygames/logo/), at the usual icon sizes. */
+export const LOGOS = [
+  ['logo-1024x1024.png', 1024, 1024],
+  ['logo-512x512.png', 512, 512],
+];
 
 // [file, width, height, screen px per art px]
 export const COVERS = [
@@ -53,6 +59,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     for (const [name, w, h, k] of COVERS) {
       const file = path.join(OUT, name);
       await renderCover(browser, vite.base, file, w, h, k);
+      console.log('wrote', path.relative(ROOT, file));
+    }
+    const logoDir = path.join(ROOT, 'crazygames', 'logo');
+    fs.mkdirSync(logoDir, { recursive: true });
+    for (const [name, w, h] of LOGOS) {
+      const file = path.join(logoDir, name);
+      await renderCover(browser, vite.base, file, w, h, 1);
       console.log('wrote', path.relative(ROOT, file));
     }
   } finally {

@@ -20,6 +20,12 @@ export function freshState(seed = 1, now = T0, locked = false): GameState {
   return st;
 }
 
+/** `st` past a new game's warm-up spins (BAL.tutorial.warmupRarities): its next spin is the tutorial's own find. */
+export function pastWarmup(st: GameState): GameState {
+  st.roll.count = Math.max(st.roll.count, BAL.tutorial.warmupRarities.length);
+  return st;
+}
+
 /** Count occurrences of each value from `n` calls. */
 export function histogram<T extends string | number | boolean>(n: number, f: () => T): Map<T, number> {
   const m = new Map<T, number>();

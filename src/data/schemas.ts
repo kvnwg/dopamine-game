@@ -487,6 +487,11 @@ export const BalanceSchema = z.object({
    * tutorial's hand points.
    */
   tutorial: z.object({
+    /**
+     * A new game's first spins warm the player up before the tutorial's own find (Kevin: "get them
+     * accustomed a bit first to rolling"): one everyday find per spin, at these rarities in turn.
+     */
+    warmupRarities: z.array(RaritySchema),
     beginnerAfterRolls: z.number().int().positive(),
     beginnerAfterEquips: z.number().int().positive(),
     beginnerAtRolls: z.number().int().positive(),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, beginnerLuckDue, GameStateSchema, performSpin, rebirthRequirement, Rng, spinCycle, tick, type CoreEvent, type GameState } from '../src/core';
 import { BAL, DATA } from '../src/data';
-import { freshState, T0 } from './helpers';
+import { freshState, pastWarmup, T0 } from './helpers';
 
 const clone = (s: GameState) => structuredClone(s) as GameState;
 
@@ -20,9 +20,9 @@ describe("tutorial: the first roll and beginner's luck", () => {
   const t = BAL.tutorial;
   const tutorialSlot = DATA.itemsById.get(BAL.dumpster.tutorialItem.baseId)!.slot;
 
-  it('the very first spin is scripted: the tutorial item, marked as such', () => {
+  it('after the warm-up spins, the tutorial\'s own find is scripted: the tutorial item, marked as such', () => {
     const rng = new Rng(3);
-    const { events } = spin(freshState(), rng);
+    const { events } = spin(pastWarmup(freshState()), rng);
     const start = events.find((e): e is SpinStart => e.type === 'spinStart')!;
     const roll = events.find((e): e is Roll => e.type === 'roll')!;
     expect(start.scripted).toBe('first');
@@ -141,7 +141,7 @@ describe('the tutorial holds the reels on its finds', () => {
 
   it('the reels rest on the first find while it waits in the bag to be put on, and roll on as soon as it is', () => {
     const rng = new Rng(4);
-    const a = play(freshState(), 20, rng);
+    const a = play(pastWarmup(freshState()), 20, rng);
     // Only the cone in 20 seconds: the hand's target stays put.
     expect(a.rolls.map((r) => r.item.baseId)).toEqual([BAL.dumpster.tutorialItem.baseId]);
     expect(a.st.roll.current?.scripted).toBe('first');
@@ -153,9 +153,9 @@ describe('the tutorial holds the reels on its finds', () => {
   it('at most holdSeconds if it is never put on; scrapping it lets them go on at once', () => {
     const rng = new Rng(5);
     const cycle = spinCycle(freshState());
-    const waited = play(freshState(), t.holdSeconds + cycle * 2 + 1, rng);
+    const waited = play(pastWarmup(freshState()), t.holdSeconds + cycle * 2 + 1, rng);
     expect(waited.rolls.length).toBeGreaterThanOrEqual(2);
-    const a = play(freshState(), 10, new Rng(6));
+    const a = play(pastWarmup(freshState()), 10, new Rng(6));
     expect(a.rolls).toHaveLength(1);
     const gone = clone(applyAction(a.st, { type: 'scrapItem', uid: a.st.inventory[0].uid }, new Rng(6), a.at).state);
     expect(play(gone, cycle + 0.5, new Rng(6), a.at).rolls.length).toBeGreaterThanOrEqual(1);

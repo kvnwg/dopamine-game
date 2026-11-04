@@ -36,7 +36,7 @@ import { GemIcon, HandIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import s from './tutorial.module.css';
 
-type Step = 'open' | 'roll' | 'equip' | 'best' | 'fight' | 'lucky';
+type Step = 'open' | 'roll' | 'best' | 'fight' | 'lucky';
 
 const snap = (v: number) => Math.round(v / UI_PX) * UI_PX;
 
@@ -46,13 +46,13 @@ function stepOf(g: GameState): { step: Step | null; uid: number | null } {
   if (b.state === 'done') return { step: null, uid: null };
   if (!g.features.unlocked.includes('roll')) return { step: 'open', uid: null };
   const worn = g.lifetime.itemsEquipped > 0;
-  if (!g.dumpster.firstDiveDone || (!worn && g.inventory.length === 0)) return { step: 'roll', uid: null };
-  if (!worn) {
-    const first = g.inventory.find((x) => x.baseId === BAL.dumpster.tutorialItem.baseId) ?? g.inventory[0];
-    return { step: 'equip', uid: first.uid };
-  }
-  // Beginner's luck: once its item has landed in the bag, put it on.
-  if (b.state === 'rolled' && g.inventory.some((x) => x.uid === b.uid)) return { step: 'lucky', uid: b.uid };
+  // The warm-up spins and the tutorial's own find rolling in (Kevin: "get them accustomed a bit first").
+  const findIn = worn || g.inventory.some((x) => x.baseId === BAL.dumpster.tutorialItem.baseId);
+  if (!g.dumpster.firstDiveDone || !findIn) return { step: 'roll', uid: null };
+  // Its find (and the warm-up's) go on with Equip best, no dragging (Kevin: "just take them to equip best").
+  if (!worn) return { step: 'best', uid: null };
+  // Beginner's luck: once its item has landed in the bag, put it on (Equip best again).
+  if (b.state === 'rolled' && g.inventory.some((x) => x.uid === b.uid)) return { step: 'lucky', uid: null };
   // Then wear the best of the rest at once (done for good after a few items have gone on).
   if (g.lifetime.itemsEquipped < 3 && bestUpgrades(g).length >= 2) return { step: 'best', uid: null };
   return { step: 'fight', uid: null };
@@ -60,7 +60,8 @@ function stepOf(g: GameState): { step: Step | null; uid: number | null } {
 
 /** How many of the three steps are done. */
 function doneCount(step: Step): number {
-  return step === 'open' || step === 'roll' || step === 'equip' ? 0 : step === 'best' ? 1 : 2;
+  // Bust the dumpster open, dress him with Equip best, put beginner's luck on.
+  return step === 'open' ? 0 : step === 'roll' || step === 'best' ? 1 : 2;
 }
 
 /** A nav tab's button. */
@@ -288,7 +289,7 @@ export function TutorialLayer() {
     if (!before || !step || before === step) return;
     const n = doneCount(step);
     if (n > doneCount(before)) setTimeout(() => audio.tierPass(4 + n * 2), 400);
-    if (step === 'fight' && (before === 'equip' || before === 'best')) setFightUntil(Date.now() + 5200);
+    if (step === 'fight' && before === 'best') setFightUntil(Date.now() + 5200);
   }, [step]);
 
   useEffect(() => {
@@ -316,10 +317,7 @@ export function TutorialLayer() {
     hand = true;
     target = { target: '[data-lock-target]' };
   } else if (step === 'roll') bubble = { text: t('tut.roll') };
-  else if (step === 'equip') {
-    bubble = { text: t('tut.drag') };
-    hand = true;
-  } else if (step === 'best') {
+  else if (step === 'best') {
     bubble = { text: t('tut.best') };
     hand = true;
   } else if (step === 'fight' && now < fightUntil) bubble = { text: t('tut.fight') };
@@ -361,7 +359,7 @@ export function TutorialLayer() {
     <div className={s.layer}>
       {!busy && bubble && <Bubble text={bubble.text} done={bubble.intro ? null : step ? doneCount(step) : 3} gold={bubble.gold} />}
       {!busy && hand && (
-        <Hand uid={target ? null : uid} baseId={target ? null : baseId} best={step === 'best'} target={target?.target} fallback={target?.fallback} />
+        <Hand uid={target ? null : uid} baseId={target ? null : baseId} best={step === 'best' || step === 'lucky'} target={target?.target} fallback={target?.fallback} />
       )}
       {finale !== null && <Finale gems={finale} onClose={() => setFinale(null)} />}
     </div>

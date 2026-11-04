@@ -3,7 +3,7 @@ import {
   applyAction, canRebirth, combatEffects, luckOddsOneIn, rollDrama, revealBar, revealDrama, haulMinutes, haulSize, currentRate, createItem, currentLuck, goldMult, inventoryCapacity, computeStats, isUpgrade, itemOddsOneIn, luckBreakdown, performRoll, luckyEvery, rarityChances, rebirthRequirement, rollEnchants, rollRarity, Rng, performSpin, rarityAtLeast, reelCount, spinCycle, spinShare, tick, sanitizeUpgrades, upgradeCostAt, upgradeDef, upgradeEffects, upgradeNodeState, type CoreEvent, type GameState, type Item, bestUpgrades,
 } from '../src/core';
 import { BAL, DATA, RARITIES } from '../src/data';
-import { freshState, histogram, T0 } from './helpers';
+import { freshState, histogram, pastWarmup, T0 } from './helpers';
 
 const N = 10_000;
 const clone = (s: GameState) => structuredClone(s) as GameState;
@@ -170,9 +170,9 @@ describe('luck odds ("1 in X")', () => {
 });
 
 describe('the wheel', () => {
-  it('the first spin is the scripted Legendary Traffic Cone; once it is worn, spins keep coming without input', () => {
+  it('after the warm-up, the scripted Legendary Traffic Cone; once it is worn, spins keep coming without input', () => {
     const rng = new Rng(1);
-    const a = runTicks(clone(freshState()), 120, rng);
+    const a = runTicks(pastWarmup(clone(freshState())), 120, rng);
     const first = a.events.find((e) => e.type === 'roll');
     expect(first?.type === 'roll' && first.item.baseId).toBe('hat_traffic_cone');
     expect(first?.type === 'roll' && first.item.rarity).toBe('legendary');

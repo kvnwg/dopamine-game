@@ -207,10 +207,12 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
  * Rolls one reel's item at `luck`. `dry` is the bad-luck streak as of this reel (earlier reels in
  * the same spin count), so protection triggers at most once per streak.
  */
-function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number, slotOverride?: Slot, avoidBase?: string, floor: Rarity | null = null): Item {
+function rollReelItem(
+  d: GameState, rng: Rng, luck: number, dry: number, slotOverride?: Slot, avoidBase?: string, floor: Rarity | null = null, tutorialFind = false,
+): Item {
   const dz = d.dumpster;
   const theme = dz.theme;
-  if (!dz.firstDiveDone) {
+  if (tutorialFind) {
     const t = BAL.dumpster.tutorialItem;
     dz.firstDiveDone = true;
     return createItem(DATA.itemsById.get(t.baseId)!, t.rarity, t.level, theme, rng, d.nextItemUid++);
@@ -286,10 +288,15 @@ export function tokenMult(mults: readonly number[]): number {
  */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
-  // The tutorial scripts two spins: the very first (rollReelItem gives the tutorial item) and, a little
-  // later, beginner's luck: its first reel chains BAL.tutorial's tokens into a rare item. The reels
-  // rest on either find while it waits in the bag to be put on (rollTick ends the rest when it goes).
-  const scripted = !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
+  // A new game's first spins warm up: everyday finds climbing BAL.tutorial.warmupRarities (no tokens,
+  // nothing scripted). Then the tutorial scripts two spins: its own find (rollReelItem gives the
+  // tutorial item) and, a little later, beginner's luck: its first reel chains BAL.tutorial's tokens
+  // into a rare item. The reels rest on either find while it waits in the bag to be put on (rollTick
+  // ends the rest when it goes).
+  const warm = BAL.tutorial.warmupRarities;
+  const warmup = !d.dumpster.firstDiveDone && d.roll.count < warm.length ? warm[d.roll.count] : null;
+  const scripted = warmup ? null : !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
+  if (warmup) d.dumpster.forcedRarity = warmup;
   const rolled: { item: Item; mults: number[] }[] = [];
   let dry = d.dumpster.dryStreak;
   // Rigged Jackpot (an Alley perk): every Nth spin, every reel lands at least its rarity.
@@ -311,7 +318,7 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     const tut = BAL.dumpster.tutorialItem.baseId;
     const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
     const floor = higherFloor(chainFloor(tokenMult(mults)), rigged);
-    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined, floor);
+    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined, floor, scripted === 'first' && i === 0);
     if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     rolled.push({ item, mults });

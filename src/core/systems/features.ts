@@ -55,7 +55,8 @@ function ready(d: GameState, f: Feature): boolean {
     case 'roll':
       return false; // the player's tap: openDumpster
     case 'bag':
-      return d.lifetime.itemsEquipped > 0;
+      // With the tutorial's own find in (after the warm-up spins): it goes on with Equip best there.
+      return d.lifetime.itemsEquipped > 0 || (d.dumpster.firstDiveDone && d.roll.count > BAL.tutorial.warmupRarities.length);
     case 'luck':
     case 'codex':
       return tutorialOver(d);

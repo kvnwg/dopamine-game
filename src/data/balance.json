@@ -508,6 +508,7 @@
     "watchSeconds": 1.5
   },
   "tutorial": {
+    "warmupRarities": ["junk", "decent", "shiny"],
     "beginnerAfterRolls": 8,
     "beginnerAfterEquips": 3,
     "beginnerAtRolls": 14,

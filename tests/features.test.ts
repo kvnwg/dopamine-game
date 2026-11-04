@@ -16,7 +16,7 @@ function step(st: GameState, rng = new Rng(1), now = T0): { st: GameState; opene
 }
 
 describe('a new game opens its features one by one', () => {
-  it('the dumpster waits, padlocked, for the first tap; then it rolls the tutorial\'s first find', () => {
+  it('the dumpster waits, padlocked, for the first tap; then a few everyday warm-up finds, then the tutorial\'s own find', () => {
     const rng = new Rng(2);
     let st = freshState(1, T0, true);
     expect(st.features).toEqual({ unlocked: [], seen: [] });
@@ -33,9 +33,29 @@ describe('a new game opens its features one by one', () => {
     expect(opened.state.features.seen).toContain('roll');
     // A second tap does nothing more.
     expect(applyAction(opened.state, { type: 'openDumpster' }, rng, T0).events.some((e) => e.type === 'featureUnlocked')).toBe(false);
-    const next = tick(opened.state, { ticks: 1 }, rng, T0);
-    const start = next.events.find((e) => e.type === 'spinStart');
-    expect(start?.type === 'spinStart' && start.scripted).toBe('first');
+    // The warm-up: one everyday find per spin, climbing BAL.tutorial.warmupRarities, no tokens, nothing scripted.
+    let s = opened.state;
+    const starts: Extract<CoreEvent, { type: 'spinStart' }>[] = [];
+    for (let i = 0; i < 400 && starts.length < BAL.tutorial.warmupRarities.length + 1; i++) {
+      const r = tick(s, { ticks: 1 }, rng, T0 + i * 100);
+      s = r.state;
+      for (const e of r.events) if (e.type === 'spinStart') starts.push(e);
+    }
+    const warm = starts.slice(0, BAL.tutorial.warmupRarities.length);
+    expect(warm.map((e) => e.reels[0].item.rarity)).toEqual(BAL.tutorial.warmupRarities);
+    for (const e of warm) {
+      expect(e.scripted).toBeUndefined();
+      expect(e.reels[0].mults).toEqual([]);
+    }
+    // Then the tutorial's own find.
+    const own = starts[BAL.tutorial.warmupRarities.length];
+    expect(own.scripted).toBe('first');
+    expect(own.reels[0].item.baseId).toBe(BAL.dumpster.tutorialItem.baseId);
+    // The Bag opens with it in (its Equip best puts it on).
+    expect(s.features.unlocked).not.toContain('bag');
+    for (let i = 0; i < 100 && !s.features.unlocked.includes('bag'); i++) s = tick(s, { ticks: 1 }, rng, T0 + 40_000 + i * 100).state;
+    expect(s.features.unlocked).toContain('bag');
+    expect(s.lifetime.itemsEquipped).toBe(0);
   });
 
   it('each opens when it becomes useful, once: the Bag with the first item worn, luck, the Codex and Worlds after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Rebirth near the first rebirth, Heists with it, Perks with the second', () => {

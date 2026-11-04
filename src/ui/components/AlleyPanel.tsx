@@ -89,10 +89,12 @@ function LastRoll() {
     return wornPower(g, it) - (worn ? wornPower(g, worn) : 0);
   });
   const sparkle = useMemo(() => sparkleArt(), []);
+  // A new game's first step is a world; the padlock waits for it.
+  const onWorld = useGame((g) => g.stage.chosen);
   if (!last) {
     return (
       <div className={`${s.last} card`}>
-        <span className={s.waiting}>{t('roll.firstRoll')}</span>
+        <span className={s.waiting}>{t(onWorld ? 'roll.firstRoll' : 'roll.firstWorld')}</span>
       </div>
     );
   }

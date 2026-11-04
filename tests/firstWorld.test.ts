@@ -45,19 +45,40 @@ describe('the first world (a calm start)', () => {
     expect(applyAction(r.st, { type: 'travel', world: 1 }, rng, T0).events.some((e) => e.type === 'stageStart')).toBe(false);
   });
 
-  it('Worlds opens with the tutorial over and is introduced at once; Luck and the Codex open quietly', () => {
-    const st = clone(newGame().st);
-    st.lifetime.itemsEquipped = 1;
-    st.features.unlocked.push('bag');
-    st.features.seen.push('bag');
+  it('Worlds is open from the very start, padlock still on, so he can fight before a single roll; Luck and the Codex open quietly later', () => {
+    const { st, rng } = newGame();
+    expect(featureView(st, 'worlds')).toBe('open');
+    expect(introFeature(st)).toBeNull();
+    // Picked before the dumpster is even open: the fight starts at once.
+    const padlocked = freshState(1, T0, true);
+    expect(featureView(padlocked, 'worlds')).toBe('open');
+    const picked = applyAction(padlocked, { type: 'travel', world: 1 }, rng, T0);
+    expect(picked.state.stage.chosen).toBe(true);
+    expect(picked.state.features.unlocked).not.toContain('roll');
+    expect(run(picked.state, rng, 300).events.some((e) => e.type === 'waveStart')).toBe(true);
+    // The tutorial over: Luck and the Codex appear without a walkthrough.
+    const s = clone(st);
+    s.lifetime.itemsEquipped = 1;
+    s.features.unlocked.push('bag');
+    s.features.seen.push('bag');
+    s.dumpster.beginner = { state: 'done', uid: null };
+    const r = applyAction(s, { type: 'featureSeen', feature: 'bag' }, new Rng(1), T0);
+    expect(r.state.features.seen).toEqual(expect.arrayContaining(['luck', 'codex', 'worlds']));
+    expect(featureView(r.state, 'luck')).toBe('open');
+  });
+
+  it('starting on a world before the dumpster is open, he never falls during the tutorial; after it, he can', () => {
+    const rng = new Rng(9);
+    let st = applyAction(freshState(9, T0, true), { type: 'travel', world: 1 }, rng, T0).state;
+    // A minute and a half of fighting, gear-less: he holds on at 1 HP.
+    const r = run(st, rng, 900);
+    expect(r.events.some((e) => e.type === 'playerDeath')).toBe(false);
+    expect(r.events.filter((e) => e.type === 'enemyHit').length).toBeGreaterThan(20);
+    // With the tutorial over, the same gear-less raccoon falls in time.
+    st = clone(r.st);
     st.dumpster.beginner = { state: 'done', uid: null };
-    const r = applyAction(st, { type: 'featureSeen', feature: 'bag' }, new Rng(1), T0);
-    expect(r.state.features.unlocked).toEqual(expect.arrayContaining(['luck', 'codex', 'worlds']));
-    const s = r.state;
-    expect(s.features.seen).toEqual(expect.arrayContaining(['luck', 'codex']));
-    expect(introFeature(s)).toBe('worlds');
-    expect(featureView(s, 'worlds')).toBe('intro');
-    expect(featureView(s, 'luck')).toBe('open');
+    const after = run(st, rng, 1800, 900);
+    expect(after.events.some((e) => e.type === 'playerDeath')).toBe(true);
   });
 
   it('no fighting means no offline fight rewards, and a reload keeps him waiting', () => {

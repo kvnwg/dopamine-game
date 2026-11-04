@@ -1,7 +1,9 @@
 /**
  * The first-run tutorial (new games only; see BAL.tutorial and dumpster.beginner in core). Quick
  * steps, each paid off with as much fanfare as the game has:
- *  - The dumpster starts padlocked under steel: the hand taps the padlock (DumpsterLock), the metal
+ *  - First a world (Kevin: "have them start on a world, and then unlock the roller"): the game opens
+ *    on the Worlds tab and the hand points at World 1; picked, the raccoon starts fighting there.
+ *  - Then the dumpster, padlocked under steel: the hand taps the padlock (DumpsterLock), the metal
  *    falls off, and it rolls the first item by itself: the Traffic Cone of Destiny, with the big reveal.
  *  1. Put it on: a pointing hand carries a ghost of it from its tile up to the raccoon, over and over,
  *     until you drag it there (then the equip slam and the power count). If it isn't on screen, the
@@ -10,7 +12,7 @@
  *  3. Beginner's luck: a little later the reels chain two luck tokens into a Limited Edition hat (the
  *     big reveal calls it beginner's luck). Put it on and the tutorial ends: a full-screen celebration
  *     and a gem gift.
- * A bubble over the bottom of the battle says what to do, with three pips that light up (and chime,
+ * A bubble over the bottom of the battle says what to do, with four pips that light up (and chime,
  * a step higher each time) as the steps are done. Everything moves in whole art pixels.
  *
  * Everything else starts locked and opens one feature at a time (core/systems/features.ts): when one
@@ -36,7 +38,7 @@ import { GemIcon, HandIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import s from './tutorial.module.css';
 
-type Step = 'open' | 'roll' | 'best' | 'fight' | 'lucky';
+type Step = 'world' | 'open' | 'roll' | 'best' | 'fight' | 'lucky';
 
 const snap = (v: number) => Math.round(v / UI_PX) * UI_PX;
 
@@ -44,7 +46,8 @@ const snap = (v: number) => Math.round(v / UI_PX) * UI_PX;
 function stepOf(g: GameState): { step: Step | null; uid: number | null } {
   const b = g.dumpster.beginner;
   if (b.state === 'done') return { step: null, uid: null };
-  if (!g.features.unlocked.includes('roll')) return { step: 'open', uid: null };
+  // First a world, then the dumpster (whose padlock waits for it, DumpsterLock).
+  if (!g.features.unlocked.includes('roll')) return { step: g.stage.chosen ? 'open' : 'world', uid: null };
   const worn = g.lifetime.itemsEquipped > 0;
   // The warm-up spins and the tutorial's own find rolling in (Kevin: "get them accustomed a bit first").
   const findIn = worn || g.inventory.some((x) => x.baseId === BAL.dumpster.tutorialItem.baseId);
@@ -58,11 +61,12 @@ function stepOf(g: GameState): { step: Step | null; uid: number | null } {
   return { step: 'fight', uid: null };
 }
 
-/** How many of the three steps are done. */
+/** How many of the four steps are done. */
 function doneCount(step: Step): number {
-  // Bust the dumpster open, dress him with Equip best, put beginner's luck on.
-  return step === 'open' ? 0 : step === 'roll' || step === 'best' ? 1 : 2;
+  // Start on a world, bust the dumpster open, dress him with Equip best, put beginner's luck on.
+  return step === 'world' ? 0 : step === 'open' ? 1 : step === 'roll' || step === 'best' ? 2 : 3;
 }
+const STEPS = 4;
 
 /** A nav tab's button. */
 const navTab = (tab: string) => `nav button[aria-label="${t(`tab.${tab}`)}"]`;
@@ -217,7 +221,7 @@ function Bubble({ text, done, gold }: { text: string; done: number | null; gold?
       <div key={text} className={`${s.bubble} ${gold ? s.bubbleGold : ''}`}>
         {done !== null && (
           <div className={s.pips}>
-            {[0, 1, 2].map((i) => (
+            {Array.from({ length: STEPS }, (_, i) => (
               <span key={i} className={i < done ? s.pipOn : s.pip} />
             ))}
           </div>
@@ -315,10 +319,20 @@ export function TutorialLayer() {
     [],
   );
 
+  // A brand-new game opens on the Worlds tab, its first step.
+  useEffect(() => {
+    if (step === 'world') useUi.getState().setTab('worlds');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   let bubble: { text: string; gold?: boolean; intro?: boolean } | null = null;
   let hand = false;
   let target: { target: string; fallback?: string } | null = null;
-  if (step === 'open') {
+  if (step === 'world') {
+    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.goWorlds') };
+    hand = true;
+    target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
+  } else if (step === 'open') {
     bubble = { text: t('tut.open') };
     hand = true;
     target = { target: '[data-lock-target]' };
@@ -346,7 +360,7 @@ export function TutorialLayer() {
   const before = introducing === 'bag';
   const picking = !before && (step === null || step === 'fight') && worldsOpen && !chosen;
   if (picking) {
-    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.intro.worlds'), gold: true, intro: true };
+    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.goWorlds'), gold: true, intro: true };
     hand = true;
     target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
   }
@@ -359,7 +373,7 @@ export function TutorialLayer() {
   }, [showing, introducing]);
   return (
     <div className={s.layer}>
-      {!busy && bubble && <Bubble text={bubble.text} done={bubble.intro ? null : step ? doneCount(step) : 3} gold={bubble.gold} />}
+      {!busy && bubble && <Bubble text={bubble.text} done={bubble.intro ? null : step ? doneCount(step) : STEPS} gold={bubble.gold} />}
       {!busy && hand && (
         <Hand uid={target ? null : uid} baseId={target ? null : baseId} best={step === 'best' || step === 'lucky'} target={target?.target} fallback={target?.fallback} />
       )}

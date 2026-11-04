@@ -60,10 +60,13 @@ export function TopHud() {
       </button>
       <div className={s.levelPill}>
         <span key={`lv${ups}`} className={`${s.lvBadge} ${ups ? s.lvUp : ''}`}>{t('hud.level', { level })}</span>
-        <div className={s.xpTrack} data-xp-target>
-          {/* (A new level gets a new fill, so it doesn't shrink back from full.) */}
-          <div key={`fill${level}`} className={`${s.xpFill} ${turn(xpHits, s.flashA, s.flashB)}`} style={{ width: `${Math.min(100, (xpNow / need) * 100)}%` }} />
-          {ups > 0 && <span key={`full${ups}`} className={s.xpFull} />}
+        <div className={s.xpBar}>
+          <div className={s.xpTrack} data-xp-target>
+            {/* (A new level gets a new fill, so it doesn't shrink back from full.) */}
+            <div key={`fill${level}`} className={`${s.xpFill} ${turn(xpHits, s.flashA, s.flashB)}`} style={{ width: `${Math.min(100, (xpNow / need) * 100)}%` }} />
+            {ups > 0 && <span key={`full${ups}`} className={s.xpFull} />}
+          </div>
+          {/* Over the bar, not in it: the bar clips its fill, and must never clip the numbers. */}
           <span className={s.xpText}>{formatNumber(xp)}/{formatNumber(need)}</span>
         </div>
         {ups > 0 && !noFlash && (

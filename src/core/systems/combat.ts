@@ -265,6 +265,14 @@ function runBlock(c: Ctx): boolean {
   return false;
 }
 
+/**
+ * A new game's first-run tutorial is still on (as features.ts tutorialOver has it: beginner's luck not
+ * yet worn, no rebirth, not past the rolls that end it anyway).
+ */
+export function inTutorial(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'>): boolean {
+  return d.dumpster.beginner.state !== 'done' && d.rebirths === 0 && d.roll.count < BAL.tutorial.overAtRolls;
+}
+
 /** `unavoidable`: a charge, which can't be dodged or blocked. */
 function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoidable = false) {
   const { d, stats, rng, ev } = c;
@@ -281,6 +289,10 @@ function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoi
   let amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng), c.k);
   if (c.run && c.run.fx.armorPct) amount *= Math.max(0.1, 1 - c.run.fx.armorPct / 100);
   d.battle.playerHp -= amount;
+  // A new game's raccoon starts on World 1 before the dumpster is even open (Kevin's order), still
+  // undressed: there, until the tutorial is over, he holds on at 1 HP instead of falling. (Sent further
+  // on his own, he falls and tries again as ever.)
+  if (!c.run && d.battle.playerHp < 1 && d.battle.stage === 1 && inTutorial(d)) d.battle.playerHp = 1;
   ev.push({ type: 'enemyHit', enemyUid: e.uid, amount, heavy });
   if (c.run) {
     if (d.battle.playerHp <= 0) {

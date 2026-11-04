@@ -63,7 +63,9 @@ export function BottomNav() {
   const perksIntro = useGame((g) => featureView(g, 'perks') === 'intro');
   const rebirth = useGame(canRebirth);
   const bagBadge = useGame((g) => g.inventory.length >= inventoryCapacity(g) || g.inventory.some((it) => isUpgrade(g, it)));
+  // An easy next world, or none picked yet (a new game's raccoon waits there to start fighting).
   const easyNext = useGame((g) => {
+    if (!g.stage.chosen) return true;
     const next = g.stage.highestCleared + 1;
     return next <= DATA.worlds.length && g.battle.stage !== next && worldThreat(g, next).level === 'easy';
   });

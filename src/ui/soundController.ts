@@ -29,18 +29,25 @@ export function installSound(): () => void {
     }
   };
   document.addEventListener('pointerdown', onDown, true);
+  // Phones only count a tap as allowed to start audio once the finger lifts (pointerdown isn't), and
+  // iOS can leave the audio 'interrupted' after an app switch: every tap's end tries again.
+  const retry = () => audio.unlock();
+  for (const type of ['pointerup', 'touchend', 'click', 'keydown'] as const) document.addEventListener(type, retry, true);
   const offJuice = installButtonJuice();
 
-  let last = { sound: true, music: true };
-  const sync = () => {
+  const pick = () => {
     const s = getGame().settings;
-    if (s.sound !== last.sound) audio.setSound(s.sound);
-    if (s.music !== last.music) audio.setMusic(s.music);
-    last = { sound: s.sound, music: s.music };
+    return { sound: s.sound, music: s.music, soundVolume: s.soundVolume, musicVolume: s.musicVolume };
   };
-  audio.setSound(getGame().settings.sound);
-  audio.setMusic(getGame().settings.music);
-  last = { sound: getGame().settings.sound, music: getGame().settings.music };
+  let last = pick();
+  const sync = () => {
+    const now = pick();
+    if (now.sound !== last.sound || now.soundVolume !== last.soundVolume) audio.setSound(now.sound, now.soundVolume);
+    if (now.music !== last.music || now.musicVolume !== last.musicVolume) audio.setMusic(now.music, now.musicVolume);
+    last = now;
+  };
+  audio.setSound(last.sound, last.soundVolume);
+  audio.setMusic(last.music, last.musicVolume);
   const unsubStore = gameStore.subscribe(sync);
 
   const onVis = () => (document.visibilityState === 'hidden' ? audio.suspend() : audio.resume());
@@ -135,6 +142,7 @@ export function installSound(): () => void {
   return () => {
     offJuice();
     document.removeEventListener('pointerdown', onDown, true);
+    for (const type of ['pointerup', 'touchend', 'click', 'keydown'] as const) document.removeEventListener(type, retry, true);
     document.removeEventListener('visibilitychange', onVis);
     unsubStore();
     unsubBus();

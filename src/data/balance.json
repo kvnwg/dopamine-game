@@ -81,6 +81,7 @@
     "firstClearGems": 10,
     "firstClearGemsPerWorld": 5,
     "choiceSeconds": 5,
+    "lossesBeforeBack": 3,
     "threat": {
       "waveSize": 4,
       "easyMargin": 2.5
@@ -536,6 +537,11 @@
         { "x": 3, "weight": 25 },
         { "x": 5, "weight": 11 },
         { "x": 10, "weight": 4 }
+      ],
+      "floors": [
+        { "x": 25, "rarity": "epic" },
+        { "x": 50, "rarity": "legendary" },
+        { "x": 250, "rarity": "mythic" }
       ]
     }
   },

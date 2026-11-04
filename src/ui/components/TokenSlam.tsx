@@ -7,7 +7,8 @@
  */
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { useGame } from '../../app/store';
-import { formatNumber } from '../../core';
+import { chainFloor, formatNumber } from '../../core';
+import { rarityColor } from '../../render/art';
 import { luckTokenArt, UI_PX } from '../../render/icons';
 import { t } from '../i18n';
 import { slamBridge } from '../../render/equipSlam';
@@ -53,6 +54,8 @@ export function TokenSlam() {
   }, [slam, calm]);
 
   if (!slam) return null;
+  // A big chain guarantees a rarity (chainFloor): say so under its luck.
+  const floor = chainFloor(slam.total);
   return (
     <div key={slam.id} className={s.slam} data-calm={calm || undefined} aria-hidden>
       <div className={s.rays} style={{ backgroundImage: `url(${raysUrl([GREEN], 16, 0.5)})` }} />
@@ -65,6 +68,11 @@ export function TokenSlam() {
         ))}
       </div>
       <div className={s.text}>{t('reel.token', { x: formatNumber(slam.total) })}</div>
+      {floor && (
+        <div className={s.floor} style={{ color: rarityColor(floor) }}>
+          {t('reel.tokenFloor', { rarity: t(`rarity.${floor}`).toUpperCase() })}
+        </div>
+      )}
     </div>
   );
 }

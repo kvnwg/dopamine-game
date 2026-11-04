@@ -2,7 +2,19 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Rare finds that make sense, a quicker early and mid game, cutscenes you end, a gentler token slam (Nov 4, newest)
+## Big chains pay off, a loss retries the world, volume sliders, sound that always starts (Nov 4, newest)
+
+Kevin: "are u sure my luck multipliers work? i got x60 a couple times and got nothing good", "losing doesnt have to take u to the world before. u just retry that world again", "add settings to turn down music, sound effects, etc", "sometimes the game has no sounds when i open it", "tutorial finger gets cut off from the bottom".
+
+| # | Decision | Why |
+|---|---|---|
+| C1 | Luck tokens worked: a reel's item rolls at your luck times the chain. But the rarities are far apart (Epic 1 in 80, Legendary 1 in 1,000), so at about x2 luck a x60 chain (x120) made the item Epic or better every time yet Legendary only 1 time in 8. Big chains now also guarantee a rarity (`roll.multiplier.floors`): x25 an Epic or better, x50 a Legendary or better, x250 a Mythic or better, with the item still rolled at the multiplied luck (it can be rarer). The token's slam says so under its luck ("LEGENDARY OR BETTER!" in the rarity's color). A reel reaches x25 about once in 130 spins, x50 once in 290, x250 once in 3,000. | A x60 chain should feel like a jackpot. In the simulator (3 seeds, 4 hours) Legendaries roughly double; the first rebirth comes at 18 to 29 minutes (27 to 31 before), later ones as before, best world 15 or 16. |
+| C2 | A loss retries the same world from its first wave instead of falling back. Only after 3 losses in a row there (`worlds.lossesBeforeBack`) does it fall back as before (a failed push to the world it came from, a beaten world one down), so an idle raccoon at a wall doesn't die there all day. Beating a boss, travelling or rebirthing clears the count. | Kevin's request. With retries alone, the simulator's raccoon died far more (315 deaths, 43 boss wins in 4 hours, against about 210 and 250) and the second rebirth slipped from about 56 to 76 minutes; with the fallback after 3 losses it is back to about 200 to 250 deaths and the same pace. |
+| C3 | Settings has a volume slider under the Sound effects and Music switches (0 to 100%, on a squared curve so it feels even; the switches still mute). Music at 0 stops playing. | Kevin's request. |
+| C4 | Sound starts reliably: the audio is retried on every tap's end (pointerup, touchend, click, keys) as well as its start, from any state but closed. Phones only count a tap as allowed to start audio once the finger lifts, and iOS leaves audio "interrupted" (not "suspended") after an app switch; before, only a suspended context was resumed, and only at pointerdown. | "Sometimes the game has no sounds when I open it." |
+| C5 | The tutorial's pointing hand points down from above at targets near the bottom of the screen (the tabs), so it is never cut off. | Kevin's report. |
+
+## Rare finds that make sense, a quicker early and mid game, cutscenes you end, a gentler token slam (Nov 4)
 
 Kevin: "whats ur current system. it needs to make sense and appear for rare pulls, but not constantly pop up", "it takes too long to progress early game, its ok if its longer late game, but early and mid should be a bit more interactive", "the screen shake on the luck multipliers is too violent and unsmooth", "for rare item cutscenes and big gold cutscenes, let the player decide when to tap and end it".
 

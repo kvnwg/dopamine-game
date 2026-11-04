@@ -162,7 +162,7 @@ describe('world progression', () => {
     expect(events.some((e) => e.type === 'stageStart' && e.stage === 2 && e.push)).toBe(true);
   });
 
-  it('every world is open, but a fresh raccoon in World 10 is one-shot and sent home', () => {
+  it('every world is open, but a fresh raccoon in World 10 is one-shot, tries World 10 again, and after 3 losses falls back', () => {
     const rng = new Rng(4);
     let st = freshState();
     // (Past the first-run tutorial, which keeps "too tough" quiet: see the next test.)
@@ -173,18 +173,39 @@ describe('world progression', () => {
     expect(st.battle.stage).toBe(10);
     expect(st.stage.mode).toBe('push');
     const maxHp = computeStats(st).HP;
-    const { state, events } = run(structuredClone(st) as GameState, 15, rng);
+    // Second by second until the first loss is resolved.
+    let state = structuredClone(st) as GameState;
+    const events: CoreEvent[] = [];
+    for (let i = 0; i < 30 && state.stage.losses === 0; i++) {
+      const r = run(state, 1, rng, T0 + i * 1000);
+      state = r.state;
+      events.push(...r.events);
+    }
     const hits = events.filter((e) => e.type === 'enemyHit');
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].type === 'enemyHit' && hits[0].amount).toBeGreaterThanOrEqual(maxHp);
     expect(events.some((e) => e.type === 'playerDeath')).toBe(true);
-    expect(state.battle.stage).toBe(1);
-    expect(state.stage.mode).toBe('farm');
+    // A loss doesn't send it back a world: it tries the same world again, from its first wave...
+    expect(state.stage.losses).toBe(1);
+    expect(state.battle.stage).toBe(10);
+    expect(state.stage.mode).toBe('push');
     expect(state.stage.showToughHint).toBe(true);
+    // ...until it has lost there worlds.lossesBeforeBack times in a row; then it falls back to winning.
+    let later = state;
+    let deaths = 1;
+    for (let i = 0; i < 120 && later.battle.stage === 10; i++) {
+      const r = run(later, 1, rng, T0 + 60_000 + i * 1000);
+      later = r.state;
+      deaths += r.events.filter((e) => e.type === 'playerDeath').length;
+    }
+    expect(deaths).toBe(BAL.worlds.lossesBeforeBack);
+    expect(later.battle.stage).toBeLessThan(10);
+    expect(later.stage.mode).toBe('farm');
+    expect(later.stage.losses).toBe(0);
     expect(state.stage.powerAtDeath).not.toBeNull();
   });
 
-  it('a raccoon still in the first-run tutorial is sent home without the "too tough" hint', () => {
+  it('a raccoon still in the first-run tutorial tries again without the "too tough" hint', () => {
     const rng = new Rng(4);
     let st = freshState();
     expect(st.dumpster.beginner.state).toBe('pending');

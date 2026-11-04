@@ -127,6 +127,9 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'setSetting':
         d.settings[action.key] = action.value;
         break;
+      case 'setVolume':
+        d.settings[action.key] = Math.max(0, Math.min(1, Number.isFinite(action.value) ? action.value : 1));
+        break;
       case 'heistStart':
         if (heistsOpen(d)) startHeist(d, action.location, rng, now, ev);
         break;

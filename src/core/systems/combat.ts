@@ -367,6 +367,7 @@ function onWorldCleared(c: Ctx) {
 export function resolveAfterBoss(d: GameState, goNext: boolean, ev: CoreEvent[]): void {
   if (d.battle.phase !== 'choice') return;
   const s = d.stage;
+  s.losses = 0;
   const world = d.battle.stage;
   const next = world + 1;
   if (goNext && next <= worldCount()) {
@@ -382,23 +383,27 @@ export function resolveAfterBoss(d: GameState, goNext: boolean, ev: CoreEvent[])
 }
 
 /**
- * After a death: a failed push falls back to the world it started from; a death in a world already
- * beaten steps down one world. Each further death steps down again, so the raccoon always ends up
- * somewhere it can win.
+ * After a death the raccoon tries the same world again from its first wave (Kevin: "losing doesn't
+ * have to take u to the world before. u just retry that world again"). Only after
+ * worlds.lossesBeforeBack losses in a row there does it fall back, so an idle raccoon at a wall goes
+ * back to winning somewhere: a failed push to the world it came from, a beaten world one down.
  */
 function onDeathResolved(d: GameState, ev: CoreEvent[]) {
   const s = d.stage;
   const world = d.battle.stage;
-  s.mode = 'farm';
+  const push = world > s.highestCleared;
   // (Not during the first-run tutorial: it has its own guidance, and the raccoon is still dressing.)
   s.showToughHint = d.dumpster.beginner.state === 'done';
-  let back: number;
-  if (world > s.highestCleared) {
-    s.powerAtDeath = playerPower(d);
-    back = Math.max(1, Math.min(s.returnTo, world - 1));
-  } else {
-    back = Math.max(1, world - 1);
+  if (push) s.powerAtDeath = playerPower(d);
+  s.losses += 1;
+  if (s.losses < BAL.worlds.lossesBeforeBack) {
+    s.mode = push ? 'push' : 'farm';
+    startStage(d, world, ev, push);
+    return;
   }
+  s.losses = 0;
+  s.mode = 'farm';
+  const back = push ? Math.max(1, Math.min(s.returnTo, world - 1)) : Math.max(1, world - 1);
   s.returnTo = Math.max(1, back - 1);
   startStage(d, back, ev, false);
 }

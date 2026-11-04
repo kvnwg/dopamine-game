@@ -99,6 +99,9 @@ class AudioEngine {
   private noiseBuf!: AudioBuffer;
   private soundOn = true;
   private musicOn = true;
+  /** Settings' volume sliders (0 to 1), on a squared curve so the slider feels even to the ear. */
+  private soundVol = 1;
+  private musicVol = 1;
   private musicTimer: ReturnType<typeof setInterval> | null = null;
   private nextStep = 0;
   private step = 0;
@@ -216,7 +219,15 @@ class AudioEngine {
   unlock(): void {
     try {
       if (!this.ctx) this.build();
-      if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume().then(() => this.syncMusic());
+      const ctx = this.ctx;
+      // Any state but running or closed: 'suspended' (made before a tap counted, or after the app was
+      // in the background) or iOS's 'interrupted' (after a call or an app switch). Every tap tries.
+      if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') {
+        void ctx.resume().then(
+          () => this.syncMusic(),
+          () => {},
+        );
+      }
       this.syncMusic();
     } catch {
       /* no audio available */
@@ -238,7 +249,7 @@ class AudioEngine {
     this.master.gain.value = 0.9;
     this.master.connect(comp);
     this.sfx = ctx.createGain();
-    this.sfx.gain.value = this.soundOn ? 1 : 0;
+    this.sfx.gain.value = this.soundGain();
     this.sfx.connect(this.master);
     this.duck = ctx.createGain();
     this.duck.connect(this.master);
@@ -248,7 +259,7 @@ class AudioEngine {
     warm.frequency.value = 2600;
     warm.connect(this.duck);
     this.musicBus = ctx.createGain();
-    this.musicBus.gain.value = this.musicOn ? 0.5 : 0;
+    this.musicBus.gain.value = this.musicGain();
     this.musicBus.connect(warm);
     const len = ctx.sampleRate * 2;
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -256,14 +267,26 @@ class AudioEngine {
     for (let i = 0; i < len; i++) d[i] = this.rnd() * 2 - 1;
   }
 
-  setSound(on: boolean): void {
-    this.soundOn = on;
-    if (this.ctx) this.sfx.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, 0.02);
+  private soundGain(): number {
+    return this.soundOn ? this.soundVol * this.soundVol : 0;
   }
 
-  setMusic(on: boolean): void {
+  private musicGain(): number {
+    return this.musicOn ? 0.5 * this.musicVol * this.musicVol : 0;
+  }
+
+  /** The Sound switch, and its volume slider (0 to 1). */
+  setSound(on: boolean, volume = this.soundVol): void {
+    this.soundOn = on;
+    this.soundVol = volume;
+    if (this.ctx) this.sfx.gain.setTargetAtTime(this.soundGain(), this.ctx.currentTime, 0.02);
+  }
+
+  /** The Music switch, and its volume slider (0 to 1); at 0 the music stops playing altogether. */
+  setMusic(on: boolean, volume = this.musicVol): void {
     this.musicOn = on;
-    if (this.ctx) this.musicBus.gain.setTargetAtTime(on ? 0.5 : 0, this.ctx.currentTime, 0.1);
+    this.musicVol = volume;
+    if (this.ctx) this.musicBus.gain.setTargetAtTime(this.musicGain(), this.ctx.currentTime, 0.1);
     this.syncMusic();
   }
 
@@ -272,7 +295,13 @@ class AudioEngine {
   }
 
   resume(): void {
-    if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume();
+    const ctx = this.ctx;
+    if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') {
+      void ctx.resume().then(
+        () => this.syncMusic(),
+        () => {},
+      );
+    }
   }
 
   // ------------------------------------------------------------------ primitives
@@ -1304,7 +1333,7 @@ class AudioEngine {
   private syncMusic() {
     const ctx = this.ctx;
     if (!ctx) return;
-    if (this.musicOn && ctx.state === 'running') {
+    if (this.musicOn && this.musicVol > 0 && ctx.state === 'running') {
       if (!this.musicTimer) {
         this.nextStep = ctx.currentTime + 0.1;
         this.step = 0;

@@ -287,6 +287,8 @@ export const GameStateSchema = z.object({
     returnTo: z.number().int().positive(),
     powerAtDeath: z.number().nullable(),
     showToughHint: z.boolean(),
+    /** Losses in a row in this world: it is retried until worlds.lossesBeforeBack, then it falls back. */
+    losses: z.number().int().nonnegative().default(0),
   }),
   battle: BattleSchema,
   dumpster: z.object({
@@ -341,6 +343,9 @@ export const GameStateSchema = z.object({
     haptics: z.boolean(),
     sound: z.boolean(),
     music: z.boolean(),
+    /** How loud the sounds and the music are when on (0 to 1). Saves from before have them full. */
+    soundVolume: z.number().min(0).max(1).default(1),
+    musicVolume: z.number().min(0).max(1).default(1),
     reduceFlashing: z.boolean(),
     reduceMotion: z.boolean(),
   }),
@@ -397,7 +402,7 @@ export function createInitialState(now: number, seed: number): GameState {
     equipped: emptyEquipment(),
     inventory: [],
     nextItemUid: 1,
-    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false },
+    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0 },
     battle: {
       stage: 1,
       wave: 0,
@@ -429,7 +434,7 @@ export function createInitialState(now: number, seed: number): GameState {
     codex: { entries: [] },
     offline: { buckets: [], trackingSince: null, pausedRate: null, paused: false, pending: null },
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
-    settings: { haptics: true, sound: true, music: true, reduceFlashing: false, reduceMotion: false },
+    settings: { haptics: true, sound: true, music: true, soundVolume: 1, musicVolume: 1, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
     features: { unlocked: [], seen: [] },
   };

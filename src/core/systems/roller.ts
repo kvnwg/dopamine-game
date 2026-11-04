@@ -185,7 +185,7 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
  * Rolls one reel's item at `luck`. `dry` is the bad-luck streak as of this reel (earlier reels in
  * the same spin count), so protection triggers at most once per streak.
  */
-function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number, slotOverride?: Slot, avoidBase?: string): Item {
+function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number, slotOverride?: Slot, avoidBase?: string, floor: Rarity | null = null): Item {
   const dz = d.dumpster;
   const theme = dz.theme;
   if (!dz.firstDiveDone) {
@@ -199,10 +199,10 @@ function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number, slotOve
   if (dz.forcedRarity) {
     rarity = dz.forcedRarity;
     dz.forcedRarity = null;
-  } else if (dz.level >= bl.minDumpsterLevel && dry >= drySpell(d)) {
-    rarity = rollRarity(luck, rng, bl.minRarity);
   } else {
-    rarity = rollRarity(luck, rng);
+    // Bad luck protection's floor, or a big token chain's (chainFloor), whichever is higher.
+    const pity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d) ? bl.minRarity : 'junk';
+    rarity = rollRarity(luck, rng, floor && rarityAtLeast(floor, pity) ? floor : pity);
   }
   const slot = slotOverride ?? rollSlot(rng);
   const level = rollItemLevel(d.player.level, rng);
@@ -210,6 +210,16 @@ function rollReelItem(d: GameState, rng: Rng, luck: number, dry: number, slotOve
   rarity = bumpRarity(rarity, rarityBump(enchants));
   const base = pickBaseItem(slot, theme, rarity, rng, d.rebirths, avoidBase);
   return createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
+}
+
+/**
+ * The least a reel's item can be after a token chain multiplying its luck by `mult`
+ * (roll.multiplier.floors: x25 Epic, x50 Legendary, x250 Mythic), or null under the first.
+ */
+export function chainFloor(mult: number): Rarity | null {
+  let out: Rarity | null = null;
+  for (const f of BAL.roll.multiplier.floors) if (mult >= f.x && (!out || rarityAtLeast(f.rarity, out))) out = f.rarity;
+  return out;
 }
 
 /**
@@ -267,7 +277,7 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     // Beginner's luck lands in the tutorial item's slot: it upgrades what the raccoon got first.
     const tut = BAL.dumpster.tutorialItem.baseId;
     const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
-    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined);
+    const item = rollReelItem(d, rng, luck * tokenMult(mults), dry, slot, beginner ? tut : undefined, chainFloor(tokenMult(mults)));
     if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     reels.push({ item, odds: itemOddsOneIn(item), mults, landAt: baseSpinSeconds + mults.length * stepSeconds, landed: false });

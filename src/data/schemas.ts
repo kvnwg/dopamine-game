@@ -205,6 +205,8 @@ export const BalanceSchema = z.object({
     firstClearGemsPerWorld: nonNeg,
     /** After a boss falls the battle waits this long for Again or Next, then moves on to the next world. */
     choiceSeconds: positive,
+    /** A world is retried after a loss; this many losses in a row there fall back a world (idle play keeps winning). */
+    lossesBeforeBack: z.number().int().min(1),
     /** Threat: margin = (your HP x your DPS) / (their HP x their DPS); under 1 you lose, at easyMargin+ it's easy. */
     threat: z.object({ waveSize: positive, easyMargin: positive }),
   }),
@@ -303,6 +305,8 @@ export const BalanceSchema = z.object({
       maxSteps: z.number().int().min(0),
       holdSeconds: nonNeg,
       values: z.array(z.object({ x: z.number().min(1.5), weight: positive })).min(1),
+      /** A chain this big (x, the tokens multiplied) guarantees at least this rarity. */
+      floors: z.array(z.object({ x: positive, rarity: RaritySchema })).default([]),
     }),
   }),
   /** Base odds as "1 in X" for every rarity above Junk. */

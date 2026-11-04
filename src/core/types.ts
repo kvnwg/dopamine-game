@@ -139,6 +139,7 @@ export type GameAction =
   | { type: 'boot' }
   | { type: 'collectOffline'; doubled: boolean }
   | { type: 'setSetting'; key: SettingKey; value: boolean }
+  | { type: 'setVolume'; key: VolumeKey; value: number }
   // ---- heists: start a run with a ticket, then Go stop by stop
   | { type: 'heistStart'; location: LocationId }
   /** Resolves the next stop (blocked while a decision is pending or a fight is on). */
@@ -161,6 +162,8 @@ export type GameAction =
   | { type: 'cheat'; cheat: Cheat };
 
 export type SettingKey = 'haptics' | 'sound' | 'music' | 'reduceFlashing' | 'reduceMotion';
+/** Volume levels (0 to 1) under the Sound and Music switches. */
+export type VolumeKey = 'soundVolume' | 'musicVolume';
 
 export type Cheat =
   | { kind: 'addCurrency'; coins?: number; gems?: number; bags?: number }

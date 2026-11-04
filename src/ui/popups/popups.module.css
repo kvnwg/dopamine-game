@@ -455,6 +455,69 @@
   box-shadow: 0 var(--px) 0 0 #3a8f25;
 }
 
+/* A volume slider under its switch: a chunky track and a square thumb, on the pixel grid. */
+.volumeRow {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  padding: 0 calc(2 * var(--px)) calc(3 * var(--px));
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #6d6157;
+}
+.volumeRow > span {
+  flex: none;
+  width: calc(46 * var(--px));
+}
+.volumeRow > b {
+  flex: none;
+  width: calc(14 * var(--px));
+  text-align: right;
+}
+.volumeRow[data-off] {
+  opacity: 0.45;
+}
+.volume {
+  flex: 1;
+  min-width: 0;
+  height: calc(8 * var(--px));
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.volume::-webkit-slider-runnable-track {
+  height: calc(3 * var(--px));
+  background: #b9b1a6;
+  border: var(--px) solid var(--ink);
+}
+.volume::-moz-range-track {
+  height: calc(3 * var(--px));
+  background: #b9b1a6;
+  border: var(--px) solid var(--ink);
+}
+.volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: calc(5 * var(--px));
+  height: calc(7 * var(--px));
+  margin-top: calc(-3 * var(--px));
+  background: #5bc236;
+  border: var(--px) solid var(--ink);
+  border-radius: 0;
+}
+.volume::-moz-range-thumb {
+  width: calc(5 * var(--px));
+  height: calc(7 * var(--px));
+  background: #5bc236;
+  border: var(--px) solid var(--ink);
+  border-radius: 0;
+}
+.volume:disabled {
+  cursor: default;
+}
+
 /* ------------------------------------------------------------ world: the preview is 135 x 45 art pixels (810 x 270) */
 .worldThumb {
   width: fit-content;

@@ -89,6 +89,14 @@
   top: 0;
   filter: drop-shadow(0 calc(2 * var(--px)) 0 rgba(10, 6, 20, 0.45));
 }
+/* Pointing down from above (a target at the bottom of the screen): the same hand, upside down, its
+   fingertip at the bottom on the origin. */
+.hand[data-flip] .handIcon {
+  top: auto;
+  bottom: 0;
+  transform: scaleY(-1);
+  filter: drop-shadow(0 calc(-2 * var(--px)) 0 rgba(10, 6, 20, 0.45));
+}
 .ghost {
   position: absolute;
   left: -48px;

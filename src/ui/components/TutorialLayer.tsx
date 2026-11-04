@@ -96,6 +96,10 @@ function bagButton(): { x: number; y: number } | null {
   return spot(`nav button[aria-label="${t('tab.bag')}"]`, 0.3);
 }
 
+/** The stage's height, and how far below its fingertip the hand reaches (with its bob and shadow). */
+const STAGE_H = 1920;
+const HAND_REACH = 30 * UI_PX;
+
 /**
  * The pointing hand. With `from`, it carries a ghost of item `uid` from there up onto the raccoon and
  * starts over; without, it taps on `at` (the Bag tab).
@@ -107,6 +111,9 @@ function Hand({
   const ghost = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<'drag' | 'tap'>('drag');
   const modeRef = useRef(mode);
+  // Near the bottom of the screen (the tabs), the hand points down from above, or it would hang off the edge.
+  const [flip, setFlip] = useState(false);
+  const flipRef = useRef(flip);
   useEffect(() => {
     let raf = 0;
     let t0 = performance.now();
@@ -123,6 +130,11 @@ function Hand({
       if (m !== modeRef.current) {
         modeRef.current = m;
         setMode(m);
+      }
+      const f = !!tap && tap.y > STAGE_H - HAND_REACH;
+      if (f !== flipRef.current) {
+        flipRef.current = f;
+        setFlip(f);
       }
     };
     plan();
@@ -162,9 +174,9 @@ function Hand({
           alpha = Math.max(0, 1 - (ms - 1450) / 350);
         }
       } else if (tap) {
-        // Taps the Bag tab, bobbing two pixels.
+        // Taps its target, bobbing two pixels (toward it from above when it points down).
         x = tap.x;
-        y = tap.y - (Math.floor(ms / 240) % 2 ? 2 * UI_PX : 0);
+        y = tap.y + (Math.floor(ms / 240) % 2 ? (flipRef.current ? 2 : -2) * UI_PX : 0);
       } else {
         alpha = 0;
       }
@@ -176,7 +188,7 @@ function Hand({
     return () => cancelAnimationFrame(raf);
   }, [uid, best, target, fallback]);
   return (
-    <div ref={ref} className={s.hand} data-mode={mode}>
+    <div ref={ref} className={s.hand} data-mode={mode} data-flip={flip || undefined}>
       {baseId && mode === 'drag' && (
         <div ref={ghost} className={s.ghost}>
           <PixelArt art={itemArt(baseId, 1)} />

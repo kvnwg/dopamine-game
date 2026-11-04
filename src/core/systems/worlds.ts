@@ -21,6 +21,7 @@ export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean 
   s.mode = w > s.highestCleared ? 'push' : 'farm';
   s.powerAtDeath = null;
   s.showToughHint = false;
+  s.losses = 0;
   startStage(d, w, ev, s.mode === 'push');
   return true;
 }

@@ -50,6 +50,7 @@ export function doRebirth(d: GameState, ev: CoreEvent[]): boolean {
   d.stage.returnTo = 1;
   d.stage.powerAtDeath = null;
   d.stage.showToughHint = false;
+  d.stage.losses = 0;
   d.offline.buckets = [];
   d.offline.trackingSince = null;
   // A tutorial still waiting for beginner's luck to go on ends here (the bag it was in is gone).

@@ -375,13 +375,18 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
 
 /**
  * Whether this spin is beginner's luck (BAL.tutorial): new games only, before the first rebirth, once
- * the raccoon has dressed up (the tutorial's Equip best) and a few items have rolled, or a few more
- * regardless.
+ * the raccoon has dressed up (the tutorial's Equip best), a few items have rolled and the dumpster has
+ * been open `beginnerAfterSeconds` (so the find lands about 45 s in: Kevin found a 1 in 150,000
+ * within seconds of starting hard to believe), or after more rolls regardless. A save from before the
+ * timing (no `openedAtMs`) goes by the rolls alone.
  */
 export function beginnerLuckDue(d: GameState): boolean {
   const t = BAL.tutorial;
   if (d.dumpster.beginner.state !== 'pending' || d.rebirths > 0) return false;
-  return d.roll.count >= t.beginnerAtRolls || (d.roll.count >= t.beginnerAfterRolls && d.lifetime.itemsEquipped >= t.beginnerAfterEquips);
+  if (d.roll.count >= t.beginnerAtRolls) return true;
+  const open = d.dumpster.openedAtMs;
+  const longEnough = open === null || d.playTimeMs - open >= t.beginnerAfterSeconds * 1000;
+  return longEnough && d.roll.count >= t.beginnerAfterRolls && d.lifetime.itemsEquipped >= t.beginnerAfterEquips;
 }
 
 /**

@@ -511,6 +511,7 @@
     "warmupRarities": ["junk", "decent", "shiny"],
     "beginnerAfterRolls": 8,
     "beginnerAfterEquips": 3,
+    "beginnerAfterSeconds": 35,
     "beginnerAtRolls": 14,
     "beginnerRarity": "limited",
     "beginnerTokens": [3, 5],

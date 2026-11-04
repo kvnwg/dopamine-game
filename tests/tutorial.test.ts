@@ -93,6 +93,27 @@ describe("tutorial: the first roll and beginner's luck", () => {
     expect(scrapped.events.some((e) => e.type === 'tutorialDone')).toBe(false);
   });
 
+  it("lands about 45 s after the padlock comes off for a quick player (Kevin: not a 1 in 150,000 within seconds)", () => {
+    const rng = new Rng(5);
+    let st = freshState(5, T0, true);
+    st = applyAction(st, { type: 'openDumpster' }, rng, T0).state;
+    const opened = st.playTimeMs;
+    let landedMs = -1;
+    let equipped = false;
+    for (let i = 0; i < 120 * BAL.tickRate && landedMs < 0; i++) {
+      const r = tick(st, { ticks: 1 }, rng, T0 + i * 100);
+      st = r.state;
+      // Dress him the moment the tutorial's own find is in (its Equip best step).
+      if (!equipped && st.inventory.some((x) => x.baseId === BAL.dumpster.tutorialItem.baseId)) {
+        st = applyAction(st, { type: 'equipBest' }, rng, T0).state;
+        equipped = true;
+      }
+      if (r.events.some((e) => e.type === 'roll' && e.scripted === 'beginner')) landedMs = st.playTimeMs - opened;
+    }
+    expect(landedMs).toBeGreaterThan(40_000);
+    expect(landedMs).toBeLessThan(52_000);
+  });
+
   it("saves from before the tutorial count as done, and rebirths never get beginner's luck", () => {
     const old = clone(freshState()) as unknown as { dumpster: Record<string, unknown> };
     delete old.dumpster.beginner;

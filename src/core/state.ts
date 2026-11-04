@@ -356,6 +356,8 @@ export const GameStateSchema = z.object({
     beginner: z
       .object({ state: z.enum(['pending', 'rolled', 'done']), uid: z.number().int().nullable() })
       .default({ state: 'done', uid: null }),
+    /** The play clock (playTimeMs) when the padlock came off, for beginner's luck's timing; null before (and in older saves). */
+    openedAtMs: z.number().nullable().default(null),
     adSpeedupDay: z.string(),
     adSpeedupsUsed: z.number().int().nonnegative(),
   }),
@@ -475,6 +477,7 @@ export function createInitialState(now: number, seed: number): GameState {
       forcedTokens: null,
       forcedTokensAll: false,
       beginner: { state: 'pending', uid: null },
+      openedAtMs: null,
       adSpeedupDay: '',
       adSpeedupsUsed: 0,
     },
@@ -488,7 +491,8 @@ export function createInitialState(now: number, seed: number): GameState {
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, soundVolume: 1, musicVolume: 1, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
-    features: { unlocked: [], seen: [] },
+    // Worlds is open from the start (features.ts); the rest opens one at a time.
+    features: { unlocked: ['worlds'], seen: ['worlds'] },
     perks: freshPerks(),
   };
 }

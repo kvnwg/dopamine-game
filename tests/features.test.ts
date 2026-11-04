@@ -19,7 +19,8 @@ describe('a new game opens its features one by one', () => {
   it('the dumpster waits, padlocked, for the first tap; then a few everyday warm-up finds, then the tutorial\'s own find', () => {
     const rng = new Rng(2);
     let st = freshState(1, T0, true);
-    expect(st.features).toEqual({ unlocked: [], seen: [] });
+    // Only Worlds is open: the first world can be picked before anything else (Kevin: fight instantly if they want).
+    expect(st.features).toEqual({ unlocked: ['worlds'], seen: ['worlds'] });
     const events: CoreEvent[] = [];
     for (let i = 0; i < 100; i++) {
       const r = tick(st, { ticks: 1 }, rng, T0 + i * 100);
@@ -58,7 +59,7 @@ describe('a new game opens its features one by one', () => {
     expect(s.lifetime.itemsEquipped).toBe(0);
   });
 
-  it('each opens when it becomes useful, once: the Bag with the first item worn, luck, the Codex and Worlds after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Rebirth near the first rebirth, Heists with it, Perks with the second', () => {
+  it('each opens when it becomes useful, once: Worlds from the start, the Bag with the first item worn, luck and the Codex after the tutorial, Upgrades and the dumpster\'s upgrade when affordable, Rebirth near the first rebirth, Heists with it, Perks with the second', () => {
     let st = freshState();
     let r = step(st);
     expect(r.opened).toEqual([]);
@@ -67,15 +68,14 @@ describe('a new game opens its features one by one', () => {
     st.lifetime.itemsEquipped = 1;
     r = step(st);
     expect(r.opened).toEqual(['bag']);
-    // The tutorial ends: Worlds (a new game's raccoon waits there for his first world), and luck and the
-    // Codex, which open quietly (already seen: no walkthrough); Upgrades and the dumpster wait for gold.
+    // The tutorial ends: luck and the Codex, which open quietly (already seen: no walkthrough); Upgrades
+    // and the dumpster wait for gold. (Worlds was open from the start.)
     st = r.st;
     st.dumpster.beginner = { state: 'done', uid: null };
     st.currencies.coins = 0;
     r = step(st);
-    expect(r.opened).toEqual(['worlds', 'luck', 'codex']);
-    expect(r.st.features.seen).toEqual(expect.arrayContaining(['luck', 'codex']));
-    expect(r.st.features.seen).not.toContain('worlds');
+    expect(r.opened).toEqual(['luck', 'codex']);
+    expect(r.st.features.seen).toEqual(expect.arrayContaining(['luck', 'codex', 'worlds']));
     // Gold for the cheapest upgrade (and the dumpster's).
     st = r.st;
     st.currencies.coins = Math.max(upgradeCost(st.dumpster.level), 1e6);
@@ -129,7 +129,8 @@ describe('a new game opens its features one by one', () => {
     expect(featureView(st, 'bag')).toBe('open');
     expect(featureView(st, 'luck')).toBe('intro');
     expect(featureView(st, 'upgrades')).toBe('locked');
-    expect(featureView(st, 'worlds')).toBe('locked');
+    // Worlds, open from the start, is never held back behind the others.
+    expect(featureView(st, 'worlds')).toBe('open');
     st.features.seen.push('luck');
     expect(featureView(st, 'upgrades')).toBe('intro');
     st.features.seen.push('upgrades');

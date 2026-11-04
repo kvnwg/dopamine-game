@@ -2,7 +2,17 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A hand-drawn logo, and a PLAY button with a bite out of it (Nov 4, newest)
+## Worlds from the start, beginner's luck at about 45 s, the level bar's numbers whole (Nov 4, newest)
+
+Kevin: "text for the level bar is cut off"; "it's not quite believable to get a 1 in 150k within 10 seconds of the game... push that down a bit to 45 seconds"; "worlds should automatically be accessible, so they can fight instantly if they want to and not have to sit there and wait for the first 4 rolls".
+
+| # | Decision | Why |
+|---|---|---|
+| P1 | The XP numbers sit over the level bar instead of inside it. The bar is also taller (8 art px) and a little wider (42), so the numbers (about 20 px of glyph plus a 5 px stroke at 30 px) fit with room. | The bar's inside was 24 px tall and clipped them, and the font sits its digits low, so their bottoms were cut off. |
+| P2 | Beginner's luck (the scripted Limited Edition, 1 in 150,000) now also waits until the dumpster has been open 35 s (`beginnerAfterSeconds`; `dumpster.openedAtMs` keeps when the padlock came off), on top of the rolls and Equip best it already waited for. Its two tokens then take it to about 46 s after the padlock for a quick player; it was about 37 s, some 20 s after the 1-in-1,000 cone. 14 rolls still bring it regardless, and saves from before the change go by the rolls. | |
+| P3 | Worlds is open from the start, before the padlock even comes off: a new game's raccoon starts fighting the moment a world is picked, during the first rolls if the player likes. Its tab wears a "!" until he is fighting. Once the tutorial's Equip best is done, the tutorial points there ("Ready to fight? Tap Worlds and pick one!") if he isn't fighting yet. It no longer gets a NEW walkthrough of its own. | No waiting out the tutorial's first rolls to start fighting. |
+
+## A hand-drawn logo, and a PLAY button with a bite out of it (Nov 4)
 
 Kevin: "the dumpster legend logo on the loading screen is too dull and has no interesting factors. make it look like a whimsical human designed it, also the play button is too boring".
 

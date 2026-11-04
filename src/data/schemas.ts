@@ -486,8 +486,9 @@ export const BalanceSchema = z.object({
   /**
    * The first-run tutorial (new games only). Beginner's luck: one scripted spin early on, its first
    * reel chaining `beginnerTokens` into a `beginnerRarity` item. It comes once the raccoon has put
-   * on `beginnerAfterEquips` items (the tutorial's Equip best) and `beginnerAfterRolls` items have
-   * rolled, or at `beginnerAtRolls` regardless. Putting that item on ends the tutorial with
+   * on `beginnerAfterEquips` items (the tutorial's Equip best), `beginnerAfterRolls` items have rolled
+   * and the dumpster has been open `beginnerAfterSeconds` (its two tokens take the find to about 45 s
+   * in), or at `beginnerAtRolls` regardless. Putting that item on ends the tutorial with
    * `rewardGems`. The reels rest on each of the tutorial's scripted finds (the first roll, beginner's
    * luck) while it waits in the bag to be put on, `holdSeconds` at most, so it stays where the
    * tutorial's hand points.
@@ -500,6 +501,7 @@ export const BalanceSchema = z.object({
     warmupRarities: z.array(RaritySchema),
     beginnerAfterRolls: z.number().int().positive(),
     beginnerAfterEquips: z.number().int().positive(),
+    beginnerAfterSeconds: nonNeg,
     beginnerAtRolls: z.number().int().positive(),
     beginnerRarity: RaritySchema,
     beginnerTokens: z.array(z.number().positive()),

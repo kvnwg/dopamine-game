@@ -346,7 +346,7 @@ export function TutorialLayer() {
   const before = introducing === 'bag';
   const picking = !before && (step === null || step === 'fight') && worldsOpen && !chosen;
   if (picking) {
-    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.intro.worlds'), gold: true, intro: true };
+    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.goWorlds'), gold: true, intro: true };
     hand = true;
     target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
   }

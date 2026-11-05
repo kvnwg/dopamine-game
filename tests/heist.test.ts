@@ -100,6 +100,24 @@ describe('heist tickets', () => {
     expect(applyAction(full, { type: 'heistAdTicket' }, rng, T0).state.heist.tickets).toBe(H.tickets.max);
   });
 
+  it("the day's bonus ticket can be paid with Gems instead of the ad, once a day either way", () => {
+    const rng = new Rng(3);
+    const withGems = (gems: number) => {
+      const st = clone(raccoon(10));
+      st.rebirths = H.unlockRebirths;
+      st.heist.tickets = 0;
+      st.heist.adTicketDay = null;
+      st.currencies.gems = gems;
+      return st;
+    };
+    expect(applyAction(withGems(H.tickets.bonusGems - 1), { type: 'heistAdTicket', via: 'gems' }, rng, T0).state.heist.tickets).toBe(0);
+    const r = applyAction(withGems(H.tickets.bonusGems + 7), { type: 'heistAdTicket', via: 'gems' }, rng, T0).state;
+    expect(r.heist.tickets).toBe(1);
+    expect(r.currencies.gems).toBe(7);
+    // The ad's ticket is the same one: taken for today.
+    expect(applyAction(r, { type: 'heistAdTicket' }, rng, T0).state.heist.tickets).toBe(1);
+  });
+
   it('open with the first rebirth: before it a run or an ad ticket does nothing (tickets still come in), after it both work', () => {
     const rng = new Rng(5);
     const st = clone(freshState());
@@ -409,6 +427,10 @@ describe('heist perk offers and evolutions', () => {
     const twice = applyAction(once, { type: 'heistReroll' }, rng, T0).state;
     expect(twice.currencies.gems).toBe(0);
     expect(twice.heist.run!.rerollsUsed).toBe(2);
+    // The free reroll can be paid with Gems instead of its ad (when no ad can play).
+    const viaGems = applyAction(d, { type: 'heistReroll', via: 'gems' }, rng, T0).state;
+    expect(viaGems.currencies.gems).toBe(0);
+    expect(viaGems.heist.run!.rerollsUsed).toBe(1);
     const picked = applyAction(twice, { type: 'heistChoose', index: 0 }, rng, T0).state;
     expect(picked.heist.run!.perks).toHaveLength(1);
     expect(picked.heist.run!.pending).toBeNull();

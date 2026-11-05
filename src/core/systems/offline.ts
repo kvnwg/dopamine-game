@@ -268,9 +268,24 @@ export function onResume(d: GameState, now: number, ev: CoreEvent[], rng?: Rng):
   });
 }
 
-export function collectOffline(d: GameState, doubled: boolean, ev: CoreEvent[]): boolean {
+/** Gems to double an offline haul instead of watching the ad: offline.doubleGems.perHour of time away (at least 1), capped. */
+export function offlineDoubleGems(awayMs: number): number {
+  const g = BAL.offline.doubleGems;
+  return Math.min(g.max, Math.max(1, Math.ceil((awayMs / MS_PER_HOUR) * g.perHour)));
+}
+
+/**
+ * Collects the offline haul; `doubled` (once away 30+ minutes) pays it twice, after an ad or, with
+ * `via: 'gems'`, for offlineDoubleGems. Without the Gems nothing is collected (the popup stays).
+ */
+export function collectOffline(d: GameState, doubled: boolean, ev: CoreEvent[], via: 'ad' | 'gems' = 'ad'): boolean {
   const p = d.offline.pending;
   if (!p) return false;
+  if (doubled && p.canDouble && via === 'gems') {
+    const cost = offlineDoubleGems(p.awayMs);
+    if (d.currencies.gems < cost) return false;
+    d.currencies.gems -= cost;
+  }
   const mult = doubled && p.canDouble ? 2 : 1;
   const bags = p.bags * mult;
   const coins = p.coins * mult;

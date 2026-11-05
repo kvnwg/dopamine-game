@@ -8,6 +8,8 @@ import { DATA } from '../../data';
 import { formatNumber, heistPayout } from '../../core';
 import { useGame } from '../../app/store';
 import { ads, haptics } from '../../services';
+import { isCrazyGames } from '../../services/platform';
+import { skipClass, useAdReady } from '../adReady';
 import { itemArt, type Art } from '../../render/icons';
 import { pixelUrl } from '../../render/pixel';
 import { blank, type PixelBuf } from '../../render/pixel/buf';
@@ -170,6 +172,7 @@ function Won({ run }: { run: HeistRun }) {
 
 function SecondChance({ run }: { run: HeistRun }) {
   const gems = useGame((g) => g.currencies.gems);
+  const adReady = useAdReady('heist_revive');
   const r = heistPayout(run);
   const revive = async (via: 'ad' | 'gems') => {
     if (via === 'ad') {
@@ -186,10 +189,12 @@ function SecondChance({ run }: { run: HeistRun }) {
         <Chunky text={t('heistUi.busted')} size={100} grad="red" className={s.endTitle} />
         <span className={s.endSub}>{t('heistUi.secondChance')}</span>
         <div className={s.reviveBtns}>
-          <button className={`btn blue breathe ${s.reviveBtn}`} onClick={() => revive('ad')}>
-            <TvIcon size="md" />
-            {t('heistUi.reviveAd')}
-          </button>
+          {adReady && (
+            <button className={`btn blue ${isCrazyGames ? '' : 'breathe '}${s.reviveBtn}`} onClick={() => revive('ad')}>
+              <TvIcon size="md" />
+              {t('heistUi.reviveAd')}
+            </button>
+          )}
           <button className={`btn gold ${s.reviveBtn}`} disabled={gems < REVIVE_GEMS} onClick={() => revive('gems')}>
             {t('heistUi.reviveGems')}
             <span className={s.price}>
@@ -207,9 +212,10 @@ function SecondChance({ run }: { run: HeistRun }) {
             {formatNumber(Math.floor((r.coins * LOSS_KEEP_PCT) / 100))}
           </span>
         </div>
-        {/* Walking away (keeping part of the loot) can always be tapped here: red. */}
+        {/* Walking away (keeping part of the loot) can always be tapped here: red. On CrazyGames it looks
+            exactly like the revive ad's button instead (the way out of an ad offer must). */}
         <button
-          className={`btn red small ${s.giveUp}`}
+          className={skipClass(`btn red small ${s.giveUp}`, `btn blue ${s.reviveBtn} ${s.giveUp}`, adReady)}
           onClick={() => {
             haptics.impact('light');
             heistDispatch({ type: 'heistDecline' });

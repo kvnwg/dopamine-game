@@ -38,6 +38,7 @@ interface CgSdk {
   };
   ad: {
     requestAd(type: 'midgame' | 'rewarded', callbacks: CgAdCallbacks): void;
+    hasAdblock(): Promise<boolean>;
   };
   data: {
     getItem(key: string): string | null;
@@ -53,7 +54,20 @@ let env: Env = 'none';
 let inGameplay = false;
 let loading = false;
 let adsDisabled = false;
+let adblocked = false;
 const listeners: Record<AdEvent, Set<() => void>> = { adStart: new Set(), adEnd: new Set(), adFailed: new Set() };
+/** Told when ads turn out to be unavailable, so ad buttons can hide (CrazyGames: no ad buttons without effect). */
+const availability = new Set<() => void>();
+
+function availabilityChanged(): void {
+  for (const fn of availability) {
+    try {
+      fn();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
 
 async function init(): Promise<boolean> {
   const found = (window as unknown as { CrazyGames?: { SDK?: CgSdk } }).CrazyGames?.SDK;
@@ -68,6 +82,18 @@ async function init(): Promise<boolean> {
     ]);
     sdk = found;
     env = found.environment ?? 'disabled';
+    // An ad blocker is known up front: hide the ad buttons from the start (the Gem prices stay).
+    if (usable()) {
+      void Promise.resolve()
+        .then(() => found.ad.hasAdblock())
+        .then((blocked) => {
+          if (blocked && !adblocked) {
+            adblocked = true;
+            availabilityChanged();
+          }
+        })
+        .catch(() => undefined);
+    }
   } catch (err) {
     console.warn('[crazygames] SDK init failed', err);
     env = 'none';
@@ -93,8 +119,11 @@ function call(fn: (s: CgSdk) => void): void {
 
 export const crazyGames = {
   environment: (): Env => env,
-  /** False off CrazyGames, and in Basic Launch / kids mode (the SDK answers 'adsDisabled'). */
-  adsAvailable: (): boolean => usable() && !adsDisabled,
+  /**
+   * False off CrazyGames, with an ad blocker, and in Basic Launch / kids mode. The SDK has no way to ask
+   * about the last two in advance: the first ad request answers 'adsDisabled', and from then on it's false.
+   */
+  adsAvailable: (): boolean => usable() && !adsDisabled && !adblocked,
 
   loadingStart(): void {
     if (loading) return;
@@ -185,8 +214,11 @@ function requestAd(type: 'midgame' | 'rewarded'): Promise<boolean> {
         adError: (err) => {
           clearTimeout(timer);
           const code = err?.code ?? 'other';
+          // Ads off for the session, or blocked: the buttons hide. ('unfilled' and 'adCooldown' pass.)
           if (code === 'adsDisabled' || code === 'adsDisabledBasicLaunch') adsDisabled = true;
+          if (code === 'adblock') adblocked = true;
           end(false);
+          if (!crazyGames.adsAvailable()) availabilityChanged();
         },
       });
     } catch {
@@ -203,6 +235,10 @@ export class CrazyGamesAdsService implements AdsService {
   }
   isReady(_placement: AdPlacement): boolean {
     return crazyGames.adsAvailable();
+  }
+  onAvailabilityChange(fn: () => void): () => void {
+    availability.add(fn);
+    return () => availability.delete(fn);
   }
   async showRewarded(_placement: AdPlacement): Promise<AdResult> {
     const ok = await requestAd('rewarded');

@@ -10,6 +10,7 @@ import { BAL } from '../../data';
 import { formatNumber, heistOptionAvailable, optionPreview, rerollCost, wheelOdds } from '../../core';
 import { getGame, useGame } from '../../app/store';
 import { ads, haptics } from '../../services';
+import { useAdReady } from '../adReady';
 import { audio } from '../../services/audio';
 import { uiBitArt, uiIcon, UI_PX } from '../../render/icons';
 import { t } from '../i18n';
@@ -56,15 +57,18 @@ function PerkCard({ id, evolution, index }: { id: string; evolution: boolean; in
 
 function PerkPick({ run, pending }: { run: HeistRun; pending: Pending<'perk'> }) {
   const gems = useGame((g) => g.currencies.gems);
+  const adReady = useAdReady('perk_reroll');
   const cost = rerollCost(run);
   const free = cost === 0;
-  const reroll = async () => {
-    if (free) {
+  // The run's free reroll comes with an ad; its Gem price is the way when no ad can play (and beside it).
+  const gemCost = free ? BAL.heist.rerolls.gems : cost;
+  const reroll = async (via: 'ad' | 'gems') => {
+    if (via === 'ad') {
       const r = await ads.showRewarded('perk_reroll');
       if (!r.rewarded) return;
-    } else if (gems < cost) return;
+    } else if (gems < gemCost) return;
     haptics.impact('light');
-    heistDispatch({ type: 'heistReroll' });
+    heistDispatch({ type: 'heistReroll', via });
   };
   // A new set of options deals in again.
   const key = pending.options.map((o) => o.id).join(',');
@@ -78,15 +82,18 @@ function PerkPick({ run, pending }: { run: HeistRun; pending: Pending<'perk'> })
         />
         <span className={s.decideSub}>{t('heistUi.pickPerk', { n: run.perks.length, max: BAL.heist.maxPerks })}</span>
         <span className={s.grow} />
-        <button className={`btn small ${free ? 'blue' : 'gold'} ${s.rerollBtn}`} disabled={!free && gems < cost} onClick={reroll}>
-          {free ? <TvIcon /> : null}
-          {free ? t('heistUi.rerollFree') : t('heistUi.reroll')}
-          {!free && (
-            <span className={s.price}>
-              <GemIcon size="sm" />
-              {cost}
-            </span>
-          )}
+        {free && adReady && (
+          <button className={`btn small blue ${s.rerollBtn}`} onClick={() => reroll('ad')}>
+            <TvIcon />
+            {t('heistUi.rerollFree')}
+          </button>
+        )}
+        <button className={`btn small gold ${s.rerollBtn}`} disabled={gems < gemCost} onClick={() => reroll('gems')}>
+          {t('heistUi.reroll')}
+          <span className={s.price}>
+            <GemIcon size="sm" />
+            {gemCost}
+          </span>
         </button>
       </div>
       <div className={s.perkCards} key={key}>

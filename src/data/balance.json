@@ -410,6 +410,7 @@
     "fallbackStageSeconds": 75,
     "fallbackEnemiesPerWave": 4,
     "adDoubleMinAwayMinutes": 30,
+    "doubleGems": { "perHour": 10, "max": 80 },
     "minAwaySecondsForPopup": 60,
     "maxTickGapSeconds": 5,
     "rollSlowdown": 10,
@@ -1085,6 +1086,7 @@
       "perDay": 3,
       "max": 6,
       "adPerDay": 1,
+      "bonusGems": 100,
       "start": 3
     },
     "fightSpeed": 2,

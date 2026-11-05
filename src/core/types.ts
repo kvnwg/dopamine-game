@@ -170,7 +170,7 @@ export type GameAction =
   | { type: 'resume' }
   | { type: 'snapshot' }
   | { type: 'boot' }
-  | { type: 'collectOffline'; doubled: boolean }
+  | { type: 'collectOffline'; doubled: boolean; via?: 'ad' | 'gems' }
   | { type: 'setSetting'; key: SettingKey; value: boolean }
   | { type: 'setVolume'; key: VolumeKey; value: number }
   // ---- heists: start a run with a ticket, then Go stop by stop
@@ -181,7 +181,7 @@ export type GameAction =
   | { type: 'heistChoose'; index: number }
   | { type: 'heistLeaveShop' }
   /** New perk options (the first reroll of a run is free, then balance.heist.rerolls.gems Gems). */
-  | { type: 'heistReroll' }
+  | { type: 'heistReroll'; via?: 'ad' | 'gems' }
   /** Second Chance after a knockout: back at 50% HP (the ad is free once per run). */
   | { type: 'heistRevive'; via: 'ad' | 'gems' }
   /** No Second Chance: the run is lost (keeps part of its rewards); heistClaim banks them. */
@@ -191,7 +191,8 @@ export type GameAction =
   /** Walks away now: a loss, banked at once. */
   | { type: 'heistAbandon' }
   /** +1 ticket from a rewarded ad (once a day). */
-  | { type: 'heistAdTicket' }
+  /** The daily bonus ticket, for an ad or Gems. */
+  | { type: 'heistAdTicket'; via?: 'ad' | 'gems' }
   | { type: 'cheat'; cheat: Cheat };
 
 export type SettingKey = 'haptics' | 'sound' | 'music' | 'reduceFlashing' | 'reduceMotion';

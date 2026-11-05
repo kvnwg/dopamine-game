@@ -3,6 +3,7 @@ import { adSpeedupsLeft, formatDuration, formatNumber, gemSpeedupCost, upgradeCo
 import { dispatch, useGame } from '../../app/store';
 import { dumpsterArt } from '../../render/icons';
 import { ads, haptics } from '../../services';
+import { useAdReady } from '../adReady';
 import { ClockIcon, CloverIcon, CoinIcon, GemIcon, TvIcon } from '../components/Icons';
 import { PixelArt } from '../components/PixelArt';
 import { useNow } from '../hooks';
@@ -22,6 +23,8 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
   const remaining = endsAt !== null ? endsAt - now : 0;
   const gemCost = gemSpeedupCost(remaining);
   const adsLeft = adSpeedupsLeft(g, now);
+  // (Hidden when no ad can play, or none are left today: the Gem Finish is the way then.)
+  const adReady = useAdReady('dumpster_speedup');
   const art = dumpsterArt();
   const pityLevel = BAL.dumpster.badLuck.minDumpsterLevel;
   return (
@@ -46,17 +49,18 @@ export function UpgradePopup({ onClose }: { onClose: () => void }) {
             {formatDuration(remaining / 1000)}
           </div>
           <div className={s.actions}>
-            <button
-              className="btn blue"
-              disabled={adsLeft <= 0}
-              onClick={async () => {
-                const r = await ads.showRewarded('dumpster_speedup');
-                if (r.rewarded) dispatch({ type: 'speedupDumpsterAd' });
-              }}
-            >
-              <TvIcon />
-              {t('dumpster.adSpeedup', { minutes: BAL.dumpster.adSpeedup.minutes, left: adsLeft, max: BAL.dumpster.adSpeedup.perDay })}
-            </button>
+            {adReady && adsLeft > 0 && (
+              <button
+                className="btn blue"
+                onClick={async () => {
+                  const r = await ads.showRewarded('dumpster_speedup');
+                  if (r.rewarded) dispatch({ type: 'speedupDumpsterAd' });
+                }}
+              >
+                <TvIcon />
+                {t('dumpster.adSpeedup', { minutes: BAL.dumpster.adSpeedup.minutes, left: adsLeft, max: BAL.dumpster.adSpeedup.perDay })}
+              </button>
+            )}
             <button
               className="btn gold"
               disabled={g.currencies.gems < gemCost}

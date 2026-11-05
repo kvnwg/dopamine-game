@@ -137,9 +137,17 @@ export function heistAdTicketAvailable(state: Pick<GameState, 'heist'>, now: num
   return H.tickets.adPerDay > 0 && h.adTicketDay !== dayKey(now) && h.tickets < H.tickets.max;
 }
 
-export function heistAdTicket(d: GameState, now: number, ev: CoreEvent[]): boolean {
+/**
+ * The daily bonus ticket: once a day, for a rewarded ad or (`via: 'gems'`, the alternative CrazyGames asks
+ * every rewarded ad to have) tickets.bonusGems Gems. Either way it is the day's one bonus ticket.
+ */
+export function heistAdTicket(d: GameState, now: number, ev: CoreEvent[], via: 'ad' | 'gems' = 'ad'): boolean {
   refreshTickets(d, now, ev);
   if (!heistAdTicketAvailable(d, now)) return false;
+  if (via === 'gems') {
+    if (d.currencies.gems < H.tickets.bonusGems) return false;
+    d.currencies.gems -= H.tickets.bonusGems;
+  }
   d.heist.tickets += 1;
   d.heist.adTicketDay = dayKey(now);
   ev.push({ type: 'heistTickets', tickets: d.heist.tickets });
@@ -1393,10 +1401,12 @@ export function heistLeaveShop(d: GameState, rng: Rng): boolean {
 }
 
 /** New options for the pending perk offer (the run's free reroll first, then Gems). */
-export function heistReroll(d: GameState, rng: Rng): boolean {
+/** Rerolls the perk offer. The run's free reroll comes with an ad; `via: 'gems'` pays the usual price for it instead. */
+export function heistReroll(d: GameState, rng: Rng, via: 'ad' | 'gems' = 'ad'): boolean {
   const run = d.heist.run;
   if (!run || run.pending?.kind !== 'perk' || run.status !== 'ready') return false;
-  const cost = rerollCost(run);
+  const free = rerollCost(run);
+  const cost = free === 0 && via === 'gems' ? H.rerolls.gems : free;
   if (d.currencies.gems < cost) return false;
   const source = run.pending.source;
   const options = makeOffer(run, rng, source === 'shrine' ? 'epic' : undefined);

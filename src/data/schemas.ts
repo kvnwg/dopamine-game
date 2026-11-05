@@ -102,7 +102,12 @@ export const HeistBalanceSchema = z.object({
   /** Heists open with this many rebirths (until then the Heist tab shows what is coming). */
   unlockRebirths: z.number().int().nonnegative(),
   /** Free tickets: `perDay` at each local midnight, never more than `max`; one more a day from an ad. */
-  tickets: z.object({ perDay: z.number().int().positive(), max: z.number().int().positive(), adPerDay: z.number().int().nonnegative(), start: z.number().int().nonnegative() }),
+  tickets: z.object({
+    perDay: z.number().int().positive(), max: z.number().int().positive(), adPerDay: z.number().int().nonnegative(),
+    /** Gems for the daily bonus ticket instead of its ad. */
+    bonusGems: nonNeg,
+    start: z.number().int().nonnegative(),
+  }),
   /** Run fights tick this many times per game tick (the spec's 2x speed). */
   fightSpeed: z.number().int().positive(),
   nodesPerAct: z.number().int().positive(),
@@ -328,6 +333,8 @@ export const BalanceSchema = z.object({
     fallbackStageSeconds: positive,
     fallbackEnemiesPerWave: positive,
     adDoubleMinAwayMinutes: nonNeg,
+    /** Gems to double the offline haul instead of watching the ad: perHour of time away, at most max. */
+    doubleGems: z.object({ perHour: nonNeg, max: nonNeg }),
     minAwaySecondsForPopup: nonNeg,
     maxTickGapSeconds: positive,
     /**

@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react';
-import { formatDuration, formatNumber, type PendingOffline } from '../../core';
-import { dispatch } from '../../app/store';
+import { formatDuration, formatNumber, offlineDoubleGems, type PendingOffline } from '../../core';
+import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { ads, haptics } from '../../services';
-import { BagIcon, CoinIcon, StarIcon, TrashIcon, TvIcon } from '../components/Icons';
+import { useAdReady, skipClass } from '../adReady';
+import { BagIcon, CoinIcon, GemIcon, StarIcon, TrashIcon, TvIcon } from '../components/Icons';
 import { ItemIcon } from '../components/ItemIcon';
 import { t } from '../i18n';
 import { Modal } from './Modal';
@@ -47,13 +48,18 @@ function OfflineFinds({ pending }: { pending: PendingOffline }) {
 }
 
 export function OfflinePopup({ pending }: { pending: PendingOffline }) {
-  const collect = async (doubled: boolean) => {
-    if (doubled) {
+  const adReady = useAdReady('offline_double');
+  const gems = useGame((g) => g.currencies.gems);
+  const gemCost = offlineDoubleGems(pending.awayMs);
+  const showAd = pending.canDouble && adReady;
+  const collect = async (doubled: boolean, via: 'ad' | 'gems' = 'ad') => {
+    if (doubled && via === 'ad') {
       const r = await ads.showRewarded('offline_double');
       if (!r.rewarded) return;
     }
+    if (doubled && via === 'gems' && gems < gemCost) return;
     haptics.impact(doubled ? 'heavy' : 'medium');
-    dispatch({ type: 'collectOffline', doubled });
+    dispatch({ type: 'collectOffline', doubled, via });
   };
   return (
     <Modal title={t('offline.title')} subtitle={t('offline.away', { time: formatDuration(pending.awayMs / 1000) })}>
@@ -75,13 +81,19 @@ export function OfflinePopup({ pending }: { pending: PendingOffline }) {
       </div>
       <OfflineFinds pending={pending} />
       <div className={s.actions}>
-        <button className="btn" onClick={() => collect(false)}>
+        {/* (On CrazyGames, Collect looks exactly like the ad's button: the way out of an ad offer must.) */}
+        <button className={skipClass('btn', 'btn blue', showAd)} onClick={() => collect(false)}>
           {t('offline.collect')}
         </button>
-        {pending.canDouble && (
+        {showAd && (
           <button className="btn blue" onClick={() => collect(true)}>
             <TvIcon />
             {t('offline.collectDouble')}
+          </button>
+        )}
+        {pending.canDouble && (
+          <button className="btn gold" disabled={gems < gemCost} onClick={() => collect(true, 'gems')}>
+            {t('offline.collectDouble')} <GemIcon /> {gemCost}
           </button>
         )}
       </div>

@@ -12,8 +12,11 @@ export interface AdResult {
 
 export interface AdsService {
   init(): Promise<void>;
+  /** False when no ad can play (ads off for the session, an ad blocker): the game hides its ad buttons then. */
   isReady(placement: AdPlacement): boolean;
   showRewarded(placement: AdPlacement): Promise<AdResult>;
+  /** Called when isReady may have changed (for example ads turned out to be off). Returns an unsubscribe. */
+  onAvailabilityChange?(fn: () => void): () => void;
 }
 
 type Listener = (placement: AdPlacement | null) => void;

@@ -126,7 +126,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         snapshotForSave(d, now);
         break;
       case 'collectOffline':
-        collectOffline(d, action.doubled, ev);
+        collectOffline(d, action.doubled, ev, action.via);
         break;
       case 'setSetting':
         d.settings[action.key] = action.value;
@@ -147,7 +147,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         heistLeaveShop(d, rng);
         break;
       case 'heistReroll':
-        heistReroll(d, rng);
+        heistReroll(d, rng, action.via);
         break;
       case 'heistRevive':
         heistRevive(d, action.via, ev);
@@ -162,7 +162,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         heistAbandon(d, rng, now, ev);
         break;
       case 'heistAdTicket':
-        if (heistsOpen(d)) heistAdTicket(d, now, ev);
+        if (heistsOpen(d)) heistAdTicket(d, now, ev, action.via);
         break;
       case 'cheat':
         applyCheat(d, action.cheat, ev, now);

@@ -28,7 +28,9 @@ The balance bot (no Heists, no ads, never spends a Gem) ends up with:
 
 The spec's target is **about 50 Gems a day** for a non-paying player. Four hours of play gives about 90 days' worth, which is roughly $57 of the spec's Gem packs. The cause is `onWorldCleared` (`src/core/systems/combat.ts`): "first clear" means the first clear *this run*, and a rebirth sets `highestCleared` back to 0, so every run pays every world's Gems again (10 + 5 × world each). Rebirth runs also get longer (5 + 2 × rebirths worlds), so the payout grows every run.
 
-The fix is to pay the world-clear Gems only the first time **ever** (track a lifetime best world). Per-run first clears keep the free Luck Potion and pay gold and bags instead.
+The fix is to pay the world-clear Gems only the first time **ever** (track a lifetime best world). Per-run first clears keep the free Luck Potion.
+
+**Done (Nov 5, DECISIONS J1):** the bot now holds about 1,950 Gems after 4 hours instead of 4,600. What's left is one-time: Codex bonuses (about 920 by then, at most about 2,550 ever) and first-ever world clears (about 935, at most 1,250). If that welcome pile is still too big, halving the Codex bonus (`codex.gemsPerBonus`, 10 to 5) is the next lever. On CrazyGames a large pile means early players pay Gems instead of watching ads.
 
 This matters on both builds. On the app, nobody buys Gems they already have thousands of. On CrazyGames, every rewarded ad needs a way to get the same reward without watching (B4), and that way is Gems. If Gems are free, nobody watches the ads.
 
@@ -263,11 +265,11 @@ Dumpster Legend's battle and reels never stop, so **"not on an active gameplay s
 
 | # | Placement | Where | When it's offered | Reward | Cap | Gem alternative | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | **Offline ×2** | `OfflinePopup` | Back after 30+ min | Double the offline haul | Once per return | 10 per hour away, up to 80 (new) | Built (needs the Gem option) |
-| 2 | **Quick Dive** | Boosts panel | Any time | 2 h of offline rolls right now | 3 a day, with the timer to the next | 50, then 100, then 200 | New |
-| 3 | **Potion Brew** | Boosts panel | Any time | ×3 luck for 5 min | 3 a day | 60 | New |
-| 4 | **Duct-Tape Reel** | Boosts panel | Any time | A second reel for 15 min (Gilded Reel with all 5) | 2 a day | 120 | New |
-| 5 | **Bonus Crate** | Boosts panel, top row | Every 4 hours | A Bronze Token, a 2-minute Potion or a pile of bags, odds shown | 3 a day | 40 | New |
+| 1 | **Offline ×2** | `OfflinePopup` | Back after 30+ min | Double the offline haul | Once per return | 10 per hour away, up to 80 | Built |
+| 2 | **Quick Dive** | Boosts panel | Any time | 2 h of offline rolls right now | 3 a day, with the timer to the next | 50, then 100, then 200 | Built |
+| 3 | **Potion Brew** | Boosts panel | Any time | ×3 luck for 5 min | 3 a day | 60 | Built |
+| 4 | **Duct-Tape Reel** | Boosts panel | Any time | One more reel for 15 min (not offered with all 5 on; the Gilded Reel is for later) | 2 a day | 120 | Built |
+| 5 | **Bonus Crate** | Boosts panel, top row | Every 4 hours | Trash Bags or gold (10 minutes' worth) or a 2-minute Luck Potion, odds shown (Bronze Tokens join once tokens exist) | 3 a day | 40 | Built |
 | 6 | **Weather Machine** | Luck popup | Not during weather | Summons Garbage Day | 1 a day | 40 (Raccoon Moon and Dumpster Fire are Gems only, 150; Glitch Alley never) | New |
 | 7 | **Encore Spin** | The full-screen reveal's end card | A reveal that came from a ×25 or larger token chain | One more spin of that reel at the same luck. They keep what they got | 2 a day | 80 | New |
 | 8 | **Polish** | The reveal's end card, and the item card in the Bag | A Mythic or better | Reroll that item's enchantments, or +1 enchant tier | 3 a day | 100 | New |
@@ -275,9 +277,9 @@ Dumpster Legend's battle and reels never stop, so **"not on an active gameplay s
 | 10 | **Boss Rage** | The world's card (Worlds tab) and the boss popup | After 2 losses to the same boss; never at the moment of a loss | +50% ATK for the next try | 3 a day | 60 | New |
 | 11 | **Gold top-up** | A hex's card on the upgrade map | Short by 25% or less of a hex's price | The missing gold (capped at ~10 min of income) | 3 a day | 20 | New |
 | 12 | **Dumpster speedup** | `UpgradePopup` | A dumpster upgrade is running | −30 min | 3 a day | 1 Gem per 2 min (built) | Built |
-| 13 | **Heist ticket** | `heistLobby` | Tickets below max | +1 ticket | 1 a day | 100 (new) | Built (needs the Gem option) |
+| 13 | **Heist ticket** | `heistLobby` | Tickets below max | +1 ticket | 1 a day | 100 | Built |
 | 14 | **Heist revive** | `heistEnd` | A run is lost | Revive at 50% HP | 1 per run | 50 (built) | Built |
-| 15 | **Perk reroll** | `heistPick` | A perk offer | Reroll the offer | 1 per run (the free one) | 10 (built) | Built |
+| 15 | **Perk reroll** | `heistPick` | A perk offer | Reroll the offer | 1 per run (the free one) | 10 | Built |
 
 Notes:
 
@@ -320,11 +322,11 @@ The rules, quoted from <https://docs.crazygames.com/requirements/ads/>:
 - "When our rewarded ad returns with an adError callback, do NOT reward the player." (Built.)
 - "Do not show a midgame ad on a navigational button."
 
-What to fix in the existing build before it's submitted with ads on:
+What the build broke, now fixed (Nov 5, DECISIONS J2 to J5):
 
-1. **Ad buttons never hide when ads can't play.** No UI code calls `ads.isReady()`, so in Basic Launch (ads off), with an ad blocker, or when the SDK is missing, every ad button stays tappable and only shows the "no ad" toast. That's a "button without effect." Hide the ad option when `ads.isReady(placement)` is false and keep the Gem option, so players with ad blockers aren't penalized.
-2. **Offline ×2 and the Heist ticket have no Gem alternative.** Add one to each (B2, rows 1 and 13).
-3. **Make the skip button match the watch button.** The offline popup's Collect and Collect ×2 must be the same size and style (today one is plain and one is blue). Check every placement for this.
+1. **Ad buttons never hid when ads couldn't play.** Now every ad button hides when `ads.isReady(placement)` is false and the Gem option stays. The service checks for an ad blocker at startup and marks ads off after an `adsDisabled` or `adblock` error. (The SDK has no way to know about Basic Launch or kids mode before the first request, so those buttons go after it.)
+2. **Offline ×2 and the Heist ticket had no Gem alternative.** Both have one now (B2, rows 1 and 13), and so does the free perk reroll.
+3. **The skip buttons didn't match.** In the CrazyGames build, Collect matches Collect ×2 and Give up matches the revive ad.
 
 ## B5. What to measure on CrazyGames
 
@@ -377,9 +379,9 @@ Each step is small, testable and measurable with the spec's analytics events (`o
 
 **Both builds first:**
 
-1. **The Gem fix** (section 0) and the Gem sinks.
-2. **The CrazyGames fixes** (B4): hide ad buttons when ads can't play, Gem alternatives, matching skip buttons.
-3. **The Boosts panel and the new rewarded placements** (B2), and the two midgame placements (B3) in the CrazyGames build.
+1. **The Gem fix** (section 0) and the Gem sinks. *Done.*
+2. **The CrazyGames fixes** (B4): hide ad buttons when ads can't play, Gem alternatives, matching skip buttons. *Done.*
+3. **The Boosts panel and the new rewarded placements** (B2), and the two midgame placements (B3) in the CrazyGames build. *The Boosts panel is done (rows 2 to 5); still to build: Encore Spin, Polish, Rebirth Blessing, Boss Rage, Gold top-up and the midgame ads.*
 4. **Weather states and the Weather Machine.**
 
 At this point the CrazyGames build is complete, and it can go out while the app's store comes together.

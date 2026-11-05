@@ -137,10 +137,14 @@ The CrazyGames build is its own Vite mode, so the phone apps and other web build
 - [x] Gameplay is one click away (title screen → PLAY)
 
 **Ads**
-- [x] Rewarded only, through the SDK: offline ×2, heist ticket, heist second chance, perk reroll, dumpster speed-up. No midgame ads and no banners, matching the game's design ("rewarded placements only")
+- [x] Rewarded only, through the SDK: offline ×2, heist ticket, heist second chance, perk reroll, dumpster speed-up, and the Boosts panel's four (Bonus Crate, Quick Dive, Potion Brew, Duct-Tape Reel), which opens a few minutes into the game. No midgame ads and no banners yet (the two planned midgame spots are in `docs/MONETIZATION.md` B3)
+- [x] No rewarded ad button on an active gameplay screen: the boost ads live in a panel the player opens, never over the reels or the battle
+- [x] No ad buttons without effect: they hide when an ad blocker is detected at startup (`ad.hasAdblock()`) and after an `adsDisabled` or `adblock` error (Basic Launch, kids mode); the Gem price stays
+- [x] A used-up rewarded ad shows a timer or hides (Boosts: "Back in 5:12:00", "Next crate in 3:59:59"; the dumpster speed-up and the bonus ticket hide)
+- [x] The way out of an ad offer looks exactly like the watch button: Collect next to Collect ×2, Give up next to the revive ad
 - [x] Game paused and muted when an ad *starts*; resumed and unmuted on finish or error
 - [x] Rewards only on `adFinished`; on `adError` the player gets nothing and sees "No ad available right now" (no popups, no adblock nagging)
-- [x] Rewarded ads are optional, with non-ad alternatives (gems for the revive and reroll, a normal collect for offline earnings) and daily caps on the speed-up and tickets
+- [x] Rewarded ads are optional, and every one has a Gem price for the same reward (offline ×2, the bonus ticket, the revive, the reroll, the speed-up, every boost), with daily caps
 - [ ] **Judgment call:** the heist "second chance" ad is offered when a heist run is lost. CrazyGames says not to offer rewarded ads on *every* death. Heists are long and limited by tickets (at most 6 a day), so this is probably fine. If QA objects, offer it only every other loss
 
 **Technical / quality**

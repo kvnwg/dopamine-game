@@ -30,7 +30,8 @@ export function goals(state: GameState): Goal[] {
   const req = rebirthRequirement(state.rebirths);
   const next = state.rebirths + 1;
   if (isDump(req.world) && best >= req.world) {
-    const g = nextGate(floor + 1);
+    // (The gate after the next floor, when the next floor is itself a gate: it's already the first goal.)
+    const g = nextGate(floor + 2);
     out.push({ key: 'goals.gate', params: { n: Math.round(g / BAL.endless.gateEvery), floor: g }, have: floor, need: g });
   } else if (isDump(req.world)) {
     out.push({ key: 'goals.rebirthFloor', params: { n: next, floor: floorOf(req.world) }, have: floor, need: floorOf(req.world) });

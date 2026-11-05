@@ -38,7 +38,8 @@ export function WorldsPanel() {
   // Redrawn when what it shows changes, not with every battle tick.
   const g = useGameWhen((x) => [x.battle.stage, x.stage, tutorialOver(x), x.equipped, x.player.level, x.upgrades, x.codex.entries.length, x.dump.bestEver, x.rebirths]);
   const here = g.battle.stage;
-  const best = g.stage.highestCleared;
+  // (Past World 20 the best "world" is a Dump floor: the header counts the 20 worlds.)
+  const best = Math.min(g.stage.highestCleared, DATA.worlds.length);
   // Before the first pick (a new game's raccoon waits for it), no threat ratings: at level 1 every world
   // reads as deadly (he levels up through the waves), and World 1 says where to start.
   const first = !g.stage.chosen;

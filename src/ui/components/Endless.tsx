@@ -36,8 +36,8 @@ export function TwistChip({ twist }: { twist: TwistId | null }) {
 
 /** The world a Dump floor borrows its look from, as a preview. */
 function DumpThumb({ floor }: { floor: number }) {
-  const art = useWorldThumb(lookWorld(lastWorld() + Math.max(1, floor)), 'card');
-  return art ? <PixelArt art={art} /> : null;
+  const art = useWorldThumb(lookWorld(lastWorld() + Math.max(1, floor)), 'popup');
+  return art ? <PixelArt art={art} className={s.dumpArt} /> : null;
 }
 
 /** The Endless Dump's card at the top of the Worlds tab: locked until World 20 falls this run. */
@@ -68,9 +68,7 @@ export function DumpCard() {
       <div className={s.dumpInfo}>
         {open ? (
           <>
-            <span>
-              {t('dump.thisRun', { n: runFloor(g) })}
-            </span>
+            {runFloor(g) > 0 && <span>{t('dump.thisRun', { n: runFloor(g) })}</span>}
             <span>
               {g.dump.bestEver > 0 ? t('dump.deepest', { n: g.dump.bestEver }) : t('dump.deepestNone')}
             </span>

@@ -16,15 +16,20 @@ import { PixelArt } from './PixelArt';
 import p from './panels.module.css';
 import s from './endless.module.css';
 
-/** A star upgrade's line of text, with its numbers. */
+/**
+ * A star upgrade's line of text, with its numbers: what the next level makes it (all of it once maxed),
+ * and for the ones with no limit, a level's worth and the total so far.
+ */
 function perkText(def: LegendPerkDef, level: number): string {
-  const n = Math.max(1, level + (def.max === 0 || level < def.max ? 1 : 0));
+  const n = def.max === 0 ? 1 : Math.max(1, Math.min(def.max, level + 1));
   const e = def.effect;
+  const pct = (e.goldenSpin ?? 0) * 100 + (e.luckPct ?? 0) + (e.powerPct ?? 0) + (e.goldPct ?? 0);
   return t(`legend.perk.${def.id}.text`, {
     levels: (e.startLevels ?? 0) * n,
     worlds: (e.startWorlds ?? 0) * n,
     loaves: (e.startLoaves ?? 0) * n,
-    pct: Math.round(((e.goldenSpin ?? 0) * 100 + (e.luckPct ?? 0) + (e.powerPct ?? 0) + (e.goldPct ?? 0)) * n),
+    pct: Math.round(pct * n),
+    now: Math.round(pct * level),
   });
 }
 

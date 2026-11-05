@@ -2320,9 +2320,8 @@ export class BattleScene extends Phaser.Scene {
             this.banner(t('dump.gateCleared', { n: Math.round(e.floor / BAL.endless.gateEvery) }), GOLD, FEET_Y - 50 * P);
             this.confetti.burst(60, BATTLE_W / 2, FEET_Y - 50 * P, CONFETTI);
             this.cheer(1.4);
-          } else {
-            this.stamp(BATTLE_W / 2, FEET_Y - 44 * P, t('dump.cleared', { n: e.floor }), '#B48CFF');
           }
+          // (An ordinary floor needs no banner: the next floor's title card arrives at once.)
           break;
         }
         case 'thorns': {

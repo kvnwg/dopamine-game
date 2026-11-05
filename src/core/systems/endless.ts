@@ -72,16 +72,33 @@ export function twistSalt(state: Pick<GameState, 'dump' | 'legend'>, weekly = st
 export function floorTwist(floor: number, salt: number, rule: WeeklyRule | null = null): TwistId | null {
   if (rule?.twist) return rule.twist;
   const e = E();
-  const place = ((floor - 1) % e.gateEvery) + 1;
-  if (floor > e.gateEvery && place <= e.goodAfterGate) return GOOD_TWISTS[hash32(floor, salt, 5) % GOOD_TWISTS.length];
-  if (!isGate(floor) && hashUnit(floor, salt, 1) >= e.twistChance) return null;
-  const pick = (f: number) => HARD_TWISTS[hash32(f, salt, 2) % HARD_TWISTS.length];
-  let t = pick(floor);
-  // (Two floors in a row never ask the same question.)
-  if (floor > 1 && t === pick(floor - 1) && (isGate(floor - 1) || hashUnit(floor - 1, salt, 1) < e.twistChance)) {
-    t = HARD_TWISTS[(HARD_TWISTS.indexOf(t) + 1 + (hash32(floor, salt, 9) % (HARD_TWISTS.length - 1))) % HARD_TWISTS.length];
+  if (isGoodFloor(floor)) return GOOD_TWISTS[hash32(floor, salt, 5) % GOOD_TWISTS.length];
+  if (!isHardFloor(floor, salt)) return null;
+  // Two floors in a row never ask the same question: walk back to the start of this run of hard floors
+  // (a floor with a good twist or none ends it, so it's short), then forward, moving any repeat along.
+  let start = floor;
+  while (start > 1 && isHardFloor(start - 1, salt) && floor - start < e.gateEvery * 4) start--;
+  let prev: TwistId | null = null;
+  let t: TwistId = HARD_TWISTS[0];
+  for (let f = start; f <= floor; f++) {
+    t = HARD_TWISTS[hash32(f, salt, 2) % HARD_TWISTS.length];
+    if (t === prev) t = HARD_TWISTS[(HARD_TWISTS.indexOf(t) + 1 + (hash32(f, salt, 9) % (HARD_TWISTS.length - 1))) % HARD_TWISTS.length];
+    prev = t;
   }
   return t;
+}
+
+/** One of the floors right after a gate: a good twist (the lap of honor). */
+function isGoodFloor(floor: number): boolean {
+  const e = E();
+  const place = ((floor - 1) % e.gateEvery) + 1;
+  return floor > e.gateEvery && place <= e.goodAfterGate;
+}
+
+/** A floor with a hard twist: every gate, and `twistChance` of the others (not the lap of honor). */
+function isHardFloor(floor: number, salt: number): boolean {
+  if (floor < 1 || isGoodFloor(floor)) return false;
+  return isGate(floor) || hashUnit(floor, salt, 1) < E().twistChance;
 }
 
 /** This week's Weekly Dive rules. */

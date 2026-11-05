@@ -29,6 +29,7 @@ const seeds = arg('seeds', 3);
 const legendAfterMinutes = arg('legend', 45);
 const stench = arg('stench', 0);
 const dodge = process.argv.includes('--dodge');
+const noRebirth = process.argv.includes('--no-rebirth');
 const every = arg('every', 5);
 const verbose = process.argv.includes('--verbose');
 const perksAt = process.argv.indexOf('--perks');
@@ -40,7 +41,7 @@ for (let seed = 1; seed <= seeds; seed++) {
   const t0 = Date.now();
   let saved = false;
   const r = simulate({
-    minutes, seed, perks, legendAfterMinutes, stench, dodge, from,
+    minutes, seed, perks, legendAfterMinutes, stench, dodge, from, rebirth: !noRebirth,
     onWorld20: (st) => {
       if (!savePath || saved) return;
       saved = true;

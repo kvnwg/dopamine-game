@@ -19,7 +19,7 @@ import heistJson from './heist.json';
 import heistEventsJson from './heistEvents.json';
 import {
   AffixesFileSchema, AssetsSchema, BalanceSchema, EnchantsSchema, EnemiesSchema, HeistEventsSchema, HeistFileSchema, ItemsSchema,
-  WorldsSchema, LOCATION_IDS, PERK_TREE_IDS, RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema,
+  WorldsSchema, LOCATION_IDS, PERK_TREE_IDS, RARITIES, SLOTS, STAT_IDS, StringsSchema, ThemesSchema, CLASSIC_TOP, GATE_MOVES, TWIST_IDS,
   type Affix, type AlleyPerkDef, type Assets, type Balance, type BaseItem, type CurseDef, type EnchantDef, type EnemyDef, type HeistEventDef,
   type HeistLocationDef, type HeistTrapDef, type LocationId, type MintPerk, type PerkDef, type WorldDef, type Theme,
 } from './schemas';
@@ -173,6 +173,7 @@ export function buildGameData(raw: {
   const heist = buildHeistData(raw.heist ?? heistJson, raw.heistEvents ?? heistEventsJson, {
     balance, itemsById, enemiesById, worlds, assets, strings,
   });
+  checkEndless(balance, enemiesById, assets, strings);
   const alleyPerksById = checkAlleyPerks(balance);
 
   return {
@@ -196,6 +197,45 @@ export function buildGameData(raw: {
     alleyPerks: balance.perks.list,
     alleyPerksById,
   };
+}
+
+/**
+ * The Endless Dump, Legend, daily tasks and the Weekly Dive (balance.json `endless`, `stench`, `legend`,
+ * `daily`, `weekly`): gate bosses are bosses with art, the tiers it opens are the ones past Grail, the
+ * teeth cover a whole set of floors, and everything the player reads has its text.
+ */
+function checkEndless(balance: Balance, enemiesById: Map<string, EnemyDef>, assets: Assets, strings: Record<string, string>): void {
+  const e = balance.endless;
+  const need = (key: string) => {
+    if (!strings[key]) fail(`missing string ${key}`);
+  };
+  for (const id of e.gateBosses) {
+    if (enemiesById.get(id)?.kind !== 'boss') fail(`endless gate boss ${id} must be a boss`);
+    if (!assets.placeholders.enemies[id]) fail(`endless gate boss ${id} has no art`);
+  }
+  if (e.sawtooth.length !== e.gateEvery) fail(`endless.sawtooth needs one value per floor of a set (${e.gateEvery})`);
+  const past = RARITIES.slice(RARITIES.indexOf(CLASSIC_TOP) + 1);
+  for (const r of Object.keys(e.tierFloors)) if (!past.includes(r as (typeof past)[number])) fail(`endless.tierFloors: ${r} is not a tier past ${CLASSIC_TOP}`);
+  for (const r of past) if (!e.tierFloors[r]) fail(`endless.tierFloors misses ${r}`);
+  for (const t of TWIST_IDS) {
+    need(`twist.${t}.name`);
+    need(`twist.${t}.text`);
+  }
+  for (const m of GATE_MOVES) {
+    need(`move.${m}`);
+    need(`move.${m}.text`);
+  }
+  for (const c of balance.stench.curses) need(`stench.${c.id}`);
+  if (balance.stench.curses.length < balance.stench.max) fail('stench needs a curse for every level');
+  for (const p of balance.legend.perks) {
+    need(`legend.perk.${p.id}.name`);
+    need(`legend.perk.${p.id}.text`);
+    if (p.max > 0 && (p.costs?.length ?? 0) !== p.max) fail(`legend perk ${p.id} needs a price for each of its ${p.max} levels`);
+    if (p.max === 0 && !p.cost) fail(`legend perk ${p.id} has no limit, so it needs a growing cost`);
+  }
+  for (const t of balance.daily.tasks) need(`daily.task.${t.id}`);
+  for (const r of balance.weekly.rules) need(`weekly.rule.${r.id}`);
+  for (const k of ['dump.names.adj', 'dump.names.place', 'dump.names.noun', 'dump.titles']) need(k);
 }
 
 /**

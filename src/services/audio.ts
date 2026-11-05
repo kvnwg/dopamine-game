@@ -104,6 +104,9 @@ function leadIn(buf: AudioBuffer): number {
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
+  /** After master (whose gain the reveal's silence drop moves): the platform's mute (CrazyGames settings, ads). */
+  private system!: GainNode;
+  private systemMuted = false;
   private sfx!: GainNode;
   private musicBus!: GainNode;
   private duck!: GainNode;
@@ -289,7 +292,10 @@ class AudioEngine {
     this.probeBuf = new Float32Array(probe.fftSize);
     this.master = ctx.createGain();
     this.master.gain.value = 0.9;
-    this.master.connect(comp);
+    this.system = ctx.createGain();
+    this.system.gain.value = this.systemMuted ? 0 : 1;
+    this.master.connect(this.system);
+    this.system.connect(comp);
     this.sfx = ctx.createGain();
     this.sfx.gain.value = this.soundGain();
     this.sfx.connect(this.master);
@@ -415,6 +421,12 @@ class AudioEngine {
     this.musicVol = volume;
     if (this.ctx) this.musicBus.gain.setTargetAtTime(this.musicGain(), this.ctx.currentTime, 0.1);
     this.syncMusic();
+  }
+
+  /** Silences everything regardless of Settings (the host's mute setting, or an ad playing). */
+  setSystemMute(on: boolean): void {
+    this.systemMuted = on;
+    if (this.ctx) this.system.gain.setTargetAtTime(on ? 0 : 1, this.ctx.currentTime, 0.02);
   }
 
   suspend(): void {

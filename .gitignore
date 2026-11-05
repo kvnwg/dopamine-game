@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-artifact/
+dist-crazygames/
 artifact/
 *.log
 .DS_Store
@@ -19,3 +20,4 @@ ios/DerivedData/
 # Python bytecode from the pack tools
 __pycache__/
 *.pyc
+crazygames/.trailer/

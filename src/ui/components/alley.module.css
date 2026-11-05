@@ -1,0 +1,461 @@
+/* The Roll tab. Pixel-ish sizes are art pixels (var(--px) = 6 stage px). */
+.panel {
+  position: absolute;
+  inset: 0;
+  padding: calc(2 * var(--px)) 24px;
+  display: flex;
+  flex-direction: column;
+  /* A card's drop shadow (2 px) and the next card's edge (1 px). */
+  gap: calc(3 * var(--px));
+}
+.grow {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------ the machine: a row of info, the reel bank, a row of info (516 px) */
+.top {
+  position: relative;
+  flex: none;
+  padding: var(--px) calc(2 * var(--px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(2 * var(--px));
+}
+/* Above the bank, so its build-up glow rings pass behind the info. */
+.wideRow {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  height: calc(12 * var(--px));
+  padding: 0 var(--px);
+}
+.binTitle {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.statLine {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  min-height: calc(7 * var(--px));
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.bonusOn {
+  color: #2569b8;
+}
+/* Lucky spin meter: one segment per spin, ink between them. */
+.lucky {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--px) calc(2 * var(--px));
+  padding-left: var(--px);
+}
+.luckySegs {
+  display: flex;
+  gap: var(--px);
+  background: var(--ink);
+  box-shadow: var(--pixel-edge);
+}
+.seg {
+  width: calc(2 * var(--px));
+  height: calc(4 * var(--px));
+  background: #d8cbb0;
+}
+.segOn {
+  background: #46d36b;
+}
+.segReady {
+  background: #ffc233;
+  animation: segBlink 0.6s steps(2) infinite;
+}
+@keyframes segBlink {
+  50% { background: #fff3a0; }
+}
+.luckyText {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #3a8f25;
+  white-space: nowrap;
+}
+.luckyReady {
+  color: #d48a12;
+}
+/* The luck badge: a green button with the clover, the luck and LUCK (or a potion's time left). */
+.luckBadge {
+  height: calc(12 * var(--px));
+  padding: 0 calc(3 * var(--px)) 0 var(--px);
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+  background: linear-gradient(180deg, #8af59a 0 var(--px), #34b553 var(--px) calc(100% - 2 * var(--px)), #23913e calc(100% - 2 * var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  color: #fff;
+  font-family: var(--font-display);
+}
+.luckBadge:active {
+  transform: translateY(var(--px));
+}
+.luckNum {
+  font-size: 40px;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+}
+.luckWord {
+  font-size: 30px;
+  margin-top: var(--px);
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.luckBoosted {
+  animation: luckGlow 1s steps(2) infinite;
+}
+@keyframes luckGlow {
+  50% {
+    box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 calc(4 * var(--px)) rgba(110, 255, 150, 0.95);
+  }
+}
+.pity {
+  height: calc(7 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  border: var(--px) solid #a463f2;
+  background: #efe1ff;
+  color: #6b2fb8;
+  font-size: 27px;
+  line-height: calc(5 * var(--px));
+  white-space: nowrap;
+}
+/* The Codex button. */
+.mini {
+  flex: none;
+  width: calc(12 * var(--px));
+  height: calc(12 * var(--px));
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #ffffff 0 50%, #e9dcc0 50% 100%);
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink);
+}
+.mini:active {
+  transform: translateY(var(--px));
+  box-shadow: var(--pixel-edge);
+}
+
+/* ------------------------------------------------------------ last result: tile, name, power change, odds (156 px) */
+.last {
+  --c: #9e9e9e;
+  position: relative;
+  height: calc(26 * var(--px));
+  flex: none;
+  padding: var(--px) calc(2 * var(--px));
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+}
+/* Nothing scrolls on the Roll tab: a finger on the last roll's tile drags it, never pans the page. */
+.last > [data-uid] {
+  touch-action: none;
+}
+.waiting {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: #8b7d72;
+}
+/* A new result drops in, overshoots an art pixel and settles (whole pixels); its plates pop in after it. */
+.lastIn {
+  animation: lastIn 300ms steps(4) backwards;
+}
+@keyframes lastIn {
+  0% { transform: translateY(calc(-3 * var(--px))); filter: brightness(1.5); }
+  50% { transform: translateY(var(--px)); filter: brightness(1.2); }
+  75% { transform: none; filter: none; }
+}
+.lastRare {
+  animation: lastIn 300ms steps(4) backwards, rareGlow 1.4s steps(2) 300ms infinite;
+}
+@keyframes rareGlow {
+  50% { box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 0 calc(2 * var(--px)) var(--c); }
+}
+.lastBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+.lastName {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.1;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Up to two rows of chips (their pixel edges stay inside the clip); none, no row (the name sits alone). */
+.chips:empty {
+  display: none;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(2 * var(--px)) calc(2 * var(--px));
+  max-height: calc(14 * var(--px));
+  margin: 0 calc(-1 * var(--px));
+  padding: var(--px);
+  overflow: hidden;
+}
+.chip {
+  height: calc(5 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  box-shadow: var(--pixel-edge);
+  background: #7c82a8;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: calc(5 * var(--px));
+  color: #fff;
+  white-space: nowrap;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+}
+.placed_bag {
+  background: #42a5f5;
+}
+.placed_scrapped {
+  background: #9a9aa6;
+}
+.chipGold {
+  background: linear-gradient(180deg, #fff3a0 0 50%, #ffc233 50% 100%);
+}
+.chipLucky {
+  background: #46d36b;
+}
+.chipBeginner {
+  background: linear-gradient(180deg, #ffd1d6 0 50%, #ff3b4e 50% 100%);
+  animation: recordBlink 0.7s steps(2) infinite;
+}
+/* The plates pop in after the card: down past their spot by an art pixel and back, with a flash. */
+@keyframes platePop {
+  0% { transform: translateY(calc(-2 * var(--px))); opacity: 0; filter: brightness(2); }
+  34% { transform: translateY(var(--px)); opacity: 1; filter: brightness(1.4); }
+  67% { transform: none; filter: none; }
+}
+/* The power change against what is worn in that slot: the star of the card. Green up, red down. */
+.delta {
+  flex: none;
+  min-width: calc(30 * var(--px));
+  height: calc(20 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #8af59a 0 var(--px), #34b553 var(--px) calc(100% - 2 * var(--px)), #23913e calc(100% - 2 * var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink);
+  font-family: var(--font-display);
+  color: #fff;
+  cursor: pointer;
+  animation: platePop 300ms steps(3) 90ms backwards;
+}
+.delta[data-dir='up'] {
+  animation: platePop 300ms steps(3) 90ms backwards, deltaBob 1s steps(2) 700ms infinite;
+}
+@keyframes deltaBob {
+  50% { transform: translateY(calc(-1 * var(--px))); }
+}
+.delta[data-dir='down'] {
+  background: linear-gradient(180deg, #ff8f7a 0 var(--px), #e14a43 var(--px) calc(100% - 2 * var(--px)), #9c2230 calc(100% - 2 * var(--px)) 100%);
+}
+.delta[data-dir='even'],
+.delta[data-dir='worn'] {
+  background: linear-gradient(180deg, #a7a5b8 0 var(--px), #7f7c94 var(--px) calc(100% - 2 * var(--px)), #5b5870 calc(100% - 2 * var(--px)) 100%);
+}
+.deltaNum {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-size: 52px;
+  line-height: 1;
+  white-space: nowrap;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+}
+.deltaWord {
+  margin-top: var(--px);
+  font-size: 30px;
+  letter-spacing: 2px;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.deltaWorn {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-size: 30px;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+
+/* The result's odds: big, loud, rarity colored, square on the grid. */
+.lastOdds {
+  position: relative;
+  flex: none;
+  min-width: calc(28 * var(--px));
+  height: calc(20 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 50%, #fff) 0 50%, var(--c) 50% 100%);
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink);
+  font-family: var(--font-display);
+  color: #fff;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  animation: platePop 300ms steps(3) 180ms backwards;
+}
+.oddsTier {
+  font-size: 26px;
+  line-height: 1;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  -webkit-text-stroke: 5px var(--ink);
+}
+.oddsSmall {
+  font-size: 30px;
+  line-height: 1;
+}
+.oddsBig {
+  font-size: 56px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.lastOddsRare {
+  animation: platePop 300ms steps(3) 180ms backwards, oddsGlow 0.9s steps(2) 480ms infinite;
+}
+@keyframes oddsGlow {
+  50% { box-shadow: var(--pixel-edge), 0 var(--px) 0 0 var(--ink), 0 0 0 calc(2 * var(--px)) var(--c); filter: brightness(1.15); }
+}
+/* Epic and up: the battle's sparkle twinkles round the plate. */
+.plateSparkle {
+  position: absolute;
+  z-index: 2;
+  opacity: 0;
+  animation: plateTwinkle 1.3s steps(1) infinite both;
+}
+@keyframes plateTwinkle {
+  0%, 100% { opacity: 0; }
+  20%, 45% { opacity: 1; }
+}
+.lastOdds[data-rarity='legendary'],
+.lastOdds[data-rarity='mint'] {
+  background: linear-gradient(90deg, #fff3a0, #ffc233, #ff8a00, #ffc233, #fff3a0);
+}
+.lastOdds[data-rarity='mythic'] {
+  background: linear-gradient(90deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
+}
+.lastOdds[data-rarity='vintage'] {
+  background: linear-gradient(90deg, #ffe3b8, #d2884a, #8a4b23, #d2884a, #ffe3b8);
+}
+.lastOdds[data-rarity='limited'] {
+  background: linear-gradient(90deg, #ff3b4e, #ffb300, #ff3b4e, #ffb300, #ff3b4e);
+}
+.lastOdds[data-rarity='prototype'] {
+  background: linear-gradient(90deg, #e8fdff, #38e8ff, #2a6bff, #38e8ff, #e8fdff);
+}
+.lastOdds[data-rarity='gemMint'] {
+  background: linear-gradient(90deg, #ffffff, #4dffb4, #38e8ff, #4dffb4, #ffffff);
+}
+.lastOdds[data-rarity='museum'] {
+  background: linear-gradient(90deg, #ffffff, #e9ddff, #ffd54f, #b48cff, #ffffff);
+}
+.lastOdds[data-rarity='grail'] {
+  background: linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
+}
+/* Reduce motion: everything just appears; Reduce flashing: no bright flashes. */
+.last[data-calm],
+.last[data-calm] .delta,
+.last[data-calm] .lastOdds {
+  animation: none;
+}
+.last[data-calm].lastRare {
+  animation: rareGlow 1.4s steps(2) infinite;
+}
+.last[data-noflash].lastIn,
+.last[data-noflash] .delta,
+.last[data-noflash] .lastOdds {
+  filter: none !important;
+}
+
+/* ------------------------------------------------------------ the rarest roll ever */
+
+/* ------------------------------------------------------------ equipped gear (the Bag tab; also a drop target) */
+.gear {
+  display: grid;
+  grid-template-columns: repeat(5, calc(18 * var(--px)));
+  justify-content: center;
+  gap: calc(6 * var(--px)) calc(10 * var(--px));
+  padding: calc(3 * var(--px)) 0 var(--px);
+}
+.gearDrop {
+  background: rgba(126, 240, 143, 0.12);
+  box-shadow: 0 0 0 var(--px) #7ef08f, 0 0 calc(3 * var(--px)) rgba(126, 240, 143, 0.6);
+}
+.slotTarget {
+  animation: slotPulse 0.6s steps(2) infinite;
+}
+@keyframes slotPulse {
+  50% { filter: brightness(1.3) drop-shadow(0 0 var(--px) #7ef08f); }
+}
+/* Just equipped: a flash and a one-pixel drop. */
+.equipPop {
+  animation: equipPop 480ms steps(4);
+}
+@keyframes equipPop {
+  0% { transform: translateY(calc(-2 * var(--px))); filter: brightness(2.2); }
+  50% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.5); }
+  100% { transform: none; filter: none; }
+}
+
+/* The reel machine, with the padlock a new game starts under (DumpsterLock) over it. */
+.machine {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+/* Tiers past Grail (balance.endless.tierFloors): their own banners. */
+.lastOdds[data-rarity='cosmic'] {
+  background: linear-gradient(90deg, #ffffff, #9c84ff, #40c4ff, #7c5cff, #ffffff);
+}
+.lastOdds[data-rarity='glitched'] {
+  background: linear-gradient(90deg, #00ffa3, #ff2bd6, #00e5ff, #00ffa3, #ff2bd6);
+}
+.lastOdds[data-rarity='fourthWall'] {
+  background: linear-gradient(90deg, #ffffff, #ff6ad5, #ffd54f, #ff6ad5, #ffffff);
+}
+.lastOdds[data-rarity='devsOwn'] {
+  background: linear-gradient(90deg, #b9f3ff, #33d1ff, #0b6b99, #33d1ff, #b9f3ff);
+}
+.lastOdds[data-rarity='patchNotes'] {
+  background: linear-gradient(90deg, #ffffff, #ffa726, #ff5252, #ffa726, #ffffff);
+}
+.lastOdds[data-rarity='sourceCode'] {
+  background: linear-gradient(90deg, #b6ff9e, #39ff14, #0a5c00, #39ff14, #b6ff9e);
+}
+.lastOdds[data-rarity='concept'] {
+  background: linear-gradient(90deg, #ffffff, #ff5252, #ffd54f, #69f0ae, #40c4ff, #e040fb, #ffffff);
+}

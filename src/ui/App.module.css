@@ -1,0 +1,96 @@
+.viewport {
+  position: fixed;
+  inset: 0;
+  padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  padding-left: max(var(--gutter-x, 0px), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter-x, 0px), env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #1d2135, #0d0f19);
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1080px;
+  height: 1920px;
+  transform-origin: 50% 50%;
+  background: var(--navy);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The battle canvas: 180 x 160 art pixels of 6 px (src/render/BattleScene.ts BATTLE_H). */
+.battle { height: 960px; flex: none; position: relative; }
+.lower {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 60%),
+    linear-gradient(180deg, #2c2e45, #232538);
+}
+/*
+ * A tab's panel slides up three pixels, overshoots one and settles (whole pixels, each keyframe held
+ * until the next), so switching tabs never just swaps.
+ */
+.panelIn {
+  position: absolute;
+  inset: 0;
+  animation: panelIn 0.24s backwards;
+}
+@keyframes panelIn {
+  0% { transform: translateY(calc(3 * var(--px))); opacity: 0.4; animation-timing-function: steps(1, end); }
+  30% { transform: translateY(var(--px)); opacity: 1; animation-timing-function: steps(1, end); }
+  60% { transform: translateY(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panelIn { animation: none; }
+}
+.nav { height: 160px; flex: none; position: relative; z-index: 2; }
+/*
+ * Under a full-screen moment (App.tsx blackout): only the moment itself, toasts, popups and hover
+ * cards (data-keep-lit) are drawn; the battle, the menus and everything else on the stage are not.
+ */
+.stage[data-blackout] > :not([data-keep-lit]) {
+  visibility: hidden;
+}
+
+/*
+ * The wide stage (PC screens): the tall stage's two halves side by side. The battle (1080 x 960) on
+ * the left; the menus (1080 x 800) and the tabs (1080 x 160) on the right.
+ */
+.stage[data-layout='wide'] {
+  width: 2160px;
+  height: 960px;
+  display: grid;
+  grid-template-columns: 1080px 1080px;
+  grid-template-rows: 800px 160px;
+}
+.stage[data-layout='wide'] > .battle {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.stage[data-layout='wide'] > .lower {
+  grid-column: 2;
+  grid-row: 1;
+  box-shadow: inset calc(var(--px)) 0 0 rgba(0, 0, 0, 0.35);
+}
+.stage[data-layout='wide'] > .nav {
+  grid-column: 2;
+  grid-row: 2;
+}

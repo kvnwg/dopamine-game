@@ -1,0 +1,31 @@
+/*
+ * Pixel look, applied over every component: square corners everywhere (pixel UIs have no
+ * rounded corners), crisp scaling for pixel images, and the pixel font for text drawn in canvases.
+ */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+img {
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+/*
+ * Pixel art (PixelArt.tsx): sized by its art at 6 stage px per art pixel, never by layout. It does
+ * not shrink in flex rows, ignores max sizes, and lets taps through to whatever it sits on.
+ */
+img[data-px] {
+  display: block;
+  flex: none;
+  max-width: none;
+  max-height: none;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+/* Light rays (Rays.tsx) are a soft picture drawn big: smooth, not pixelated. */
+img[data-rays] {
+  image-rendering: auto;
+}

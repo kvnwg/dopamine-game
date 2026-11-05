@@ -1,0 +1,14 @@
+[
+  { "id": "lucky",      "name": "Lucky",      "color": "#43C463", "weight": 12, "effect": { "type": "luck",    "values": [0.05, 0.1, 0.18] } },
+  { "id": "golden",     "name": "Golden",     "color": "#FFB300", "weight": 12, "effect": { "type": "goldPct", "values": [10, 20, 35] } },
+  { "id": "swift",      "name": "Swift",      "color": "#40C4FF", "weight": 10, "effect": { "type": "mod", "stat": "ATK_SPD", "mode": "pct", "values": [6, 12, 20] } },
+  { "id": "vampiric",   "name": "Vampiric",   "color": "#E53935", "weight": 9,  "effect": { "type": "mod", "stat": "LIFESTEAL", "mode": "flat", "values": [2, 4, 7] } },
+  { "id": "giant",      "name": "Giant",      "color": "#8D6E63", "weight": 6,  "effect": { "type": "mod", "stat": "HP", "mode": "pct", "values": [10, 20, 35] } },
+  { "id": "magnetic",   "name": "Magnetic",   "color": "#00BCD4", "weight": 7,  "effect": { "type": "mod", "stat": "BAG_FIND", "mode": "flat", "values": [5, 10, 18] } },
+  { "id": "flaming",    "name": "Flaming",    "color": "#FF7043", "weight": 9,  "effect": { "type": "burn",    "values": [0.2, 0.35, 0.5] } },
+  { "id": "thundering", "name": "Thundering", "color": "#FFD600", "weight": 8,  "effect": { "type": "chain",   "values": [0.15, 0.25, 0.35] } },
+  { "id": "echoing",    "name": "Echoing",    "color": "#B388FF", "weight": 8,  "effect": { "type": "echo",    "values": [0.1, 0.18, 0.28] } },
+  { "id": "explosive",  "name": "Explosive",  "color": "#FF5722", "weight": 7,  "effect": { "type": "explode", "values": [0.4, 0.7, 1.0] } },
+  { "id": "thorny",     "name": "Thorny",     "color": "#7CB342", "weight": 7,  "effect": { "type": "thorns",  "values": [0.15, 0.3, 0.5] } },
+  { "id": "prismatic",  "name": "Prismatic",  "color": "#FF4FA3", "weight": 3,  "effect": { "type": "rarityUp", "values": [1, 1, 2] } }
+]

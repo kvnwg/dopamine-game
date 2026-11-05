@@ -1,0 +1,433 @@
+[
+  {
+    "id": "evt_cat_staring_contest",
+    "text": "The guard's cat challenges you to a staring contest.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "options": [
+      { "label": "Stare back", "outcomes": [{ "chance": 0.6, "type": "gainPerk", "perkId": "lucky_penny" }, { "chance": 0.4, "type": "damagePct", "value": 10 }] },
+      { "label": "Hiss", "outcomes": [{ "type": "eliteFight", "rewardMult": 2 }] },
+      { "label": "Offer a fish", "outcomes": [{ "type": "runCoins", "value": -20 }, { "type": "healPct", "value": 30 }] }
+    ]
+  },
+  {
+    "id": "evt_half_burrito",
+    "text": "You find half a burrito.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "options": [
+      { "label": "Eat it", "outcomes": [{ "type": "healPct", "value": 50 }] },
+      { "label": "Save it for later", "outcomes": [{ "type": "savedHeal", "value": 40, "below": 20 }] },
+      { "label": "Throw it at the guard", "outcomes": [{ "type": "skipFight" }] }
+    ]
+  },
+  {
+    "id": "evt_trench_coat",
+    "text": "A raccoon in a trench coat wants to sell you something.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "See what he's got", "outcomes": [{ "type": "openShop" }] },
+      { "label": "Keep walking", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_kitchen_door",
+    "text": "The kitchen door is open.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "options": [
+      { "label": "Sneak in", "outcomes": [{ "type": "treasure" }] },
+      { "label": "Wait", "outcomes": [{ "type": "nothing" }] },
+      { "label": "Barge in", "outcomes": [{ "type": "eliteFight", "rewardMult": 1.5 }] }
+    ]
+  },
+  {
+    "id": "evt_security_camera",
+    "text": "A security camera blinks red.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "options": [
+      { "label": "Unplug it", "outcomes": [{ "type": "damagePct", "value": 10 }, { "type": "noTraps" }] },
+      { "label": "Smile", "outcomes": [{ "type": "gainPerk", "rarity": "common" }] },
+      { "label": "Run", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_lottery_tickets",
+    "text": "A pile of lottery tickets.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "options": [
+      { "label": "Scratch one", "outcomes": [{ "type": "jackpotWheel" }] },
+      { "label": "Take them all", "outcomes": [{ "type": "runCoins", "value": 30 }, { "chance": 0.25, "type": "gainCurse", "curseId": "paper_cuts" }] }
+    ]
+  },
+  {
+    "id": "evt_cousin_rocco",
+    "text": "Your cousin Rocco shows up.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Recruit him", "outcomes": [{ "type": "gainPerk", "tag": "crew" }] },
+      { "label": "Borrow money", "outcomes": [{ "type": "runCoins", "value": 50 }, { "type": "maxHpPct", "value": -10 }] },
+      { "label": "Ignore him", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_rat_truce",
+    "text": "A rat offers a truce.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "foe": "rat",
+    "options": [
+      { "label": "Accept", "outcomes": [{ "type": "truce", "value": 2 }] },
+      { "label": "Refuse", "outcomes": [{ "type": "fight", "rewardMult": 1.5 }] }
+    ]
+  },
+  {
+    "id": "evt_grease_trap",
+    "text": "A grease trap, full to the brim. It glistens.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Dive in", "outcomes": [{ "type": "runCoins", "value": 25 }, { "chance": 0.4, "type": "gainCurse", "curseId": "smelly" }] },
+      { "label": "Walk around it", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_union_rep",
+    "text": "A raccoon union rep asks if you've paid your dues.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "foe": "raccoon",
+    "options": [
+      { "label": "Pay up", "outcomes": [{ "type": "runCoins", "value": -15 }, { "type": "gainPerk", "rarity": "common" }] },
+      { "label": "Flash a fake card", "outcomes": [{ "chance": 0.5, "type": "runCoins", "value": 20 }, { "chance": 0.5, "type": "damagePct", "value": 10 }] },
+      { "label": "Start a strike", "outcomes": [{ "type": "fight" }] }
+    ]
+  },
+  {
+    "id": "evt_glowing_dumpster",
+    "text": "A dumpster hums with a strange green light.",
+    "acts": [1, 2, 3],
+    "weight": 9,
+    "options": [
+      { "label": "Open it", "outcomes": [{ "type": "treasure" }] },
+      { "label": "Kick it", "outcomes": [{ "chance": 0.5, "type": "runCoins", "value": 40 }, { "chance": 0.5, "type": "damagePct", "value": 15 }] },
+      { "label": "Back away slowly", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_vending_machine",
+    "text": "A vending machine is one good shove from tipping over.",
+    "acts": [1, 2, 3],
+    "weight": 9,
+    "options": [
+      { "label": "Shake it", "outcomes": [{ "chance": 0.6, "type": "runCoins", "value": 25 }, { "chance": 0.4, "type": "damagePct", "value": 15 }] },
+      { "label": "Buy a snack", "outcomes": [{ "type": "runCoins", "value": -10 }, { "type": "healPct", "value": 25 }] }
+    ]
+  },
+  {
+    "id": "evt_possum",
+    "text": "A possum is playing dead in your path. Badly. Two rats are selling tickets.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "foe": "rat",
+    "options": [
+      { "label": "Play dead too", "outcomes": [{ "type": "healPct", "value": 20 }] },
+      { "label": "Poke it", "outcomes": [{ "chance": 0.5, "type": "gainPerk", "rarity": "common" }, { "chance": 0.5, "type": "fight" }] },
+      { "label": "Step over it", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_shiny_wrapper",
+    "text": "Something shiny glints under a table.",
+    "acts": [1, 2, 3],
+    "weight": 9,
+    "options": [
+      { "label": "Grab it", "outcomes": [{ "chance": 0.7, "type": "runCoins", "value": 25 }, { "chance": 0.3, "type": "gainCurse", "curseId": "sticky_paws" }] },
+      { "label": "It's probably gum", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_mop_bucket",
+    "text": "The janitor left his mop bucket. It has wheels.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Ride it", "outcomes": [{ "type": "skipNext" }] },
+      { "label": "Drink from it", "outcomes": [{ "chance": 0.5, "type": "healPct", "value": 30 }, { "chance": 0.5, "type": "gainCurse", "curseId": "smelly" }] },
+      { "label": "Leave it", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_birthday_cake",
+    "text": "Half a birthday cake, candles still lit.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Eat it all", "outcomes": [{ "type": "healPct", "value": 40 }, { "chance": 0.3, "type": "gainCurse", "curseId": "sticky_paws" }] },
+      { "label": "Make a wish", "outcomes": [{ "chance": 0.35, "type": "gainPerk", "rarity": "rare" }] }
+    ]
+  },
+  {
+    "id": "evt_fortune_cookie",
+    "text": "A fortune cookie. It says: \"Danger is close. Also, lucky numbers 4, 8, 15.\"",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Believe it", "outcomes": [{ "type": "noTraps" }] },
+      { "label": "Eat it", "outcomes": [{ "type": "healPct", "value": 15 }] }
+    ]
+  },
+  {
+    "id": "evt_alarm_panel",
+    "text": "An alarm panel with a blinking keypad.",
+    "acts": [2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Mash buttons", "outcomes": [{ "chance": 0.5, "type": "skipFight" }, { "chance": 0.5, "type": "eliteFight" }] },
+      { "label": "Cut the red wire", "outcomes": [{ "type": "damagePct", "value": 5 }, { "type": "noTraps" }] },
+      { "label": "Leave it", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_pigeon_gang",
+    "text": "A gang of pigeons wants a cut.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "foe": "pigeon",
+    "options": [
+      { "label": "Pay them", "outcomes": [{ "type": "runCoins", "value": -25 }, { "type": "gainPerk", "perkId": "pigeon_pal" }] },
+      { "label": "Fight them", "outcomes": [{ "type": "fight", "rewardMult": 1.5 }] },
+      { "label": "Flap your arms", "outcomes": [{ "chance": 0.5, "type": "damagePct", "value": 10 }] }
+    ]
+  },
+  {
+    "id": "evt_lost_wallet",
+    "text": "A lost wallet with forty bucks in it.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Take the cash", "outcomes": [{ "type": "runCoins", "value": 40 }, { "chance": 0.2, "type": "gainCurse", "curseId": "paper_cuts" }] },
+      { "label": "Turn it in", "outcomes": [{ "type": "gainPerk", "rarity": "common" }] }
+    ]
+  },
+  {
+    "id": "evt_dog_bowl",
+    "text": "A food bowl that says GUARD on it. No guard in sight.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Eat it", "outcomes": [{ "type": "healPct", "value": 35 }, { "chance": 0.4, "type": "eliteFight" }] },
+      { "label": "Leave it", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_hot_sauce_crate",
+    "text": "A crate of extra-hot hot sauce. The label is just a skull.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Chug a bottle", "outcomes": [{ "type": "gainPerk", "perkId": "hot_sauce" }, { "type": "damagePct", "value": 10 }] },
+      { "label": "Pocket a few", "outcomes": [{ "type": "runCoins", "value": 15 }] }
+    ]
+  },
+  {
+    "id": "evt_espresso_machine",
+    "text": "An espresso machine, still warm.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Pull a shot", "outcomes": [{ "type": "gainPerk", "perkId": "sugar_high" }] },
+      { "label": "Steal the beans", "outcomes": [{ "type": "runCoins", "value": 20 }] }
+    ]
+  },
+  {
+    "id": "evt_cardboard_fort",
+    "text": "A fort made of cardboard boxes. Someone put a lot of work into it.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Hide inside", "outcomes": [{ "type": "healPct", "value": 25 }] },
+      { "label": "Wear a box", "outcomes": [{ "type": "gainPerk", "tag": "tank" }, { "type": "damagePct", "value": 10 }] }
+    ]
+  },
+  {
+    "id": "evt_toll_raccoon",
+    "text": "A raccoon blocks the air vent. \"Toll's ten coins.\"",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "foe": "raccoon",
+    "options": [
+      { "label": "Pay the toll", "outcomes": [{ "type": "runCoins", "value": -10 }, { "type": "skipFight" }] },
+      { "label": "Shove past", "outcomes": [{ "type": "fight" }] }
+    ]
+  },
+  {
+    "id": "evt_bottle_cap_shrine",
+    "text": "A tiny shrine made of bottle caps. Somebody worships something here.",
+    "acts": [1, 2, 3],
+    "weight": 7,
+    "options": [
+      { "label": "Leave an offering", "outcomes": [{ "type": "runCoins", "value": -15 }, { "type": "gainPerk", "rarity": "rare" }] },
+      { "label": "Rob it", "outcomes": [{ "type": "runCoins", "value": 35 }, { "chance": 0.5, "type": "gainCurse" }] },
+      { "label": "Bow politely", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_walk_in_fridge",
+    "text": "The walk-in fridge is wide open.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Raid it", "outcomes": [{ "type": "healPct", "value": 40 }, { "chance": 0.35, "type": "gainCurse", "curseId": "smelly" }] },
+      { "label": "Close it like a good citizen", "outcomes": [{ "type": "nothing" }] }
+    ]
+  },
+  {
+    "id": "evt_cat_burglar",
+    "text": "A cat in a ski mask is robbing the same place.",
+    "acts": [1, 2, 3],
+    "weight": 8,
+    "options": [
+      { "label": "Team up", "outcomes": [{ "type": "gainPerk", "perkId": "alley_cat" }] },
+      { "label": "Rat it out", "outcomes": [{ "type": "runCoins", "value": 25 }] },
+      { "label": "Race it to the loot", "outcomes": [{ "chance": 0.5, "type": "runCoins", "value": 40 }, { "chance": 0.5, "type": "eliteFight" }] }
+    ]
+  },
+  {
+    "id": "evt_magic_8_ball",
+    "text": "A Magic 8 Ball in the lost and found.",
+    "acts": [1, 2, 3],
+    "weight": 7,
+    "options": [
+      { "label": "Shake it", "outcomes": [{ "chance": 0.34, "type": "gainPerk" }, { "chance": 0.33, "type": "healPct", "value": 20 }, { "chance": 0.33, "type": "gainCurse" }] },
+      { "label": "Pocket it", "outcomes": [{ "type": "runCoins", "value": 15 }] }
+    ]
+  },
+  {
+    "id": "evt_recycling_bins",
+    "text": "Three recycling bins: blue, green and gray.",
+    "acts": [1, 2, 3],
+    "weight": 9,
+    "options": [
+      { "label": "Blue", "outcomes": [{ "type": "treasure" }] },
+      { "label": "Green", "outcomes": [{ "type": "healPct", "value": 25 }] },
+      { "label": "Gray", "outcomes": [{ "chance": 0.5, "type": "runCoins", "value": 50 }, { "chance": 0.5, "type": "fight" }] }
+    ]
+  },
+  {
+    "id": "evt_sleeping_guard",
+    "text": "A guard snores at the front desk.",
+    "acts": [2, 3],
+    "weight": 9,
+    "options": [
+      { "label": "Tiptoe past", "outcomes": [{ "type": "skipFight" }] },
+      { "label": "Steal his lunch", "outcomes": [{ "type": "healPct", "value": 30 }, { "chance": 0.4, "type": "eliteFight" }] },
+      { "label": "Honk his nose", "outcomes": [{ "type": "eliteFight", "rewardMult": 2 }] }
+    ]
+  },
+  {
+    "id": "evt_pizza_oven",
+    "text": "The pizza oven is still warm.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["pizza"],
+    "options": [
+      { "label": "Nap on it", "outcomes": [{ "type": "healPct", "value": 40 }, { "chance": 0.25, "type": "damagePct", "value": 15 }] },
+      { "label": "Grab a slice", "outcomes": [{ "type": "healPct", "value": 15 }, { "type": "runCoins", "value": 10 }] }
+    ]
+  },
+  {
+    "id": "evt_tip_jar",
+    "text": "The tip jar is overflowing.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["pizza"],
+    "options": [
+      { "label": "Take it all", "outcomes": [{ "type": "runCoins", "value": 45 }, { "chance": 0.3, "type": "gainCurse", "curseId": "paper_cuts" }] },
+      { "label": "Take a little", "outcomes": [{ "type": "runCoins", "value": 15 }] }
+    ]
+  },
+  {
+    "id": "evt_dough_mountain",
+    "text": "A mountain of pizza dough, rising.",
+    "acts": [1, 2, 3],
+    "weight": 9,
+    "locations": ["pizza"],
+    "options": [
+      { "label": "Belly flop into it", "outcomes": [{ "type": "healPct", "value": 25 }] },
+      { "label": "Throw a ball of it", "outcomes": [{ "type": "skipFight" }] },
+      { "label": "Eat it raw", "outcomes": [{ "chance": 0.5, "type": "gainPerk", "perkId": "thick_fur" }, { "chance": 0.5, "type": "damagePct", "value": 10 }] }
+    ]
+  },
+  {
+    "id": "evt_massage_chair",
+    "text": "A coin-op massage chair. Two minutes for a quarter.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["mall"],
+    "options": [
+      { "label": "Feed it coins", "outcomes": [{ "type": "runCoins", "value": -15 }, { "type": "healPct", "value": 50 }] },
+      { "label": "Sit in it anyway", "outcomes": [{ "type": "healPct", "value": 10 }] }
+    ]
+  },
+  {
+    "id": "evt_wishing_fountain",
+    "text": "The fountain is full of wishing coins.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["mall"],
+    "options": [
+      { "label": "Dive in", "outcomes": [{ "type": "runCoins", "value": 40 }, { "type": "damagePct", "value": 10 }] },
+      { "label": "Make a wish", "outcomes": [{ "type": "runCoins", "value": -5 }, { "chance": 0.4, "type": "gainPerk" }] }
+    ]
+  },
+  {
+    "id": "evt_free_samples",
+    "text": "The free samples are unattended.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["mall"],
+    "options": [
+      { "label": "Take one", "outcomes": [{ "type": "healPct", "value": 15 }] },
+      { "label": "Take the whole tray", "outcomes": [{ "type": "healPct", "value": 35 }, { "chance": 0.4, "type": "eliteFight" }] }
+    ]
+  },
+  {
+    "id": "evt_room_service_cart",
+    "text": "A room service cart. Nobody around. A lobster stares at you.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["hotel"],
+    "options": [
+      { "label": "Eat the lobster", "outcomes": [{ "type": "healPct", "value": 45 }] },
+      { "label": "Take the silverware", "outcomes": [{ "type": "runCoins", "value": 35 }] },
+      { "label": "Hide under the tablecloth", "outcomes": [{ "type": "skipNext" }] }
+    ]
+  },
+  {
+    "id": "evt_mini_bar",
+    "text": "Somebody left the mini bar open.",
+    "acts": [1, 2, 3],
+    "weight": 10,
+    "locations": ["hotel"],
+    "options": [
+      { "label": "Raid it", "outcomes": [{ "type": "gainPerk", "perkId": "sugar_high" }, { "type": "runCoins", "value": 10 }] },
+      { "label": "Read the prices", "outcomes": [{ "type": "damagePct", "value": 5 }, { "type": "trashBags", "value": 4 }] }
+    ]
+  },
+  {
+    "id": "evt_ice_machine",
+    "text": "The ice machine rattles ominously.",
+    "acts": [1, 2, 3],
+    "weight": 9,
+    "locations": ["hotel"],
+    "options": [
+      { "label": "Climb inside", "outcomes": [{ "type": "healPct", "value": 25 }, { "chance": 0.3, "type": "gainCurse", "curseId": "sticky_paws" }] },
+      { "label": "Kick it", "outcomes": [{ "chance": 0.5, "type": "runCoins", "value": 30 }, { "chance": 0.5, "type": "fight" }] }
+    ]
+  }
+]

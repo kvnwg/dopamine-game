@@ -1,0 +1,80 @@
+/*
+ * The mini roller (MiniRoller.tsx): under the settings gear, over the battle, on the 6 px grid (hidden
+ * under the full-screen Upgrades screen). Each reel is a window of one item at its
+ * own size: black silhouettes flick past while it spins, its find shows in color with a rim in its
+ * rarity's light, a token's clover in green.
+ */
+.mini {
+  position: absolute;
+  left: calc(3 * var(--px));
+  top: calc(20 * var(--px));
+  z-index: 21;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+  gap: calc(2 * var(--px));
+  padding: calc(2 * var(--px));
+  border: 0;
+  background: linear-gradient(180deg, #4a5180 0 var(--px), #2d3150 var(--px) calc(100% - var(--px)), #1d2036 calc(100% - var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  cursor: pointer;
+  /* It appears as the big machine's shrink lands in this corner (Reel.tsx, 0.38 s): a smooth fade and
+     a small settle, timed to the copy's landing. */
+  transform-origin: 50% 50%;
+  animation: miniIn 0.22s cubic-bezier(0.2, 0.8, 0.3, 1) 0.24s backwards;
+}
+@keyframes miniIn {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Under the full-screen Upgrades screen: still rolling (its sounds play), not shown. */
+.mini[data-hidden] {
+  visibility: hidden;
+  pointer-events: none;
+}
+.mini:active {
+  transform: translateY(var(--px));
+}
+.win {
+  position: relative;
+  flex: none;
+  width: calc(16 * var(--px));
+  height: calc(16 * var(--px));
+  overflow: hidden;
+  background: #f2e3c4;
+}
+/* A rim in the find's rarity light (or a token's green), inside the window's edge. */
+.win::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 var(--px) var(--rim, #b9b1a6);
+  pointer-events: none;
+}
+.win > img {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.win[data-state='spin'] > img {
+  filter: brightness(0);
+  opacity: 0.8;
+}
+.win[data-state='spin'] {
+  background: #e3cfa6;
+}
+.win[data-state='token'] {
+  background: #d8f5c8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini {
+    animation: none;
+  }
+}

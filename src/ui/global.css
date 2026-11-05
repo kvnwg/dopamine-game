@@ -1,0 +1,278 @@
+/*
+ * Pixel-art UI: dark navy chrome, cream cards and chunky buttons with square pixel borders,
+ * Pixelify Sans everywhere. pixel.css (loaded after this file) squares every corner.
+ */
+
+/*
+ * Dumpster Digits: clearer 0, 2, 5, 6, 8 and C (Pixelify Sans draws them like O, Z, S, G, B and O), on
+ * Pixelify Sans's own grid. Listed first in the font stacks; every other character falls through to
+ * Pixelify Sans.
+ * Made by tools/fonts/digits.py.
+ */
+@font-face {
+  font-family: 'Dumpster Digits';
+  src: url('../assets/fonts/dumpster-digits-500.woff') format('woff');
+  font-weight: 400 500;
+  font-display: block;
+  unicode-range: U+0030, U+0032, U+0035, U+0036, U+0038, U+0043;
+}
+@font-face {
+  font-family: 'Dumpster Digits';
+  src: url('../assets/fonts/dumpster-digits-700.woff') format('woff');
+  font-weight: 600 900;
+  font-display: block;
+  unicode-range: U+0030, U+0032, U+0035, U+0036, U+0038, U+0043;
+}
+:root {
+  --ink: #1a1326;
+  --outline: #1a1326;
+  --navy: #23263a;
+  --navy-2: #2d3150;
+  --navy-3: #3a3f63;
+  --navy-4: #4a5180;
+  --cream: #fff7e6;
+  --cream-2: #f2e3c4;
+  --cream-3: #e3cfa6;
+  --sky: #36c8f4;
+  --green: #5bc236;
+  --green-d: #3a8f25;
+  --gold: #ffc233;
+  --gold-d: #d48a12;
+  --red: #ef5350;
+  --red-d: #b52f35;
+  --blue: #42a5f5;
+  --blue-d: #2569b8;
+  --purple: #9c6cf0;
+  --text: #ffffff;
+  --text-dark: #2e2523;
+  --muted: #a9aed0;
+  --good: #7ee35a;
+  --bad: #ff6b6b;
+  --luck: #46d36b;
+
+  --r-junk: #9e9e9e;
+  --r-decent: #4caf50;
+  --r-shiny: #2196f3;
+  --r-epic: #9c27b0;
+  --r-legendary: #ffb300;
+  --r-mythic: #ff4fa3;
+  --r-mint: #fff4d6;
+  --r-vintage: #d2884a;
+  --r-limited: #ff3b4e;
+  --r-prototype: #38e8ff;
+  --r-gemMint: #4dffb4;
+  --r-museum: #e9ddff;
+  --r-grail: #fff07a;
+  --r-cosmic: #9c84ff;
+  --r-glitched: #00ffa3;
+  --r-fourthWall: #ff6ad5;
+  --r-devsOwn: #33d1ff;
+  --r-patchNotes: #ffa726;
+  --r-sourceCode: #39ff14;
+  --r-concept: #ffffff;
+  --r-mythic-gradient: linear-gradient(135deg, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb);
+  --r-mint-gradient: linear-gradient(135deg, #ffffff, #fff4d6, #ffd54f, #ffffff);
+
+  --font-display: 'Dumpster Digits', 'Pixelify Sans', 'Courier New', monospace;
+  --font-body: 'Dumpster Digits', 'Pixelify Sans', 'Courier New', monospace;
+  /*
+   * One art pixel in stage px: the battle's pixel size, and every sprite, border, notch and drop
+   * shadow in the UI. Keep pixel-ish sizes in CSS to multiples of it.
+   */
+  --px: 6px;
+  --pixel-edge: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink);
+  --pixel-text: 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 4px 4px 0 var(--ink), -4px 4px 0 var(--ink),
+    4px -4px 0 var(--ink), -4px -4px 0 var(--ink), 0 8px 0 var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #11131f;
+  color: var(--text);
+  font-family: var(--font-body);
+  /*
+   * Body text in the pixel font's regular weight with a little air between letters: its bold fills in
+   * the small holes of e, a, s, C and 8 at reading sizes (Kevin: "text can be hard to read because it's
+   * pixelated"). Headings, buttons and big numbers set their own bold weight.
+   */
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  /* The pixel font's "fi" ligature draws like an "A" ("Aghts"): letters stay separate everywhere. */
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
+}
+
+/* Form controls and the canvas text do not inherit the setting above. */
+button,
+input,
+textarea,
+select {
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
+}
+
+button {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+/* Display text: chunky font, dark outline, drop shadow. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+/*
+ * ---------------------------------------------------------------- buttons: flat bands, pixel border, press = drop
+ * A one-pixel light band on top and a two-pixel dark band at the bottom (art pixels: var(--px)).
+ */
+.btn {
+  --b: #5dc14c;
+  --bd: #2f8a45;
+  --bl: #b0ec6c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 90px;
+  padding: 0 36px;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 42px;
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow: var(--pixel-text);
+  background: linear-gradient(
+    180deg,
+    var(--bl) 0 var(--px),
+    var(--b) var(--px) calc(100% - 2 * var(--px)),
+    var(--bd) calc(100% - 2 * var(--px)) 100%
+  );
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  transition: transform 70ms steps(2);
+}
+.btn:active {
+  transform: translateY(var(--px));
+  box-shadow: var(--pixel-edge), 0 var(--px) 0 0 rgba(10, 6, 20, 0.55);
+}
+.btn:disabled {
+  filter: grayscale(0.85) brightness(0.72);
+  cursor: default;
+}
+.btn.gold {
+  --b: #f5c638;
+  --bd: #ef8a22;
+  --bl: #fff28c;
+}
+.btn.red {
+  --b: #e14a43;
+  --bd: #9c2230;
+  --bl: #ff8f7a;
+}
+.btn.blue {
+  --b: #3fa1e3;
+  --bd: #2f56a6;
+  --bl: #9edcf7;
+}
+.btn.gray {
+  --b: #7f7c94;
+  --bd: #5b5870;
+  --bl: #a7a5b8;
+}
+.btn.small {
+  gap: 12px;
+  min-height: 72px;
+  font-size: 32px;
+  padding: 0 24px;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(calc(-1 * var(--px))); }
+}
+.breathe {
+  animation: breathe 0.9s steps(2) infinite;
+}
+.breathe:active {
+  animation: none;
+}
+
+/*
+ * A button let go of hops a pixel up with a flash and settles (src/ui/juice.ts adds .popped): a
+ * slight overshoot in whole pixels. Each keyframe holds until the next (steps(1, end)).
+ */
+@keyframes btnPop {
+  0% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.35); animation-timing-function: steps(1, end); }
+  45% { transform: translateY(calc(-1 * var(--px))); filter: brightness(1.12); animation-timing-function: steps(1, end); }
+  70%, 100% { transform: translateY(0); filter: none; }
+}
+.popped {
+  animation: btnPop 180ms backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .popped {
+    animation: none;
+  }
+}
+
+/* Cream card with a pixel border. */
+.card {
+  background: var(--cream);
+  color: var(--text-dark);
+  border: none;
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathe {
+    animation: none;
+  }
+}
+
+/*
+ * Something the tutorial is introducing right now (ui/features.ts): a gold outline blinking a pixel
+ * out from it until it has been seen.
+ */
+[data-new] {
+  outline: var(--px) solid #ffd23f;
+  outline-offset: var(--px);
+  animation: newBlink 0.8s steps(2) infinite;
+}
+@keyframes newBlink {
+  50% {
+    outline-color: #fff7c2;
+  }
+}
+
+/* A mouse (PC): buttons brighten a little under the pointer. Touch screens never see it. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled),
+  nav button:hover {
+    filter: brightness(1.1);
+  }
+}

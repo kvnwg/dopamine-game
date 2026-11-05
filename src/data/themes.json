@@ -1,0 +1,10 @@
+[
+  {
+    "id": "curbside",
+    "name": "Curbside",
+    "substatWeights": {
+      "ATK_PCT": 1, "HP_PCT": 1, "DEF_PCT": 1, "ATK_SPD_PCT": 1, "CRIT": 1, "CRIT_DMG": 1,
+      "DODGE": 1, "LIFESTEAL": 1, "REGEN": 1, "BAG_FIND": 1, "COIN_FIND": 1, "BOSS_DMG": 1
+    }
+  }
+]

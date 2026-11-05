@@ -1,0 +1,17 @@
+/*
+ * A luck token flying from its reel into the battle's luck row (TokenFlight.tsx): over the battle, on
+ * any tab, under popups and the reveal. The flight runs on the DOM from JS.
+ * Whole pixels only: the picture changes size by stepping to its Scale2x/Scale3x versions, and it moves
+ * in whole art pixel steps (var(--px) = 6 stage px).
+ */
+.fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 25;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 calc(2 * var(--px)) 0 rgba(10, 6, 20, 0.45));
+}

@@ -1,0 +1,525 @@
+/* ------------------------------------------------------------------ battle area + overlaid HUD */
+.battle {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #3cc8f6 0%, #8fe2ff 55%, #e8d9b0 56%);
+}
+.canvasHost {
+  position: absolute;
+  inset: 0;
+}
+.canvasHost canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  /* Everything on the HUD sits on the battle's 6 px grid, so its pixel art lines up with the battle's. */
+  padding: calc(3 * var(--px)) calc(3 * var(--px)) 0;
+  display: flex;
+  align-items: flex-start;
+  gap: calc(4 * var(--px));
+  z-index: 5;
+  pointer-events: none;
+}
+.hud > * {
+  pointer-events: auto;
+}
+.spacer {
+  flex: 1;
+  pointer-events: none !important;
+}
+.gearBtn {
+  width: calc(14 * var(--px));
+  height: calc(14 * var(--px));
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #5a6299 0 var(--px), #3d4470 var(--px) calc(100% - var(--px)), #2a2f52 calc(100% - var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+}
+.gearBtn:active {
+  transform: translateY(var(--px));
+  box-shadow: var(--pixel-edge);
+}
+/* Level and XP: a green level box and the XP bar in one dark plate. */
+.levelPill {
+  position: relative;
+  margin-top: calc(2 * var(--px));
+  height: calc(10 * var(--px));
+  padding-right: calc(3 * var(--px));
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  background: rgba(32, 34, 52, 0.82);
+  box-shadow: var(--pixel-edge);
+}
+.lvBadge {
+  min-width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #b0ec6c 0 var(--px), #5bc236 var(--px) calc(100% - var(--px)), #3a8f25 calc(100% - var(--px)) 100%);
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: #fff;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+}
+/* The XP bar, its numbers over it. It is tall enough for them (their glyphs are about 20 px with a
+   5 px stroke), and the numbers sit outside the clipped track, so nothing cuts them off. */
+.xpBar {
+  position: relative;
+  flex: none;
+}
+.xpTrack {
+  position: relative;
+  width: calc(42 * var(--px));
+  height: calc(8 * var(--px));
+  border: var(--px) solid var(--ink);
+  background: #15172a;
+  overflow: hidden;
+}
+.xpFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(180deg, #c6ff9e 0 var(--px), #6fd83f var(--px) 100%);
+  transition: width 300ms steps(4);
+}
+.xpText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* (One line, exactly the font size: the glyphs then sit centred, a pixel low at most.) */
+  line-height: 1;
+  padding-bottom: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(2 * var(--px));
+  margin-top: calc(2 * var(--px));
+}
+.row {
+  display: flex;
+  gap: calc(4 * var(--px));
+}
+/* Gold and gems: the icon at the plate's left edge, the amount after it. */
+.money {
+  position: relative;
+  height: calc(10 * var(--px));
+  min-width: calc(30 * var(--px));
+  padding-right: calc(3 * var(--px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(2 * var(--px));
+  background: rgba(32, 34, 52, 0.82);
+  box-shadow: var(--pixel-edge);
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: #fff;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+}
+.moneyIcon {
+  flex: none;
+}
+/* Wave progress at the bottom left of the view (opens the Worlds tab): one art pixel per dot, the skull for the boss. */
+.waveBox {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+}
+.waveBox:active {
+  transform: translateY(var(--px));
+}
+.waveTrack {
+  display: flex;
+  align-items: center;
+  height: calc(9 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  background: rgba(32, 34, 52, 0.78);
+  box-shadow: var(--pixel-edge);
+}
+.waveSeg {
+  display: flex;
+  align-items: center;
+}
+.waveLine {
+  width: calc(3 * var(--px));
+  height: var(--px);
+  margin: 0 var(--px);
+  background: #15172a;
+}
+.waveLineDone {
+  background: #ffc233;
+}
+.waveDot {
+  width: calc(4 * var(--px));
+  height: calc(4 * var(--px));
+  border: var(--px) solid var(--ink);
+  background: #6b7096;
+}
+.waveDotDone {
+  background: #ffc233;
+}
+.waveDotNow {
+  background: #fff;
+  box-shadow: 0 0 var(--px) var(--px) rgba(255, 255, 255, 0.35);
+  animation: nowPulse 1.1s steps(2) infinite;
+}
+@keyframes nowPulse {
+  50% { box-shadow: 0 0 var(--px) calc(2 * var(--px)) rgba(255, 255, 255, 0.15); }
+}
+.waveDone {
+  filter: grayscale(0.7) brightness(0.8);
+}
+.battleActions {
+  position: absolute;
+  left: calc(3 * var(--px));
+  right: calc(3 * var(--px));
+  bottom: calc(3 * var(--px));
+  display: flex;
+  align-items: flex-end;
+  gap: calc(2 * var(--px));
+  z-index: 5;
+}
+/*
+ * Drop target around the raccoon while an item is being dragged: a frame of one-pixel dashes that
+ * march round a pixel at a time (no rotation: everything stays on the 6 px grid), solid green over
+ * the target. 36 art px square, centered on his body where he fights (feet on the ground line at
+ * y 828; his body about 15 x 15 art px, x 294 to 384 and y 738 to 828), his HP bar inside it.
+ */
+.dropRing {
+  --dash: repeating-linear-gradient(90deg, #fff 0 calc(2 * var(--px)), transparent 0 calc(4 * var(--px)));
+  --dashV: repeating-linear-gradient(180deg, #fff 0 calc(2 * var(--px)), transparent 0 calc(4 * var(--px)));
+  position: absolute;
+  left: 228px;
+  top: 672px;
+  width: 216px;
+  height: 216px;
+  z-index: 6;
+  background: rgba(126, 240, 143, 0.16);
+  pointer-events: none;
+}
+.dropRing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    var(--dash) 0 0 / calc(100% + 4 * var(--px)) var(--px) repeat-x,
+    var(--dash) 0 100% / calc(100% + 4 * var(--px)) var(--px) repeat-x,
+    var(--dashV) 0 0 / var(--px) calc(100% + 4 * var(--px)) repeat-y,
+    var(--dashV) 100% 0 / var(--px) calc(100% + 4 * var(--px)) repeat-y;
+  animation: dashMarch 0.6s steps(4) infinite;
+}
+.dropRingOn {
+  background: rgba(126, 240, 143, 0.3);
+}
+.dropRingOn::before {
+  background: none;
+  box-shadow: inset 0 0 0 var(--px) #7ef08f, inset 0 0 0 calc(2 * var(--px)) rgba(126, 240, 143, 0.45);
+  animation: none;
+}
+@keyframes dashMarch {
+  to {
+    background-position:
+      calc(4 * var(--px)) 0,
+      calc(-4 * var(--px)) 100%,
+      0 calc(-4 * var(--px)),
+      100% calc(4 * var(--px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dropRing::before {
+    animation: none;
+  }
+}
+.dropLabel {
+  position: absolute;
+  left: 50%;
+  top: calc(-10 * var(--px));
+  height: calc(7 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  transform: translateX(-50%);
+  background: #5bc236;
+  box-shadow: var(--pixel-edge);
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: calc(7 * var(--px));
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+}
+
+/*
+ * First-time nudge over the raccoon until something is worn: over his HP bar (the heart's top at
+ * y 690, the bar centered between x 318 walking and 342 fighting), with a stepped pixel arrow pointing
+ * down at it. It bobs a pixel at a time.
+ */
+.dragTip {
+  position: absolute;
+  left: 330px;
+  top: 624px;
+  z-index: 6;
+  transform: translateX(-50%);
+  height: calc(7 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  background: #fff;
+  box-shadow: var(--pixel-edge), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: calc(7 * var(--px));
+  color: var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: tipBob 1.1s steps(2, jump-none) infinite;
+}
+/* The arrow: four rows of white narrowing to a point (7 x 4 art px), outlined in ink (all whole art pixels). */
+.dragTipArrow {
+  position: absolute;
+  left: 50%;
+  /* Its top row sits on the box's ink edge, opening the box into the arrow. */
+  top: 100%;
+  width: calc(7 * var(--px));
+  height: calc(4 * var(--px));
+  transform: translateX(-50%);
+  background:
+    linear-gradient(#fff, #fff) calc(1 * var(--px)) 0 / calc(5 * var(--px)) var(--px) no-repeat,
+    linear-gradient(#fff, #fff) calc(2 * var(--px)) var(--px) / calc(3 * var(--px)) var(--px) no-repeat,
+    linear-gradient(#fff, #fff) calc(3 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 0 / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(6 * var(--px)) 0 / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) var(--px) var(--px) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(5 * var(--px)) var(--px) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(2 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(4 * var(--px)) calc(2 * var(--px)) / var(--px) var(--px) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) calc(3 * var(--px)) calc(3 * var(--px)) / var(--px) var(--px) no-repeat;
+}
+@keyframes tipBob {
+  50% { transform: translateX(-50%) translateY(calc(-1 * var(--px))); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dragTip {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ after a boss: again or next? */
+.choice {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  /* A flat dim over the battle. */
+  background: rgba(10, 12, 26, 0.55);
+  /* It waits a beat (hidden, so it can't be tapped yet) while the boss falls: the freeze, the boom and
+     the coins show first. */
+  animation: choiceIn 220ms steps(3) 900ms backwards;
+}
+@keyframes choiceIn {
+  from { opacity: 0; visibility: hidden; }
+}
+/* A cream card framed in ink, dropping in from six pixels up, a pixel past its spot and back (no
+   scaling: its pixels stay 6 px). */
+.choiceCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  padding: calc(5 * var(--px)) calc(8 * var(--px)) calc(6 * var(--px));
+  background: linear-gradient(180deg, #fffaf0 0 var(--px), #fff8e6 var(--px) calc(100% - 2 * var(--px)), #f3e3bf calc(100% - 2 * var(--px)) 100%);
+  box-shadow: var(--pixel-edge), 0 calc(3 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  animation: choicePop 330ms steps(1, end) 900ms backwards;
+}
+@keyframes choicePop {
+  0% { transform: translateY(calc(-6 * var(--px))); opacity: 0; }
+  20% { transform: translateY(calc(-4 * var(--px))); opacity: 1; }
+  40% { transform: translateY(calc(-2 * var(--px))); }
+  60% { transform: translateY(var(--px)); }
+  80% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice,
+  .choiceCard {
+    animation: none;
+  }
+}
+.choiceReward {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #6b4bb8;
+}
+.choiceBtns {
+  display: flex;
+  gap: calc(5 * var(--px));
+  margin-top: calc(2 * var(--px));
+}
+.choiceBtn {
+  position: relative;
+  min-width: calc(50 * var(--px));
+  min-height: calc(22 * var(--px));
+  padding: calc(2 * var(--px)) calc(5 * var(--px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-size: 48px;
+  overflow: hidden;
+}
+.choiceNext {
+  min-width: calc(63 * var(--px));
+}
+/*
+ * The countdown fills the Next button from the left (whole art pixels at a time, --fill is a share of
+ * the button); when it is full the raccoon moves on.
+ */
+.choiceFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--fill, 0%);
+  width: round(down, var(--fill, 0%), var(--px));
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+.choiceLabel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--px));
+}
+.choiceAuto {
+  position: relative;
+  font-size: 30px;
+  opacity: 0.9;
+}
+
+/*
+ * Things landing on the HUD (TopHud, hudFlight.ts). Moves are whole art pixels and flashes are steps;
+ * TopHud zeroes --hop / --hop2 for Reduce Motion and --flash / --flash2 for Reduce Flashing.
+ */
+.hud {
+  --hop: calc(-1 * var(--px));
+  --hop2: calc(-2 * var(--px));
+  --flash: brightness(1.45);
+  --flash2: brightness(1.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud {
+    --hop: 0px;
+    --hop2: 0px;
+  }
+}
+/* A coin (or a haul's coins) lands on the gold counter: it hops a pixel, flashed, and drops back. Two
+   classes take turns so each landing restarts it; a stream of coins makes it chatter. */
+.hopA {
+  animation: hopA 120ms steps(1, end);
+}
+.hopB {
+  animation: hopB 120ms steps(1, end);
+}
+@keyframes hopA {
+  0% { transform: translateY(var(--hop)); filter: var(--flash); }
+  55% { transform: none; filter: none; }
+}
+@keyframes hopB {
+  0% { transform: translateY(var(--hop)); filter: var(--flash); }
+  55% { transform: none; filter: none; }
+}
+/* XP sparks reach the bar: its fill flashes. */
+.flashA {
+  animation: flashA 110ms steps(1, end);
+}
+.flashB {
+  animation: flashB 110ms steps(1, end);
+}
+@keyframes flashA {
+  0% { filter: var(--flash2); }
+  55% { filter: none; }
+}
+@keyframes flashB {
+  0% { filter: var(--flash2); }
+  55% { filter: none; }
+}
+/* Level up: the badge hops twice (two pixels, then one), flashing. */
+.lvUp {
+  animation: lvUp 900ms steps(1, end);
+}
+@keyframes lvUp {
+  0% { transform: translateY(var(--hop)); filter: var(--flash2); }
+  8% { transform: translateY(var(--hop2)); filter: none; }
+  22% { transform: translateY(var(--hop)); }
+  32% { transform: none; }
+  44% { transform: translateY(var(--hop)); filter: var(--flash2); }
+  52% { transform: none; filter: none; }
+  64% { filter: var(--flash); }
+  72% { filter: none; }
+}
+/* ...the bar shows full and flashes, then steps out to show the new level's (empty) bar. */
+.xpFull {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #c6ff9e 0 var(--px), #6fd83f var(--px) 100%);
+  pointer-events: none;
+  animation: xpFull 640ms steps(1, end) forwards;
+}
+@keyframes xpFull {
+  0% { filter: var(--flash2); }
+  14% { filter: none; }
+  28% { filter: var(--flash); }
+  40% { filter: none; opacity: 1; }
+  70% { opacity: 0.5; }
+  85%, 100% { opacity: 0; }
+}
+/* ...and sparkles blink around them: a white plus, a yellow plus, a yellow dot, gone. */
+.sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.spark {
+  position: absolute;
+  width: calc(3 * var(--px));
+  height: calc(3 * var(--px));
+  opacity: 0;
+  background:
+    linear-gradient(#fff, #fff) center / 100% var(--px) no-repeat,
+    linear-gradient(#fff, #fff) center / var(--px) 100% no-repeat;
+  animation: spark 480ms steps(1, end) forwards;
+}
+@keyframes spark {
+  0% { opacity: 1; }
+  30% {
+    opacity: 1;
+    background:
+      linear-gradient(#ffe14a, #ffe14a) center / 100% var(--px) no-repeat,
+      linear-gradient(#ffe14a, #ffe14a) center / var(--px) 100% no-repeat;
+  }
+  60% {
+    opacity: 1;
+    background: linear-gradient(#ffe14a, #ffe14a) center / var(--px) var(--px) no-repeat;
+  }
+  85%, 100% { opacity: 0; }
+}

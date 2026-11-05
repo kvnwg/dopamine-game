@@ -7,14 +7,8 @@ The requirements below were checked against the official docs at <https://docs.c
 
 ## 0. Fix before you submit
 
-1. **Asset licenses (blocker).** CrazyGames only accepts games whose art you have the rights to. `CREDITS.md` lists four packs with no license in the download:
-   - **Farm animals:** Funky Farmland's enemies.
-   - **Modern Pixel Clothes:** 21 clothing items.
-   - **MV Icons:** world props.
-   - **0x72 DungeonTileset II:** the itch.io page says CC0, which is likely fine.
-
-   Confirm each license allows commercial web distribution, or replace that art.
-2. **Brand name:** the item **"Crocs"** (`src/data/items.json`) is a real trademark. Rename it, for example "Croc-Clogs" or "Swamp Clogs". `CONTENT_TODO.md` already marks names for a rewrite.
+1. **Asset licenses: resolved.** Kevin confirmed the licenses for the packs `CREDITS.md` lists (farm animals, Modern Pixel Clothes, MV Icons, 0x72 DungeonTileset II) allow commercial web distribution (Nov 5).
+2. **Brand name: resolved.** The item "Crocs" is now **Swamp Clogs** (Legendary: Swamp Clogs of Sport Mode). Its internal id stays `sneakers_crocs`, which players never see, so saves and art keep working. Other names that brush against brands, all low risk: Bubble Wrap Armor, Chewed Frisbee (both everyday words) and Mall Cop Doug's Segway in Heists.
 3. **Desktop readability: resolved.** The game now has a wide PC layout (battle on the left, the dumpster and tabs on the right). It reads well even in CrazyGames' smallest desktop frame (800×450, checked), so you can submit for desktop and mobile.
 
 ---
@@ -156,7 +150,7 @@ The CrazyGames build is its own Vite mode, so the phone apps and other web build
 - [x] Fixed 10-tick-per-second simulation, so the game behaves the same at any refresh rate
 - [x] Notifications are phone-only: no browser permission prompts
 - [x] No dev cheat panel in the CrazyGames build
-- [ ] Asset licenses and the "Crocs" name: see section 0
+- [x] Asset licenses and the "Crocs" name: see section 0 (both done, Nov 5)
 
 ## 6. Step by step
 

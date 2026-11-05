@@ -25,6 +25,7 @@ Kevin: "for the app version i want ingame purchases for sure. for crazygames i j
 | J15 | **Midgame ads** (CrazyGames build only, `src/app/crazygames.ts`, `midgame` in balance.json): as a won Heist is claimed, and as the after-boss choice moves on from a world's first clear in a run from World 3. Not after a lost Heist (it offers its revive ad: CrazyGames allows a midgame or a "watch to keep playing", not both), not on "Again", not at a rebirth (it has the Blessing). At most one every 6 minutes, none within 6 minutes of a rewarded ad, none in a player's first 10 minutes of play or a visit's first 3. | CrazyGames' idle guide: midgame ads "very sparingly, if at all ... during major transitions". |
 | J16 | The big reveal's offers sit under the item's name and keep their taps (the reveal closes on any other tap). The world's Rage, the Rebirth Blessing and Polish on the item card use one gold-edged offer box. | |
 | J17 | `upgradeNodeState` calls one past a line's last tier "open"; the top-up checks the line's max itself rather than change that. | Found while testing: the top-up would have offered gold for a tier that doesn't exist. |
+| J18 | The item "Crocs" is now **Swamp Clogs** (Legendary: Swamp Clogs of Sport Mode). Its id stays `sneakers_crocs`, which players never see, so saves and its art keep working. | Kevin: "can u rename crocs for me". Crocs is a trademark, and CrazyGames rejects games that use brand names. |
 
 ## Luck token combos: tokens landing together multiply (Nov 5)
 

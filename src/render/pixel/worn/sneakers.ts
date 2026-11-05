@@ -8,7 +8,7 @@ import type { Piece, ShoeArt } from './types';
 const piece = (at: [number, number], rows: string[]): Piece => ({ at: { x: at[0], y: at[1] }, rows });
 
 export const SHOES: Readonly<Record<string, ShoeArt>> = {
-  // Lime crocs: chunky clogs with holes on top.
+  // Swamp Clogs: chunky lime clogs with holes on top. (The id keeps its old name: saves and art use it.)
   sneakers_crocs: {
     pal: { G: 'G', g: 'g', l: 'l', L: 'L' },
     front: piece([2, 1], ['.#Ll#', '#lglG#']),

@@ -17,7 +17,7 @@ import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
 import { t } from './i18n';
 import { teasePlan, type Tease } from './reelDrama';
-import { itemStopMs, multOf } from './reelTiming';
+import { chainMult, itemStopMs } from './reelTiming';
 import { useUi, type RollView } from './uiStore';
 
 let rollId = 1;
@@ -162,7 +162,7 @@ export function installRollController(): () => void {
           if (rare.drama) {
             const view: RollView = {
               id: -best.item.uid, item: best.item, odds: best.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false,
-              at: performance.now(), mult: multOf(best.mults, e.matched), scripted, ...rare,
+              at: performance.now(), mult: chainMult(e, e.reels.indexOf(best), e.matched), scripted, ...rare,
             };
             buildUp(view, itemStopMs(e, e.reels.indexOf(best)));
           } else {

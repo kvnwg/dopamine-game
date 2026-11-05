@@ -196,6 +196,7 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
     case 'forceTokens':
       d.dumpster.forcedTokens = cheat.mults;
       d.dumpster.forcedTokensAll = !!cheat.mults && !!cheat.everyReel;
+      d.dumpster.forcedReelTokens = cheat.perReel?.map((m) => m.filter((x) => Number.isFinite(x) && x >= 1).slice(0, BAL.roll.multiplier.maxSteps)) ?? null;
       break;
     case 'forceRarity':
       d.dumpster.forcedRarity = cheat.rarity;

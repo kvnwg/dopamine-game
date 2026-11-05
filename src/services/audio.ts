@@ -839,6 +839,25 @@ class AudioEngine {
     this.tone(260, at, 0.2, { type: 'triangle', gain: 0.04, freqEnd: 720 });
   }
 
+  /**
+   * A luck token combo (Reel.tsx ComboFx): the reels' numbers zip together, two glides meeting in the
+   * middle `fly` seconds later, where they merge with a thump (the combo's jingle plays over it). More
+   * reels in it, a bell higher for each.
+   */
+  combo(reels: number, fly: number): void {
+    const ctx = this.live;
+    if (!ctx || !this.gate('combo', 200)) return;
+    const at = ctx.currentTime;
+    const zip = Math.max(0.08, fly - 0.09);
+    this.tone(330, at + 0.09, zip, { type: 'triangle', gain: 0.05, freqEnd: 880 });
+    this.tone(1760, at + 0.09, zip, { type: 'triangle', gain: 0.035, freqEnd: 880 });
+    this.noise(at + 0.09, zip, { type: 'bandpass', freq: 1600, q: 1.2, gain: 0.05, attack: zip * 0.8 });
+    const hit = at + fly;
+    this.tone(96, hit, 0.4, { gain: 0.32, freqEnd: 44 });
+    this.noise(hit, 0.12, { type: 'lowpass', freq: 2200, gain: 0.16 });
+    for (let k = 0; k < Math.min(4, reels); k++) this.bell(midi(84 + [0, 4, 7, 12][k]), hit + 0.02 + k * 0.05, 0.5, 0.05);
+  }
+
   /** The counter lands: a slam, a crash and a chord stab. `level` 0, 1, 2, 3 = big, huge, insane, HYPER RARE. */
   slam(level: number): void {
     const ctx = this.live;

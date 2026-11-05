@@ -77,7 +77,7 @@ describe('luck tokens', () => {
     expect(start.spinSeconds).toBeCloseTo(Math.max(...start.reels.map((r) => r.landAt)));
     expect(start.stepSeconds).toBeCloseTo(tokenStepSeconds(start.baseSpinSeconds));
     const roll = rolls.find((r) => r.reel === 0)!;
-    expect(roll.mult).toBe(tokenMult(r0.mults));
+    expect(roll.mult).toBe(tokenMult(start.reels.map((r) => r.mults), 0, start.matched));
     expect(roll.luck).toBeCloseTo(start.luck * roll.mult);
     expect(roll.item.uid).toBe(r0.item.uid);
   });
@@ -107,7 +107,7 @@ describe('luck tokens', () => {
     const late = runTicks(clone(st), Math.ceil(start.reels[1].landAt * 10) + 1, new Rng(picked!.seed));
     const rolls = late.events.filter((e): e is Roll => e.type === 'roll');
     expect(rolls.slice(0, 2).map((r) => r.reel)).toEqual([0, 1]);
-    expect(rolls[1].mult).toBe(tokenMult(start.reels[1].mults));
+    expect(rolls[1].mult).toBe(tokenMult(start.reels.map((r) => r.mults), 1, start.matched));
   });
 
   it('the tutorial spin never lands on a token', () => {

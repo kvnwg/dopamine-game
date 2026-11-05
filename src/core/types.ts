@@ -50,8 +50,8 @@ export type CoreEvent =
       /** The spin's smaller build-up: 0 none, 1 a riser and glow, 2 a longer one (luck.ts judgeFinds). */
       tease: 0 | 1 | 2;
       /**
-       * Token steps at which every reel (two or more) landed the same token: those tokens count
-       * squared on every reel (x5 on all three reels gives each x25).
+       * Token steps (rounds) at which two or more reels landed a token together, a combo: each of
+       * those reels counts the product of all that step's tokens (x2 and x5 make x10 on both).
        */
       matched: number[];
       lucky: boolean;
@@ -205,8 +205,11 @@ export type Cheat =
   /** Jump to a world as if every world before it was beaten. */
   | { kind: 'setStage'; stage: number }
   | { kind: 'forceRarity'; rarity: Rarity | null }
-  /** The next spin's first reel lands these tokens before its item (`everyReel`: every reel does, a match). */
-  | { kind: 'forceTokens'; mults: number[] | null; everyReel?: boolean }
+  /**
+   * The next spin's first reel lands these tokens before its item (`everyReel`: every reel does, a
+   * combo each round); or `perReel`, each reel its own (a combo where two or more get one together).
+   */
+  | { kind: 'forceTokens'; mults: number[] | null; everyReel?: boolean; perReel?: number[][] }
   | { kind: 'luckBoost'; seconds: number }
   | { kind: 'setDumpsterLevel'; level: number }
   | { kind: 'skipToLastWave' }

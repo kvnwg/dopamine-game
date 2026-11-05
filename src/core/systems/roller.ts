@@ -277,25 +277,33 @@ export function tokenStepSeconds(baseSpinSeconds: number): number {
 }
 
 /**
- * A reel's luck multiplier from its tokens: their product, a matched step's token counting squared
- * (matchedSteps). 1 without any.
+ * The token steps (rounds) at which two or more reels of a spin land a luck token together: a combo.
+ * Each of those reels counts the product of all that step's tokens, so x2 and x5 make x10 on both,
+ * and three at once multiply all three (Kevin: "if two numbers both land on a multiplier ... make the
+ * multiplier those two numbers combined"). `all` is every reel's tokens in landing order. (It used to
+ * take every reel landing the same token, which counted squared: x5 x5 is still x25 on both.)
  */
-export function tokenMult(mults: readonly number[], matched: readonly number[] = []): number {
-  return mults.reduce((a, x, k) => a * (matched.includes(k) ? x * x : x), 1);
+export function comboSteps(all: ReadonlyArray<readonly number[]>): number[] {
+  const out: number[] = [];
+  const steps = Math.max(0, ...all.map((m) => m.length));
+  for (let k = 0; k < steps; k++) if (all.filter((m) => m.length > k).length >= 2) out.push(k);
+  return out;
+}
+
+/** The product of every reel's token at step `k` (what each of them counts for when it's a combo). */
+export function comboValue(all: ReadonlyArray<readonly number[]>, k: number): number {
+  return all.reduce((a, m) => (m.length > k ? a * m[k] : a), 1);
 }
 
 /**
- * The token steps at which every reel of a spin (two or more) lands the same luck token: those
- * tokens count squared on every reel, x5 x5 x5 giving each reel x25 (Kevin: "if u have multiple rows
- * spinning and they all land on the same multiplier, u need to square the luck"). `mults` is each
- * reel's tokens in landing order; a step only counts while every reel is still landing tokens.
+ * Reel `reel`'s luck multiplier from its tokens (its first `steps` of them; all by default): their
+ * product, each `combos` step counting the whole step's product (comboSteps). 1 without any.
  */
-export function matchedSteps(mults: ReadonlyArray<readonly number[]>): number[] {
-  const out: number[] = [];
-  if (mults.length < 2) return out;
-  const steps = Math.min(...mults.map((m) => m.length));
-  for (let k = 0; k < steps; k++) if (mults.every((m) => m[k] === mults[0][k])) out.push(k);
-  return out;
+export function tokenMult(all: ReadonlyArray<readonly number[]>, reel: number, combos: readonly number[] = [], steps = Infinity): number {
+  const mults = all[reel] ?? [];
+  let x = 1;
+  for (let k = 0; k < Math.min(steps, mults.length); k++) x *= combos.includes(k) ? comboValue(all, k) : mults[k];
+  return x;
 }
 
 /**
@@ -322,20 +330,23 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const rigged = scripted ? null : rigSpin(d);
   const tokenChance = perkFx(d).tokenChanceMult;
   const n = reelCount(d);
-  // Every reel's tokens first: tokens that match on every reel count squared on each (matchedSteps).
+  // Every reel's tokens first: tokens landing together on two or more reels multiply (comboSteps).
   // No tokens on the tutorial spin or on a reel whose rarity is forced (the first, by a debug roll);
-  // dev cheats can force a chain on the first reel, or on all of them.
+  // dev cheats can force a chain on the first reel, on all of them, or each reel's own.
   // (The rolls are made either way, so a forced or scripted reel leaves the rest of the spin's luck as it was.)
   const forced = d.dumpster.forcedTokens;
+  const perReel = d.dumpster.forcedReelTokens;
   const tokens = Array.from({ length: n }, (_, i) => {
     let mults = d.dumpster.firstDiveDone && !(i === 0 && d.dumpster.forcedRarity) ? rollTokens(rng, tokenChance) : [];
     if (forced && (i === 0 || d.dumpster.forcedTokensAll)) mults = [...forced];
+    if (perReel?.[i]) mults = [...perReel[i]];
     if (scripted === 'beginner' && i === 0) mults = [...BAL.tutorial.beginnerTokens];
     return mults;
   });
   d.dumpster.forcedTokens = null;
   d.dumpster.forcedTokensAll = false;
-  const matched = matchedSteps(tokens);
+  d.dumpster.forcedReelTokens = null;
+  const matched = comboSteps(tokens);
   for (let i = 0; i < n; i++) {
     const mults = tokens[i];
     const beginner = scripted === 'beginner' && i === 0;
@@ -343,7 +354,7 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     // Beginner's luck lands in the tutorial item's slot: it upgrades what the raccoon got first.
     const tut = BAL.dumpster.tutorialItem.baseId;
     const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
-    const mult = tokenMult(mults, matched);
+    const mult = tokenMult(tokens, i, matched);
     const floor = higherFloor(chainFloor(mult), rigged);
     const item = rollReelItem(d, rng, luck * mult, dry, slot, beginner ? tut : undefined, floor, scripted === 'first' && i === 0);
     if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
@@ -407,7 +418,7 @@ function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
   spin.reels.forEach((r, reel) => {
     if (r.landed || (r.landAt ?? spin.spinSeconds) > upTo + 1e-9) return;
     r.landed = true;
-    const mult = tokenMult(r.mults, spin.matched);
+    const mult = tokenMult(spin.reels.map((x) => x.mults), reel, spin.matched);
     const item = snap(r.item);
     d.roll.count += 1;
     dz.totalDives += 1;

@@ -21,8 +21,8 @@ export const tokenKey = (itemUid: number | string, step: number) => `${itemUid}:
 /**
  * A luck token lands on reel `reel`: its chime (a step higher for each in a chain), a buzz, and its
  * flight into its place in the battle's luck row (`row`, the `step`-th token there). `match`: the
- * last of a step's tokens to land when every reel landed the same one; they all count squared, and
- * a jingle plays as it slams in. Once per token.
+ * last token of a combo to land (two or more reels landing one in the same round): each of those
+ * reels now counts the product of them all, and a jingle plays as it slams in. Once per token.
  */
 export function tokenLanded(key: string, step: number, x: number, reel: number, row: number, match = false): void {
   if (fired.has(key)) return;

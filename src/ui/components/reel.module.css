@@ -551,6 +551,7 @@
   height: var(--px);
   background: #ffffff;
   box-shadow: 0 calc(-1 * var(--px)) 0 0 var(--c), var(--px) 0 0 0 var(--c), 0 var(--px) 0 0 var(--c), calc(-1 * var(--px)) 0 0 0 var(--c);
+  opacity: 0;
   animation: sparkFly 0.54s steps(6) both;
 }
 @keyframes sparkFly {
@@ -667,6 +668,7 @@
   height: var(--px);
   background: #2f8f3a;
   box-shadow: 0 calc(-1 * var(--px)) 0 0 #7cff6b, var(--px) 0 0 0 #7cff6b, 0 var(--px) 0 0 #7cff6b, calc(-1 * var(--px)) 0 0 0 #7cff6b;
+  opacity: 0;
   animation: cloverFly 0.72s steps(6) both;
 }
 .burst i:nth-child(1) { --dx: 0px; --dy: -144px; }
@@ -799,7 +801,7 @@
   color: inherit;
   -webkit-text-stroke: 5px var(--ink);
 }
-/* Every reel matched a token: the multipliers are squared, in gold, with a bigger drop. */
+/* A combo merged onto it (Reel.tsx ComboFx): the stack counts the whole combo, in gold, with a bigger drop. */
 .chain[data-gold] {
   color: #ffd84a;
   animation: chainGold 0.36s steps(4) backwards;
@@ -813,6 +815,185 @@
     transform: translateY(calc(-2 * var(--px)));
     color: #fff6b0;
   }
+}
+
+/* ------------------------------------------------------------ combos (Reel.tsx ComboFx) */
+/*
+ * Two or more reels landed a luck token in the same round: each one's number pops out of its reel and
+ * flies to the middle (--fly), they merge with a burst into their product under "COMBO!" and the sum
+ * that made it, which holds (--hold), then copies of the product drop onto each reel's chip (--back).
+ * All of it is timed here from the moment it mounts, and whatever ends hidden ends so by its own
+ * style or its animation's last frame, never by an opacity fade over things with layers of their own
+ * (Chrome drew such a fade's middle frame again as the combo was taken away).
+ */
+.combo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.comboPart,
+.comboBack {
+  position: absolute;
+  left: -200px;
+  width: 400px;
+  top: -70px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.comboPart,
+.comboBack,
+.comboX,
+.comboSum {
+  font-family: var(--font-display);
+  line-height: 1;
+  white-space: nowrap;
+  color: #ffd84a;
+  -webkit-text-stroke: 9px var(--ink);
+  paint-order: stroke fill;
+}
+/* Each number pops out of its reel, then flies in whole steps to the middle, gone as they meet. */
+.comboPart {
+  opacity: 0;
+  animation: comboFly var(--fly) both;
+}
+@keyframes comboFly {
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0;
+    animation-timing-function: steps(3, jump-end);
+  }
+  23% {
+    transform: translate(0, calc(-2 * var(--px))) scale(1.25);
+    opacity: 1;
+    animation-timing-function: steps(5, jump-none);
+  }
+  99% {
+    transform: translate(var(--dx), 0) scale(1);
+    opacity: 1;
+    animation-timing-function: steps(1, jump-end);
+  }
+  100% {
+    transform: translate(var(--dx), 0) scale(1);
+    opacity: 0;
+  }
+}
+/*
+ * What happens as they meet stays hidden until then (by opacity, which runs with the flight off the
+ * main thread: visibility would wait for a busy page and leave a gap after the numbers meet).
+ */
+.comboLate {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: comboShow 1ms steps(1, jump-end) var(--fly) both;
+}
+@keyframes comboShow {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* The merge: two hard diamond rings burst out of the middle. */
+.comboRing {
+  position: absolute;
+  left: -90px;
+  top: -90px;
+  width: 180px;
+  height: 180px;
+  box-sizing: border-box;
+  border: calc(2 * var(--px)) solid #fff3b0;
+  opacity: 0;
+  animation: comboRing 0.42s steps(5) var(--fly) both;
+}
+.comboRing[data-late] {
+  border-color: #ffc233;
+  animation-delay: calc(var(--fly) + 0.1s);
+}
+@keyframes comboRing {
+  0% { transform: rotate(45deg) scale(0.2); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: rotate(45deg) scale(2.2); opacity: 0; }
+}
+/*
+ * It blinks out as the copies leave. (By visibility, not a fade: Chrome drew a faded opacity
+ * animation's last frame again as the whole thing was taken away.)
+ */
+.comboHit {
+  position: absolute;
+  width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: comboBlinkOut 0.18s calc(var(--fly) + var(--hold)) forwards;
+}
+@keyframes comboBlinkOut {
+  0% { visibility: visible; animation-timing-function: steps(1, jump-end); }
+  33% { visibility: hidden; animation-timing-function: steps(1, jump-end); }
+  66% { visibility: visible; animation-timing-function: steps(1, jump-end); }
+  100% { visibility: hidden; }
+}
+/* "COMBO!" drops into place over the product. */
+.comboTitle {
+  animation: comboTitleIn 0.24s steps(3) var(--fly) both;
+}
+@keyframes comboTitleIn {
+  from { transform: translateY(calc(-3 * var(--px))); opacity: 0; }
+}
+/* The product slams in big and bright, then beats a few times while it holds. */
+.comboX {
+  -webkit-text-stroke-width: 11px;
+  animation: comboXIn 0.3s steps(4) var(--fly) both, comboBeat 0.2s steps(2) calc(var(--fly) + 0.3s) 4 alternate;
+}
+@keyframes comboXIn {
+  0% { transform: scale(1.8); filter: brightness(2.2); }
+  45% { transform: scale(0.9); filter: brightness(1.4); }
+  100% { transform: none; filter: none; }
+}
+@keyframes comboXInSoft {
+  0% { transform: scale(1.8); }
+  45% { transform: scale(0.9); }
+  100% { transform: none; }
+}
+@keyframes comboBeat {
+  to { transform: scale(1.08); }
+}
+.bank[data-noflash] .comboX {
+  animation-name: comboXInSoft, comboBeat;
+}
+.combo[data-rainbow] .comboX {
+  animation: comboXIn 0.3s steps(4) var(--fly) both, comboBeat 0.2s steps(2) calc(var(--fly) + 0.3s) 4 alternate, chainRainbow 0.8s steps(1) infinite;
+}
+.bank[data-noflash] .combo[data-rainbow] .comboX {
+  animation-name: comboXInSoft, comboBeat, chainRainbow;
+}
+/* The sum that made it ("×2 × ×5"), under the product. */
+.comboSum {
+  margin-top: 6px;
+  color: #fff3b0;
+  -webkit-text-stroke-width: 6px;
+  animation: comboSumIn 0.2s steps(2) calc(var(--fly) + 0.12s) both;
+}
+@keyframes comboSumIn {
+  from { transform: translateY(calc(2 * var(--px))); opacity: 0; }
+}
+/*
+ * Copies of the product drop onto each reel's chip, shrinking to its size, and sit on it until the
+ * combo is taken away (the chip changes under them, so a late chip never leaves a gap).
+ */
+.comboBack {
+  opacity: 0;
+  -webkit-text-stroke-width: 11px;
+  animation: comboBack var(--back) steps(5) calc(var(--fly) + var(--hold)) forwards;
+}
+@keyframes comboBack {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.42); opacity: 1; }
+}
+/* Reduce motion: nothing flies, drops or beats; the sum shows, then fades. */
+.combo[data-calm] .comboTitle,
+.combo[data-calm] .comboX,
+.combo[data-calm] .comboSum {
+  animation: none;
 }
 
 /* The machine shrinking into the mini roller's corner as the Roll tab closes (Reel.tsx shrinkToMini). */

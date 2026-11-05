@@ -68,7 +68,7 @@ export const SpinSchema = z.object({
     .min(1),
   /** The spin's smaller build-up (luck.ts judgeFinds): 0 none, 1 a riser and glow, 2 a longer one. */
   tease: z.number().int().min(0).max(2).default(0),
-  /** Token steps every reel landed the same token on: those count squared (roller.ts matchedSteps). */
+  /** Token steps two or more reels landed a token on together: each counts their product (roller.ts comboSteps). */
   matched: z.array(z.number().int().nonnegative()).default(() => []),
   lucky: z.boolean(),
   /** A Golden Spin (x5 luck). */
@@ -353,6 +353,8 @@ export const GameStateSchema = z.object({
     /** Dev: the luck tokens the next spin's first reel (or, with forcedTokensAll, every reel) lands on before its item. */
     forcedTokens: z.array(z.number()).nullable().default(null),
     forcedTokensAll: z.boolean().default(false),
+    /** Dev: each reel's tokens for the next spin (a combo when two or more get one in the same round). */
+    forcedReelTokens: z.array(z.array(z.number())).nullable().default(null),
     /**
      * Beginner's luck (BAL.tutorial), new games only: 'pending' until its spin, 'rolled' (with the
      * item's uid) until that item is put on, then 'done'. Saves from before it count as done.
@@ -504,6 +506,7 @@ export function createInitialState(now: number, seed: number): GameState {
       forcedRarity: null,
       forcedTokens: null,
       forcedTokensAll: false,
+      forcedReelTokens: null,
       beginner: { state: 'pending', uid: null },
       openedAtMs: null,
       adSpeedupDay: '',

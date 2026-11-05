@@ -7,7 +7,7 @@
  */
 import { useState, type ReactNode } from 'react';
 import { RARITIES, type Rarity } from '../../data';
-import { currentLuck, formatNumber, itemOddsOneIn, luckOddsOneIn, type Cheat, type Item } from '../../core';
+import { currentLuck, formatNumber, itemOddsOneIn, luckOddsOneIn, reelCount, type Cheat, type Item } from '../../core';
 import { clock, dispatch, getGame, useGame } from '../../app/store';
 import { saveNow } from '../../app/session';
 import { haptics } from '../../services';
@@ -76,6 +76,7 @@ export function AdminPopup({ onClose }: { onClose: () => void }) {
   const level = useGame((g) => g.player.level);
   const rebirths = useGame((g) => g.rebirths);
   const forced = useGame((g) => g.dumpster.forcedRarity);
+  const reels = useGame(reelCount);
   const [amount, setAmount] = useState('1M');
   const [world, setWorld] = useState('5');
   const [dumpster, setDumpster] = useState('10');
@@ -125,7 +126,19 @@ export function AdminPopup({ onClose }: { onClose: () => void }) {
         <B tone="green" onClick={() => cheat({ kind: 'luckBoost', seconds: 60 })}>Potion 1 min</B>
         <B tone="green" onClick={() => cheat({ kind: 'luckBoost', seconds: 600 })}>Potion 10 min</B>
         <B tone="green" onClick={() => cheat({ kind: 'forceTokens', mults: [5, 10] })}>Next: ×50 chain</B>
-        <B tone="green" onClick={() => cheat({ kind: 'forceTokens', mults: [5, 10, 5], everyReel: true })}>Next: ×250 every reel</B>
+        {reels >= 2 && (
+          <B tone="green" onClick={() => cheat({ kind: 'forceTokens', mults: null, perReel: [[2], [5]] })}>
+            Next: combo ×2 × ×5
+          </B>
+        )}
+        {reels >= 3 && (
+          <B tone="green" onClick={() => cheat({ kind: 'forceTokens', mults: null, perReel: [[2], [3], [5]] })}>
+            Next: combo ×2 × ×3 × ×5
+          </B>
+        )}
+        <B tone="green" onClick={() => cheat({ kind: 'forceTokens', mults: [5, 10, 5], everyReel: true })}>
+          Next: ×{formatNumber(250 ** reels)} every reel
+        </B>
       </Row>
       <Row label={`Next roll's rarity${forced ? ` (${t(`rarity.${forced}`)})` : ''}`}>
         {RARITIES.filter((r) => r !== 'junk').map((r) => (

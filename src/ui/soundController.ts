@@ -22,7 +22,7 @@ export function installSound(): () => void {
     // The dumpster has its own lid clunk.
     if (btn && !btn.hasAttribute('data-no-tap-sound')) {
       const now = performance.now();
-      streak = now - lastTap < 650 ? streak + 1 : 0;
+      streak = now - lastTap < 650 ? Math.min(12, streak + 1) : 0;
       lastTap = now;
       audio.tap(streak);
       haptics.impact('light');

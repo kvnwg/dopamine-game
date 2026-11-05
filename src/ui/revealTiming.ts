@@ -7,7 +7,10 @@ import { BAL } from '../data';
 import type { RollDrama } from '../core';
 import type { RollView } from './uiStore';
 
-export const DRAMA_LEVEL: Record<RollDrama, number> = { big: 0, huge: 1, insane: 2 };
+export const DRAMA_LEVEL: Record<RollDrama, number> = { big: 0, huge: 1, insane: 2, hyper: 3 };
+
+/** HYPER RARE's showcase can't be skipped before this (ms from its start: the portal, then the burst). */
+export const HYPER_LOCK_MS = 2400;
 
 export interface RevealPhases {
   /** Fade to black. */
@@ -24,12 +27,14 @@ export interface RevealPhases {
 
 export function revealPhases(drama: RollDrama, calm: boolean): RevealPhases {
   const lvl = DRAMA_LEVEL[drama];
+  // HYPER RARE: the dark is the summoning (a portal, warp, lightning, warning bands), ending in the burst
+  // as the item appears; it can't be skipped until then (HYPER_LOCK_MS), Reduce motion or not.
   return {
     black: 250,
-    dark: calm ? 300 : [700, 1300, 2000][lvl],
+    dark: drama === 'hyper' ? HYPER_LOCK_MS - 250 : calm ? 300 : [700, 1300, 2000][lvl],
     appear: 650,
-    count: [1700, 2400, 3100][lvl],
-    beats: calm ? 1 : [2, 3, 5][lvl],
+    count: [1700, 2400, 3100, 3800][lvl],
+    beats: calm ? 1 : [2, 3, 5, 7][lvl],
   };
 }
 

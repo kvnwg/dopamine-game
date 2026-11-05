@@ -20,12 +20,19 @@
   cursor: default;
 }
 
+/*
+ * Its box is a third of the stage, scaled up 3x from the top left (TitleScreen.tsx sets the size):
+ * Safari draws a canvas's layer at 3 pixels per box pixel whatever the transforms, so a full-size box
+ * was a 75 MB layer redrawn whole every frame of the title's animation; this is a ninth of that.
+ */
 .canvas {
   position: absolute;
   left: 0;
   top: 0;
-  width: 1080px;
-  height: 1920px;
+  width: 360px;
+  height: 640px;
+  transform: scale(3);
+  transform-origin: 0 0;
   display: block;
   image-rendering: crisp-edges;
   image-rendering: pixelated;

@@ -22,7 +22,7 @@
   /* It appears as the big machine's shrink lands in this corner (Reel.tsx, 0.38 s): a smooth fade and
      a small settle, timed to the copy's landing. */
   transform-origin: 50% 50%;
-  animation: miniIn 0.22s cubic-bezier(0.2, 0.8, 0.3, 1) 0.24s both;
+  animation: miniIn 0.22s cubic-bezier(0.2, 0.8, 0.3, 1) 0.24s backwards;
 }
 @keyframes miniIn {
   from {

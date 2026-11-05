@@ -30,7 +30,7 @@
 }
 /* It leaves its tile as a white flash, then shows its colors. */
 .flight[data-phase='lift'] .art {
-  animation: liftFlash 150ms both;
+  animation: liftFlash 150ms backwards;
 }
 @keyframes liftFlash {
   0% { filter: brightness(0) invert(1); animation-timing-function: steps(1, end); }
@@ -72,7 +72,6 @@
   height: calc(var(--size) * 2.8);
   left: calc(var(--size) * -1.4);
   top: calc(var(--size) * -1.4);
-  background-size: 100% 100%;
   animation: raysTurn 6s linear infinite;
 }
 @keyframes raysTurn {
@@ -114,7 +113,7 @@
   box-shadow: var(--pixel-edge), 0 0 0 calc(2 * var(--px)) var(--hi);
   font-family: var(--font-display);
   color: #fff;
-  animation: powerIn 0.3s both;
+  animation: powerIn 0.3s backwards;
 }
 .powerDown {
   --hi: #ff6b6b;
@@ -128,7 +127,7 @@
 }
 /* The count lands: the box hops a pixel and its edge flashes white. */
 .powerLanded {
-  animation: powerHop 0.3s both;
+  animation: powerHop 0.3s backwards;
 }
 @keyframes powerHop {
   0% { transform: translateY(calc(-2 * var(--px))); box-shadow: var(--pixel-edge), 0 0 0 calc(2 * var(--px)) #fff; animation-timing-function: steps(1, end); }
@@ -172,7 +171,7 @@
 }
 .powerDiff[data-on] {
   visibility: visible;
-  animation: diffPop 0.28s both;
+  animation: diffPop 0.28s backwards;
 }
 @keyframes diffPop {
   0% { transform: translateY(calc(3 * var(--px))); animation-timing-function: steps(1, end); }

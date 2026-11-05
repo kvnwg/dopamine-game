@@ -70,6 +70,8 @@ export function worldThumb(world: number, kind: ThumbKind): Art {
   const src = full;
   a = { url: pixelUrl(`worldThumb:${key}`, () => crop(src, x, top, w, h), 1), w, h };
   made.set(key, a);
+  // Both previews made: the whole composed world (100+ KB) isn't needed any more.
+  if (made.has(`card:${world}`) && made.has(`popup:${world}`)) composed.delete(world);
   return a;
 }
 
@@ -84,10 +86,16 @@ function pump(): void {
   }
   const key = next.value;
   const [kind, world] = key.split(':') as [ThumbKind, string];
-  const a = worldThumb(Number(world), kind);
-  for (const done of waiting.get(key) ?? []) done(a);
-  waiting.delete(key);
-  setTimeout(pump, 16);
+  try {
+    const a = worldThumb(Number(world), kind);
+    for (const done of waiting.get(key) ?? []) done(a);
+  } catch (e) {
+    console.error('world preview failed', key, e);
+  } finally {
+    // (One failing preview never stops the rest.)
+    waiting.delete(key);
+    setTimeout(pump, 16);
+  }
 }
 
 /** A world's preview, made in the background (null until it is ready). */

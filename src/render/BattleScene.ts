@@ -25,7 +25,7 @@
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
 import {
-  battleMaxHp, battleStats, chainFloor, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, runEffects, worldDef, type CoreEvent, type CrewHelper,
+  battleMaxHp, battleStats, chainFloor, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, rarityIndex, runEffects, tokenMult, worldDef, type CoreEvent, type CrewHelper,
   type GameState, type Item,
 } from '../core';
 import { bus } from '../app/eventBus';
@@ -41,7 +41,7 @@ import {
   shadowTex, texOrigin, texSize, weaponTex, worldTextures, type FoeTex, type WorldKeys,
 } from './textures';
 import { SLAM_FROM, SLAM_HEIGHT, slamAnchor, slamBridge } from './equipSlam';
-import { multOf, reelStops, tokenStops } from '../ui/reelTiming';
+import { comboOf, reelStops, tokenStops } from '../ui/reelTiming';
 import { tokenKey } from '../ui/tokenFx';
 import { luckBridge, luckRowsOf, luckSlot, TOKEN_FLIGHT_MS } from './luckRows';
 import { P, toCanvas } from './pixel';
@@ -68,13 +68,33 @@ interface LuckChain {
   total: PixelText | null;
   /** The rarity a big chain guarantees, under the total. */
   floor: PixelText | null;
-  /** The reel's tokens, and the steps that count squared (every reel matched them). */
+  /** The reel's tokens; every reel's (for combos); which reel; the combo steps it has counted so far. */
   mults: readonly number[];
-  squared: number[];
+  all: ReadonlyArray<readonly number[]>;
+  reel: number;
+  combos: number[];
   row: number;
   y: number;
   /** Its reel has landed its item: the row is on its way out. */
   done: boolean;
+  /** The best rarity its total has guaranteed so far (crossing a new one is celebrated). */
+  floorSeen?: string | null;
+}
+
+/**
+ * A luck row's total gets bigger and brighter as it stacks up (Kevin: a playtester "didn't notice
+ * the tiers stack ... esp when it gets to a higher number"): green, blue from ×10, then in the huge
+ * face purple from ×25 (an Epic or better guaranteed), gold from ×50 (Legendary or better) and rainbow
+ * from ×250 (Mythic or better). Matched (squared) rows stay gold.
+ */
+function luckTotalStyle(mult: number, gold: boolean): { face: 'big' | 'huge'; fill: string[] } {
+  const face = mult >= 25 ? 'huge' : 'big';
+  if (gold) return { face, fill: ['#fffbe0', '#ffd84a'] };
+  if (mult >= 250) return { face, fill: ['#ff6b6b', '#ffc233', '#7dff9a', '#5ad1ff', '#e48bff'] };
+  if (mult >= 50) return { face, fill: ['#fff7b0', '#ffc233', '#ff8a00'] };
+  if (mult >= 25) return { face, fill: ['#fbefff', '#d29bff', '#8a3ff0'] };
+  if (mult >= 10) return { face, fill: ['#e6f9ff', '#5ad1ff'] };
+  return { face, fill: ['#d8ffd0', '#46d36b'] };
 }
 export const BATTLE_H = VIEW.h * P;
 /** The ground line: the bottom edge of the view row fighters stand on (y 828). */
@@ -1764,9 +1784,10 @@ export class BattleScene extends Phaser.Scene {
     const delay = this.reduceMotion ? 0 : TOKEN_FLIGHT_MS;
     const chains: LuckChain[] = [];
     const match = new Set(tokenStops(e).filter((tk) => tk.match).map((tk) => `${tk.reel}:${tk.step}`));
+    const all = e.reels.map((r) => r.mults);
     e.reels.forEach((r, i) => {
       if (rows[i] < 0) return;
-      const chain: LuckChain = { tokens: [], total: null, floor: null, mults: r.mults, squared: [], row: rows[i], y: luckSlot(rows[i], 0, 1).y, done: false };
+      const chain: LuckChain = { tokens: [], total: null, floor: null, mults: r.mults, all, reel: i, combos: [], row: rows[i], y: luckSlot(rows[i], 0, 1).y, done: false };
       chains.push(chain);
       reelStops(e, i).forEach((st, j) => {
         if (st.token === null) {
@@ -1777,8 +1798,8 @@ export class BattleScene extends Phaser.Scene {
         const key = tokenKey(r.item.uid, j);
         this.luckPending.set(key, () => {
           this.addLuckToken(chain, j);
-          // The last of a matched step's tokens squares it on every row.
-          if (match.has(`${i}:${j}`)) this.time.delayedCall(70, () => this.squareLuck(chains, j));
+          // The last of a combo's tokens to land: every row in it now counts the whole combo.
+          if (match.has(`${i}:${j}`)) this.time.delayedCall(70, () => this.comboLuck(chains, j, e));
         });
         this.time.delayedCall(st.at + delay + 250, () => this.landLuck(key));
       });
@@ -1813,7 +1834,9 @@ export class BattleScene extends Phaser.Scene {
         this.time.delayedCall(70, () => img.active && img.clearTint());
       }
     }
-    this.bits.burst(12 + step * 6, at.x, chain.y, { speed: [30, 90], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
+    // More bits the higher the stack.
+    const mult = tokenMult(chain.all, chain.reel, chain.combos, n);
+    this.bits.burst(12 + step * 6 + Math.round(8 * Math.log10(Math.max(1, mult))), at.x, chain.y, { speed: [30, 90], life: [260, 520], drag: 2.2, colors: [0xffffff, 0x8dff8a, 0x46d36b], fade: [0x2fb150], sizes: [2, 1] });
     // A small kick, as gentle as a blow's (Kevin wanted the token slams' shake gentle).
     this.shake(160, P / BATTLE_W, 1);
     this.drawLuckTotal(chain);
@@ -1823,38 +1846,60 @@ export class BattleScene extends Phaser.Scene {
   private drawLuckTotal(chain: LuckChain, gold = false) {
     const n = chain.tokens.length;
     if (!n) return;
-    const mult = multOf(chain.mults.slice(0, n), chain.squared);
+    const mult = tokenMult(chain.all, chain.reel, chain.combos, n);
     chain.total?.destroy();
     chain.floor?.destroy();
     chain.floor = null;
     const last = luckSlot(chain.row, n - 1, n);
-    const fill = gold ? ['#fffbe0', '#ffd84a'] : ['#d8ffd0', '#46d36b'];
-    const total = this.texts.add(`×${formatNumber(mult)} ${t('battle.luck')}`, { face: 'big', fill, shadow: true }).setDepth(44);
-    const tx = snap(last.x + 9 * P + (total.artW * P) / 2);
+    const look = luckTotalStyle(mult, gold);
+    // (In the huge face the number says it all: "×625", not "×625 LUCK", so a long one still fits.)
+    const label = look.face === 'huge' ? `×${formatNumber(mult)}` : `×${formatNumber(mult)} ${t('battle.luck')}`;
+    const total = this.texts.add(label, { face: look.face, fill: look.fill, shadow: true }).setDepth(44);
+    // After its tokens, but never past the view's right edge.
+    const tx = snap(Math.min(last.x + 9 * P + (total.artW * P) / 2, BATTLE_W - 3 * P - (total.artW * P) / 2));
     total.place(tx, chain.y);
     if (!this.reduceFlashing) {
       total.setFlash(true);
-      this.time.delayedCall(80, () => total.active && total.setFlash(false));
+      this.time.delayedCall(look.face === 'huge' ? 140 : 80, () => total.active && total.setFlash(false));
+    }
+    // A big total pops in from above (whole pixels).
+    if (look.face === 'huge' && !this.reduceMotion) {
+      [3, 1, 0].forEach((d, k) => this.time.delayedCall(k * 40, () => total.active && total.place(tx, chain.y - d * P)));
     }
     chain.total = total;
     const floor = chainFloor(mult);
     if (floor) {
-      const tag = this.texts.add(t('reel.tokenFloor', { rarity: t(`rarity.${floor}`).toUpperCase() }), { face: 'small', fill: rarityColor(floor), shadow: true }).setDepth(44);
-      tag.place(tx, chain.y + 8 * P);
+      const tag = this.texts.add(t('reel.tokenFloorShort', { rarity: t(`rarity.${floor}`).toUpperCase() }), { face: 'big', fill: rarityColor(floor), shadow: true }).setDepth(44);
+      tag.place(snap(Math.min(tx, BATTLE_W - 3 * P - (tag.artW * P) / 2)), chain.y + 9 * P);
       chain.floor = tag;
+      // A new guarantee reached: a burst in its color, a harder kick, its chime.
+      if (chain.floorSeen !== floor) {
+        chain.floorSeen = floor;
+        const c = Phaser.Display.Color.HexStringToColor(rarityColor(floor)).color;
+        this.bits.burst(40, tx, chain.y, { speed: [60, 160], life: [380, 760], drag: 2, colors: [0xffffff, c], fade: [c], sizes: [2, 1] });
+        this.shake(240, (2 * P) / BATTLE_W, 1);
+        audio.tierPass(rarityIndex(floor as Rarity));
+        haptics.impact('heavy');
+        if (!this.reduceFlashing) {
+          tag.setFlash(true);
+          [120, 240, 360].forEach((ms, k) => this.time.delayedCall(ms, () => tag.active && tag.setFlash(k % 2 === 1)));
+        }
+      }
     }
   }
 
   /**
-   * Every reel landed the same token at `step` (Kevin: "if u have multiple rows spinning and they all
-   * land on the same multiplier, u need to square the luck"): it counts squared on every row now.
+   * Two or more reels landed a token together at `step` (Kevin: "if two numbers both land on a
+   * multiplier, create an animation for it and make the multiplier those two numbers combined"):
+   * every row in it now counts the product, x2 and x5 making x10 on both.
    */
-  private squareLuck(chains: readonly LuckChain[], step: number) {
+  private comboLuck(chains: readonly LuckChain[], step: number, e: Extract<CoreEvent, { type: 'spinStart' }>) {
     if (!this.sys.isActive()) return;
-    const live = chains.filter((c) => !c.done && c.tokens.length > step);
+    const live = chains.filter((c) => !c.done && c.mults.length > step && c.tokens.length > step);
     if (!live.length) return;
+    const combo = comboOf(e, step);
     for (const c of live) {
-      if (!c.squared.includes(step)) c.squared.push(step);
+      if (!c.combos.includes(step)) c.combos.push(step);
       const tk = c.tokens[step];
       if (tk && !this.reduceFlashing) {
         tk.setTintFill(0xffe680);
@@ -1864,20 +1909,29 @@ export class BattleScene extends Phaser.Scene {
       this.drawLuckTotal(c, true);
     }
     this.shake(260, (2 * P) / BATTLE_W, 1);
-    // "MATCH!" under the rows: it pops in flashing, holds, then lifts away in steps.
+    // "COMBO! ×10" under the rows, the sum that made it under that ("×2 × ×5"): it pops in flashing,
+    // holds, then lifts away in steps.
     const y = Math.max(...live.map((c) => c.y)) + 17 * P;
-    const text = this.texts.add(t('battle.luckMatch'), { face: 'big', fill: ['#ffffff', '#fff28c', '#ffc233', '#ff9a1a'], shadow: true }).setDepth(45);
-    text.place(snap(BATTLE_W / 2), y + (this.reduceMotion ? 0 : 3 * P));
+    const text = this.texts.add(t('battle.luckCombo', { x: formatNumber(combo.product) }), { face: 'big', fill: ['#ffffff', '#fff28c', '#ffc233', '#ff9a1a'], shadow: true }).setDepth(45);
+    const sum = this.texts.add(combo.values.map((v) => `×${v}`).join(' × '), { face: 'small', fill: ['#fff7d0', '#ffd23f'], shadow: true }).setDepth(45);
+    const place = (d: number) => {
+      if (text.active) text.place(snap(BATTLE_W / 2), y + d * P);
+      if (sum.active) sum.place(snap(BATTLE_W / 2), y + (d + 9) * P);
+    };
+    place(this.reduceMotion ? 0 : 3);
     if (!this.reduceFlashing) {
       text.setFlash(true);
       this.time.delayedCall(90, () => text.active && text.setFlash(false));
     }
-    if (!this.reduceMotion) [2, 1, 0].forEach((d, k) => this.time.delayedCall(40 + k * 40, () => text.active && text.place(snap(BATTLE_W / 2), y + d * P)));
+    if (!this.reduceMotion) [2, 1, 0].forEach((d, k) => this.time.delayedCall(40 + k * 40, () => place(d)));
     [0.66, 0.33, 0].forEach((a, k) =>
-      this.time.delayedCall(1500 + k * 90, () => {
-        if (!text.active) return;
-        if (!a) text.destroy();
-        else text.setAlpha(a).place(snap(BATTLE_W / 2), y - (k + 1) * P);
+      this.time.delayedCall(1700 + k * 90, () => {
+        for (const tx of [text, sum]) {
+          if (!tx.active) continue;
+          if (!a) tx.destroy();
+          else tx.setAlpha(a);
+        }
+        place(-(k + 1));
       }),
     );
   }

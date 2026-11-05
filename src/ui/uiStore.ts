@@ -22,7 +22,7 @@ export interface TokenFlightState {
   step: number;
 }
 
-export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll';
+export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll' | 'save' | 'admin';
 export type Tab = 'alley' | 'heist' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
 export interface RollView {
@@ -60,7 +60,7 @@ export interface Toast {
   tone: 'good' | 'info' | 'warn';
 }
 
-interface UiState {
+export interface UiState {
   tab: Tab;
   popup: PopupKind | null;
   /** Item uid (bag or equipped) for the detail popup, or the world number for the world popup. */
@@ -92,8 +92,11 @@ interface UiState {
   mapView: { x: number; y: number; k: number } | null;
   /** The dev cheat panel is open (playtest builds; opened from Settings). */
   devOpen: boolean;
+  /** A full-screen moment covers the whole stage (App.tsx): the battle stops drawing (BattlePanel.tsx). */
+  blackout: boolean;
   /** A big Scrap All haul being celebrated. */
-  haul: { id: number; coins: number; minutes: number; count: number; size: HaulSize } | null;
+  /** `usual`: what a usual haul of the run is worth now (null for the game's first haul). */
+  haul: { id: number; coins: number; usual: number | null; count: number; size: HaulSize } | null;
   /** Bumped when coins land on the gold counter (it pulses). */
   goldPulse: number;
   /**
@@ -135,6 +138,7 @@ export const useUi = create<UiState>((set) => ({
   perkSel: '',
   prevTab: 'alley',
   mapView: null,
+  blackout: false,
   haul: null,
   goldPulse: 0,
   afterBoss: null,

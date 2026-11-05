@@ -11,15 +11,18 @@ import { rarityColor } from '../../render/art';
 import { sparkleArt, UI_PX } from '../../render/icons';
 import { audio } from '../../services/audio';
 import { revealLanded, skipReveal } from '../rollController';
-import { DRAMA_LEVEL, revealPhases } from '../revealTiming';
+import { DRAMA_LEVEL, HYPER_LOCK_MS, revealPhases } from '../revealTiming';
 import { stagePoint } from '../drag';
 import { RAINBOW, raysUrl } from '../rays';
+import { Rays } from './Rays';
 import { t } from '../i18n';
 import { stageSize, useUi, type RollView } from '../uiStore';
 import { enchantLabel, fmtOdds } from './AlleyPanel';
 import { Chunky, type Grad } from './Chunky';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { CoinIcon } from './Icons';
+import { HyperBands, HyperFx, type HyperHandle, type RevealClock } from './HyperFx';
+import { haptics } from '../../services/haptics';
 import { PixelArt } from './PixelArt';
 import s from './overlays.module.css';
 
@@ -123,6 +126,54 @@ function Sparkles({ n }: { n: number }) {
   );
 }
 
+/** `hex` mixed with white (`w` of white), as CSS color-mix(in srgb, hex, #fff w) would. */
+function mixWhite(hex: string, w: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.round(v + (255 - v) * w);
+  return `rgb(${ch((n >> 16) & 255)}, ${ch((n >> 8) & 255)}, ${ch(n & 255)})`;
+}
+
+/**
+ * The landing's shock wave: a one-art-pixel square ring growing from the item to 1512 px and fading,
+ * in 16 steps over 0.72 s, then gone. Drawn on a canvas of one pixel per art pixel (scaled up crisp):
+ * as a growing bordered box it was a layer as big as itself, redrawn every step, and stayed after.
+ */
+function ShockRing({ color }: { color: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c?.getContext('2d');
+    if (!c || !ctx) return;
+    const t0 = performance.now();
+    let raf = 0;
+    let shown = -1;
+    const frame = (now: number) => {
+      const k = Math.min(15, Math.floor(((now - t0) / SHOCK_MS) * 16));
+      if (k !== shown) {
+        shown = k;
+        ctx.clearRect(0, 0, SHOCK_ART, SHOCK_ART);
+        const size = Math.max(2, Math.round((108 + (SHOCK_ART * UI_PX - 108) * (k / 16)) / UI_PX));
+        const o = Math.floor((SHOCK_ART - size) / 2);
+        ctx.globalAlpha = 1 - k / 16;
+        ctx.fillStyle = color;
+        ctx.fillRect(o, o, size, 1);
+        ctx.fillRect(o, o + size - 1, size, 1);
+        ctx.fillRect(o, o, 1, size);
+        ctx.fillRect(o + size - 1, o, 1, size);
+      }
+      if (now - t0 < SHOCK_MS) raf = requestAnimationFrame(frame);
+      else setDone(true);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [color]);
+  return done ? null : <canvas ref={ref} className={s.shock} width={SHOCK_ART} height={SHOCK_ART} aria-hidden />;
+}
+const SHOCK_MS = 720;
+/** The ring's canvas in art pixels (1512 stage px across at the end). */
+const SHOCK_ART = 252;
+
 /** The reveal's light starts no higher than Shiny's blue, so it never gives the ceiling away. */
 const GLOW_START = RARITIES.indexOf('shiny');
 
@@ -134,6 +185,10 @@ const GLOW_START = RARITIES.indexOf('shiny');
  * rays, shock ring) starts at a low tier's color and flickers up tier by tier with the counter, so it
  * only reaches the item's own color as the odds land. A tutorial roll (the first find, beginner's
  * luck) gets its own banner over the title. Tap skips to the result; tap again closes it.
+ *
+ * HYPER RARE (the rarest find of the whole game, luck.ts judgeFinds) plays the same reveal on a longer
+ * clock inside its own showcase (HyperFx): warning bands and a summoning that can't be skipped for its
+ * first HYPER_LOCK_MS, a burst the item rises out of, fireworks through the count, and its own banner.
  */
 function RareReveal({ view }: { view: RollView }) {
   const calm = useGame((g) => g.settings.reduceMotion);
@@ -142,6 +197,11 @@ function RareReveal({ view }: { view: RollView }) {
   const drama = view.drama ?? 'big';
   const lvl = DRAMA_LEVEL[drama];
   const ph = useMemo(() => revealPhases(drama, calm), [drama, calm]);
+  const hyper = drama === 'hyper';
+  const clock = useRef<RevealClock>({ t0: performance.now(), offset: 0 });
+  const fx = useRef<HyperHandle | null>(null);
+  // HYPER RARE can't be skipped at first; the hint shows once it can.
+  const [locked, setLocked] = useState(hyper);
   const it = view.item;
   const itemTier = RARITIES.indexOf(it.rarity);
   const [phase, setPhase] = useState<Phase>('black');
@@ -150,17 +210,19 @@ function RareReveal({ view }: { view: RollView }) {
   const skip = useRef(false);
   const phaseRef = useRef<Phase>('black');
   const rootRef = useRef<HTMLDivElement>(null);
-  const raysRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const raysRefs = useRef<(HTMLImageElement | null)[]>([]);
   // The light's tier (climbs with the counter); the rays follow once a step has settled.
   const glowRef = useRef(Math.min(itemTier, GLOW_START));
   const raysTierRef = useRef(glowRef.current);
   // The counter climbs through every tier from Decent up to the item's own.
   const ladder = useMemo(() => RARITIES.filter((r) => r !== 'junk' && rarityAtLeast(it.rarity, r)), [it.rarity]);
-  // The biggest deals end on rainbow rays; until then the rays take the light's color.
-  const raysFor = (k: number) => (drama === 'insane' && k >= itemTier ? raysUrl(RAINBOW, 24, 0.5) : raysUrl([rarityColor(RARITIES[k])]));
+  // The biggest deals end on rainbow rays (HYPER RARE's are rainbow all along); until then the rays take the light's color.
+  const raysFor = (k: number) =>
+    hyper || (drama === 'insane' && k >= itemTier) ? raysUrl(RAINBOW, 24, 0.5) : raysUrl([rarityColor(RARITIES[k])]);
 
   useEffect(() => {
     const t0 = performance.now();
+    clock.current = { t0, offset: 0 };
     const tDark = ph.black;
     const tAppear = tDark + ph.dark;
     const tCount = tAppear + ph.appear;
@@ -178,17 +240,39 @@ function RareReveal({ view }: { view: RollView }) {
     let glowShown = -1;
     // Draw each tier's rays ahead of time in the dark, one per frame (rays.ts caches them).
     const pending = ladder.map((r) => RARITIES.indexOf(r)).filter((k) => k >= glow);
-    audio.blackout();
+    let stillLocked = hyper;
+    let dropped = false;
+    let boomed = false;
+    if (hyper) audio.hyperIntro(tAppear / 1000);
+    else audio.blackout();
     const step = () => {
       if (skip.current) {
         skip.current = false;
         offset = Math.max(offset, tLand - (performance.now() - t0));
+        clock.current.offset = offset;
       }
       const el = performance.now() - t0 + offset;
+      if (stillLocked && performance.now() - t0 >= HYPER_LOCK_MS) {
+        stillLocked = false;
+        setLocked(false);
+      }
+      // A breath of silence right before HYPER RARE bursts, then the boom.
+      if (hyper && !dropped && el >= tAppear - 130) {
+        dropped = true;
+        audio.silenceDrop(0.12);
+      }
+      if (hyper && !boomed && el >= tAppear) {
+        boomed = true;
+        audio.hyperBoom();
+        [0, 110, 220].forEach((ms) => setTimeout(() => haptics.impact('heavy'), ms));
+      }
       const next: Phase = el < tDark ? 'black' : el < tAppear ? 'dark' : el < tCount ? 'appear' : el < tLand ? 'count' : 'landed';
       if ((next === 'black' || next === 'dark') && pending.length) raysFor(pending.shift()!);
       if (next === 'black' || next === 'dark') {
-        while (beats < ph.beats && el >= tDark + (beats * ph.dark) / ph.beats) audio.heartbeat(beats++);
+        while (beats < ph.beats && el >= tDark + (beats * ph.dark) / ph.beats) {
+          audio.heartbeat(beats++);
+          if (hyper) haptics.impact(beats > ph.beats - 2 ? 'medium' : 'light');
+        }
       }
       // The light climbs with the counter's tier (never past the item's own), and lands on the item's.
       const reachedTier = next === 'landed' ? itemTier : next === 'count' ? Math.max(RARITIES.indexOf(shownTier), glow) : glow;
@@ -206,9 +290,9 @@ function RareReveal({ view }: { view: RollView }) {
       }
       if (el - glowAt >= 180 && raysTierRef.current !== glow) {
         raysTierRef.current = glow;
-        const url = `url(${raysFor(glow)})`;
+        const url = raysFor(glow);
         raysRefs.current.forEach((r) => {
-          if (r) r.style.backgroundImage = url;
+          if (r && r.getAttribute('src') !== url) r.src = url;
         });
       }
       if (next !== cur) {
@@ -236,7 +320,11 @@ function RareReveal({ view }: { view: RollView }) {
         if (reached !== shownTier) {
           shownTier = reached;
           setTier(reached);
-          if (next === 'count') audio.tierPass(rarityIndex(reached));
+          if (next === 'count') {
+            audio.tierPass(rarityIndex(reached));
+            // HYPER RARE: a firework in each tier's color as the counter passes it.
+            fx.current?.firework(rarityColor(reached));
+          }
         }
       }
       // After the landing it runs on until the light's last step has flickered and settled.
@@ -248,6 +336,8 @@ function RareReveal({ view }: { view: RollView }) {
   }, [view.id]);
 
   const tap = () => {
+    // HYPER RARE's summoning plays out whatever (Kevin: "unskippable ... at least for the first 2 seconds").
+    if (hyper && performance.now() - clock.current.t0 < HYPER_LOCK_MS) return;
     if (phaseRef.current === 'landed') skipReveal();
     else skip.current = true;
   };
@@ -257,44 +347,54 @@ function RareReveal({ view }: { view: RollView }) {
   const landed = phase === 'landed';
   const forYou = landed && luck >= 1.2 && view.luckOdds < view.odds;
   // The light's color right now (the effect steps it up the tiers straight on the DOM).
-  const raysNow = `url(${raysFor(raysTierRef.current)})`;
+  const raysNow = raysFor(raysTierRef.current);
   const banner = view.scripted === 'beginner' ? t('reveal.beginner') : view.scripted === 'first' ? t('reveal.firstFind') : null;
   return (
     <div
       ref={rootRef}
       className={s.rare}
+      data-keep-lit
       data-phase={phase}
       data-drama={drama}
       data-calm={calm || undefined}
+      data-noflash={noFlash || undefined}
       onClick={tap}
       style={{ ['--c' as string]: rarityColor(RARITIES[Math.min(itemTier, GLOW_START)]), ['--appear' as string]: `${ph.appear}ms` } as CSSProperties}
     >
       <div className={s.rareBlack} />
-      {!lit && !calm && <Motes n={[14, 22, 32][lvl]} ms={ph.black + ph.dark + ph.appear} />}
-      {phase === 'dark' && <div className={s.rareSpark} />}
+      {!lit && !calm && !hyper && <Motes n={[14, 22, 32, 40][lvl]} ms={ph.black + ph.dark + ph.appear} />}
+      {phase === 'dark' && !hyper && <div className={s.rareSpark} />}
       {lit && <div className={s.rareGlow} />}
       {lit && !calm && (
-        <div
+        <Rays
           className={s.rays}
-          ref={(el) => {
+          url={raysNow}
+          imgRef={(el) => {
             raysRefs.current[0] = el;
           }}
-          style={{ backgroundImage: raysNow }}
         />
       )}
       {lit && !calm && lvl > 0 && (
-        <div
+        <Rays
           className={`${s.rays} ${s.raysBack}`}
-          ref={(el) => {
+          url={raysNow}
+          imgRef={(el) => {
             raysRefs.current[1] = el;
           }}
-          style={{ backgroundImage: raysNow }}
         />
       )}
-      {landed && !calm && <Confetti n={[30, 44, 60][lvl]} />}
-      {landed && !calm && <div className={s.shock} />}
+      {landed && !calm && !hyper && <Confetti n={[30, 44, 60, 70][lvl]} />}
+      {landed && !calm && !hyper && <ShockRing color={mixWhite(rarityColor(it.rarity), 0.3)} />}
+      {/* (After the rays, which are layers anyway, and under the item: nothing more needs a layer of its own over it.) */}
+      {hyper && <HyperFx clock={clock} ph={ph} color={rarityColor(it.rarity)} calm={calm} noFlash={noFlash} fxRef={fx} />}
+      {hyper && (phase === 'black' || phase === 'dark') && <HyperBands words={t('reveal.hyperBand')} />}
       <div className={s.center}>
         <div className={s.rareTitle}>
+          {landed && hyper && (
+            <div className={s.hyperBanner}>
+              <Chunky text={t('reveal.hyper')} size={96} grad="rainbow" />
+            </div>
+          )}
           {landed && banner && (
             <div className={s.scriptedBanner}>
               <Chunky text={banner} size={72} grad="gold" />
@@ -310,7 +410,7 @@ function RareReveal({ view }: { view: RollView }) {
           <div className={`${s.rareItem} ${lit ? s.rareLit : ''}`}>
             <ItemIcon item={it} scale={3} showOdds={false} />
             {lit && <span className={s.glint} />}
-            {lit && !calm && <Sparkles n={[6, 9, 12][lvl]} />}
+            {lit && !calm && <Sparkles n={[6, 9, 12, 14][lvl]} />}
           </div>
         )}
         {lit && (
@@ -326,11 +426,12 @@ function RareReveal({ view }: { view: RollView }) {
         {landed && (
           <>
             <span className={s.name}>{itemName(it)}</span>
+            {hyper && <span className={s.hyperSub}>{t('reveal.hyperSub')}</span>}
             {forYou && <span className={s.forYou}>{t('reveal.forYou', { odds: fmtOdds(view.luckOdds) })}</span>}
             <div className={s.tags}>
               {view.golden && <span className={`${s.tag} ${s.tagGold}`}>{t('reel.golden')}</span>}
               {view.lucky && <span className={`${s.tag} ${s.tagLucky}`}>{t('reveal.lucky')}</span>}
-              {view.newRecord && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
+              {view.newRecord && !hyper && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
             </div>
             {it.enchants.length > 0 && (
               <div className={s.enchants}>
@@ -347,9 +448,11 @@ function RareReveal({ view }: { view: RollView }) {
           </>
         )}
       </div>
-      {phase === 'appear' && !noFlash && <div className={s.flashLate} />}
+      {phase === 'appear' && !noFlash && !hyper && <div className={s.flashLate} />}
       {lit && !noFlash && <div key={phase} className={s.flash} />}
-      <span className={s.tap}>{landed ? (view.placed === 'bag' ? t('reveal.dragHint') : t('reveal.tap')) : t('reveal.skip')}</span>
+      {!locked && (
+        <span className={`${s.tap} ${hyper ? s.tapNow : ''}`}>{landed ? (view.placed === 'bag' ? t('reveal.dragHint') : t('reveal.tap')) : t('reveal.skip')}</span>
+      )}
     </div>
   );
 }
@@ -412,12 +515,13 @@ function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['h
       };
     });
   }, [lvl]);
-  const mins = Math.round(haul.minutes);
-  const worth = mins >= 120 ? t('haul.hours', { n: Math.round(haul.minutes / 6) / 10 }) : t('haul.minutes', { n: mins });
+  // Against the run's usual haul (haul.ts judgeHaul): "That's 4.2× your usual haul!".
+  const times = haul.usual ? haul.coins / haul.usual : 0;
+  const worth = times > 0 ? t('haul.usual', { x: times >= 10 ? formatNumber(Math.round(times)) : times.toFixed(1) }) : t('haul.first');
   return (
-    <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })}>
+    <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })} data-keep-lit>
       <div className={s.haulBack} />
-      {!calm && <div className={s.haulRays} style={{ backgroundImage: `url(${raysUrl(['#ffd23f'], 18, 0.42)})` }} />}
+      {!calm && <Rays className={s.haulRays} url={raysUrl(['#ffd23f'], 18, 0.42)} />}
       <div className={s.haulCenter}>
         <div className={s.title}>
           <Chunky text={t(`haul.${haul.size}`)} size={[100, 112, 128][lvl]} grad="gold" />
@@ -457,9 +561,9 @@ function RebirthFx() {
   const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
   if (n === null) return null;
   return (
-    <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties}>
+    <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties} data-keep-lit>
       <div className={s.backdrop} />
-      <div className={s.rays} style={{ backgroundImage: `url(${raysUrl(['#c48bff'])})` }} />
+      <Rays className={s.rays} url={raysUrl(['#c48bff'])} />
       <Confetti n={40} />
       <div className={s.center}>
         <Chunky text={t('rebirth.done', { n })} size={124} grad="purple" className={s.title} />

@@ -21,7 +21,8 @@ import { registerCodex } from './codex';
 import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
-import { currentLuck, itemOddsOneIn, luckyEvery, rollRarity, spinBuildsUp } from './luck';
+import { currentLuck, itemOddsOneIn, judgeFinds, luckyEvery, rollRarity } from './luck';
+import { judgeHaul } from './haul';
 import { perkBagMult, perkFx, perkSpinMult, rigSpin } from './perks';
 import { addXp } from './progression';
 import { rebirthGoldMult } from './rebirth';
@@ -276,32 +277,41 @@ export function tokenStepSeconds(baseSpinSeconds: number): number {
 }
 
 /**
- * A reel's luck multiplier from its tokens: their product, a matched step's token counting squared
- * (matchedSteps). 1 without any.
+ * The token steps (rounds) at which two or more reels of a spin land a luck token together: a combo.
+ * Each of those reels counts the product of all that step's tokens, so x2 and x5 make x10 on both,
+ * and three at once multiply all three (Kevin: "if two numbers both land on a multiplier ... make the
+ * multiplier those two numbers combined"). `all` is every reel's tokens in landing order. (It used to
+ * take every reel landing the same token, which counted squared: x5 x5 is still x25 on both.)
  */
-export function tokenMult(mults: readonly number[], matched: readonly number[] = []): number {
-  return mults.reduce((a, x, k) => a * (matched.includes(k) ? x * x : x), 1);
-}
-
-/**
- * The token steps at which every reel of a spin (two or more) lands the same luck token: those
- * tokens count squared on every reel, x5 x5 x5 giving each reel x25 (Kevin: "if u have multiple rows
- * spinning and they all land on the same multiplier, u need to square the luck"). `mults` is each
- * reel's tokens in landing order; a step only counts while every reel is still landing tokens.
- */
-export function matchedSteps(mults: ReadonlyArray<readonly number[]>): number[] {
+export function comboSteps(all: ReadonlyArray<readonly number[]>): number[] {
   const out: number[] = [];
-  if (mults.length < 2) return out;
-  const steps = Math.min(...mults.map((m) => m.length));
-  for (let k = 0; k < steps; k++) if (mults.every((m) => m[k] === mults[0][k])) out.push(k);
+  const steps = Math.max(0, ...all.map((m) => m.length));
+  for (let k = 0; k < steps; k++) if (all.filter((m) => m.length > k).length >= 2) out.push(k);
   return out;
 }
 
+/** The product of every reel's token at step `k` (what each of them counts for when it's a combo). */
+export function comboValue(all: ReadonlyArray<readonly number[]>, k: number): number {
+  return all.reduce((a, m) => (m.length > k ? a * m[k] : a), 1);
+}
+
 /**
- * Starts a spin: rolls every reel's result. A Trash Bag, if there is one, pays for a faster turbo spin,
- * unless the spin builds up to a rare find (spinBuildsUp): then it runs at normal speed so its riser and
- * glow can play out, and the bag waits for the next spin (Kevin: "turbo rolls should get slowed down if
- * ur gonna play ramp up music").
+ * Reel `reel`'s luck multiplier from its tokens (its first `steps` of them; all by default): their
+ * product, each `combos` step counting the whole step's product (comboSteps). 1 without any.
+ */
+export function tokenMult(all: ReadonlyArray<readonly number[]>, reel: number, combos: readonly number[] = [], steps = Infinity): number {
+  const mults = all[reel] ?? [];
+  let x = 1;
+  for (let k = 0; k < Math.min(steps, mults.length); k++) x *= combos.includes(k) ? comboValue(all, k) : mults[k];
+  return x;
+}
+
+/**
+ * Starts a spin: rolls every reel's result, and judges the finds (judgeFinds: which get the full-screen
+ * reveal, how much the spin builds up). A Trash Bag, if there is one, pays for a faster turbo spin,
+ * unless the spin builds up to a rare find: then it runs at normal speed so its riser and glow can
+ * play out, and the bag waits for the next spin (Kevin: "turbo rolls should get slowed down if ur
+ * gonna play ramp up music").
  */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
@@ -320,20 +330,23 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   const rigged = scripted ? null : rigSpin(d);
   const tokenChance = perkFx(d).tokenChanceMult;
   const n = reelCount(d);
-  // Every reel's tokens first: tokens that match on every reel count squared on each (matchedSteps).
+  // Every reel's tokens first: tokens landing together on two or more reels multiply (comboSteps).
   // No tokens on the tutorial spin or on a reel whose rarity is forced (the first, by a debug roll);
-  // dev cheats can force a chain on the first reel, or on all of them.
+  // dev cheats can force a chain on the first reel, on all of them, or each reel's own.
   // (The rolls are made either way, so a forced or scripted reel leaves the rest of the spin's luck as it was.)
   const forced = d.dumpster.forcedTokens;
+  const perReel = d.dumpster.forcedReelTokens;
   const tokens = Array.from({ length: n }, (_, i) => {
     let mults = d.dumpster.firstDiveDone && !(i === 0 && d.dumpster.forcedRarity) ? rollTokens(rng, tokenChance) : [];
     if (forced && (i === 0 || d.dumpster.forcedTokensAll)) mults = [...forced];
+    if (perReel?.[i]) mults = [...perReel[i]];
     if (scripted === 'beginner' && i === 0) mults = [...BAL.tutorial.beginnerTokens];
     return mults;
   });
   d.dumpster.forcedTokens = null;
   d.dumpster.forcedTokensAll = false;
-  const matched = matchedSteps(tokens);
+  d.dumpster.forcedReelTokens = null;
+  const matched = comboSteps(tokens);
   for (let i = 0; i < n; i++) {
     const mults = tokens[i];
     const beginner = scripted === 'beginner' && i === 0;
@@ -341,32 +354,37 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     // Beginner's luck lands in the tutorial item's slot: it upgrades what the raccoon got first.
     const tut = BAL.dumpster.tutorialItem.baseId;
     const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
-    const mult = tokenMult(mults, matched);
+    const mult = tokenMult(tokens, i, matched);
     const floor = higherFloor(chainFloor(mult), rigged);
     const item = rollReelItem(d, rng, luck * mult, dry, slot, beginner ? tut : undefined, floor, scripted === 'first' && i === 0);
     if (beginner) d.dumpster.beginner = { state: 'rolled', uid: item.uid };
     dry = rarityAtLeast(item.rarity, BAL.dumpster.badLuck.minRarity) ? 0 : dry + 1;
     rolled.push({ item, mults });
   }
-  // The finds decide the pace: a build-up (a scripted spin always has one) needs the spin's full length,
-  // and the warm-up spins roll at their own easy pace (the bags wait).
-  const buildsUp = scripted !== null || spinBuildsUp(rolled.map((r) => r.item), currentLuck(d, now));
+  // The finds decide the pace: a build-up (a scripted spin always has one, and its find the reveal)
+  // needs the spin's full length, and the warm-up spins roll at their own easy pace (the bags wait).
+  const judged = judgeFinds(d, rolled.map((r) => r.item), currentLuck(d, now));
+  if (scripted) judged.drama[0] ??= 'big';
+  const buildsUp = scripted !== null || judged.tease > 0 || judged.drama.some((x) => x !== null);
   const turbo = d.currencies.bags >= 1 && !buildsUp && !warmup;
   if (turbo) d.currencies.bags -= 1;
   const cycle = spinCycle(d, turbo);
   const baseSpinSeconds = cycle * spinShare();
   const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
-  const reels = rolled.map((r) => ({
+  const reels = rolled.map((r, i) => ({
     item: r.item, odds: itemOddsOneIn(r.item), mults: r.mults, landAt: baseSpinSeconds + r.mults.length * stepSeconds, landed: false,
+    drama: judged.drama[i],
   }));
   const spinSeconds = Math.max(...reels.map((r) => r.landAt));
-  d.roll.current = { reels, matched, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false, scripted };
+  const tease = judged.tease;
+  d.roll.current = { reels, matched, lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds, landed: false, scripted, tease };
   d.roll.timer = 0;
   ev.push({
     type: 'spinStart',
-    reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt })),
+    reels: reels.map((r) => ({ item: snap(r.item), odds: r.odds, mults: [...r.mults], landAt: r.landAt, drama: r.drama })),
     matched: [...matched],
+    tease,
     lucky, golden, luck, turbo, spinSeconds, baseSpinSeconds, stepSeconds, restSeconds,
     ...(scripted ? { scripted } : {}),
     ...(rigged ? { rigged } : {}),
@@ -400,7 +418,7 @@ function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
   spin.reels.forEach((r, reel) => {
     if (r.landed || (r.landAt ?? spin.spinSeconds) > upTo + 1e-9) return;
     r.landed = true;
-    const mult = tokenMult(r.mults, spin.matched);
+    const mult = tokenMult(spin.reels.map((x) => x.mults), reel, spin.matched);
     const item = snap(r.item);
     d.roll.count += 1;
     dz.totalDives += 1;
@@ -414,7 +432,7 @@ function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
     const placed = decidePlacement(d, item);
     ev.push({
       type: 'roll', item, reel, lucky: spin.lucky, golden: spin.golden, source: spin.turbo ? 'turbo' : 'free', odds: r.odds,
-      luck: spin.luck * mult, mult, placed, newRecord, ...(spin.scripted && reel === 0 ? { scripted: spin.scripted } : {}),
+      luck: spin.luck * mult, mult, placed, newRecord, drama: r.drama ?? null, ...(spin.scripted && reel === 0 ? { scripted: spin.scripted } : {}),
     });
     registerCodex(d, item, ev);
     if (placed === 'bag') addToBag(d, item, ev);
@@ -533,7 +551,7 @@ export function scrapAllFromBag(d: GameState, ev: CoreEvent[], keepUpgrades = fa
   d.inventory = keep;
   d.currencies.coins += coins;
   d.lifetime.itemsRecycled += count;
-  ev.push({ type: 'scrapAll', count, coins, xp });
+  ev.push({ type: 'scrapAll', count, coins, xp, ...judgeHaul(d, coins) });
   addXp(d, xp, ev);
   return count;
 }

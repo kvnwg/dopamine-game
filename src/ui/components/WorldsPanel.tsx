@@ -2,7 +2,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import { DATA } from '../../data';
 import { formatNumber, tutorialOver, worldRewards, worldThreat, type ThreatLevel } from '../../core';
-import { useGame } from '../../app/store';
+import { useGameWhen } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { useWorldThumb } from '../worldThumbs';
@@ -34,7 +34,8 @@ function Thumb({ world }: { world: number }) {
 }
 
 export function WorldsPanel() {
-  const g = useGame((x) => x);
+  // Redrawn when what it shows changes, not with every battle tick.
+  const g = useGameWhen((x) => [x.battle.stage, x.stage, tutorialOver(x), x.equipped, x.player.level, x.upgrades, x.codex.entries.length]);
   const here = g.battle.stage;
   const best = g.stage.highestCleared;
   // Before the first pick (a new game's raccoon waits for it), no threat ratings: at level 1 every world

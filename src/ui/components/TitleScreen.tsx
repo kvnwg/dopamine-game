@@ -97,13 +97,14 @@ function Title({ onClose }: { onClose: () => void }) {
       ref={rootRef}
       className={s.title}
       data-title
+      data-keep-lit
       onClick={play}
       onPointerDown={() => press(true)}
       onPointerUp={() => press(false)}
       onPointerCancel={() => press(false)}
       onPointerLeave={() => press(false)}
     >
-      <canvas ref={canvasRef} className={s.canvas} style={{ width: TITLE.w * P, height: TITLE.h * P }} aria-hidden />
+      <canvas ref={canvasRef} className={s.canvas} style={{ width: (TITLE.w * P) / 3, height: (TITLE.h * P) / 3 }} aria-hidden />
       <h1 className={s.name}>{name}</h1>
       <button
         type="button"

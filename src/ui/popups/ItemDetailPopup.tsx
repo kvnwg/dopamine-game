@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { DATA, SLOTS, type Rarity } from '../../data';
-import { formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
-import { dispatch, useGame } from '../../app/store';
+import { enchantRarity, formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
+import { dispatch, useGameWhen } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { uiBitArt } from '../../render/icons';
 import { haptics } from '../../services';
@@ -20,6 +20,13 @@ function findItem(equipped: Record<string, Item | null>, bag: Item[], uid: numbe
   return { item: bag.find((x) => x.uid === uid) ?? null, equipped: false };
 }
 
+/** "×4", "×1.4", "×118", "×13.3K": how many times rarer. */
+function fmtTimes(x: number): string {
+  return x >= 100 ? formatNumber(Math.round(x)) : x >= 10 ? String(Math.round(x)) : String(Math.round(x * 10) / 10);
+}
+/** The least an enchantment adds (one, of the commonest tier). */
+const ONE_ENCHANT = enchantRarity([{ tier: 1 }]).total;
+
 /** The detail popup's color per rarity. */
 const TONE: Partial<Record<Rarity, 'gold' | 'purple' | 'red' | 'green' | 'blue'>> = {
   decent: 'green', epic: 'purple', legendary: 'gold', mythic: 'red', vintage: 'gold', limited: 'red', prototype: 'blue',
@@ -27,7 +34,8 @@ const TONE: Partial<Record<Rarity, 'gold' | 'purple' | 'red' | 'green' | 'blue'>
 };
 
 export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => void }) {
-  const g = useGame((x) => x);
+  // Redrawn when what it shows changes, not with every battle tick.
+  const g = useGameWhen((x) => [x.inventory, x.equipped, x.upgrades, x.perks, x.rebirths, x.player.level, x.stage, x.battle.stage]);
   const equippedMap = g.equipped;
   const bag = g.inventory;
   const { item, equipped } = findItem(equippedMap, bag, uid);
@@ -45,12 +53,35 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
   const diff = !equipped && cur ? worn(item) - worn(cur) : null;
   const perk = item.mintPerkId ? DATA.mintPerksById.get(item.mintPerkId) : null;
   const scrapGold = scrapValue(g, item).coins;
+  // Its "1 in X" is its tier's odds times its enchantments' (Kevin: "make it obvious that enchantments
+  // make items more rare when someone clicks into an item").
+  const plain = itemOddsOneIn({ rarity: item.rarity, enchants: [] });
+  const ench = enchantRarity(item.enchants);
+  const enchanted = item.enchants.length > 0;
   return (
     <Modal title={t(`rarity.${item.rarity}`)} tone={TONE[item.rarity] ?? 'blue'} onClose={onClose}>
       <div className={s.bigOdds} data-rarity={item.rarity} style={{ ['--c' as string]: color } as CSSProperties}>
         <i>1 in</i>
         <b>{fmtOdds(itemOddsOneIn(item))}</b>
       </div>
+      {enchanted ? (
+        <div className={s.oddsMath}>
+          <span className={s.oddsTerm}>
+            <em>{t(`rarity.${item.rarity}`)}</em>
+            <b>{t('item.oneInShort', { odds: fmtOdds(plain) })}</b>
+          </span>
+          <span className={s.oddsTimes}>×</span>
+          <span className={`${s.oddsTerm} ${s.oddsEnchanted}`}>
+            <em>
+              <PixelArt art={uiBitArt('sparkle')} />
+              {t('item.enchanted')}
+            </em>
+            <b>{t('item.rarer', { x: fmtTimes(ench.total) })}</b>
+          </span>
+        </div>
+      ) : (
+        <p className={s.oddsHint}>{t('item.noEnchants', { x: fmtTimes(ONE_ENCHANT) })}</p>
+      )}
       <div className={s.itemHead}>
         <ItemIcon item={item} scale={2} equipped={equipped} showPower={false} showOdds={false} />
         <div className={s.itemHeadText}>
@@ -90,14 +121,19 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
           </div>
         )}
       </div>
-      {item.enchants.length > 0 && (
+      {enchanted && (
         <div className={s.enchantList}>
-          {item.enchants.map((en) => (
+          <div className={s.enchantHead}>
+            <span>{t(item.enchants.length === 1 ? 'item.enchantOne' : 'item.enchantMany', { n: item.enchants.length })}</span>
+            <span className={s.rarerTag}>{t('item.rarer', { x: fmtTimes(ench.count) })}</span>
+          </div>
+          {item.enchants.map((en, i) => (
             <div key={en.id} className={s.enchantRow}>
               <span className={s.enchantChip} style={{ background: enchantColor(en.id) }}>
                 {enchantLabel(en.id, en.tier)}
               </span>
-              <span>{enchantDesc(en.id, en.tier)}</span>
+              <span className={s.enchantText}>{enchantDesc(en.id, en.tier)}</span>
+              <span className={s.rarerTag}>{t('item.times', { x: fmtTimes(ench.tiers[i]) })}</span>
             </div>
           ))}
         </div>

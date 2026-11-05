@@ -21,6 +21,7 @@ import { itemArt, sparkleArt, UI_PX, type ArtScale } from '../../render/icons';
 import { equipSourceOf, type EquipSource } from '../equipSource';
 import { t } from '../i18n';
 import { raysUrl } from '../rays';
+import { Rays } from './Rays';
 import { useUi } from '../uiStore';
 import { ArrowDownIcon, ArrowUpIcon, PowerIcon } from './Icons';
 import { PixelArt } from './PixelArt';
@@ -163,7 +164,7 @@ function FlightView({ f, onHit }: { f: Flight; onHit: (f: Flight) => void }) {
   const style = { ['--c' as string]: color, ['--size' as string]: `${size}px` } as CSSProperties;
   return (
     <div ref={ref} className={s.flight} style={style} data-phase={look.phase}>
-      {flying && f.tier >= SLAM_FROM.sparkle && <div className={s.rays} style={{ backgroundImage: `url(${raysUrl([color, '#ffffff'])})` }} />}
+      {flying && f.tier >= SLAM_FROM.sparkle && <Rays className={s.rays} url={raysUrl([color, '#ffffff'])} />}
       {flying && <div className={s.glow} />}
       {look.phase === 'dive' &&
         [0, 1].map((i) => (

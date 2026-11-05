@@ -1,5 +1,5 @@
 import { BAL, RARITIES } from '../../data';
-import { enchantChance, formatDuration, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances, formatPct, revealBar } from '../../core';
+import { currentLuck, enchantChance, formatDuration, formatNumber, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances, formatPct, revealBar } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { fmtOdds } from '../components/AlleyPanel';
@@ -14,7 +14,9 @@ import s from './popups.module.css';
 export function LuckPopup({ onClose }: { onClose: () => void }) {
   const now = useNow(500);
   const g = useGame((x) => x);
-  const b = luckBreakdown(g, now);
+  const raw = luckBreakdown(g, now);
+  // (The total the rolls use: currentLuck's, never NaN.)
+  const b = { ...raw, total: currentLuck(g, now) };
   const bar = revealBar(b.total);
   const chances = rarityChances(b.total);
   const lucky = rarityChances(b.total * BAL.roll.luckyRollMult);
@@ -73,7 +75,8 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
       </div>
       <p className={s.note}>{t('luck.lucky', { n: luckyEvery(g), mult: BAL.roll.luckyRollMult })}</p>
       <p className={s.note}>{t('luck.enchantChance', { pct: (enchantChance(g) * 100).toFixed(1) })}</p>
-      <p className={s.note}>{t('luck.revealBar', { rarity: t(`rarity.${bar.rarity}`), x: fmtOdds(bar.oneIn) })}</p>
+      <p className={s.note}>{t('luck.revealBar', { rarity: t(`rarity.${bar.rarity}`), n: bar.minutes })}</p>
+      <p className={s.note}>{t('luck.hyperBar', { odds: formatNumber(BAL.feel.bigRoll.hyperOneIn) })}</p>
       <p className={s.note}>{t('luck.badLuck', { level: bl.minDumpsterLevel, n: bl.drySpell })}</p>
       <p className={s.note}>{t('luck.potionDrop', { mult: BAL.luck.potion.mult, s: BAL.luck.potion.seconds })}</p>
       <p className={s.note}>{t('luck.slots')}</p>

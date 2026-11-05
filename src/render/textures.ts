@@ -114,7 +114,8 @@ function layout(n: number, fw: number): { cols: number; rows: number } {
 /** Draws frame buffers (each fw x fh) into a grid canvas at 1x (or redraws an existing one). */
 function drawFrames(canvas: HTMLCanvasElement, bufs: PixelBuf[], fw: number, fh: number): void {
   const { cols } = layout(bufs.length, fw);
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   bufs.forEach((b, f) => {
     if (b.w > 0 && b.h > 0) ctx.putImageData(new ImageData(new Uint8ClampedArray(b.px), b.w, b.h), (f % cols) * fw, Math.floor(f / cols) * fh);
@@ -235,7 +236,8 @@ function paintGear(g: LiveGear, frame: number): void {
   g.shown = want;
   const tex = g.textures.get(g.key) as Phaser.Textures.CanvasTexture;
   const canvas = tex.getSourceImage() as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const sprite = frameOffsets()[frame]?.head ? gearSprite(g.slot, g.id, frame, clothes) : null;
   if (sprite) {

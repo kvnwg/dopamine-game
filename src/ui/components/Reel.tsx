@@ -31,22 +31,25 @@
  *
  * Luck tokens: a reel can stop on a clover token first (core rolls them; see reelStrip.ts for the
  * strips and reelTiming.ts for when each reel stops). It chimes and bursts into clovers, its ×N chip
- * stacks up on the reel, and the reel spins on to its next stop. Fillers only show unlocked items.
+ * stacks up on the reel, and the reel spins on to its next stop. Two or more reels landing a token in
+ * the same round make a combo (ComboFx): their numbers fly together and merge into their product,
+ * which drops back onto each of those reels' chips in gold. Fillers only show unlocked items.
  */
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { RARITIES, type Rarity } from '../../data';
-import { currentLuck, formatNumber, rarityIndex, reelCount, type GameState } from '../../core';
+import { chainFloor, currentLuck, formatNumber, rarityIndex, reelCount, tokenMult, type GameState } from '../../core';
 import { gameStore, useGame } from '../../app/store';
 import { itemArt, luckTokenArt, sparkleArt, uiBitArt, UI_PX, type Art, type ArtScale } from '../../render/icons';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { t } from '../i18n';
 import { RAINBOW, raysUrl } from '../rays';
+import { Rays } from './Rays';
 import { flickerMs, glowAt, landFx, teasePlan, tierLight, type Tease } from '../reelDrama';
 import { buildStrip, filler, stripAt, type Strip, type StripCell } from '../reelStrip';
-import { tokenHoldMs } from '../reelTiming';
+import { comboOf, tokenHoldMs } from '../reelTiming';
 import { tokenKey, tokenLanded } from '../tokenFx';
-import { luckRowsOf } from '../../render/luckRows';
+import { luckRowsOf, TOKEN_FLIGHT_MS } from '../../render/luckRows';
 import { stagePoint } from '../drag';
 import { MINI, miniHeight, miniWidth } from './MiniRoller';
 import { useUi } from '../uiStore';
@@ -110,9 +113,15 @@ interface Run {
   /** Stops each reel has reached (its tokens, then its item); and how many it had when the run was built. */
   reached: number[];
   before: number[];
-  /** Each reel's row in the battle's luck rows (-1 without tokens), and the token steps every reel matched. */
+  /**
+   * Each reel's row in the battle's luck rows (-1 without tokens); every reel's tokens; the combo
+   * steps (two or more reels landing a token together, core comboSteps); and the combos the chips
+   * show so far (each once its animation has merged it).
+   */
   rows: number[];
+  mults: number[][];
   matched: number[];
+  shown: number[];
   plan: Tease | null;
   /** The reel that stops last. */
   lastReel: number;
@@ -151,7 +160,7 @@ function buildRun(spin: NonNullable<GameState['roll']['current']>, prev: (StripC
     if (reached[i] >= st.stops.length) best = Math.max(best, rarityIndex(st.cells[resultIdx(st)].rarity));
   });
   const n = strips.length;
-  return {
+  const run: Run = {
     key: spin.reels.map((r) => r.item.uid).join(','),
     strips,
     layout: reelLayout(n),
@@ -159,7 +168,9 @@ function buildRun(spin: NonNullable<GameState['roll']['current']>, prev: (StripC
     reached,
     before: reached.slice(),
     rows: luckRowsOf(spin.reels),
+    mults: spin.reels.map((r) => [...(r.mults ?? [])]),
     matched: [...(spin.matched ?? [])],
+    shown: [],
     plan,
     lastReel,
     notch: strips.map(() => 0),
@@ -177,25 +188,23 @@ function buildRun(spin: NonNullable<GameState['roll']['current']>, prev: (StripC
     flicker: plan ? flickerMs(plan) : 0,
     last: performance.now(),
   };
+  // Combos that came together before this run was built (the tab was away) show at once.
+  run.shown = combosDone(run);
+  return run;
 }
 
 /** Index of the result cell (the last stop). */
 const resultIdx = (st: Strip) => (st.stops.length ? st.stops[st.stops.length - 1].idx : 0);
 
-/** The token steps every reel matched that every reel has landed (they count squared from then). */
-function squaredSteps(r: Pick<Run, 'matched' | 'reached'>): number[] {
-  return r.matched.filter((k) => r.reached.every((m) => m > k));
+/** The combo steps whose every token has landed (each reel with a token then has gone past it). */
+function combosDone(r: Pick<Run, 'matched' | 'mults' | 'reached'>): number[] {
+  return r.matched.filter((k) => r.mults.every((m, i) => m.length <= k || r.reached[i] > k));
 }
 
-/** The multiplier a reel has stacked up after `reached` stops, the `squared` steps counting squared. */
-function chainOf(st: Strip, reached: number, squared: readonly number[] = []): number {
-  let x = 1;
-  for (let k = 0; k < Math.min(reached, st.stops.length); k++) {
-    const tk = st.stops[k].token ?? 1;
-    x *= squared.includes(k) ? tk * tk : tk;
-  }
-  return x;
-}
+/** Each reel's chip: the luck it has stacked up so far, the combos shown counting whole (core tokenMult). */
+const chainsOf = (r: Pick<Run, 'mults' | 'reached' | 'shown'>) => r.mults.map((_, i) => tokenMult(r.mults, i, r.shown, r.reached[i]));
+/** How many combos have merged onto each reel's chip (it is gold from the first). */
+const mergedOf = (r: Pick<Run, 'mults' | 'shown'>) => r.mults.map((m) => r.shown.filter((k) => m.length > k).length);
 
 /** The stamp's lettering for each tier (as the full-screen reveal's title). */
 const GRAD: Partial<Record<Rarity, Grad>> = {
@@ -204,11 +213,13 @@ const GRAD: Partial<Record<Rarity, Grad>> = {
 
 interface Fx {
   id: number;
-  kind: 'land' | 'token';
+  kind: 'land' | 'token' | 'combo';
   reel: number;
   tier: number;
   /** The full-screen reveal covers the reels: skip what nobody would see (confetti). */
   covered?: boolean;
+  /** A combo: its reels, each one's token, their product, and how long the product holds (ms). */
+  combo?: { reels: number[]; values: number[]; product: number; hold: number };
 }
 let fxId = 1;
 
@@ -284,7 +295,7 @@ const Cells = memo(function Cells({
 });
 
 /** Pixel sparks flying out from a landed result (whole art pixels per step). */
-function Sparks({ n, color, big }: { n: number; color: string; big: boolean }) {
+function Sparks({ n, color, big, delay = 0 }: { n: number; color: string; big: boolean; delay?: number }) {
   const bits = useMemo(
     () =>
       Array.from({ length: n }, (_, k) => {
@@ -299,7 +310,7 @@ function Sparks({ n, color, big }: { n: number; color: string; big: boolean }) {
   return (
     <div className={s.sparks} style={{ ['--c' as string]: color } as CSSProperties}>
       {bits.map((b, k) => (
-        <i key={k} style={{ ['--dx' as string]: `${b.dx}px`, ['--dy' as string]: `${b.dy}px`, animationDelay: `${b.delay}ms` } as CSSProperties} />
+        <i key={k} style={{ ['--dx' as string]: `${b.dx}px`, ['--dy' as string]: `${b.dy}px`, animationDelay: `${b.delay + delay}ms` } as CSSProperties} />
       ))}
     </div>
   );
@@ -403,6 +414,131 @@ function Landing({ f, x, y, layout, calm }: { f: Fx; x: number; y: number; layou
   );
 }
 
+/**
+ * A reel's luck stacked up so far (Kevin: a playtester "didn't notice the tiers stack, you need to
+ * make it more noticeable, esp when it gets to a higher number"). Each new token counts the total up
+ * from the last one (×2, ×4, ×7, ×10) with a drop, and the badge grows and changes color as it climbs:
+ * green, blue from ×10, purple from ×25 (an Epic or better guaranteed), gold from ×50 (Legendary or
+ * better), rainbow from ×250 (Mythic or better), the guaranteed tier written under it. `combos`: how
+ * many combos have dropped onto it (ComboFx); it is gold from the first, and a new one's total shows
+ * at once instead of counting up.
+ */
+function ChainBadge({ x, combos }: { x: number; combos: number }) {
+  const [shown, setShown] = useState(x);
+  // (Set while rendering, so the old number never shows for a frame under the combo's.)
+  const [seen, setSeen] = useState(combos);
+  if (seen !== combos) {
+    setSeen(combos);
+    if (combos > seen) setShown(x);
+  }
+  const prev = useRef(x);
+  const prevCombos = useRef(combos);
+  useEffect(() => {
+    const from = prev.current;
+    prev.current = x;
+    // A combo's product dropped onto it (ComboFx): it shows the new total at once, no counting.
+    const merged = combos > prevCombos.current;
+    prevCombos.current = combos;
+    if (!(from > 0) || from >= x || merged) {
+      setShown(x);
+      return;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / 360);
+      setShown(k >= 1 ? x : Math.max(from, Math.round(from * Math.pow(x / from, k))));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [x]);
+  const gold = combos > 0;
+  const floor = chainFloor(x);
+  const tier = x >= 250 ? 4 : x >= 50 ? 3 : x >= 25 ? 2 : x >= 10 ? 1 : 0;
+  return (
+    <span key={x} className={s.chain} data-tier={tier} data-gold={gold || undefined}>
+      ×{formatNumber(shown)}
+      {floor && <em className={s.chainFloor}>{t('reel.tokenFloorShort', { rarity: t(`rarity.${floor}`).toUpperCase() })}</em>}
+    </span>
+  );
+}
+
+/**
+ * A combo's timing (ms): its numbers fly together as long as a token's flight into the battle's luck
+ * row (the jingle plays as both land), the product holds (less when the next reel stops sooner; under
+ * Reduce motion the sum just shows this long), then drops back onto the chips.
+ */
+const COMBO = { fly: TOKEN_FLIGHT_MS, hold: 820, minHold: 380, back: 260, calmHold: 1400 } as const;
+
+/**
+ * A combo (Kevin: "if two numbers both land on a multiplier, create an animation for it and make the
+ * multiplier those two numbers combined"): each reel's number pops out of its reel and flies to the
+ * middle, they merge with a burst into their product under "COMBO!", the sum that made it beneath
+ * ("×2 × ×5"), and copies of the product drop back onto each of those reels' chips. Under Reduce
+ * motion nothing flies: the sum and product show over the reels for a moment.
+ */
+function ComboFx({ f, layout, calm, noFlash }: { f: Fx; layout: ReelLayout; calm: boolean; noFlash: boolean }) {
+  const c = f.combo!;
+  const L = layout;
+  const xs = c.reels.map((i) => FRAME + L.left + i * (L.reelW + L.gap) + L.reelW / 2);
+  const cx = snap((Math.min(...xs) + Math.max(...xs)) / 2);
+  const cy = FRAME + WIN / 2;
+  // The middle of a chip (ChainBadge: one art pixel under the reel's top, 40 px text).
+  const chipY = FRAME + UI_PX + 20;
+  const sizes = L.n <= 2 ? { title: 64, x: 128, sum: 40, part: 88 } : L.n === 3 ? { title: 56, x: 112, sum: 38, part: 76 } : { title: 46, x: 92, sum: 32, part: 64 };
+  const product = `×${formatNumber(c.product)}`;
+  // Every step is timed in CSS from the moment it mounts (--fly, --hold, --back), so the merge lands
+  // exactly as the numbers meet, however busy the page is.
+  const style = { ['--fly' as string]: `${calm ? 0 : COMBO.fly}ms`, ['--hold' as string]: `${c.hold}ms`, ['--back' as string]: `${COMBO.back}ms` } as CSSProperties;
+  return (
+    <div className={s.combo} style={style} data-calm={calm || undefined} data-rainbow={c.product >= 250 || undefined}>
+      {!calm &&
+        xs.map((x, k) => (
+          <div key={`p${k}`} className={s.at} style={{ left: x, top: cy }}>
+            <span className={s.comboPart} style={{ ['--dx' as string]: `${cx - x}px`, fontSize: sizes.part } as CSSProperties}>
+              ×{formatNumber(c.values[k])}
+            </span>
+          </div>
+        ))}
+      <div className={s.comboLate}>
+        {!calm && !noFlash && (
+          <div className={s.at} style={{ left: cx, top: cy }}>
+            <i className={s.comboRing} />
+            <i className={s.comboRing} data-late />
+          </div>
+        )}
+        {!calm && (
+          <div className={s.at} style={{ left: cx, top: cy }}>
+            <Sparks n={16} color="#ffd23f" big delay={COMBO.fly} />
+          </div>
+        )}
+        {/* The product sits on the middle, where the numbers met: "COMBO!" above it, the sum under it. */}
+        <div className={s.comboHit} style={{ left: cx - 400, top: Math.round(cy - sizes.title * 1.1 - sizes.x / 2) }}>
+          <span className={s.comboTitle}>
+            <Chunky text={t('reel.combo')} size={sizes.title} grad={c.product >= 250 ? 'rainbow' : 'gold'} />
+          </span>
+          <span className={s.comboX} style={{ fontSize: sizes.x }}>
+            {product}
+          </span>
+          <span className={s.comboSum} style={{ fontSize: sizes.sum }}>
+            {c.values.map((v) => `×${formatNumber(v)}`).join(' × ')}
+          </span>
+        </div>
+        {!calm &&
+          xs.map((x, k) => (
+            <div key={`b${k}`} className={s.at} style={{ left: cx, top: cy }}>
+              <span className={s.comboBack} style={{ ['--dx' as string]: `${x - cx}px`, ['--dy' as string]: `${chipY - cy}px`, fontSize: sizes.x } as CSSProperties}>
+                {product}
+              </span>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
 /** A luck token bursts into little pixel clovers. */
 function CloverBurst({ x, y }: { x: number; y: number }) {
   return (
@@ -426,8 +562,8 @@ export function ReelBank() {
   const noFlash = useGame((g) => g.settings.reduceFlashing);
   const [run, setRun] = useState<Run | null>(null);
   const [chain, setChain] = useState<number[]>([]);
-  /** Every reel matched a token: their multipliers are squared (the badges turn gold). */
-  const [gold, setGold] = useState(false);
+  /** How many combos have merged onto each reel's chip (gold from the first). */
+  const [merged, setMerged] = useState<number[]>([]);
   const [fx, setFx] = useState<Fx[]>([]);
   /** Reels showing light rays behind an Epic-or-better result (reel → tier). */
   const [rays, setRays] = useState<Record<number, number>>({});
@@ -444,7 +580,58 @@ export function ReelBank() {
   const addFx = (f: Omit<Fx, 'id'>, ms: number) => {
     const id = fxId++;
     setFx((cur) => [...cur.slice(-7), { ...f, id }]);
-    timers.current.push(setTimeout(() => setFx((cur) => cur.filter((x) => x.id !== id)), ms));
+    const tid = setTimeout(() => {
+      timers.current = timers.current.filter((x) => x !== tid);
+      setFx((cur) => cur.filter((x) => x.id !== id));
+    }, ms);
+    timers.current.push(tid);
+  };
+  const later = (fn: () => void, ms: number) => {
+    const tid = setTimeout(() => {
+      timers.current = timers.current.filter((x) => x !== tid);
+      fn();
+    }, ms);
+    timers.current.push(tid);
+  };
+
+  /**
+   * The last token of combo step `k` landed, on reel `reel`, `el` ms into the spin (ComboFx): every
+   * reel's token of that round flies to the middle, they merge into their product, and it drops back
+   * onto each of their chips, which only then count it (in gold). It holds until just before the next
+   * reel stops (COMBO.hold at most). Reduce motion: nothing flies, the chips count it at once.
+   */
+  const startCombo = (r: Run, k: number, reel: number, el: number) => {
+    const c = comboOf({ reels: r.mults.map((m) => ({ mults: m })) }, k);
+    const next = Math.min(Infinity, ...r.strips.flatMap((st) => st.stops.map((x) => x.at)).filter((a) => a > el + 1));
+    const fly = calm ? 0 : COMBO.fly;
+    const back = calm ? 0 : COMBO.back;
+    const hold = calm ? COMBO.calmHold : Math.round(Math.max(COMBO.minHold, Math.min(COMBO.hold, next - el - fly - back - 120)));
+    addFx({ kind: 'combo', reel, tier: 0, combo: { ...c, hold } }, fly + hold + back + 150);
+    const show = () => {
+      if (runRef.current !== r || r.shown.includes(k)) return;
+      r.shown = [...r.shown, k];
+      setChain(chainsOf(r));
+      setMerged(mergedOf(r));
+    };
+    if (calm) {
+      show();
+      return;
+    }
+    audio.combo(c.reels.length, fly / 1000);
+    // They merge: the bank jolts and the payline flashes (delayed on the animations' own clock, like
+    // ComboFx's), the bulbs flash (tokenFx plays the jingle and buzzes).
+    bankRef.current?.animate(
+      [{ transform: `translateY(${2 * UI_PX}px)` }, { transform: `translateY(${-UI_PX}px)` }, { transform: 'translateY(0)' }],
+      { duration: 210, delay: fly, easing: 'steps(3, jump-none)' },
+    );
+    if (!noFlash) {
+      payFlashRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 360, delay: fly, easing: 'steps(3, jump-none)' });
+      later(() => {
+        if (runRef.current === r) r.flashUntil = performance.now() + 260;
+      }, fly);
+    }
+    // (The chips change as the copies land: a frame or so early, so a busy page can't leave a gap.)
+    later(show, fly + hold + back - 60);
   };
 
   useEffect(
@@ -477,9 +664,8 @@ export function ReelBank() {
     prevRef.current = next.strips.map((st) => st.cells[resultIdx(st)]);
     runRef.current = next;
     setRun(next);
-    const sq = squaredSteps(next);
-    setChain(next.strips.map((st, i) => chainOf(st, next.reached[i], sq)));
-    setGold(sq.length > 0);
+    setChain(chainsOf(next));
+    setMerged(mergedOf(next));
     setFx([]);
     setRays({});
     if (timer < 0.15) {
@@ -563,20 +749,14 @@ export function ReelBank() {
           cellRefs.current.get(`${r.key}:${i}:${stop.idx}`)?.setAttribute('data-revealed', '');
           if (stop.token !== null) {
             // A luck token: chime, burst and its flight into the battle's luck row (tokenFx.ts: once,
-            // on any tab), and the reel spins on with its luck multiplied. The last reel to land a token
-            // every reel matched squares it on all of them.
-            const match = r.matched.includes(k) && r.reached.every((m) => m > k);
+            // on any tab), and the reel spins on with its luck multiplied. The last token of a combo
+            // (two or more reels landing one in the same round) sets off its animation (ComboFx).
+            const match = combosDone(r).includes(k);
             tokenLanded(tokenKey(r.key.split(',')[i], k), k, stop.token, i, r.rows[i], match);
             setTimeout(() => audio.respin(), tokenHoldMs());
-            const sq = squaredSteps(r);
-            if (match) {
-              setChain(r.strips.map((sj, j) => chainOf(sj, r.reached[j], sq)));
-              setGold(true);
-            } else {
-              const x = chainOf(st, r.reached[i], sq);
-              setChain((c) => c.map((cur, j) => (j === i ? x : cur)));
-            }
+            setChain(chainsOf(r));
             addFx({ kind: 'token', reel: i, tier: 0 }, 900);
+            if (match) startCombo(r, k, i, el);
           } else {
             const tier = rarityIndex(st.cells[stop.idx].rarity);
             const last = r.reached.every((m, j) => m >= r.strips[j].stops.length);
@@ -729,10 +909,7 @@ export function ReelBank() {
                 <div className={s.under}>
                   <div className={s.light} />
                   {rayTier !== undefined && (
-                    <div
-                      className={s.rays}
-                      style={{ backgroundImage: `url(${rayTier >= rarityIndex('mythic') ? raysUrl(RAINBOW, 20, 0.5) : raysUrl([tierLight(rayTier)], 16, 0.55)})` }}
-                    />
+                    <Rays className={s.rays} url={rayTier >= rarityIndex('mythic') ? raysUrl(RAINBOW, 20, 0.5) : raysUrl([tierLight(rayTier)], 16, 0.55)} />
                   )}
                 </div>
                 <div
@@ -745,11 +922,7 @@ export function ReelBank() {
                   <Cells strip={st} runKey={shown.key} reel={i} layout={L} reached={shown.reached[i]} before={shown.before[i]} idle={!run} cellRefs={cellRefs.current} />
                 </div>
                 <div className={s.curve} />
-                {x > 1 && (
-                  <span key={x} className={s.chain} data-gold={(run && gold) || undefined}>
-                    ×{formatNumber(x)}
-                  </span>
-                )}
+                {x > 1 && <ChainBadge x={x} combos={run ? merged[i] ?? 0 : 0} />}
               </div>
             );
           })}
@@ -763,6 +936,8 @@ export function ReelBank() {
           {fx.map((f) =>
             f.kind === 'token' ? (
               <CloverBurst key={f.id} x={fxX(f.reel)} y={fxY} />
+            ) : f.kind === 'combo' ? (
+              <ComboFx key={f.id} f={f} layout={L} calm={calm} noFlash={noFlash} />
             ) : (
               <Landing key={f.id} f={f} x={fxX(f.reel)} y={fxY} layout={L} calm={calm} />
             ),
@@ -832,7 +1007,9 @@ function buildRunShell(strips: Strip[]): Run {
     reached: strips.map(() => 0),
     before: strips.map(() => 0),
     rows: strips.map(() => -1),
+    mults: strips.map(() => []),
     matched: [],
+    shown: [],
     plan: null,
     lastReel: 0,
     notch: strips.map(() => 0),

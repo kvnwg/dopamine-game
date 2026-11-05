@@ -2,6 +2,8 @@ import { useGame } from '../../app/store';
 import { useUi } from '../uiStore';
 import { CodexPopup } from './CodexPopup';
 import { ItemDetailPopup } from './ItemDetailPopup';
+import { SavePopup } from './SavePopup';
+import { AdminPopup } from './AdminPopup';
 import { LuckPopup } from './LuckPopup';
 import { OfflinePopup } from './OfflinePopup';
 import { SettingsPopup } from './SettingsPopup';
@@ -33,6 +35,10 @@ export function PopupLayer() {
       return <WorldPopup world={detailUid ?? 1} onClose={close} />;
     case 'scrapAll':
       return <ScrapAllPopup onClose={close} />;
+    case 'save':
+      return <SavePopup onClose={close} />;
+    case 'admin':
+      return <AdminPopup onClose={close} />;
     default:
       return null;
   }

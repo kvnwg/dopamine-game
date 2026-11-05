@@ -1,4 +1,10 @@
 /* Popups. Pixel-ish sizes are art pixels (var(--px) = 6 stage px). */
+/*
+ * A popup over the game: the dimming is its own empty element (.dim), only a color, which Safari shows
+ * without a picture; the card is a layer the card's size. When the overlay painted the dimming itself
+ * (with the card in it), Safari kept a full-screen picture of it, about 75 MB at 3x, for as long as
+ * any popup was open.
+ */
 .overlay {
   position: absolute;
   inset: 0;
@@ -6,11 +12,15 @@
   display: grid;
   place-items: center;
   padding: 120px 40px;
+}
+.dim {
+  position: absolute;
+  inset: 0;
   background: rgba(10, 11, 22, 0.66);
-  animation: dim 180ms ease-out;
+  animation: dim 180ms ease-out backwards;
 }
 @keyframes dim {
-  from { background: rgba(10, 11, 22, 0); }
+  from { opacity: 0; }
 }
 .card {
   position: relative;
@@ -20,9 +30,12 @@
   flex-direction: column;
   border: var(--px) solid var(--ink);
   background: var(--cream);
-  box-shadow: 0 calc(2 * var(--px)) 0 0 var(--ink), 0 30px 80px rgba(0, 0, 0, 0.5);
+  /* (A hard pixel shadow only: a soft one 80 px wide made the card's layer far bigger than the card.) */
+  box-shadow: 0 calc(2 * var(--px)) 0 0 var(--ink);
   color: var(--ink);
-  animation: pop 260ms both;
+  animation: pop 260ms backwards;
+  /* Its own layer, the card's size: nothing paints into a full-screen one (see .overlay). */
+  will-change: transform;
 }
 .wide {
   width: 1000px;
@@ -618,10 +631,137 @@
 .bigOdds[data-rarity='grail'] {
   background: linear-gradient(90deg, #fff07a, #ff5252, #ffb300, #69f0ae, #40c4ff, #e040fb, #fff07a);
 }
+/*
+ * Under the big "1 in X": what it's made of, the tier's odds times its enchantments (Kevin: "make it
+ * obvious that enchantments make items more rare"), and in the list each enchantment's share.
+ */
+.oddsMath {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: calc(2 * var(--px));
+  margin: calc(-1 * var(--px)) auto calc(5 * var(--px));
+}
+.oddsTerm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--px) calc(3 * var(--px)) calc(1.5 * var(--px));
+  background: #fff8ec;
+  box-shadow: var(--pixel-edge);
+  font-family: var(--font-display);
+  line-height: 1.15;
+}
+.oddsTerm em {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-style: normal;
+  font-size: 26px;
+  color: #7a6a60;
+}
+.oddsTerm b {
+  font-weight: 400;
+  font-size: 36px;
+  color: var(--ink);
+}
+.oddsTimes {
+  font-family: var(--font-display);
+  font-size: 48px;
+  color: var(--ink);
+}
+.oddsEnchanted {
+  background: linear-gradient(180deg, #d29bff 0 50%, #8a3ff0 50% 100%);
+}
+.oddsEnchanted em,
+.oddsEnchanted b {
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.oddsHint {
+  margin: calc(-1 * var(--px)) 0 calc(4 * var(--px));
+  text-align: center;
+  font-size: 28px;
+  line-height: 1.3;
+  color: #7a6a60;
+}
+.enchantHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: var(--ink);
+}
+.enchantText {
+  flex: 1;
+}
+.rarerTag {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #8a3ff0;
+}
 .dragHint {
   margin: 18px 0 0;
   text-align: center;
   font-family: var(--font-display);
   font-size: 30px;
   color: #3a8f25;
+}
+
+/* ------------------------------------------------------------ Settings: your save, the admin portal */
+.settingsBtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(2 * var(--px));
+  margin-top: 24px;
+}
+/* A save code: a box of small text, selected whole on a tap. */
+.code {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 132px;
+  margin: 0 0 calc(2 * var(--px));
+  padding: 12px;
+  border: none;
+  background: #fff;
+  box-shadow: var(--pixel-edge);
+  font-family: 'Courier New', monospace;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--ink);
+  word-break: break-all;
+  resize: none;
+}
+.adminRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--px);
+  margin-top: calc(3 * var(--px));
+}
+.adminLabel {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: var(--ink);
+}
+.adminBtns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(1.5 * var(--px));
+}
+.adminInput {
+  width: 200px;
+  height: 72px;
+  padding: 0 14px;
+  border: none;
+  background: #fff;
+  box-shadow: var(--pixel-edge);
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--ink);
 }

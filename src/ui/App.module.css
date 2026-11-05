@@ -50,7 +50,7 @@
 .panelIn {
   position: absolute;
   inset: 0;
-  animation: panelIn 0.24s both;
+  animation: panelIn 0.24s backwards;
 }
 @keyframes panelIn {
   0% { transform: translateY(calc(3 * var(--px))); opacity: 0.4; animation-timing-function: steps(1, end); }
@@ -62,6 +62,13 @@
   .panelIn { animation: none; }
 }
 .nav { height: 160px; flex: none; position: relative; z-index: 2; }
+/*
+ * Under a full-screen moment (App.tsx blackout): only the moment itself, toasts, popups and hover
+ * cards (data-keep-lit) are drawn; the battle, the menus and everything else on the stage are not.
+ */
+.stage[data-blackout] > :not([data-keep-lit]) {
+  visibility: hidden;
+}
 
 /*
  * The wide stage (PC screens): the tall stage's two halves side by side. The battle (1080 x 960) on

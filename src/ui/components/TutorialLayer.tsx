@@ -34,6 +34,7 @@ import { introFeature, seeFeature } from '../features';
 import { stagePoint } from '../drag';
 import { t } from '../i18n';
 import { raysUrl } from '../rays';
+import { Rays } from './Rays';
 import { stageSize, useUi } from '../uiStore';
 import { GemIcon, HandIcon } from './Icons';
 import { PixelArt } from './PixelArt';
@@ -254,7 +255,7 @@ function Finale({ gems, onClose }: { gems: number; onClose: () => void }) {
   }));
   return (
     <div className={s.finale} onPointerDown={onClose}>
-      <div className={s.finaleRays} style={{ backgroundImage: `url(${raysUrl(['#ffd54f', '#ffffff', '#ffb300'])})` }} />
+      <Rays className={s.finaleRays} url={raysUrl(['#ffd54f', '#ffffff', '#ffb300'])} />
       {confetti.map((c, i) => (
         <span
           key={i}
@@ -306,7 +307,12 @@ export function TutorialLayer() {
 
   useEffect(() => {
     if (!fightUntil) return;
-    const id = setInterval(() => setNow(Date.now()), 500);
+    // (Ticks only until its time is up: it used to tick every half second for the rest of the session.)
+    const id = setInterval(() => {
+      const t0 = Date.now();
+      setNow(t0);
+      if (t0 > fightUntil) clearInterval(id);
+    }, 500);
     return () => clearInterval(id);
   }, [fightUntil]);
 

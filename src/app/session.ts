@@ -3,8 +3,9 @@
  */
 import { App as CapApp } from '@capacitor/app';
 import { BAL } from '../data';
-import { createInitialState, deserialize, SaveManager, TICK_MS, offlineCapMs, MS_PER_HOUR } from '../core';
+import { createInitialState, deserialize, readSave, SaveManager, serialize, TICK_MS, offlineCapMs, MS_PER_HOUR, type GameState } from '../core';
 import { analytics, createStorage, notifications } from '../services';
+import { cloudClear, cloudLoad, cloudLoadAll, cloudPossible, cloudSave } from '../services/cloudSave';
 import { isNative } from '../services/platform';
 import { t } from '../ui/i18n';
 import { clock, dispatch, getGame, replaceGame, runTicks } from './store';
@@ -24,6 +25,28 @@ let autosaveTimer: ReturnType<typeof setInterval> | undefined;
 let held = false;
 /** A save was loaded: its 'boot' (restart the stage, pay out the time away) runs when the game starts. */
 let bootPending = false;
+/** The page is reloading into another save: nothing may be saved over it on the way out. */
+let swapping = false;
+let lastCloudAt = 0;
+
+/** What the player should hear about the save once the game starts: it was mended, or came from their account. */
+export type BootNote = { kind: 'mended'; count: number } | { kind: 'cloud' };
+const bootNotes: BootNote[] = [];
+export function takeBootNotes(): BootNote[] {
+  return bootNotes.splice(0);
+}
+
+/** Copies the game to the player's Claude account (claude.ai only; at most every minute unless `now`). */
+function pushCloud(state: GameState, now = false): void {
+  if (swapping || !cloudPossible()) return;
+  const t = performance.now();
+  if (!now && t - lastCloudAt < 55_000) return;
+  lastCloudAt = t;
+  cloudSave(serialize(state), { playTimeMs: state.playTimeMs, lastActiveAt: state.lastActiveAt });
+}
+
+/** Whether save `a` has more play in it than `b` (a second's slack: the same game saved twice). */
+const newer = (a: GameState, b: GameState) => a.playTimeMs > b.playTimeMs + 1000;
 
 function newSeed(): number {
   const buf = new Uint32Array(1);
@@ -31,15 +54,16 @@ function newSeed(): number {
   return buf[0];
 }
 
-export async function saveNow(): Promise<void> {
+export async function saveNow(cloudNow = false): Promise<void> {
   // Nothing has happened behind the title yet; a save now would only cut the time away short.
-  if (held) return;
+  if (held || swapping) return;
   if (!paused) dispatch({ type: 'snapshot' });
   try {
     await saveManager.save(getGame());
   } catch (err) {
     console.error('Save failed', err);
   }
+  pushCloud(getGame(), cloudNow);
 }
 
 function frame(t: number) {
@@ -68,13 +92,14 @@ function frame(t: number) {
 }
 
 export function pauseGame(): void {
-  if (paused || held) return;
+  if (paused || held || swapping) return;
   paused = true;
   dispatch({ type: 'pause' });
   analytics.track('session_end', { seconds: Math.round((clock.now() - sessionStartedAt) / 1000) });
   const g = getGame();
   void notifications.scheduleOfflineFull(g.lastActiveAt + offlineCapMs(g), t('notif.offlineFull.title'), t('notif.offlineFull.body'));
   void saveManager.save(getGame());
+  pushCloud(getGame(), true);
 }
 
 export function resumeGame(): void {
@@ -103,7 +128,20 @@ export function skipTime(hours: number): void {
 
 export async function resetSave(): Promise<void> {
   await saveManager.reset();
+  await cloudClear();
   replaceGame(createInitialState(clock.now(), newSeed()));
+}
+
+/**
+ * Plays `state` instead of the game running now: written as the save, then the page starts over
+ * into it (a save code, a rescued save, or a newer save from the player's account).
+ */
+export async function switchToSave(state: GameState): Promise<void> {
+  swapping = true;
+  stopLoop();
+  await saveManager.save(state);
+  cloudSave(serialize(state), { playTimeMs: state.playTimeMs, lastActiveAt: state.lastActiveAt });
+  location.reload();
 }
 
 /**
@@ -112,10 +150,34 @@ export async function resetSave(): Promise<void> {
  */
 export async function boot(snapshot?: string, opts: { hold?: boolean } = {}): Promise<void> {
   const fromSnapshot = snapshot ? deserialize(snapshot) : null;
-  const loaded = fromSnapshot ? { state: fromSnapshot, source: 'main' as const } : await saveManager.load();
+  // Ask the player's account for its save right away, alongside the browser's.
+  if (!fromSnapshot && cloudPossible()) void cloudLoadAll();
+  let loaded: { state: GameState; source: 'main' | 'backup' | 'cloud'; fixed: string[] } | null = fromSnapshot
+    ? { state: fromSnapshot, source: 'main', fixed: [] }
+    : await saveManager.load();
+  // The copy in the player's Claude account: the newer of the two is played. It gets a moment to
+  // answer here (the loading screen is up); a late answer is still taken (lateCloud).
+  let late = false;
+  if (!fromSnapshot && cloudPossible()) {
+    const text = await cloudLoad(2500);
+    // (A game from before the player last started over here stays gone.)
+    const resetAt = await saveManager.resetAt();
+    if (text === 'late') late = true;
+    else if (text) {
+      const cloud = readSave(text);
+      if (cloud && cloud.state.createdAt >= resetAt && (!loaded || newer(cloud.state, loaded.state))) {
+        loaded = { state: cloud.state, source: 'cloud', fixed: cloud.fixed };
+        bootNotes.push({ kind: 'cloud' });
+      }
+    }
+  }
   if (loaded) {
     replaceGame(loaded.state);
     if (loaded.source === 'backup') console.warn('Main save was unreadable; restored from backup.');
+    if (loaded.fixed.length) {
+      console.warn('Save mended:', loaded.fixed.join(', '));
+      bootNotes.push({ kind: 'mended', count: loaded.fixed.length });
+    }
   } else {
     replaceGame(createInitialState(clock.now(), newSeed()));
     analytics.track('tutorial_step', { step: 'start' });
@@ -123,6 +185,7 @@ export async function boot(snapshot?: string, opts: { hold?: boolean } = {}): Pr
   bootPending = !!loaded;
   held = opts.hold === true;
   if (!held) begin();
+  if (late) lateCloud();
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') pauseGame();
@@ -140,6 +203,25 @@ export async function boot(snapshot?: string, opts: { hold?: boolean } = {}): Pr
   lastFrame = performance.now();
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(frame);
+}
+
+/**
+ * The account's save answered after the boot went on without it. Still at the title: it is simply
+ * played if newer. Already playing: if it has more play in it than this game, the page starts over
+ * into it (rare: the boot waits for it, and the title gives it longer).
+ */
+function lateCloud(): void {
+  void cloudLoadAll().then(async (text) => {
+    const cloud = text ? readSave(text) : null;
+    if (!cloud || !newer(cloud.state, getGame()) || cloud.state.createdAt < (await saveManager.resetAt())) return;
+    if (held) {
+      replaceGame(cloud.state);
+      bootPending = true;
+      bootNotes.push({ kind: 'cloud' });
+    } else {
+      void switchToSave(cloud.state);
+    }
+  });
 }
 
 /** The session starts: a loaded save restarts its stage and pays out the time away, and the clock runs. */

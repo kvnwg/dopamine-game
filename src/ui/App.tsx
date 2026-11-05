@@ -28,6 +28,8 @@ import { installSound } from './soundController';
 import { installTokenFx } from './tokenFx';
 import { installKeyboard } from './keyboard';
 import { STAGE_TALL, STAGE_WIDE, useUi } from './uiStore';
+import { takeBootNotes, whenStarted } from '../app/session';
+import { t } from './i18n';
 
 /**
  * The stage: tall on phones (1080 x 1920: the battle over the menus), wide on PC screens (2160 x 960:
@@ -51,6 +53,26 @@ export function App() {
   // The upgrade map covers the whole screen; underneath, keep showing the tab it was opened from.
   const prevTab = useUi((u) => u.prevTab);
   const lowerTab = tab === 'upgrades' ? prevTab : tab;
+  // Full-screen moments hide the whole game under them, and then it stops drawing: the upgrade map at
+  // once, a rare find's reveal, a big haul and a rebirth once their backdrop has faded in. Safari draws
+  // anything layered over the battle at 3 pixels per stage pixel, ignoring the stage's shrink to the
+  // screen: a full-screen moment over the game cost a 75 MB layer and more for each piece moving on
+  // it, and crashed iPhones (Kevin: "i just got a rare item and the animation crashed my game").
+  // With nothing under it, it is drawn at the screen's own size. All shows again the moment it closes.
+  const reveal = useUi((u) => u.celebrate !== null);
+  const haul = useUi((u) => u.haul !== null);
+  const reborn = useUi((u) => u.rebirthFx !== null);
+  const moment = reveal || haul || reborn;
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    if (!moment) return setDark(false);
+    const id = window.setTimeout(() => setDark(true), 300);
+    return () => window.clearTimeout(id);
+  }, [moment]);
+  const blackout = tab === 'upgrades' || (moment && dark) || undefined;
+  useEffect(() => {
+    if (useUi.getState().blackout !== !!blackout) useUi.setState({ blackout: !!blackout });
+  }, [blackout]);
 
   useLayoutEffect(() => {
     const el = frameRef.current;
@@ -67,6 +89,17 @@ export function App() {
     return () => ro.disconnect();
   }, []);
 
+  // Once the game starts: a word about the save if it was mended or came back from the player's account.
+  useEffect(
+    () =>
+      whenStarted(() => {
+        for (const note of takeBootNotes()) {
+          if (note.kind === 'cloud') useUi.getState().toast(t('save.restored'), 'good');
+          else useUi.getState().toast(t('save.mended', { n: note.count }), 'warn');
+        }
+      }),
+    [],
+  );
   useEffect(() => installRollController(), []);
   useEffect(() => installSound(), []);
   useEffect(() => installTokenFx(), []);
@@ -75,37 +108,53 @@ export function App() {
   return (
     <div className={styles.viewport}>
       <div className={styles.frame} ref={frameRef}>
-        <div className={styles.stage} data-stage data-layout={wide ? 'wide' : undefined} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
-          <div className={styles.battle}><BattlePanel /></div>
-          <div className={styles.lower}>
-            {/* A new tab's panel slides up with a little bounce (keyed so it plays on every switch). */}
-            <div key={lowerTab === 'upgrades' ? 'alley' : lowerTab} className={styles.panelIn}>
-              {(lowerTab === 'alley' || lowerTab === 'upgrades') && <AlleyPanel />}
-              {lowerTab === 'heist' && <HeistPanel />}
-              {lowerTab === 'bag' && <InventoryPanel />}
-              {lowerTab === 'rebirth' && <RebirthPanel />}
-              {lowerTab === 'worlds' && <WorldsPanel />}
-            </div>
+        <div className={styles.stage} data-stage data-layout={wide ? 'wide' : undefined} data-blackout={blackout} style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
+          <div className={styles.battle}>
+            <SafeLayer name="battle" retryMs={1000}>
+              <BattlePanel />
+            </SafeLayer>
           </div>
-          <div className={styles.nav}><BottomNav /></div>
+          <div className={styles.lower}>
+            {/*
+              A new tab's panel slides up with a little bounce (keyed so it plays on every switch). Under
+              the Upgrades screen there's none: hidden, the Roll tab still built reels, hundreds of
+              pictures a minute, for nobody.
+            */}
+            {tab !== 'upgrades' && (
+              <div key={lowerTab} className={styles.panelIn}>
+                <SafeLayer name={`panel ${lowerTab}`} retryMs={1000}>
+                  {lowerTab === 'alley' && <AlleyPanel />}
+                  {lowerTab === 'heist' && <HeistPanel />}
+                  {lowerTab === 'bag' && <InventoryPanel />}
+                  {lowerTab === 'rebirth' && <RebirthPanel />}
+                  {lowerTab === 'worlds' && <WorldsPanel />}
+                </SafeLayer>
+              </div>
+            )}
+          </div>
+          <div className={styles.nav}>
+            <SafeLayer name="nav" retryMs={1000}>
+              <BottomNav />
+            </SafeLayer>
+          </div>
           {tab === 'upgrades' && (
             <SafeLayer name="upgrades" onError={leaveUpgrades}>
               <UpgradeMap />
             </SafeLayer>
           )}
           <SafeLayer name="mini"><MiniRoller /></SafeLayer>
-          <SafeLayer name="tokens"><TokenFlights /></SafeLayer>
-          <SafeLayer name="drag"><DragLayer /></SafeLayer>
-          <SafeLayer name="reveal"><RevealLayer /></SafeLayer>
-          <SafeLayer name="unlocks"><UnlockedFx /></SafeLayer>
-          <SafeLayer name="popups"><PopupLayer /></SafeLayer>
+          <SafeLayer name="tokens" reset={{ tokenFlights: [] }}><TokenFlights /></SafeLayer>
+          <SafeLayer name="drag" reset={{ drag: null }}><DragLayer /></SafeLayer>
+          <SafeLayer name="reveal" reset={{ celebrate: null, charging: null, haul: null, rebirthFx: null }}><RevealLayer /></SafeLayer>
+          <SafeLayer name="unlocks" reset={{ unlocked: null }}><UnlockedFx /></SafeLayer>
+          <SafeLayer name="popups" reset={{ popup: null }}><PopupLayer /></SafeLayer>
           <SafeLayer name="tutorial"><TutorialLayer /></SafeLayer>
           <SafeLayer name="equip"><EquipFlight /></SafeLayer>
-          <SafeLayer name="toasts"><Toasts /></SafeLayer>
+          <SafeLayer name="toasts" reset={{ toasts: [] }}><Toasts /></SafeLayer>
           <SafeLayer name="hover"><HoverInfo /></SafeLayer>
-          <AdOverlay />
+          <SafeLayer name="ad"><AdOverlay /></SafeLayer>
           {SHOW_DEV && <DevPanel />}
-          <TitleScreen />
+          <SafeLayer name="title"><TitleScreen /></SafeLayer>
         </div>
       </div>
     </div>

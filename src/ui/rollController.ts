@@ -1,15 +1,15 @@
 /**
  * Turns core events into UI moments: every reel's result pops in; Epic and up get a burst. A roll
- * that is rare for the raccoon's current luck (see revealDrama and feel.bigRoll) gets a build-up
+ * the core judged the raccoon's rarest in a while (luck.ts judgeFinds, feel.bigRoll) gets a build-up
  * while the reels roll (glow, rattle, riser, silence drop) and the full-screen reveal when it lands
  * (black screen, the item shining, its "1 in X" counting up). A smaller build-up (a couple of rattles
- * and a short riser) plays under the reels' glow for any other rare result (reelDrama.ts). With
+ * and a short riser) plays under the reels' glow when the spin's tease says so (reelDrama.ts). With
  * several reels, sounds play once per spin for the best result. Also toasts for level-ups, luck
  * boosts, upgrades and rebirths (with the items each rebirth unlocks), the Half-Eaten Bread Loaves a
  * world pays, and Rigged Jackpot's rigged spins.
  */
 import { BAL, DATA } from '../data';
-import { currentLuck, formatNumber, haulMinutes, haulSize, luckOddsOneIn, rarityIndex, revealDrama, type CoreEvent, type Item } from '../core';
+import { currentLuck, formatNumber, luckOddsOneIn, rarityIndex, type CoreEvent, type Item, type RollDrama } from '../core';
 import { getGame } from '../app/store';
 import { saveNow } from '../app/session';
 import { bus } from '../app/eventBus';
@@ -17,7 +17,7 @@ import { haptics } from '../services';
 import { audio, type Material } from '../services/audio';
 import { t } from './i18n';
 import { teasePlan, type Tease } from './reelDrama';
-import { itemStopMs, multOf } from './reelTiming';
+import { chainMult, itemStopMs } from './reelTiming';
 import { useUi, type RollView } from './uiStore';
 
 let rollId = 1;
@@ -34,15 +34,15 @@ function next(): void {
 }
 
 /**
- * How rare an item is at the raccoon's luck right now, and how big a deal that makes it
- * (feel.bigRoll). The tutorial's scripted rolls (the first, beginner's luck) always get the reveal.
+ * How rare an item is at the raccoon's luck right now ("1 in X" for its tier or better), with the
+ * reveal the core gave it (luck.ts judgeFinds: the rarest find in a while; the tutorial's scripted
+ * rolls always get one).
  */
-function rareness(item: Item, scripted?: 'first' | 'beginner'): Pick<RollView, 'luckOdds' | 'drama'> {
-  const luck = currentLuck(getGame(), Date.now());
-  const luckOdds = luckOddsOneIn(item, luck);
-  // Rare for your luck, by its rarity and its card's "1 in X" (revealDrama, revealBar).
-  return { luckOdds, drama: revealDrama(item, luck) ?? (scripted ? 'big' : null) };
+function rareness(item: Item, drama: RollDrama | null | undefined): Pick<RollView, 'luckOdds' | 'drama'> {
+  return { luckOdds: luckOddsOneIn(item, currentLuck(getGame(), Date.now())), drama: drama ?? null };
 }
+
+const DRAMA_RANK: Record<RollDrama, number> = { big: 1, huge: 2, insane: 3, hyper: 4 };
 
 /**
  * While the reels roll toward a big roll: rising rattle, a riser, then a silence drop just before its
@@ -153,14 +153,16 @@ export function installRollController(): () => void {
     for (const e of events) {
       switch (e.type) {
         case 'spinStart': {
-          const best = e.reels.reduce((a, b) => (b.odds > a.odds ? b : a));
+          // The find with the biggest reveal (the rarest card among equals), else the rarest card.
+          const rank = (r: (typeof e.reels)[number]) => (r.drama ? DRAMA_RANK[r.drama] : 0);
+          const best = e.reels.reduce((a, b) => (rank(b) > rank(a) || (rank(b) === rank(a) && b.odds > a.odds) ? b : a));
           // A scripted spin's first reel is the one the tutorial set up.
           const scripted = e.scripted && best === e.reels[0] ? e.scripted : undefined;
-          const rare = rareness(best.item, scripted);
+          const rare = rareness(best.item, best.drama);
           if (rare.drama) {
             const view: RollView = {
               id: -best.item.uid, item: best.item, odds: best.odds, lucky: e.lucky, golden: e.golden, placed: 'bag', newRecord: false,
-              at: performance.now(), mult: multOf(best.mults, e.matched), scripted, ...rare,
+              at: performance.now(), mult: chainMult(e, e.reels.indexOf(best), e.matched), scripted, ...rare,
             };
             buildUp(view, itemStopMs(e, e.reels.indexOf(best)));
           } else {
@@ -179,7 +181,7 @@ export function installRollController(): () => void {
         case 'roll': {
           const view: RollView = {
             id: rollId++, item: e.item, odds: e.odds, lucky: e.lucky, golden: e.golden, placed: e.placed, newRecord: e.newRecord,
-            at: performance.now(), mult: e.mult, scripted: e.scripted, ...rareness(e.item, e.scripted),
+            at: performance.now(), mult: e.mult, scripted: e.scripted, ...rareness(e.item, e.drama),
           };
           // The big "last roll" card shows the best result of the spin; every result goes in Recent.
           if (e.reel === 0 || !spinBest || e.odds > spinBest.odds) spinBest = view;
@@ -261,11 +263,10 @@ export function installRollController(): () => void {
           if (!e.auto) ui.toast(t('toast.scrapped', { gold: formatNumber(e.coins) }), 'info');
           break;
         case 'scrapAll': {
-          // A haul worth many minutes of fighting gets its own moment; an everyday one a toast.
-          const minutes = haulMinutes(getGame(), e.coins, Date.now());
-          const size = Number.isFinite(minutes) ? haulSize(minutes) : null;
+          // A haul well above the run's usual ones (haul.ts judgeHaul) gets its own moment; an everyday one a toast.
+          const size = e.size;
           if (size) {
-            useUi.setState({ haul: { id: Date.now(), coins: e.coins, minutes, count: e.count, size } });
+            useUi.setState({ haul: { id: Date.now(), coins: e.coins, usual: e.usual, count: e.count, size } });
             audio.haul(size === 'big' ? 0 : size === 'huge' ? 1 : 2);
             haptics.impact('heavy');
           } else {

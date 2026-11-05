@@ -53,7 +53,8 @@ export function HoverInfo() {
       setShown(null);
       if (!el) return;
       timer = window.setTimeout(() => {
-        if (over !== el || !el.isConnected || useUi.getState().drag) return;
+        // (Not over a full-screen moment's own find: a big reveal shows it all already.)
+        if (over !== el || !el.isConnected || useUi.getState().drag || el.closest('[data-drama]')) return;
         setShown({ el, uid: Number(el.dataset.uid) });
       }, DELAY_MS);
     };
@@ -101,7 +102,7 @@ export function HoverInfo() {
   const cur = g.equipped[item.slot];
   const diff = worn ? 0 : power(item) - (cur ? power(cur) : 0);
   return (
-    <div ref={cardRef} className={s.card} style={{ ['--c' as string]: rarityColor(item.rarity) } as CSSProperties} role="tooltip">
+    <div ref={cardRef} className={s.card} style={{ ['--c' as string]: rarityColor(item.rarity) } as CSSProperties} role="tooltip" data-keep-lit>
       <span className={s.name}>{itemName(item)}</span>
       <span className={s.meta}>
         {t(`rarity.${item.rarity}`)} · 1 in {fmtOdds(itemOddsOneIn(item))} · {t(`slot.${item.slot}`)}

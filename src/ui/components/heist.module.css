@@ -684,7 +684,7 @@
   box-shadow: inset 0 0 0 var(--px) var(--rc), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45);
   color: var(--ink);
   text-align: center;
-  animation: dealIn 300ms steps(3) both;
+  animation: dealIn 300ms steps(3) backwards;
 }
 .perkCard[data-rarity='epic'],
 .perkCard[data-rarity='evolution'] {
@@ -692,7 +692,7 @@
 }
 .perkCard[data-rarity='evolution'] {
   background: #fffbe8;
-  animation: dealIn 300ms steps(3) both, evoCard 1s steps(1) 300ms infinite;
+  animation: dealIn 300ms steps(3) backwards, evoCard 1s steps(1) 300ms infinite;
 }
 .perkCard:active {
   transform: translateY(var(--px));
@@ -777,7 +777,7 @@
   gap: 0;
   padding: var(--px) calc(4 * var(--px)) calc(2 * var(--px));
   font-size: 36px;
-  animation: dealIn 300ms steps(3) both;
+  animation: dealIn 300ms steps(3) backwards;
 }
 .optionLabel {
   line-height: 1.1;
@@ -1072,7 +1072,7 @@
   text-align: center;
 }
 .endTitle {
-  animation: titleIn 420ms steps(4) both;
+  animation: titleIn 420ms steps(4) backwards;
 }
 @keyframes titleIn {
   0% { transform: translateY(calc(-8 * var(--px))); opacity: 0; }
@@ -1085,7 +1085,7 @@
   color: #fff;
   -webkit-text-stroke: 6px var(--ink);
   paint-order: stroke fill;
-  animation: fadeIn 300ms steps(3) 200ms both;
+  animation: fadeIn 300ms steps(3) 200ms backwards;
 }
 .endNote {
   font-size: 30px;
@@ -1108,7 +1108,7 @@
   background: var(--cream);
   color: var(--ink);
   box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
-  animation: rewardIn 360ms steps(4) both;
+  animation: rewardIn 360ms steps(4) backwards;
 }
 .ringReward {
   padding-left: var(--px);
@@ -1148,7 +1148,7 @@
   min-height: calc(17 * var(--px));
   font-size: 54px;
   margin-top: calc(2 * var(--px));
-  animation: fadeIn 300ms steps(3) 900ms both;
+  animation: fadeIn 300ms steps(3) 900ms backwards;
 }
 .reviveBtns {
   display: flex;

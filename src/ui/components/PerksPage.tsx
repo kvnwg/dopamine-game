@@ -261,7 +261,7 @@ export function PerksPage({ tabs, onClose }: { tabs: ReactNode; onClose: () => v
   }, [sel]);
   const def = alleyPerk(sel);
   return (
-    <div className={s.page} data-calm={calm || undefined}>
+    <div className={s.page} data-calm={calm || undefined} data-keep-lit>
       <svg className={s.defs} aria-hidden>
         <defs>
           {TREES.map((tr) => (

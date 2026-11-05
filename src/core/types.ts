@@ -17,7 +17,21 @@ export type RollPlacement = 'bag' | 'scrapped';
 export type CoreEvent =
   | { type: 'waveStart'; stage: number; wave: number }
   | { type: 'playerHit'; enemyUid: number; amount: number; crit: boolean; targetUid: number; killed: boolean; echo: boolean }
-  | { type: 'enemyHit'; enemyUid: number; amount: number; heavy: boolean }
+  /** `spikes`: a Spiky floor's prick (his own blow hurt him). */
+  | { type: 'enemyHit'; enemyUid: number; amount: number; heavy: boolean; spikes?: boolean }
+  /** An enemy dodged his swing (a Slippery floor), or it clanged off a gate boss's lid (`lid`). */
+  | { type: 'enemyDodge'; enemyUid: number; lid?: boolean }
+  /** A boss winds up its heavy hit: a Dodge tap in the next `seconds` makes it miss. */
+  | { type: 'bossWindup'; enemyUid: number; name: string; seconds: number }
+  /** A Dodge tap is in for the hit being wound up. */
+  | { type: 'dodgeArmed' }
+  /** The heavy hit missed: he dodged it, and answers with a big blow. */
+  | { type: 'perfectDodge'; enemyUid: number }
+  /** A gate boss took his hat (its stats are gone until he gets it back), and gave it back. */
+  | { type: 'hatStolen'; enemyUid: number }
+  | { type: 'hatBack'; enemyUid: number }
+  /** A gate boss hides under its lid: direct hits do nothing for `seconds`. */
+  | { type: 'lidUp'; enemyUid: number; seconds: number }
   | { type: 'playerDodge'; enemyUid: number }
   /** `perk`: Dr. Squeaks patching the raccoon up, or Playing Possum's second wind. */
   | { type: 'heal'; amount: number; source: 'lifesteal' | 'wave' | 'heist' | 'perk' }
@@ -138,6 +152,26 @@ export type CoreEvent =
   | { type: 'crewHit'; helper: CrewHelper; enemyUid: number; amount: number; killed: boolean }
   /** Playing Possum: a knockout blow left the raccoon standing at `hp`. */
   | { type: 'secondWind'; hp: number }
+  // ---- the Endless Dump (src/core/systems/endless.ts)
+  /** World 20 fell this run: the Dump is open (`first`: the very first time in the game). */
+  | { type: 'dumpUnlocked'; first: boolean }
+  | { type: 'dumpEnter'; mode: 'endless' | 'weekly'; floor: number }
+  /** A floor is clear (`firstTime`: new this run, or this week on the Weekly Dive). */
+  | { type: 'floorClear'; floor: number; gate: boolean; firstTime: boolean; mode: 'endless' | 'weekly' }
+  /** A floor deeper than ever before is clear: `gems` paid. */
+  | { type: 'dumpDeepest'; floor: number; gems: number }
+  | { type: 'dumpRecord'; kind: 'fastestGate' | 'milestone'; value: number }
+  /** A rarity tier past Grail opened (the dumpster can roll it now). */
+  | { type: 'tierUnlocked'; rarity: Rarity; floor: number }
+  | { type: 'weeklyReward'; floor: number; gems: number; stars: number }
+  | { type: 'stenchChanged'; level: number }
+  // ---- Become a Legend (src/core/systems/legend.ts)
+  | { type: 'legend'; count: number; stars: number }
+  | { type: 'legendPerkBought'; id: string; level: number; cost: number }
+  // ---- daily tasks (src/core/systems/daily.ts)
+  | { type: 'dailyNew'; day: string }
+  | { type: 'dailyClaimed'; id: string; gems: number }
+  | { type: 'dailyChest'; gems: number }
   | { type: 'error'; message: string };
 
 /** The Alley crew: the pigeon, the sewer rats, the seagull, Raccoon Mafia's recruits and the Gluten Golem. */
@@ -192,6 +226,19 @@ export type GameAction =
   | { type: 'heistAbandon' }
   /** +1 ticket from a rewarded ad (once a day). */
   | { type: 'heistAdTicket' }
+  /** A Dodge tap: makes a boss's heavy hit that is winding up miss. */
+  | { type: 'dodge' }
+  /** Into the Endless Dump: its endless floors, or this week's Weekly Dive. */
+  | { type: 'enterDump'; mode: 'endless' | 'weekly' }
+  /** Stench 0 to max (in the Dump, the floor starts over under it). */
+  | { type: 'setStench'; level: number }
+  /** Become a Legend: Legend Stars, then everything starts over, rebirths included. */
+  | { type: 'legend' }
+  | { type: 'buyLegendPerk'; id: string }
+  /** Switches the automation star upgrades on and off. */
+  | { type: 'setLegendToggle'; key: 'autoEquip' | 'autoRebirth'; value: boolean }
+  | { type: 'claimDaily'; id: string }
+  | { type: 'openDailyChest' }
   | { type: 'cheat'; cheat: Cheat };
 
 export type SettingKey = 'haptics' | 'sound' | 'music' | 'reduceFlashing' | 'reduceMotion';
@@ -220,7 +267,11 @@ export type Cheat =
   /** The admin portal: every feature open and introduced, the tutorial over. */
   | { kind: 'unlockAll' }
   /** The admin portal: `n` more rebirths counted (what they unlock follows), nothing wiped. */
-  | { kind: 'addRebirths'; n: number };
+  | { kind: 'addRebirths'; n: number }
+  /** The admin portal: into the Endless Dump at `floor`, as if every floor before it was beaten (World 20 too). */
+  | { kind: 'setFloor'; floor: number }
+  /** The admin portal: Legend Stars. */
+  | { kind: 'addStars'; n: number };
 
 export interface StepResult<S> {
   state: S;

@@ -443,7 +443,14 @@ describe('rebirth', () => {
     expect(upgradeCostAt(luckDef, 0, 1)).toBe(Math.max(1, Math.round(luckDef.cost.base * (1 - BAL.rebirth.upgradeDiscountPer))));
     expect(rebirthRequirement(1).world).toBeGreaterThan(req.world);
     expect(rebirthRequirement(1).gold).toBeGreaterThan(req.gold);
-    expect(rebirthRequirement(99).world).toBe(DATA.worlds.length);
+    // Past World 20 it goes on into the Endless Dump (a Dump floor is a world past the last), deeper every
+    // time: each world it would have asked for past the last is floorsPerRebirthWorld floors.
+    const last = DATA.worlds.length;
+    const first = Array.from({ length: 30 }, (_, r) => r).find((r) => rebirthRequirement(r).world > last)!;
+    const raw = BAL.rebirth.baseWorld + BAL.rebirth.worldPer * first;
+    expect(rebirthRequirement(first).world).toBe(last + (raw - last) * BAL.endless.floorsPerRebirthWorld);
+    expect(rebirthRequirement(first + 1).world - rebirthRequirement(first).world).toBe(BAL.rebirth.worldPer * BAL.endless.floorsPerRebirthWorld);
+    for (let r = 1; r < 30; r++) expect(rebirthRequirement(r).world).toBeGreaterThan(rebirthRequirement(r - 1).world);
   });
 });
 

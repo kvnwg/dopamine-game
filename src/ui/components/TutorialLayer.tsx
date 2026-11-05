@@ -90,6 +90,10 @@ const INTRO: Record<Exclude<Feature, 'roll'>, { target: string; fallback?: strin
   // The Perks page lives on the Upgrades screen: the hand points at its tab, and inside, the Perks
   // switch blinks until it is tapped (UpgradeMap.tsx).
   perks: { target: navTab('upgrades'), ms: 30_000 },
+  // (These open quietly, features.ts: their own announcements show instead.)
+  daily: { target: '[data-intro="daily"]', ms: 12_000 },
+  endless: { target: navTab('worlds'), ms: 12_000 },
+  legend: { target: navTab('rebirth'), ms: 12_000 },
 };
 
 /** The middle of the first element matching `sel` that is on screen (stage px), or null. */

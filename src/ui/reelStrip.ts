@@ -79,6 +79,8 @@ function pickRarity(u: number, weights: Record<Rarity, number>): Rarity {
 
 const NEAR_MISS: Record<Rarity, number> = {
   junk: 0, decent: 0, shiny: 0, epic: 0, legendary: 50, mythic: 33, vintage: 30, limited: 26, prototype: 22, mint: 17, gemMint: 12, museum: 8, grail: 5,
+  // (Past Grail: never a near miss; the reels don't tease tiers the player hasn't seen.)
+  cosmic: 0, glitched: 0, fourthWall: 0, devsOwn: 0, patchNotes: 0, sourceCode: 0, concept: 0,
 };
 
 /** The base items fillers may show: the ones unlocked at this many rebirths (heist-only items never roll). */

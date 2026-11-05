@@ -13,6 +13,7 @@ import { itemOddsOneIn } from './luck';
 import { rarityAtLeast, round2 } from '../util';
 import { isItemUnlocked } from './unlocks';
 import { modsScore } from './stats';
+import { growth } from './stages';
 
 /** Main stat value before the item is sized to its power: slotBase x rarity multiplier (it sets the mix). */
 export function mainStatValue(slotBase: number, rarity: Rarity): number {
@@ -106,17 +107,48 @@ export function pickBaseItem(slot: Slot, themeId: string, rarity: Rarity, rng: R
 export function recycleRewards(item: Pick<Item, 'rarity' | 'level'> & Partial<Pick<Item, 'tier'>>): { xp: number; coins: number } {
   const r = BAL.rarities[item.rarity];
   const mult = 1 + BAL.recycle.perItemLevel * item.level;
-  const t = Math.max(0, (item.tier ?? 1) - 1);
-  return { xp: Math.round(r.recycleXp * mult), coins: Math.round(r.recycleCoins * mult * Math.pow(BAL.worlds.goldGrowth, t)) };
+  // (Past World 20 the tier is a Dump floor's world number: growth counts it as a share of a world.)
+  return { xp: Math.round(r.recycleXp * mult), coins: Math.round(r.recycleCoins * mult * growth(BAL.worlds.goldGrowth, item.tier ?? 1)) };
+}
+
+/** The first tier past Grail: from it on, names go ridiculous (and then meta). */
+const SILLY_FROM: Rarity = 'cosmic';
+
+/** "Traffic Cone of Destiny" -> "Tr4ff1c C0n3 0f D3st1ny": a Glitched item's name, the same every time. */
+export function glitchText(text: string): string {
+  const swap: Record<string, string> = { a: '4', e: '3', i: '1', o: '0', s: '5', t: '7', A: '4', E: '3', I: '1', O: '0', S: '5', T: '7' };
+  let n = 0;
+  return Array.from(text, (ch) => {
+    const to = swap[ch];
+    if (!to) return ch;
+    n += 1;
+    return n % 3 === 0 ? ch : to;
+  }).join('');
+}
+
+/** An item's name at a tier past Grail (strings tierName.*): in space, glitched, self-aware, the developer's, patched, raw code, an idea. */
+function sillyName(base: BaseItem, rarity: Rarity): string {
+  if (rarity === 'glitched') return glitchText(base.legendaryName);
+  if (rarity === 'sourceCode') return base.id;
+  const fmt = DATA.strings[`tierName.${rarity}`] ?? '{legend}';
+  return fmt
+    .replace('{legend}', base.legendaryName)
+    .replace('{base}', base.name)
+    .replace('{slot}', DATA.strings[`slot.${base.slot}`] ?? base.slot);
 }
 
 export function itemName(item: Pick<Item, 'baseId' | 'rarity'>): string {
   const base = DATA.itemsById.get(item.baseId);
   if (!base) return item.baseId;
+  if (rarityAtLeast(item.rarity, SILLY_FROM)) return sillyName(base, item.rarity);
   return rarityAtLeast(item.rarity, 'legendary') ? base.legendaryName : base.name;
 }
 
-export function itemFlavor(item: Pick<Item, 'baseId'>): string {
+export function itemFlavor(item: Pick<Item, 'baseId'> & Partial<Pick<Item, 'rarity'>>): string {
+  if (item.rarity && rarityAtLeast(item.rarity, SILLY_FROM)) {
+    const own = DATA.strings[`tierFlavor.${item.rarity}`];
+    if (own) return own;
+  }
   return DATA.itemsById.get(item.baseId)?.flavor ?? '';
 }
 

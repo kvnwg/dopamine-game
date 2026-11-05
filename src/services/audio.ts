@@ -9,12 +9,17 @@ import { SOUND_FILES, SOUND_LEVELS } from './soundFiles';
 
 export type Material = 'plastic' | 'metal' | 'glass' | 'ceramic' | 'food' | 'cloth' | 'paper' | 'wood' | 'rubber';
 export type Tier =
-  | 'junk' | 'decent' | 'shiny' | 'epic' | 'legendary' | 'mythic' | 'vintage' | 'limited' | 'prototype' | 'mint' | 'gemMint' | 'museum' | 'grail';
+  | 'junk' | 'decent' | 'shiny' | 'epic' | 'legendary' | 'mythic' | 'vintage' | 'limited' | 'prototype' | 'mint' | 'gemMint' | 'museum' | 'grail'
+  | 'cosmic' | 'glitched' | 'fourthWall' | 'devsOwn' | 'patchNotes' | 'sourceCode' | 'concept';
 
 const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12);
 /** C major pentatonic ladder used for pitch stacking and reward notes. */
 const LADDER = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84, 86, 88, 91, 93, 96];
-const TIERS: Tier[] = ['junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'vintage', 'limited', 'prototype', 'mint', 'gemMint', 'museum', 'grail'];
+const TIERS: Tier[] = [
+  'junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'vintage', 'limited', 'prototype', 'mint', 'gemMint', 'museum', 'grail',
+  'cosmic', 'glitched', 'fourthWall', 'devsOwn', 'patchNotes', 'sourceCode', 'concept',
+];
+const GRAIL = TIERS.indexOf('grail');
 const MINT = TIERS.indexOf('mint');
 /** Semitones a recording climbs by, step by step: up the major scale (do, re, mi...) to an octave, in key. */
 const CLIMB = [0, 2, 4, 5, 7, 9, 11, 12];
@@ -1046,6 +1051,14 @@ class AudioEngine {
           for (const n of [72, 76, 79, 84]) this.tone(midi(n), at + 1.6, 1.3, { type: 'sawtooth', gain: 0.045, filter: 2600, attack: 0.03, vibrato: 4 });
           this.noise(at + 1.6, 1.2, { type: 'highpass', freq: 6000, gain: 0.05 });
         }
+        if (i > GRAIL) {
+          // Past Grail: the music glitches. A detuned stutter climbs a step higher for every tier.
+          const steps = i - GRAIL;
+          for (let k = 0; k < 4 + steps * 2; k++) {
+            this.tone(midi(84 + ((k * 5) % 12)) * (1 + steps * 0.01), at + 2.2 + k * 0.05, 0.05, { type: 'square', gain: 0.03, filter: 3200 });
+          }
+          this.tone(midi(36 - steps), at + 2.2, 1.4, { gain: 0.3, freqEnd: 30, attack: 0.05 });
+        }
       }
     }
   }
@@ -1057,7 +1070,7 @@ class AudioEngine {
     const at = ctx.currentTime;
     const i = TIERS.indexOf(tier);
     this.tone(320 + i * 60, at, 0.06, { gain: 0.06, freqEnd: 520 + i * 90 });
-    if (i >= 1) this.bell(midi(LADDER[3 + i]), at + 0.03, 0.25, 0.035 + i * 0.008);
+    if (i >= 1) this.bell(midi(LADDER[Math.min(LADDER.length - 1, 3 + i)]), at + 0.03, 0.25, 0.035 + Math.min(i, 12) * 0.008);
   }
 
   // ------------------------------------------------------------------ combat

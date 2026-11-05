@@ -17,7 +17,11 @@ export type Slot = z.infer<typeof SlotSchema>;
 /** Ordered from worst to best. Index order is used for comparisons. */
 export const RARITIES = [
   'junk', 'decent', 'shiny', 'epic', 'legendary', 'mythic', 'vintage', 'limited', 'prototype', 'mint', 'gemMint', 'museum', 'grail',
+  // Past Grail: rarer and more ridiculous, each opened by going deeper into the Endless Dump (balance.endless.tierFloors).
+  'cosmic', 'glitched', 'fourthWall', 'devsOwn', 'patchNotes', 'sourceCode', 'concept',
 ] as const;
+/** The tiers the dumpster rolls from the start; the ones after open with depth in the Endless Dump. */
+export const CLASSIC_TOP = 'grail';
 export const RaritySchema = z.enum(RARITIES);
 export type Rarity = z.infer<typeof RaritySchema>;
 
@@ -233,6 +237,161 @@ export const PerksBalanceSchema = z.object({
 });
 export type PerksBalance = z.infer<typeof PerksBalanceSchema>;
 
+// ---------------------------------------------------------------- the Endless Dump and what comes after World 20
+
+/** A floor's twist: hard ones ask for a particular answer, good ones are the lap of honor after a gate. */
+export const HARD_TWISTS = ['swarm', 'regen', 'armored', 'spiky', 'slippery', 'giants'] as const;
+export const GOOD_TWISTS = ['goldRush', 'lucky', 'pinata'] as const;
+export const TWIST_IDS = [...HARD_TWISTS, ...GOOD_TWISTS] as const;
+export const TwistIdSchema = z.enum(TWIST_IDS);
+export type TwistId = z.infer<typeof TwistIdSchema>;
+/** What a gate boss can do on top of its own special. */
+export const GATE_MOVES = ['enrage', 'summon', 'regen', 'hatSteal', 'shield'] as const;
+export const GateMoveSchema = z.enum(GATE_MOVES);
+export type GateMove = z.infer<typeof GateMoveSchema>;
+
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+export const EndlessBalanceSchema = z.object({
+  /** A floor is this share of a world: enemies, gold, XP and the gear bonus grow by growth^floorStep per floor. */
+  floorStep: positive,
+  /** Waves of regular enemies per floor; a gate floor adds its boss after them. */
+  wavesPerFloor: z.number().int().positive(),
+  /** Every Nth floor is a gate, with a gate boss. */
+  gateEvery: z.number().int().min(2),
+  /** Enemy HP and ATK x this by a floor's place in its set (index 0: the first floor after a gate). */
+  sawtooth: z.array(positive).min(1),
+  lossesBeforeBack: z.number().int().min(1),
+  gate: z.object({
+    hpMult: positive, atkMult: positive,
+    /** Gems for a gate's first fall ever: gems + gemsPerGate x the gate's number. */
+    gems: nonNeg, gemsPerGate: nonNeg,
+    /** Moves on top of its own special: movesFirst, +1 every movesEveryGates gates, at most maxMoves. */
+    movesFirst: z.number().int().nonnegative(), movesEveryGates: z.number().int().positive(), maxMoves: z.number().int().nonnegative(),
+  }),
+  /** Gems for a floor's first fall ever. */
+  floorGems: nonNeg,
+  /** The share of ordinary floors with a hard twist (gates always have one). */
+  twistChance: z.number().min(0).max(1),
+  /** This many floors after each gate get a good twist. */
+  goodAfterGate: z.number().int().nonnegative(),
+  twists: z.object({
+    swarm: z.object({ countMult: positive, hpMult: positive }),
+    regen: z.object({ pctPerSecond: nonNeg, bossPctPerSecond: nonNeg }),
+    armored: z.object({ nonCritPct: z.number().min(0).max(100) }),
+    spiky: z.object({ atkShare: nonNeg }),
+    slippery: z.object({ dodgePct: z.number().min(0).max(95) }),
+    giants: z.object({ count: z.number().int().positive(), hpMult: positive }),
+    goldRush: z.object({ goldMult: positive }),
+    lucky: z.object({ luckMult: positive }),
+    pinata: z.object({ bagMult: positive }),
+  }),
+  moves: z.object({
+    enrage: z.object({ belowHpPct: z.number().min(1).max(99), atkMult: positive, atkSpdMult: positive }),
+    summon: z.object({ everySeconds: positive, max: z.number().int().positive() }),
+    regen: z.object({ pctPerSecond: positive }),
+    hatSteal: z.object({ hits: z.number().int().positive() }),
+    shield: z.object({ atHpPct: z.array(z.number().min(1).max(99)).min(1), seconds: positive }),
+  }),
+  /** A boss's heavy hit is shown this long before it lands; a Dodge tap in that time makes it miss. */
+  windupSeconds: positive,
+  /** A dodged heavy hit is answered with a blow this many times ATK. */
+  dodgeCounterMult: nonNeg,
+  /** Grit: stuck on a new floor longer than afterMinutes, +pctPerMinute ATK and HP a minute, up to maxPct. */
+  catchUp: z.object({ afterMinutes: nonNeg, pctPerMinute: nonNeg, maxPct: nonNeg }),
+  /** Deepest-floor marks celebrated big. */
+  milestones: z.array(z.number().int().positive()),
+  /** The floor (deepest ever) that opens each tier past Grail. */
+  tierFloors: z.partialRecord(RaritySchema, z.number().int().positive()),
+  /** Bosses gate floors borrow (recolored and titled). */
+  gateBosses: z.array(z.string().min(1)).min(1),
+  /** [color, accent] recolors for gate bosses, in turn. */
+  tints: z.array(z.tuple([hexColor, hexColor])).min(1),
+  /** The Dump's backdrop: a world's scenery under this wash. */
+  overlay: z.object({ color: hexColor, alpha: z.number().min(0).max(1) }),
+  /** A rebirth that would need a world past the last asks for this many floors per world instead. */
+  floorsPerRebirthWorld: z.number().int().positive(),
+  /** The rebirth gold price stops growing per rebirth after this many (the depth asked for grows it instead). */
+  goldRebirthsCap: z.number().int().nonnegative(),
+});
+
+export const StenchCurseSchema = z.object({
+  id: z.string().min(1),
+  effect: z
+    .object({
+      enemyHpPct: nonNeg, enemyAtkPct: nonNeg, extraEnemies: z.number().int().nonnegative(), atkSpdCutPct: nonNeg, gateMoves: z.number().int().nonnegative(),
+      lifestealCutPct: nonNeg, enemyAtkSpdPct: nonNeg, regenCutPct: nonNeg, hpCutPct: nonNeg,
+    })
+    .partial(),
+});
+export type StenchCurse = z.infer<typeof StenchCurseSchema>;
+export const StenchBalanceSchema = z.object({
+  max: z.number().int().positive(),
+  /** Gold and XP x (1 + goldXpPerLevel x level) in the Dump. */
+  goldXpPerLevel: nonNeg,
+  /** Legend Stars from new floors x (1 + starsPerLevel x level). */
+  starsPerLevel: nonNeg,
+  /** Level N turns on the first N curses. */
+  curses: z.array(StenchCurseSchema).min(1),
+});
+
+export const LegendPerkSchema = z.object({
+  id: z.string().min(1),
+  icon: z.string().min(1),
+  /** Levels it can be bought (0: no limit, priced by `cost`). */
+  max: z.number().int().nonnegative(),
+  /** The price of each level when it has a max. */
+  costs: z.array(z.number().int().positive()).optional(),
+  /** Without a max: base x growth^level, rounded up. */
+  cost: z.object({ base: positive, growth: positive }).optional(),
+  effect: z
+    .object({
+      startLevels: nonNeg, startWorlds: z.number().int().nonnegative(), startLoaves: z.number().int().nonnegative(), autoEquip: nonNeg,
+      autoRebirth: nonNeg, keepReels: nonNeg, goldenSpin: nonNeg, luckPct: nonNeg, powerPct: nonNeg, goldPct: nonNeg,
+    })
+    .partial(),
+});
+export type LegendPerkDef = z.infer<typeof LegendPerkSchema>;
+export const LegendBalanceSchema = z.object({
+  /** Rebirths in a run before it can become a Legend. */
+  unlockRebirths: z.number().int().positive(),
+  /** Stars = floor(rebirths^2 x starsPerRebirthSq) + the new floors' stars (starsPerFloor each, more with Stench). */
+  starsPerRebirthSq: nonNeg,
+  starsPerFloor: nonNeg,
+  perks: z.array(LegendPerkSchema).min(1),
+});
+
+export const DAILY_EVENTS = ['roll', 'epicFind', 'bossWin', 'kill', 'scrap', 'equip', 'perfectDodge', 'floorClear', 'gateClear', 'heistWin'] as const;
+export const DailyTaskSchema = z.object({
+  id: z.string().min(1),
+  event: z.enum(DAILY_EVENTS),
+  target: z.number().int().positive(),
+  gems: nonNeg,
+  /** Only offered once this is open. */
+  needs: z.enum(['endless', 'heist']).optional(),
+});
+export type DailyTaskDef = z.infer<typeof DailyTaskSchema>;
+export const DailyBalanceSchema = z.object({
+  count: z.number().int().positive(),
+  chest: z.object({ gems: nonNeg, potionSeconds: nonNeg }),
+  tasks: z.array(DailyTaskSchema).min(1),
+});
+
+export const WeeklyRuleSchema = z.object({
+  id: z.string().min(1),
+  /** Every floor of the week has this twist (null: each floor's own). */
+  twist: TwistIdSchema.nullable(),
+  atkMult: positive,
+  hpMult: positive,
+  goldMult: positive,
+});
+export type WeeklyRule = z.infer<typeof WeeklyRuleSchema>;
+export const WeeklyBalanceSchema = z.object({
+  rules: z.array(WeeklyRuleSchema).min(1),
+  /** Paid once a week as the Weekly Dive reaches each floor. */
+  rewards: z.array(z.object({ floor: z.number().int().positive(), gems: nonNeg, stars: z.number().int().nonnegative() })).min(1),
+});
+
 // ---------------------------------------------------------------- balance.json
 export const BalanceSchema = z.object({
   tickRate: positive,
@@ -382,6 +541,7 @@ export const BalanceSchema = z.object({
   rarityOdds: z.object({
     decent: positive, shiny: positive, epic: positive, legendary: positive, mythic: positive, vintage: positive, limited: positive,
     prototype: positive, mint: positive, gemMint: positive, museum: positive, grail: positive,
+    cosmic: positive, glitched: positive, fourthWall: positive, devsOwn: positive, patchNotes: positive, sourceCode: positive, concept: positive,
   }),
   luck: z.object({
     potion: z.object({ mult: positive, seconds: positive, waveDropChance: z.number().min(0).max(1) }),
@@ -509,6 +669,16 @@ export const BalanceSchema = z.object({
   heist: HeistBalanceSchema,
   /** Alley perks: a run's Half-Eaten Bread Loaves buy them on the Upgrades screen's Perks page (core/systems/perks.ts). */
   perks: PerksBalanceSchema,
+  /** The Endless Dump: floors forever after World 20 (core/systems/endless.ts). */
+  endless: EndlessBalanceSchema,
+  /** Stench: opt-in curses for the Endless Dump that pay more (core/systems/endless.ts). */
+  stench: StenchBalanceSchema,
+  /** Become a Legend: the reset after rebirths, paying Legend Stars (core/systems/legend.ts). */
+  legend: LegendBalanceSchema,
+  /** Daily tasks (core/systems/daily.ts). */
+  daily: DailyBalanceSchema,
+  /** The Weekly Dive: the same rules and floors for everyone this week (core/systems/endless.ts). */
+  weekly: WeeklyBalanceSchema,
   /**
    * The first-run tutorial (new games only). Beginner's luck: one scripted spin early on, its first
    * reel chaining `beginnerTokens` into a `beginnerRarity` item. It comes once the raccoon has put

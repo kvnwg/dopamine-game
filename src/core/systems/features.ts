@@ -20,6 +20,8 @@ import { FEATURES, type Feature, type GameState } from '../state';
 import type { CoreEvent } from '../types';
 import { upgradeCost as dumpsterUpgradeCost } from './dumpster';
 import { perksOpen } from './perks';
+import { endlessOpen } from './endless';
+import { legendOpen } from './legend';
 import { rebirthRequirement } from './rebirth';
 import { affordableUpgrades } from './upgrades';
 
@@ -27,14 +29,16 @@ import { affordableUpgrades } from './upgrades';
  * The order features are introduced in when several are waiting: as the tutorial ends, Worlds, where
  * the player picks the first world and the fighting starts (stage.chosen).
  */
-export const FEATURE_ORDER: readonly Feature[] = ['roll', 'bag', 'worlds', 'luck', 'codex', 'upgrades', 'dumpster', 'rebirth', 'heist', 'perks'];
+export const FEATURE_ORDER: readonly Feature[] = [
+  'roll', 'bag', 'worlds', 'luck', 'codex', 'upgrades', 'dumpster', 'rebirth', 'heist', 'perks', 'daily', 'endless', 'legend',
+];
 
 /**
  * Features that open quietly, without the tutorial walking through them (no bubble, hand or popup;
  * Kevin: "in tutorial, no more walking through luck and codex"): their buttons just appear. Worlds is
  * there from the start (the tutorial's own step for the first world points at it instead).
  */
-const QUIET: readonly Feature[] = ['luck', 'codex', 'worlds'];
+const QUIET: readonly Feature[] = ['luck', 'codex', 'worlds', 'daily', 'endless', 'legend'];
 
 export function hasFeature(state: Pick<GameState, 'features'>, f: Feature): boolean {
   return state.features.unlocked.includes(f);
@@ -48,8 +52,8 @@ export function featureSeen(state: Pick<GameState, 'features'>, f: Feature): boo
  * The tutorial is over for the features waiting on it: beginner's luck worn (or scrapped), a rebirth,
  * or enough rolls that an unfinished tutorial never holds the game back.
  */
-export function tutorialOver(state: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'>): boolean {
-  return state.dumpster.beginner.state === 'done' || state.rebirths > 0 || state.roll.count >= BAL.tutorial.overAtRolls;
+export function tutorialOver(state: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'> & Partial<Pick<GameState, 'legend'>>): boolean {
+  return state.dumpster.beginner.state === 'done' || state.rebirths > 0 || (state.legend?.count ?? 0) > 0 || state.roll.count >= BAL.tutorial.overAtRolls;
 }
 
 /** The first world the Rebirth tab opens at. */
@@ -75,11 +79,18 @@ function ready(d: GameState, f: Feature): boolean {
       // From the start: the raccoon fights as soon as a world is picked there.
       return true;
     case 'rebirth':
-      return d.stage.highestCleared >= rebirthTabWorld() || d.rebirths > 0;
+      return d.stage.highestCleared >= rebirthTabWorld() || d.rebirths > 0 || d.legend.count > 0;
     case 'heist':
-      return d.rebirths >= BAL.heist.unlockRebirths;
+      return d.rebirths >= BAL.heist.unlockRebirths || d.legend.count > 0;
     case 'perks':
       return perksOpen(d);
+    case 'daily':
+      // Once the tutorial is over and a couple of worlds have fallen (or later in the game).
+      return tutorialOver(d) && (d.stage.highestCleared >= 2 || d.rebirths > 0 || d.legend.count > 0);
+    case 'endless':
+      return endlessOpen(d) || d.dump.bestEver > 0;
+    case 'legend':
+      return legendOpen(d);
   }
 }
 

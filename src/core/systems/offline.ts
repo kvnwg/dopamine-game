@@ -21,6 +21,8 @@ import { killRewards } from './stages';
 import { upgradeEffects } from './upgrades';
 import { computeStats } from './stats';
 import { itemTierFor } from './worlds';
+import { topRarity } from './endless';
+import { itemUnlockRank } from './unlocks';
 
 export function offlineCapMs(_state: GameState): number {
   return BAL.offline.capHours * MS_PER_HOUR; // Monthly Card (+4h) arrives in Milestone 4.
@@ -184,12 +186,12 @@ export function rollOffline(d: GameState, rng: Rng, now: number, count: number, 
       const itemLuck = luck * tokenMult(tokens, r, matched);
       const pity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d);
       const floor = rigged && (!pity || rarityAtLeast(rigged, bl.minRarity)) ? rigged : pity ? bl.minRarity : null;
-      let rarity = floor ? rollRarity(itemLuck, rng, floor) : rollRarity(itemLuck, rng);
+      let rarity = rollRarity(itemLuck, rng, floor ?? 'junk', topRarity(d));
       const slot = rollSlot(rng);
       const level = rollItemLevel(d.player.level, rng);
       const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
       rarity = bumpRarity(rarity, rarityBump(enchants));
-      const base = pickBaseItem(slot, dz.theme, rarity, rng, d.rebirths);
+      const base = pickBaseItem(slot, dz.theme, rarity, rng, itemUnlockRank(d));
       const item = createItem(base, rarity, level, dz.theme, rng, d.nextItemUid++, enchants, tier);
       out.rolls += 1;
       dz.totalDives += 1;

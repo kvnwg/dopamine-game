@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import {
   BAL, ModSchema, RaritySchema, SlotSchema, SLOTS, StatIdSchema, EnemyKindSchema, HeistNodeKindSchema, LocationIdSchema, LOCATION_IDS,
-  type LocationId, type Slot,
+  GateMoveSchema, type LocationId, type Slot,
 } from '../data';
 import type { Item } from './types';
 import { dayKey } from './time';
@@ -43,7 +43,7 @@ export const ItemSchema = z.object({
  * tap knocks its padlock off), then the Bag, luck, Upgrades, Worlds, the Codex, the dumpster's own
  * upgrades, Rebirth, Heists and the Upgrades screen's Perks page.
  */
-export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks'] as const;
+export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks', 'endless', 'legend', 'daily'] as const;
 export const FeatureSchema = z.enum(FEATURES);
 export type Feature = z.infer<typeof FeatureSchema>;
 
@@ -104,6 +104,20 @@ export const EnemyStateSchema = z.object({
   burnShown: z.number(),
   /** Heists: seconds left stunned (it neither attacks nor uses its specials). */
   stun: z.number().optional(),
+  // ---- the Endless Dump (endless.ts)
+  /** A gate boss's moves on top of its own special. */
+  moves: z.array(GateMoveSchema).default(() => []),
+  /** Seconds left of a heavy hit's wind-up (the Dodge button shows meanwhile); 0 when none is coming. */
+  tele: z.number().nonnegative().default(0),
+  /** Seconds toward its next summon. */
+  moveTimer: z.number().nonnegative().default(0),
+  /** Lid Up: seconds left hiding under its lid, and how many times it has. */
+  shieldLeft: z.number().nonnegative().default(0),
+  shields: z.number().int().nonnegative().default(0),
+  /** Its Enrage move has gone off. */
+  moveEnraged: z.boolean().default(false),
+  /** A Giants floor's giant: Boss Damage counts against it. */
+  giant: z.boolean().default(false),
 });
 
 export const BattleSchema = z.object({
@@ -116,6 +130,10 @@ export const BattleSchema = z.object({
   playerAtkProgress: z.number(),
   enemies: z.array(EnemyStateSchema),
   nextEnemyUid: z.number().int(),
+  /** A Dodge tap is waiting for the heavy hit being wound up. */
+  dodge: z.boolean().default(false),
+  /** A gate boss has the raccoon's hat: hits on it still needed to get it back (0: he has it). */
+  hatGone: z.number().int().nonnegative().default(0),
 });
 
 export const RewardBucketSchema = z.object({
@@ -311,6 +329,86 @@ export function freshPerks(): PerkState {
   };
 }
 
+// ---------------------------------------------------------------- the Endless Dump, Legend, daily tasks
+
+/** The Weekly Dive this week: the floor it stands at, its best, and the rewards it has paid. */
+export const WeeklyStateSchema = z.object({
+  /** The week it is for (time.ts weekKey); another week starts it over. */
+  week: z.string().default(''),
+  floor: z.number().int().positive().default(1),
+  best: count.default(0),
+  paid: z.array(z.number().int().positive()).default(() => []),
+});
+
+/**
+ * The Endless Dump (endless.ts). Its floors are worlds past the last one (floors.ts), so the run's best
+ * floor is stage.highestCleared past World 20; what lasts longer is kept here.
+ */
+export const DumpStateSchema = z.object({
+  /** The endless floors, or this week's Weekly Dive (the battle's world is its floor either way). */
+  mode: z.enum(['endless', 'weekly']).default('endless'),
+  /** The endless floor last fought (where the Dump picks up again). */
+  floor: z.number().int().positive().default(1),
+  /** The deepest floor ever cleared, across rebirths and Legends: it opens the rarity tiers past Grail. */
+  bestEver: count.default(0),
+  /** Play time (ms) spent on a new floor without clearing it: Grit grows from it. */
+  stuckMs: z.number().nonnegative().default(0),
+  /** When the current floor attempt began (play clock, ms), for the fastest gate. */
+  attemptAtMs: z.number().nonnegative().default(0),
+  /** Curses switched on (0 to stench.max). */
+  stench: z.number().int().nonnegative().default(0),
+  records: z
+    .object({
+      fastestGateMs: z.number().nonnegative().nullable().default(null),
+      /** The deepest floor cleared at each Stench level (index: the level). */
+      stench: z.array(count).default(() => []),
+      /** Deepest-floor milestones already celebrated. */
+      milestones: z.array(z.number().int().positive()).default(() => []),
+    })
+    .default(() => ({ fastestGateMs: null, stench: [], milestones: [] })),
+  weekly: WeeklyStateSchema.default(() => ({ week: '', floor: 1, best: 0, paid: [] })),
+});
+export type DumpState = z.infer<typeof DumpStateSchema>;
+
+export function freshDump(): DumpState {
+  return {
+    mode: 'endless', floor: 1, bestEver: 0, stuckMs: 0, attemptAtMs: 0, stench: 0,
+    records: { fastestGateMs: null, stench: [], milestones: [] },
+    weekly: { week: '', floor: 1, best: 0, paid: [] },
+  };
+}
+
+/** Become a Legend (legend.ts): Legend Stars and what they bought, never wiped. */
+export const LegendStateSchema = z.object({
+  count: count.default(0),
+  /** Stars to spend, and all ever earned. */
+  stars: count.default(0),
+  earned: count.default(0),
+  /** Star upgrades bought: levels by id. */
+  perks: z.record(z.string(), count).default(() => ({})),
+  /** This Legend run (since the last one): its deepest floor, and the stars its new floors are worth. */
+  runDeepest: count.default(0),
+  runFloorStars: z.number().nonnegative().default(0),
+  /** The automation upgrades can be switched off. */
+  autoEquip: z.boolean().default(true),
+  autoRebirth: z.boolean().default(true),
+});
+export type LegendState = z.infer<typeof LegendStateSchema>;
+
+export function freshLegend(): LegendState {
+  return { count: 0, stars: 0, earned: 0, perks: {}, runDeepest: 0, runFloorStars: 0, autoEquip: true, autoRebirth: true };
+}
+
+/** Today's tasks (daily.ts). */
+export const DailyStateSchema = z.object({
+  /** The local day they are for ('' before the first). */
+  day: z.string().default(''),
+  tasks: z.array(z.object({ id: z.string(), progress: count, claimed: z.boolean() })).default(() => []),
+  /** The bonus chest for doing them all has been opened. */
+  chest: z.boolean().default(false),
+});
+export type DailyState = z.infer<typeof DailyStateSchema>;
+
 export const GameStateSchema = z.object({
   saveVersion: z.number().int(),
   createdAt: z.number(),
@@ -439,6 +537,9 @@ export const GameStateSchema = z.object({
     .default(() => ({ unlocked: [...FEATURES], seen: [...FEATURES] })),
   /** This run's loaves and perks. Saves from before perks start with none (save.ts counts the worlds already beaten). */
   perks: PerkStateSchema.default(freshPerks),
+  dump: DumpStateSchema.default(freshDump),
+  legend: LegendStateSchema.default(freshLegend),
+  daily: DailyStateSchema.default(() => ({ day: '', tasks: [], chest: false })),
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
@@ -495,6 +596,8 @@ export function createInitialState(now: number, seed: number): GameState {
       playerAtkProgress: 0,
       enemies: [],
       nextEnemyUid: 1,
+      dodge: false,
+      hatGone: 0,
     },
     dumpster: {
       level: 1,
@@ -526,5 +629,8 @@ export function createInitialState(now: number, seed: number): GameState {
     // Worlds is open from the start (features.ts); the rest opens one at a time.
     features: { unlocked: ['worlds'], seen: ['worlds'] },
     perks: freshPerks(),
+    dump: freshDump(),
+    legend: freshLegend(),
+    daily: { day: '', tasks: [], chest: false },
   };
 }

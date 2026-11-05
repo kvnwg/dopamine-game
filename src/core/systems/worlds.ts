@@ -9,6 +9,7 @@ import type { CoreEvent } from '../types';
 import { computeDamage, startStage } from './combat';
 import { perkFx, type PerkFx } from './perks';
 import { defConstant, growth, scaledEnemyStats, worldCount, worldDef } from './stages';
+import { floorOf, isDump, isGate } from './floors';
 import { computeStats } from './stats';
 
 /** Sends the raccoon to `world`. Beaten worlds are farmed in place; unbeaten ones are pushed. */
@@ -21,7 +22,9 @@ export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean 
   if (w < 1 || w > worldCount() || (w === d.battle.stage && d.stage.chosen)) return false;
   const s = d.stage;
   s.chosen = true;
-  s.returnTo = w > d.battle.stage ? d.battle.stage : w;
+  // (Out of the Dump, its next visit is to its endless floors again.)
+  d.dump.mode = 'endless';
+  s.returnTo = w > d.battle.stage || d.battle.stage > worldCount() ? Math.min(d.battle.stage, worldCount()) : w;
   s.mode = w > s.highestCleared ? 'push' : 'farm';
   s.powerAtDeath = null;
   s.showToughHint = false;
@@ -33,7 +36,8 @@ export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean 
 /** The tier given to items rolled right now (from the Alley's world, also while a heist is on). */
 export function itemTierFor(state: Pick<GameState, 'battle' | 'stage'> & Partial<Pick<GameState, 'heist'>>): number {
   const world = state.heist?.run ? state.heist.run.main.stage : state.battle.stage;
-  return Math.max(1, Math.min(world, state.stage.highestCleared + 1, worldCount()));
+  // (Past World 20 the world is a Dump floor's world number: still at most one past the best this run.)
+  return Math.max(1, Math.min(world, state.stage.highestCleared + 1, Math.max(worldCount(), world)));
 }
 
 export type ThreatLevel = 'easy' | 'tough' | 'deadly' | 'oneShot';
@@ -103,7 +107,9 @@ export function worldThreat(state: GameState, world: number): WorldThreat {
   const sp = bossDef.special;
   if (sp?.type === 'heavyHit') bossDps += (computeDamage(b.atk, stats.DEF, false, 100, 1, k) * sp.damageMult) / sp.everySeconds;
   if (sp?.type === 'enrage') bossDps *= 1 + (sp.belowHpPct / 100) * (sp.atkMult * sp.atkSpdMult - 1);
-  const bossMargin = (stats.HP * yourDps(b.def) * fx.bossDmgMult) / (b.hp * bossDps);
+  // (A Dump floor that isn't a gate has no boss.)
+  const hasBoss = !isDump(world) || isGate(floorOf(world));
+  const bossMargin = hasBoss ? (stats.HP * yourDps(b.def) * fx.bossDmgMult) / (b.hp * bossDps) : Infinity;
 
   const enemyHit = computeDamage(maxAtk, stats.DEF, false, 100, 1, k);
   const margin = Math.min(waveMargin, bossMargin);

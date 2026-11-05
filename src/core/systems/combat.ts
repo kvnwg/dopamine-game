@@ -6,7 +6,7 @@
  * The Alley's own perks (perks.ts, bought with Half-Eaten Bread Loaves) add the crew, the second wind,
  * the rage, harder-hit bosses and the loaves a boss pays the first time it falls in a run.
  */
-import { BAL, DATA, type BossSpecial, type EnemyDef, type PerkEffectKey } from '../../data';
+import { BAL, DATA, type BossSpecial, type EnemyDef, type PerkEffectKey, type TwistId } from '../../data';
 import type { Rng } from '../rng';
 import type { EnemyState, GameState, HeistFight, PerkState } from '../state';
 import type { CoreEvent, CrewHelper, Stats } from '../types';
@@ -15,8 +15,12 @@ import { addXp } from './progression';
 import { recordRewards } from './offline';
 import { earnBread, NO_PERKS, perkFoes, perkFx, perksWorldStart, type PerkFx } from './perks';
 import { addLuckBoost, goldMult, potionSeconds, xpMult } from './roller';
-import { defConstant, generateWave, isBossWave, killRewards, worldCount } from './stages';
+import { defConstant, generateWave, isBossWave, killRewards, makeEnemy, worldCount, worldDef } from './stages';
 import { computeStats, playerPower } from './stats';
+import {
+  currentTwist, dumpBagMult, dumpFoes, dumpGoldMult, dumpTick, dumpXpMult, endlessOpen, enterDump, inDump, onDumpDeath, onFloorCleared,
+} from './endless';
+import { floorOf, isDump, isLastWave, lastWorld } from './floors';
 
 /**
  * damage = ATK x (K / (K + DEF)) x (crit ? CRIT_DMG/100 : 1) x variance, where K is the DEF constant
@@ -56,6 +60,9 @@ export function startStage(d: GameState, stage: number, ev: CoreEvent[], push: b
   d.battle.playerHp = stats.HP;
   d.battle.playerAtkProgress = 0;
   d.battle.enemies = [];
+  d.battle.dodge = false;
+  d.battle.hatGone = 0;
+  if (isDump(stage) && d.dump.mode === 'endless') d.dump.floor = floorOf(stage);
   perksWorldStart(d);
   ev.push({ type: 'stageStart', stage, push });
 }
@@ -105,6 +112,8 @@ export interface Ctx {
   run?: RunCombat;
   /** The Alley's perks (Alley fights with perks owned only). */
   perk?: Readonly<PerkFx>;
+  /** The Dump floor's twist (Alley fights in the Dump only). */
+  twist?: TwistId | null;
 }
 
 /** Perk burns burn at this share of ATK per second when no perk sets it. */
@@ -137,8 +146,8 @@ function onKill(c: Ctx, e: EnemyState) {
   }
   const stage = d.battle.stage;
   const r = killRewards(stage, e.kind, c.stats.COIN_FIND);
-  r.xp *= xpMult(d);
-  const coins = r.coins * goldMult(d);
+  r.xp *= xpMult(d) * dumpXpMult(d);
+  const coins = r.coins * goldMult(d) * dumpGoldMult(d);
   d.currencies.coins += coins;
   d.lifetime.kills += 1;
   ev.push({ type: 'kill', enemyUid: e.uid, enemyId: e.enemyId, coins, xp: r.xp, kind: e.kind });
@@ -149,14 +158,20 @@ function onKill(c: Ctx, e: EnemyState) {
   addXp(d, r.xp, ev);
 }
 
-/** Deals damage to the enemy at `index`; handles its death (and explosions). Returns true if it died. */
-function damageEnemy(c: Ctx, index: number, amount: number, allowExplode = true): boolean {
+/**
+ * Deals damage to the enemy at `index`; handles its death (and explosions). Returns true if it died.
+ * `direct`: a blow (not a burn), which a gate boss hiding under its lid shrugs off.
+ */
+function damageEnemy(c: Ctx, index: number, amount: number, allowExplode = true, direct = true): boolean {
   const b = c.d.battle;
   const e = b.enemies[index];
   if (!e || e.hp <= 0) return false;
-  // (YOLO, an Alley perk, makes bosses take more from everything.)
-  const dmg = e.kind === 'regular' ? amount : amount * (1 + c.stats.BOSS_DMG / 100) * (c.perk?.bossDmgMult ?? 1);
+  if (direct && e.shieldLeft > 0) return false;
+  // (YOLO, an Alley perk, makes bosses take more from everything; a Giants floor's giants count as bosses.)
+  const dmg = e.kind === 'regular' && !e.giant ? amount : amount * (1 + c.stats.BOSS_DMG / 100) * (c.perk?.bossDmgMult ?? 1);
+  const before = e.hp;
   e.hp -= dmg;
+  if (e.moves.length > 0 && e.hp > 0) bossMovesOnHit(c, e, before, direct);
   if (e.hp > 0) return false;
   b.enemies.splice(index, 1);
   onKill(c, e);
@@ -207,6 +222,8 @@ function runOnHit(c: Ctx, uid: number, crit: boolean, killed: boolean) {
 /** An Alley hit: Hold My Soda (an Alley perk) multiplies it while the raccoon is low. */
 function alleyRoll(c: Ctx, target: EnemyState): { amount: number; crit: boolean } {
   const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, c.k);
+  // An Armored floor: only crits get through properly.
+  if (c.twist === 'armored' && !roll.crit) roll.amount *= BAL.endless.twists.armored.nonCritPct / 100;
   const fx = c.perk;
   if (fx && fx.rageMult > 1 && (c.d.battle.playerHp / Math.max(1, c.stats.HP)) * 100 < fx.rageBelowPct) roll.amount *= fx.rageMult;
   return roll;
@@ -217,12 +234,26 @@ function playerAttack(c: Ctx, echo: boolean) {
   const b = c.d.battle;
   const target = b.enemies[0];
   if (!target) return;
+  // A Slippery floor: they dodge some of his swings.
+  if (c.twist === 'slippery' && c.rng.chance(BAL.endless.twists.slippery.dodgePct / 100)) {
+    c.ev.push({ type: 'enemyDodge', enemyUid: target.uid });
+    if (!echo && c.fx.echo > 0 && c.rng.chance(c.fx.echo)) playerAttack(c, true);
+    return;
+  }
+  // Under its lid: the blow clangs off.
+  if (target.shieldLeft > 0) {
+    c.ev.push({ type: 'enemyDodge', enemyUid: target.uid, lid: true });
+    return;
+  }
   const roll = c.run ? runRoll(c, target) : alleyRoll(c, target);
   const hpBefore = target.hp;
   const uid = target.uid;
+  const atk = target.atk;
   const killed = damageEnemy(c, 0, roll.amount);
   const dealt = Math.min(roll.amount, Math.max(0, hpBefore));
   c.ev.push({ type: 'playerHit', enemyUid: uid, targetUid: uid, amount: roll.amount, crit: roll.crit, killed, echo });
+  // A Spiky floor: every blow pricks him back.
+  if (c.twist === 'spiky') hurtRaccoon(c, uid, computeDamage(atk * BAL.endless.twists.spiky.atkShare, c.stats.DEF, false, 100, 1, c.k));
   if (c.run) runOnHit(c, uid, roll.crit, killed);
   if (c.stats.LIFESTEAL > 0) {
     const heal = Math.min((dealt * c.stats.LIFESTEAL) / 100, c.stats.HP - b.playerHp);
@@ -269,8 +300,8 @@ function runBlock(c: Ctx): boolean {
  * A new game's first-run tutorial is still on (as features.ts tutorialOver has it: beginner's luck not
  * yet worn, no rebirth, not past the rolls that end it anyway).
  */
-export function inTutorial(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'>): boolean {
-  return d.dumpster.beginner.state !== 'done' && d.rebirths === 0 && d.roll.count < BAL.tutorial.overAtRolls;
+export function inTutorial(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'> & Partial<Pick<GameState, 'legend'>>): boolean {
+  return d.dumpster.beginner.state !== 'done' && d.rebirths === 0 && !(d.legend?.count ?? 0) && d.roll.count < BAL.tutorial.overAtRolls;
 }
 
 /** `unavoidable`: a charge, which can't be dodged or blocked. */
@@ -327,7 +358,7 @@ function tickBurns(c: Ctx, dt: number) {
     e.burnTime -= dt;
     e.burnShown += dmg;
     const uid = e.uid;
-    const died = damageEnemy(c, i, dmg);
+    const died = damageEnemy(c, i, dmg, true, false);
     if (died || e.burnTime <= 0 || e.burnShown >= e.burnDps * BAL.enchant.burnEventSeconds) {
       c.ev.push({ type: 'burn', enemyUid: uid, amount: e.burnShown });
       e.burnShown = 0;
@@ -339,20 +370,30 @@ function tickBurns(c: Ctx, dt: number) {
 function onWaveCleared(c: Ctx) {
   const { d, rng, now, ev, stats } = c;
   const b = d.battle;
-  const bossWave = isBossWave(b.wave);
+  const bossWave = isBossWave(b.wave, b.stage);
+  const last = isLastWave(b.wave, b.stage);
   let bags: number;
   if (bossWave) {
     bags = BAL.worlds.boss.bags;
   } else {
-    bags = BAL.drops.bagsPerWave + rollExtraBags(stats.BAG_FIND, rng);
+    // (A Piñata Party floor triples them.)
+    bags = Math.round((BAL.drops.bagsPerWave + rollExtraBags(stats.BAG_FIND, rng)) * dumpBagMult(d));
     recordRewards(d, now, { bags, coins: 0, xp: 0 });
     if (rng.chance(BAL.luck.potion.waveDropChance)) addLuckBoost(d, now, potionSeconds(d), ev);
   }
   d.currencies.bags += bags;
   d.lifetime.wavesCleared += 1;
+  b.hatGone = 0;
+  b.dodge = false;
   ev.push({ type: 'bagDrop', count: bags });
   ev.push({ type: 'waveClear', stage: b.stage, wave: b.wave });
-  if (!bossWave) {
+  if (last && inDump(d)) {
+    b.enemies = [];
+    b.playerAtkProgress = 0;
+    onFloorCleared(d, ev, (w, push) => startStage(d, w, ev, push), () => addLuckBoost(d, now, potionSeconds(d), ev));
+    return;
+  }
+  if (!last) {
     b.wave += 1;
     b.phase = 'walking';
     b.phaseTime = BAL.combat.walkSeconds;
@@ -378,6 +419,8 @@ function onWorldCleared(c: Ctx) {
     d.currencies.gems += gems;
     ev.push({ type: 'worldFirstClear', world, gems });
     addLuckBoost(d, now, potionSeconds(d), ev);
+    // The last world's first fall this run opens the Endless Dump.
+    if (world === lastWorld()) ev.push({ type: 'dumpUnlocked', first: d.dump.bestEver === 0 && d.legend.count === 0 && d.rebirths === 0 });
   }
   // Half-Eaten Bread Loaves: the first time this world's boss falls this run (perks open).
   earnBread(d, world, ev);
@@ -390,7 +433,9 @@ function onWorldCleared(c: Ctx) {
   b.phaseTime = BAL.worlds.choiceSeconds;
   b.enemies = [];
   b.playerAtkProgress = 0;
-  ev.push({ type: 'bossChoice', world, next: world < worldCount() ? world + 1 : null, seconds: BAL.worlds.choiceSeconds, firstTime });
+  // After the last world, Next is the Endless Dump.
+  const next = world < worldCount() ? world + 1 : endlessOpen(d) ? worldCount() + 1 : null;
+  ev.push({ type: 'bossChoice', world, next, seconds: BAL.worlds.choiceSeconds, firstTime });
 }
 
 /**
@@ -411,6 +456,8 @@ export function resolveAfterBoss(d: GameState, goNext: boolean, ev: CoreEvent[])
     startStage(d, next, ev, s.mode === 'push');
     return;
   }
+  // Past the last world: into the Endless Dump.
+  if (goNext && world === worldCount() && enterDump(d, 'endless', ev, (w, push) => startStage(d, w, ev, push))) return;
   s.mode = 'farm';
   startStage(d, world, ev, false);
 }
@@ -422,6 +469,10 @@ export function resolveAfterBoss(d: GameState, goNext: boolean, ev: CoreEvent[])
  * back to winning somewhere: a failed push to the world it came from, a beaten world one down.
  */
 function onDeathResolved(d: GameState, ev: CoreEvent[]) {
+  if (inDump(d)) {
+    onDumpDeath(d, ev, (w, push) => startStage(d, w, ev, push));
+    return;
+  }
   const s = d.stage;
   const world = d.battle.stage;
   const push = world > s.highestCleared;
@@ -467,24 +518,36 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
 
   b.playerHp = Math.min(stats.HP, b.playerHp + stats.REGEN * dt);
   const perk = perkFx(d);
+  dumpTick(d, dt * 1000);
 
   if (b.phase === 'walking') {
     b.phaseTime -= dt;
     if (b.phaseTime <= 0) {
-      const wave = generateWave(b.stage, b.wave, rng, b.nextEnemyUid);
+      let wave = generateWave(b.stage, b.wave, rng, b.nextEnemyUid);
+      b.nextEnemyUid += wave.length;
+      // A Dump floor's twist and Stench reshape the wave; a gate boss gets its moves.
+      wave = dumpFoes(d, wave, rng, () => b.nextEnemyUid++);
       // Some perks change the enemies (angrier or well-fed bosses, harder-hitting regulars).
       perkFoes(wave, perk);
-      b.nextEnemyUid += wave.length;
       b.enemies = wave;
       b.phase = 'fighting';
       b.phaseTime = 0;
       ev.push({ type: 'waveStart', stage: b.stage, wave: b.wave });
-      if (isBossWave(b.wave)) ev.push({ type: 'bossAttempt', stage: b.stage });
+      if (isBossWave(b.wave, b.stage)) ev.push({ type: 'bossAttempt', stage: b.stage });
+      // Steals Your Hat: it's gone the moment the gate boss walks in.
+      const thief = wave.find((e) => e.moves.includes('hatSteal'));
+      if (thief && d.equipped.hat) {
+        b.hatGone = BAL.endless.moves.hatSteal.hits;
+        ev.push({ type: 'hatStolen', enemyUid: thief.uid });
+        b.playerHp = Math.min(b.playerHp, computeStats(d).HP);
+      }
     }
     return;
   }
 
-  const c: Ctx = { d, rng, now, ev, stats, fx: combatEffects(d), k: defConstant(b.stage), perk: perk === NO_PERKS ? undefined : perk };
+  const c: Ctx = {
+    d, rng, now, ev, stats, fx: combatEffects(d), k: defConstant(b.stage), perk: perk === NO_PERKS ? undefined : perk, twist: currentTwist(d),
+  };
   const result = fightStep(c, dt);
   if (result === 'cleared') {
     b.playerAtkProgress = 0;
@@ -626,10 +689,23 @@ function useSpecials(c: Ctx, e: EnemyState, dt: number) {
   for (const special of enemySpecials(DATA.enemiesById.get(e.enemyId))) {
     if (special.type === 'heavyHit' || special.type === 'charge') {
       e.specialTimer += dt;
+      // In the Alley a boss's heavy hit winds up first: a Dodge tap meanwhile makes it miss.
+      const windup = !c.run && special.type === 'heavyHit' && e.kind !== 'regular' ? Math.min(BAL.endless.windupSeconds, special.everySeconds * 0.8) : 0;
+      if (windup > 0 && e.specialTimer >= special.everySeconds - windup && e.specialTimer < special.everySeconds) {
+        if (e.tele === 0) c.ev.push({ type: 'bossWindup', enemyUid: e.uid, name: special.name, seconds: special.everySeconds - e.specialTimer });
+        e.tele = Math.max(0.01, special.everySeconds - e.specialTimer);
+      }
       if (e.specialTimer >= special.everySeconds) {
         e.specialTimer -= special.everySeconds;
+        e.tele = 0;
         c.ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: special.name });
-        enemyAttack(c, e, special.damageMult, true, special.type === 'charge');
+        if (windup > 0 && b.dodge) {
+          b.dodge = false;
+          perfectDodge(c, e);
+        } else {
+          b.dodge = false;
+          enemyAttack(c, e, special.damageMult, true, special.type === 'charge');
+        }
       }
     } else if (special.type === 'enrage' && !e.enraged && (e.hp / e.maxHp) * 100 < special.belowHpPct) {
       e.enraged = true;
@@ -660,12 +736,15 @@ export function fightStep(c: Ctx, dt: number): 'cleared' | 'dead' | null {
   const b = c.d.battle;
   if (c.run) runTimers(c, dt);
   else if (c.perk) crewStep(c, dt);
+  if (!c.run) dumpStep(c, dt);
   tickBurns(c, dt);
   b.playerAtkProgress += attackSpeed(c) * dt;
-  while (b.playerAtkProgress >= 1 && b.enemies.length > 0) {
+  while (b.playerAtkProgress >= 1 && b.enemies.length > 0 && b.playerHp > 0) {
     b.playerAtkProgress -= 1;
     playerAttack(c, false);
   }
+  // (A Spiky floor's pricks can knock him out mid-swing.)
+  if (b.playerHp <= 0) return 'dead';
   if (b.enemies.length === 0) return 'cleared';
 
   // Engaged enemies attack the raccoon (stunned ones just stand there).
@@ -682,4 +761,93 @@ export function fightStep(c: Ctx, dt: number): 'cleared' | 'dead' | null {
     if (b.playerHp <= 0) return 'dead';
   }
   return b.enemies.length === 0 ? 'cleared' : null;
+}
+
+// ------------------------------------------------------------------ the Endless Dump in the battle
+
+/** Damage to the raccoon from something other than an attack (a Spiky floor's pricks): it can knock him out. */
+function hurtRaccoon(c: Ctx, enemyUid: number, amount: number) {
+  const b = c.d.battle;
+  if (!(amount > 0)) return;
+  b.playerHp -= amount;
+  c.ev.push({ type: 'enemyHit', enemyUid, amount, heavy: false, spikes: true });
+  if (c.perk && b.playerHp <= 0) secondWind(c);
+}
+
+/** A dodged heavy hit: it misses, and he answers with a big blow. */
+function perfectDodge(c: Ctx, e: EnemyState) {
+  c.ev.push({ type: 'perfectDodge', enemyUid: e.uid });
+  const i = c.d.battle.enemies.indexOf(e);
+  const mult = BAL.endless.dodgeCounterMult;
+  if (i < 0 || !(mult > 0)) return;
+  const amount = computeDamage(c.stats.ATK * mult, e.def, true, c.stats.CRIT_DMG, 1, c.k);
+  const uid = e.uid;
+  const killed = damageEnemy(c, i, amount);
+  c.ev.push({ type: 'playerHit', enemyUid: uid, targetUid: uid, amount, crit: true, killed, echo: false });
+}
+
+/** A gate boss took a blow: it may hide under its lid, and enough hits get the hat back. */
+function bossMovesOnHit(c: Ctx, e: EnemyState, before: number, direct: boolean) {
+  const b = c.d.battle;
+  const m = BAL.endless.moves;
+  if (direct && b.hatGone > 0 && e.moves.includes('hatSteal')) {
+    b.hatGone -= 1;
+    if (b.hatGone === 0) c.ev.push({ type: 'hatBack', enemyUid: e.uid });
+  }
+  if (e.moves.includes('shield') && e.shields < m.shield.atHpPct.length) {
+    const at = (m.shield.atHpPct[e.shields] / 100) * e.maxHp;
+    if (before > at && e.hp <= at) {
+      e.shields += 1;
+      e.shieldLeft = m.shield.seconds;
+      c.ev.push({ type: 'lidUp', enemyUid: e.uid, seconds: m.shield.seconds });
+    }
+  }
+  if (e.moves.includes('enrage') && !e.moveEnraged && (e.hp / e.maxHp) * 100 < m.enrage.belowHpPct) {
+    e.moveEnraged = true;
+    e.atk *= m.enrage.atkMult;
+    e.atkSpd *= m.enrage.atkSpdMult;
+    c.ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: DATA.strings['move.enrage'] ?? 'Enrage' });
+  }
+}
+
+/**
+ * The Dump's own clock in a fight: a Regenerating floor's enemies and a regenerating gate boss heal
+ * unless they're burning, the lid comes back down, and a gate boss calls for backup.
+ */
+function dumpStep(c: Ctx, dt: number) {
+  const b = c.d.battle;
+  const tw = BAL.endless.twists;
+  const m = BAL.endless.moves;
+  for (const e of [...b.enemies]) {
+    if (e.shieldLeft > 0) e.shieldLeft = Math.max(0, e.shieldLeft - dt);
+    let pct = 0;
+    if (c.twist === 'regen') pct += e.kind === 'regular' ? tw.regen.pctPerSecond : tw.regen.bossPctPerSecond;
+    if (e.moves.includes('regen')) pct += m.regen.pctPerSecond;
+    if (pct > 0 && e.burnTime <= 0 && e.hp > 0) e.hp = Math.min(e.maxHp, e.hp + (e.maxHp * pct * dt) / 100);
+    if (e.moves.includes('summon')) {
+      e.moveTimer += dt;
+      if (e.moveTimer >= m.summon.everySeconds) {
+        e.moveTimer -= m.summon.everySeconds;
+        const roster = worldDef(b.stage).enemies;
+        const helpers = b.enemies.filter((x) => x.kind === 'regular').length;
+        if (helpers < m.summon.max && roster.length > 0) {
+          const foe = roster[c.rng.int(0, roster.length - 1)];
+          const add = makeEnemy(DATA.enemiesById.get(foe.id)!, b.stage, b.nextEnemyUid++, false);
+          // The new arrival steps in front of the one who called it.
+          b.enemies.unshift(add);
+          c.ev.push({ type: 'bossSpecial', enemyUid: e.uid, name: DATA.strings['move.summon'] ?? 'Backup' });
+        }
+      }
+    }
+  }
+}
+
+/** A Dodge tap: it counts if a boss's heavy hit is winding up right now. */
+export function dodge(d: GameState, ev: CoreEvent[]): boolean {
+  const b = d.battle;
+  if (b.phase !== 'fighting' || b.dodge) return false;
+  if (!b.enemies.some((e) => e.tele > 0)) return false;
+  b.dodge = true;
+  ev.push({ type: 'dodgeArmed' });
+  return true;
 }

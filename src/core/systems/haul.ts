@@ -19,8 +19,10 @@ export type HaulSize = 'big' | 'huge' | 'mega';
 export function judgeHaul(d: GameState, coins: number): { size: HaulSize | null; usual: number | null } {
   const h = BAL.feel.haul;
   const tr = d.haulTrend;
-  if (tr.run !== d.rebirths) {
-    tr.run = d.rebirths;
+  // (A run is a rebirth's; a Legend starts the count over, so it counts too.)
+  const run = d.rebirths + (d.legend?.count ?? 0) * 1000;
+  if (tr.run !== run) {
+    tr.run = run;
     tr.n = 0;
     tr.level = 0;
     tr.slope = 0;
@@ -40,7 +42,7 @@ export function judgeHaul(d: GameState, coins: number): { size: HaulSize | null;
     usual = Math.exp(expected);
     const k = Math.exp(x - expected);
     size = k >= h.mega ? 'mega' : k >= h.huge ? 'huge' : k >= h.big ? 'big' : null;
-  } else if (tr.n === 0 && d.rebirths === 0) {
+  } else if (tr.n === 0 && d.rebirths === 0 && !(d.legend?.count ?? 0)) {
     size = 'big';
   }
   // Holt's linear trend on the log of a haul, per minute of play.

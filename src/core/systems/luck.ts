@@ -8,6 +8,8 @@ import type { Rng } from '../rng';
 import type { GameState } from '../state';
 import { rarityAtLeast } from '../util';
 import { combatEffects, enchantTierWeights } from './enchants';
+import { dumpLuckMult } from './endless';
+import { legendFx } from './legend';
 import { perkLuckMult } from './perks';
 import { upgradeEffects } from './upgrades';
 
@@ -22,6 +24,10 @@ export interface LuckBreakdown {
   boostEndsAt: number | null;
   /** Carb Loading (an Alley perk): luck for every uneaten loaf. */
   perkMult: number;
+  /** Star Luck (Legend Stars). */
+  legendMult: number;
+  /** A Lucky Floor in the Endless Dump. */
+  dumpMult: number;
   total: number;
 }
 
@@ -33,8 +39,12 @@ export function luckBreakdown(state: GameState, now: number): LuckBreakdown {
   const boosting = state.luckBoostEndsAt !== null && now < state.luckBoostEndsAt;
   const boostMult = boosting ? BAL.luck.potion.mult : 1;
   const perkMult = perkLuckMult(state);
-  const total = (1 + upgrades + dumpster + enchants) * rebirthMult * boostMult * perkMult;
-  return { upgrades, dumpster, enchants, rebirthMult, boostMult, boostEndsAt: boosting ? state.luckBoostEndsAt : null, perkMult, total };
+  const legendMult = 1 + legendFx(state).luckPct / 100;
+  const dumpMult = dumpLuckMult(state);
+  const total = (1 + upgrades + dumpster + enchants) * rebirthMult * boostMult * perkMult * legendMult * dumpMult;
+  return {
+    upgrades, dumpster, enchants, rebirthMult, boostMult, boostEndsAt: boosting ? state.luckBoostEndsAt : null, perkMult, legendMult, dumpMult, total,
+  };
 }
 
 export function currentLuck(state: GameState, now: number): number {
@@ -49,11 +59,14 @@ export function luckyEvery(state: GameState): number {
   return Math.max(BAL.roll.luckyRollMinEvery, BAL.roll.luckyRollEvery - upgradeEffects(state).luckyEvery);
 }
 
-/** Exact probability of each rarity at a given luck. */
-export function rarityChances(luck: number, minRarity: Rarity = 'junk'): Record<Rarity, number> {
+/** The rarest tier there is. */
+export const TOP_RARITY: Rarity = RARITIES[RARITIES.length - 1];
+
+/** Exact probability of each rarity at a given luck (tiers above `maxRarity` are never rolled). */
+export function rarityChances(luck: number, minRarity: Rarity = 'junk', maxRarity: Rarity = TOP_RARITY): Record<Rarity, number> {
   const out = Object.fromEntries(RARITIES.map((r) => [r, 0])) as Record<Rarity, number>;
   let remaining = 1;
-  for (let i = RARITIES.length - 1; i >= 1; i--) {
+  for (let i = RARITIES.indexOf(maxRarity); i >= 1; i--) {
     const r = RARITIES[i];
     if (!rarityAtLeast(r, minRarity)) break;
     const p = Math.min(1, luck / RARITY_ODDS[r]);
@@ -215,9 +228,13 @@ export function revealBar(luck: number): { rarity: Rarity; minutes: number } {
   return { rarity, minutes: BAL.feel.bigRoll.windowMinutes[0] };
 }
 
-/** Rolls a rarity: tiers are tried from rarest down; anything below `minRarity` is never rolled. */
-export function rollRarity(luck: number, rng: Rng, minRarity: Rarity = 'junk'): Rarity {
-  for (let i = RARITIES.length - 1; i >= 1; i--) {
+/**
+ * Rolls a rarity: tiers are tried from rarest down; anything below `minRarity` is never rolled, nor
+ * anything above `maxRarity` (the tiers past Grail open with depth in the Endless Dump: endless.ts topRarity).
+ */
+export function rollRarity(luck: number, rng: Rng, minRarity: Rarity = 'junk', maxRarity: Rarity = TOP_RARITY): Rarity {
+  if (!rarityAtLeast(maxRarity, minRarity)) return minRarity;
+  for (let i = RARITIES.indexOf(maxRarity); i >= 1; i--) {
     const r = RARITIES[i];
     if (!rarityAtLeast(r, minRarity)) break;
     if (rng.chance(Math.min(1, luck / RARITY_ODDS[r]))) return r;

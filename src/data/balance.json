@@ -174,6 +174,48 @@
       "substats": 4,
       "recycleXp": 10000,
       "recycleCoins": 16000
+    },
+    "cosmic": {
+      "mult": 38.0,
+      "substats": 4,
+      "recycleXp": 15000,
+      "recycleCoins": 25000
+    },
+    "glitched": {
+      "mult": 48.0,
+      "substats": 4,
+      "recycleXp": 22000,
+      "recycleCoins": 38000
+    },
+    "fourthWall": {
+      "mult": 60.0,
+      "substats": 4,
+      "recycleXp": 32000,
+      "recycleCoins": 56000
+    },
+    "devsOwn": {
+      "mult": 75.0,
+      "substats": 4,
+      "recycleXp": 46000,
+      "recycleCoins": 82000
+    },
+    "patchNotes": {
+      "mult": 95.0,
+      "substats": 4,
+      "recycleXp": 66000,
+      "recycleCoins": 120000
+    },
+    "sourceCode": {
+      "mult": 120.0,
+      "substats": 4,
+      "recycleXp": 95000,
+      "recycleCoins": 175000
+    },
+    "concept": {
+      "mult": 150.0,
+      "substats": 4,
+      "recycleXp": 140000,
+      "recycleCoins": 260000
     }
   },
   "recycle": {
@@ -469,7 +511,14 @@
       "mint": 6,
       "gemMint": 7,
       "museum": 7,
-      "grail": 8
+      "grail": 8,
+      "cosmic": 8,
+      "glitched": 8,
+      "fourthWall": 8,
+      "devsOwn": 8,
+      "patchNotes": 8,
+      "sourceCode": 8,
+      "concept": 8
     },
     "revealSecondsByRarity": {
       "junk": 0.2,
@@ -484,7 +533,14 @@
       "mint": 5.0,
       "gemMint": 5.5,
       "museum": 6.0,
-      "grail": 7.0
+      "grail": 7.0,
+      "cosmic": 7.0,
+      "glitched": 7.0,
+      "fourthWall": 7.0,
+      "devsOwn": 7.0,
+      "patchNotes": 7.0,
+      "sourceCode": 7.0,
+      "concept": 7.0
     },
     "hotDumpsterStartPct": 50,
     "maxCatchUpTicksPerFrame": 50,
@@ -502,7 +558,14 @@
         "mint": 6,
         "gemMint": 4,
         "museum": 3,
-        "grail": 2
+        "grail": 2,
+        "cosmic": 1,
+        "glitched": 1,
+        "fourthWall": 1,
+        "devsOwn": 1,
+        "patchNotes": 1,
+        "sourceCode": 1,
+        "concept": 1
       },
       "nearMissChance": 0.65,
       "flairChance": 0.3,
@@ -570,7 +633,14 @@
     "mint": 1000000,
     "gemMint": 5000000,
     "museum": 25000000,
-    "grail": 250000000
+    "grail": 250000000,
+    "cosmic": 1000000000,
+    "glitched": 5000000000,
+    "fourthWall": 25000000000,
+    "devsOwn": 150000000000,
+    "patchNotes": 1000000000000,
+    "sourceCode": 10000000000000,
+    "concept": 100000000000000
   },
   "luck": {
     "potion": {
@@ -1342,6 +1412,117 @@
       { "id": "breadBait", "tree": "bread", "cost": 2, "requires": ["sourdoughStarter"], "icon": "target", "effect": { "extraLoaves": 1, "bossHpPct": 50 } },
       { "id": "holyCrust", "tree": "bread", "cost": 3, "requires": ["carbLoading", "breadBait"], "icon": "star", "effect": { "eatenLoafPct": 4 } },
       { "id": "glutenGolem", "tree": "bread", "cost": 4, "requires": ["holyCrust"], "icon": "golem", "effect": { "golemAtkPct": 15, "golemEvery": 2 } }
+    ]
+  },
+  "endless": {
+    "floorStep": 0.2,
+    "wavesPerFloor": 3,
+    "gateEvery": 10,
+    "sawtooth": [0.86, 0.88, 0.91, 0.94, 0.97, 1.0, 1.03, 1.06, 1.14, 1.0],
+    "lossesBeforeBack": 3,
+    "gate": { "hpMult": 7, "atkMult": 1.35, "gems": 25, "gemsPerGate": 5, "movesFirst": 1, "movesEveryGates": 3, "maxMoves": 3 },
+    "floorGems": 2,
+    "twistChance": 0.6,
+    "goodAfterGate": 2,
+    "twists": {
+      "swarm": { "countMult": 2, "hpMult": 0.45 },
+      "regen": { "pctPerSecond": 6, "bossPctPerSecond": 1.2 },
+      "armored": { "nonCritPct": 25 },
+      "spiky": { "atkShare": 0.18 },
+      "slippery": { "dodgePct": 40 },
+      "giants": { "count": 2, "hpMult": 2.4 },
+      "goldRush": { "goldMult": 3 },
+      "lucky": { "luckMult": 2 },
+      "pinata": { "bagMult": 3 }
+    },
+    "moves": {
+      "enrage": { "belowHpPct": 50, "atkMult": 1.3, "atkSpdMult": 1.5 },
+      "summon": { "everySeconds": 8, "max": 2 },
+      "regen": { "pctPerSecond": 1.5 },
+      "hatSteal": { "hits": 15 },
+      "shield": { "atHpPct": [66, 33], "seconds": 3 }
+    },
+    "windupSeconds": 1.2,
+    "dodgeCounterMult": 3,
+    "catchUp": { "afterMinutes": 15, "pctPerMinute": 3, "maxPct": 300 },
+    "milestones": [25, 50, 100, 150, 200, 300, 500, 750, 1000],
+    "tierFloors": { "cosmic": 10, "glitched": 25, "fourthWall": 45, "devsOwn": 70, "patchNotes": 100, "sourceCode": 140, "concept": 200 },
+    "gateBosses": ["officer_dale", "big_earl", "vinnie_two_lids", "mega_moo", "demon_king", "chef_tony", "mall_cop_doug", "the_concierge"],
+    "tints": [
+      ["#7C5CFF", "#40C4FF"], ["#00C853", "#B2FF59"], ["#FF5252", "#FFD54F"], ["#E040FB", "#FF80AB"],
+      ["#00E5FF", "#FFFFFF"], ["#FF9100", "#3E2723"], ["#212121", "#FF1744"], ["#FFEA00", "#6200EA"]
+    ],
+    "overlay": { "color": "#5B2BB5", "alpha": 0.16 },
+    "floorsPerRebirthWorld": 5,
+    "goldRebirthsCap": 8
+  },
+  "stench": {
+    "max": 10,
+    "goldXpPerLevel": 0.3,
+    "starsPerLevel": 0.15,
+    "curses": [
+      { "id": "wetSocks", "effect": { "enemyHpPct": 50 } },
+      { "id": "fruitFlies", "effect": { "extraEnemies": 1 } },
+      { "id": "hotGarbage", "effect": { "enemyAtkPct": 40 } },
+      { "id": "stickyFloor", "effect": { "atkSpdCutPct": 15 } },
+      { "id": "rottenLuck", "effect": { "gateMoves": 1 } },
+      { "id": "mysteryJuice", "effect": { "lifestealCutPct": 100 } },
+      { "id": "ratsInTheWalls", "effect": { "enemyAtkSpdPct": 30 } },
+      { "id": "weekOldPizza", "effect": { "regenCutPct": 100 } },
+      { "id": "raccoonFlu", "effect": { "hpCutPct": 25 } },
+      { "id": "theSmell", "effect": { "enemyHpPct": 100, "enemyAtkPct": 100 } }
+    ]
+  },
+  "legend": {
+    "unlockRebirths": 5,
+    "starsPerRebirthSq": 0.5,
+    "starsPerFloor": 1,
+    "perks": [
+      { "id": "headStart", "icon": "rocket", "max": 3, "costs": [4, 12, 30], "effect": { "startLevels": 10, "startWorlds": 5 } },
+      { "id": "loafStash", "icon": "bread", "max": 3, "costs": [3, 8, 18], "effect": { "startLoaves": 2 } },
+      { "id": "autoEquip", "icon": "shirt", "max": 1, "costs": [6], "effect": { "autoEquip": 1 } },
+      { "id": "autoRebirth", "icon": "rebirth", "max": 1, "costs": [10], "effect": { "autoRebirth": 1 } },
+      { "id": "keepReels", "icon": "reel", "max": 1, "costs": [25], "effect": { "keepReels": 1 } },
+      { "id": "goldenLid", "icon": "reelGold", "max": 3, "costs": [8, 20, 45], "effect": { "goldenSpin": 0.02 } },
+      { "id": "starLuck", "icon": "clover", "max": 0, "cost": { "base": 3, "growth": 1.35 }, "effect": { "luckPct": 10 } },
+      { "id": "starPower", "icon": "power", "max": 0, "cost": { "base": 3, "growth": 1.3 }, "effect": { "powerPct": 20 } },
+      { "id": "starGold", "icon": "coin", "max": 0, "cost": { "base": 2, "growth": 1.3 }, "effect": { "goldPct": 25 } }
+    ]
+  },
+  "daily": {
+    "count": 3,
+    "chest": { "gems": 50, "potionSeconds": 120 },
+    "tasks": [
+      { "id": "rolls", "event": "roll", "target": 300, "gems": 15 },
+      { "id": "epics", "event": "epicFind", "target": 5, "gems": 20 },
+      { "id": "bosses", "event": "bossWin", "target": 10, "gems": 20 },
+      { "id": "kills", "event": "kill", "target": 600, "gems": 15 },
+      { "id": "scraps", "event": "scrap", "target": 80, "gems": 15 },
+      { "id": "equips", "event": "equip", "target": 10, "gems": 15 },
+      { "id": "dodges", "event": "perfectDodge", "target": 3, "gems": 25 },
+      { "id": "floors", "event": "floorClear", "target": 15, "gems": 25, "needs": "endless" },
+      { "id": "gates", "event": "gateClear", "target": 1, "gems": 30, "needs": "endless" },
+      { "id": "heist", "event": "heistWin", "target": 1, "gems": 25, "needs": "heist" }
+    ]
+  },
+  "weekly": {
+    "rules": [
+      { "id": "allSwarm", "twist": "swarm", "atkMult": 1, "hpMult": 1, "goldMult": 1.5 },
+      { "id": "glassFloors", "twist": null, "atkMult": 2, "hpMult": 0.4, "goldMult": 1.5 },
+      { "id": "slipperyWeek", "twist": "slippery", "atkMult": 1, "hpMult": 1, "goldMult": 1.5 },
+      { "id": "ironclad", "twist": "armored", "atkMult": 1, "hpMult": 1.5, "goldMult": 1.5 },
+      { "id": "zombieWeek", "twist": "regen", "atkMult": 1, "hpMult": 1, "goldMult": 1.5 },
+      { "id": "cactusWeek", "twist": "spiky", "atkMult": 1, "hpMult": 1.2, "goldMult": 1.5 },
+      { "id": "bigBoysWeek", "twist": "giants", "atkMult": 1.2, "hpMult": 1, "goldMult": 1.5 }
+    ],
+    "rewards": [
+      { "floor": 5, "gems": 20, "stars": 0 },
+      { "floor": 10, "gems": 30, "stars": 1 },
+      { "floor": 20, "gems": 40, "stars": 2 },
+      { "floor": 35, "gems": 60, "stars": 3 },
+      { "floor": 50, "gems": 80, "stars": 5 },
+      { "floor": 75, "gems": 100, "stars": 8 },
+      { "floor": 100, "gems": 150, "stars": 12 }
     ]
   }
 }

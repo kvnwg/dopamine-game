@@ -27,8 +27,9 @@ const P = BAL.perks;
 // ------------------------------------------------------------------ the catalog
 
 /** Perks open (loaves are earned and spent) with BAL.perks.unlockRebirths rebirths. */
-export function perksOpen(state: Pick<GameState, 'rebirths'>): boolean {
-  return state.rebirths >= P.unlockRebirths;
+export function perksOpen(state: Pick<GameState, 'rebirths'> & Partial<Pick<GameState, 'legend'>>): boolean {
+  // (After a Legend they stay open.)
+  return state.rebirths >= P.unlockRebirths || (state.legend?.count ?? 0) > 0;
 }
 
 export function alleyPerk(id: string): AlleyPerkDef | undefined {

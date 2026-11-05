@@ -31,6 +31,7 @@ import { currentRate } from './offline';
 import { rebirthRequirement } from './rebirth';
 import { addLuckBoost, addToBag, goldMult, potionSeconds } from './roller';
 import { defConstant, growth, worldCount } from './stages';
+import { topRarity } from './endless';
 import { computeStats, zeroStats } from './stats';
 import { itemTierFor } from './worlds';
 
@@ -86,8 +87,9 @@ export function heistMaxLevel(): number {
  * Heists open with the first rebirth (`unlockRebirths`), so a new game has less going on at once.
  * Tickets keep coming meanwhile; only starting a run and the ad ticket wait for it.
  */
-export function heistsOpen(state: Pick<GameState, 'rebirths'>): boolean {
-  return state.rebirths >= H.unlockRebirths;
+export function heistsOpen(state: Pick<GameState, 'rebirths'> & Partial<Pick<GameState, 'legend'>>): boolean {
+  // (After a Legend they stay open.)
+  return state.rebirths >= H.unlockRebirths || (state.legend?.count ?? 0) > 0;
 }
 
 /** The best world ever beaten, across rebirths (a rebirth proves its required world was beaten). */
@@ -294,7 +296,8 @@ export function heistTier(state: GameState): number {
   const ref = H.enemies.refMargin;
   // Below World 1 for a raccoon too green for it (enemies and gold keep shrinking the same way).
   let lo = -3;
-  let hi = worldCount();
+  // (Deep in the Endless Dump, heists keep up: its floors count as worlds.)
+  let hi = Math.max(worldCount(), state.stage.highestCleared);
   if (heistMargin(state, lo) <= ref) return lo;
   if (heistMargin(state, hi) >= ref) return hi;
   for (let i = 0; i < 40; i++) {
@@ -595,6 +598,7 @@ function makeRunEnemy(run: HeistRun, enemyId: string, uid: number): EnemyState {
   return {
     uid, enemyId, kind: def.kind, hp: s.hp, maxHp: s.hp, atk: s.atk, def: s.def, atkSpd: s.atkSpd,
     atkProgress: 0, specialTimer: 0, enraged: false, burnDps: 0, burnTime: 0, burnShown: 0,
+    moves: [], tele: 0, moveTimer: 0, shieldLeft: 0, shields: 0, moveEnraged: false, giant: false,
   };
 }
 
@@ -859,6 +863,7 @@ export function startHeist(d: GameState, location: LocationId, rng: Rng, now: nu
   run.hp = max;
   d.battle = {
     stage: loc.world, wave: 0, phase: 'idle', phaseTime: 0, playerHp: max, playerAtkProgress: 0, enemies: [], nextEnemyUid: main.nextEnemyUid,
+    dodge: false, hatGone: 0,
   };
   h.run = run;
   log(h.run, 'heist.log.start', { location: loc.name });
@@ -881,7 +886,7 @@ function dropRing(d: GameState, baseId: string, rng: Rng, now: number, ev: CoreE
   const base = DATA.itemsById.get(baseId);
   if (!base) return null;
   const R = H.ring;
-  const rarity = rollRarity(currentLuck(d, now) * R.luckMult, rng, R.minRarity);
+  const rarity = rollRarity(currentLuck(d, now) * R.luckMult, rng, R.minRarity, topRarity(d));
   const item = createItem(base, rarity, rollItemLevel(d.player.level, rng), d.dumpster.theme, rng, d.nextItemUid++, [], itemTierFor(d));
   registerCodex(d, item, ev);
   addToBag(d, item, ev);

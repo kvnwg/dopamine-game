@@ -3,7 +3,10 @@ import { BAL, DATA, STAT_IDS, SLOTS, type Mod, type StatId } from '../../data';
 import type { GameState } from '../state';
 import type { Item, Stats } from '../types';
 import { codexBonusMods } from './codex';
+import { dumpStatMults } from './endless';
 import { enchantMods } from './enchants';
+import { effWorld } from './floors';
+import { legendFx } from './legend';
 import { perkStatMults } from './perks';
 import { upgradeEffects } from './upgrades';
 
@@ -31,8 +34,10 @@ export interface GearScale {
 
 export function gearScale(state: Partial<Pick<GameState, 'player' | 'stage'>>): GearScale {
   const level = state.player?.level ?? 1;
-  // Only worlds actually beaten count (the bonus for a world arrives once it is cleared).
-  const world = Math.max(1, Math.min(DATA.worlds.length, state.stage?.highestCleared ?? 0));
+  // Only worlds actually beaten count (the bonus for a world arrives once it is cleared). Endless Dump
+  // floors keep it growing, a share of a world each (floors.ts effWorld).
+  const best = Math.max(1, state.stage?.highestCleared ?? 0);
+  const world = best <= DATA.worlds.length ? best : effWorld(best);
   return { level: 1 + BAL.items.levelScalePerLevel * (level - 1), tier: tierMult(world) };
 }
 
@@ -65,7 +70,8 @@ export interface StatBreakdown {
   pct: Stats;
 }
 
-type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> & Partial<Pick<GameState, 'upgrades' | 'rebirths' | 'stage' | 'perks'>>;
+type StatState = Pick<GameState, 'player' | 'equipped' | 'codex'> &
+  Partial<Pick<GameState, 'upgrades' | 'rebirths' | 'stage' | 'perks' | 'legend' | 'dump' | 'battle' | 'heist'>>;
 
 export function statSources(state: StatState): StatBreakdown {
   const flat = zeroStats();
@@ -77,9 +83,11 @@ export function statSources(state: StatState): StatBreakdown {
     else pct[m.stat] += m.value;
   };
   const scale = gearScale(state);
+  // A gate boss that Steals Your Hat has it until he gets it back.
+  const hatGone = (state.battle?.hatGone ?? 0) > 0 && !state.heist?.run;
   for (const slot of SLOTS) {
     const it = state.equipped[slot];
-    if (it) itemMods(it, scale).forEach(apply);
+    if (it && !(slot === 'hat' && hatGone)) itemMods(it, scale).forEach(apply);
   }
   codexBonusMods(state.codex.entries.length).forEach(apply);
   const up = upgradeEffects({ upgrades: state.upgrades ?? {} });
@@ -93,6 +101,12 @@ export function statSources(state: StatState): StatBreakdown {
   const reb = (state.rebirths ?? 0) * BAL.rebirth.statPctPer;
   pct.ATK += reb;
   pct.HP += reb;
+  // Star Power (Legend Stars).
+  if (state.legend) {
+    const lf = legendFx(state as Pick<GameState, 'legend'>);
+    pct.ATK += lf.powerPct;
+    pct.HP += lf.powerPct;
+  }
   return { flat, pct };
 }
 
@@ -105,6 +119,15 @@ export function computeStats(state: StatState): Stats {
   out.ATK *= perk.atk;
   out.HP *= perk.hp;
   out.ATK_SPD *= perk.atkSpd;
+  // In the Endless Dump: Grit, Stench and the Weekly Dive's rules.
+  if (state.dump && state.battle) {
+    const m = dumpStatMults(state as Pick<GameState, 'battle' | 'dump' | 'heist'>);
+    out.ATK *= m.atk;
+    out.HP *= m.hp;
+    out.ATK_SPD *= m.atkSpd;
+    out.LIFESTEAL *= m.lifesteal;
+    out.REGEN *= m.regen;
+  }
   const caps = BAL.player.caps;
   out.CRIT = Math.min(out.CRIT, caps.CRIT);
   out.DODGE = Math.min(out.DODGE, caps.DODGE);

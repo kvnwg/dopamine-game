@@ -19,6 +19,7 @@ import { reelStops, stopOrder, tokenHoldMs, type SpinTiming } from './reelTiming
 export const TIER_LIGHT: Record<Rarity, string> = {
   junk: '#b4b4b4', decent: '#5ad35f', shiny: '#42a8ff', epic: '#c25af0', legendary: '#ffc21a', mythic: '#ff4fa3', vintage: '#d2884a',
   limited: '#ff3b4e', prototype: '#38e8ff', mint: '#fff4d6', gemMint: '#4dffb4', museum: '#e9ddff', grail: '#fff07a',
+  cosmic: '#9c84ff', glitched: '#00ffa3', fourthWall: '#ff6ad5', devsOwn: '#33d1ff', patchNotes: '#ffa726', sourceCode: '#39ff14', concept: '#ffffff',
 };
 
 export function tierLight(tier: number): string {

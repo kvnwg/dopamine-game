@@ -10,7 +10,11 @@ import { BAL } from '../data';
 import type { Rng } from './rng';
 import { FEATURES, type GameState } from './state';
 import type { CoreEvent, GameAction, StepResult } from './types';
-import { combatTick, resolveAfterBoss, startStage } from './systems/combat';
+import { combatTick, dodge, resolveAfterBoss, startStage } from './systems/combat';
+import { claimDaily, openDailyChest, refreshDaily, trackDaily } from './systems/daily';
+import { endlessOpen, enterDump, inDump, refreshWeekly, setStench } from './systems/endless';
+import { dumpWorld } from './systems/floors';
+import { autoRebirthOn, buyLegendPerk, setLegendToggle } from './systems/legend';
 import { checkUpgrade, speedupWithAd, speedupWithGems, startUpgrade } from './systems/dumpster';
 import {
   heistAbandon, heistAdTicket, heistBoot, heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistReroll, heistRevive,
@@ -20,7 +24,7 @@ import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { buyPerk } from './systems/perks';
 import { addXp, totalXpForLevel } from './systems/progression';
-import { doRebirth } from './systems/rebirth';
+import { canRebirth, doLegend, doRebirth } from './systems/rebirth';
 import { addLuckBoost, equipFromBag, rollTick, scrapAllFromBag, scrapFromBag, toggleLock, equipBest } from './systems/roller';
 import { worldCount } from './systems/stages';
 import { travelTo } from './systems/worlds';
@@ -36,6 +40,8 @@ function run(state: GameState, rng: Rng, fn: (d: GameState, ev: CoreEvent[]) => 
     fn(d, events);
     // A new game opens its features one by one, as each becomes useful.
     checkFeatures(d, events);
+    // Today's tasks count what just happened.
+    trackDaily(d, events);
     d.rngState = rng.state;
   });
   return { state: next, events };
@@ -53,9 +59,18 @@ export function tick(state: GameState, input: { ticks: number }, rng: Rng, now: 
     }
     checkUpgrade(d, now, ev);
     refreshTickets(d, now, ev);
+    refreshDays(d, now, ev);
+    // Groundhog Day (Legend Stars): a rebirth the moment it can.
+    if (autoRebirthOn(d) && canRebirth(d)) doRebirth(d, ev);
     if (d.luckBoostEndsAt !== null && now >= d.luckBoostEndsAt) d.luckBoostEndsAt = null;
     d.lastActiveAt = Math.max(d.lastActiveAt, now);
   });
+}
+
+/** A new day's tasks, a new week's Weekly Dive. */
+function refreshDays(d: GameState, now: number, ev: CoreEvent[]): void {
+  if (refreshDaily(d, now)) ev.push({ type: 'dailyNew', day: d.daily.day });
+  refreshWeekly(d, now, (w, push) => startStage(d, w, ev, push));
 }
 
 export function applyAction(state: GameState, action: GameAction, rng: Rng, now: number): StepResult<GameState> {
@@ -117,10 +132,11 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'boot':
         // Loaded from a save: restart the current stage cleanly (mid-heist, the waiting one), then pay out offline time.
         if (d.heist.run) heistBoot(d);
-        else if (d.stage.chosen) startStage(d, d.battle.stage, ev, false);
+        else if (d.stage.chosen) startStage(d, d.battle.stage, ev, d.battle.stage > d.stage.highestCleared);
         onResume(d, now, ev, rng);
         checkUpgrade(d, now, ev);
         refreshTickets(d, now, ev);
+        refreshDays(d, now, ev);
         break;
       case 'snapshot':
         snapshotForSave(d, now);
@@ -163,6 +179,35 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         break;
       case 'heistAdTicket':
         if (heistsOpen(d)) heistAdTicket(d, now, ev);
+        break;
+      case 'dodge':
+        if (!d.heist.run) dodge(d, ev);
+        break;
+      case 'enterDump':
+        refreshDays(d, now, ev);
+        enterDump(d, action.mode, ev, (w, push) => startStage(d, w, ev, push));
+        break;
+      case 'setStench':
+        if (setStench(d, action.level)) {
+          ev.push({ type: 'stenchChanged', level: d.dump.stench });
+          // On the endless floors the floor starts over under the new Stench.
+          if (inDump(d) && d.dump.mode === 'endless' && d.battle.phase !== 'choice') startStage(d, d.battle.stage, ev, d.stage.mode === 'push');
+        }
+        break;
+      case 'legend':
+        doLegend(d, ev);
+        break;
+      case 'buyLegendPerk':
+        buyLegendPerk(d, action.id, ev);
+        break;
+      case 'setLegendToggle':
+        setLegendToggle(d, action.key, action.value);
+        break;
+      case 'claimDaily':
+        claimDaily(d, action.id, ev);
+        break;
+      case 'openDailyChest':
+        openDailyChest(d, now, ev);
         break;
       case 'cheat':
         applyCheat(d, action.cheat, ev, now);
@@ -233,6 +278,23 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       break;
     case 'addRebirths':
       d.rebirths = clamp(d.rebirths + Math.round(cheat.n), 0, 9999);
+      break;
+    case 'setFloor': {
+      if (d.heist.run) break;
+      const floor = clamp(Math.round(cheat.floor), 1, 100000);
+      d.stage.highestCleared = Math.max(worldCount(), dumpWorld(floor) - 1);
+      d.dump.bestEver = Math.max(d.dump.bestEver, floor - 1);
+      d.legend.runDeepest = Math.max(d.legend.runDeepest, floor - 1);
+      d.dump.floor = floor;
+      d.dump.mode = 'endless';
+      d.stage.chosen = true;
+      d.stage.mode = 'push';
+      if (endlessOpen(d)) startStage(d, dumpWorld(floor), ev, true);
+      break;
+    }
+    case 'addStars':
+      d.legend.stars = Math.max(0, d.legend.stars + Math.round(cheat.n));
+      d.legend.earned = Math.max(d.legend.earned, d.legend.stars);
       break;
   }
 }

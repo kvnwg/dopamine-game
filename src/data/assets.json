@@ -110,6 +110,71 @@
           "#E040FB",
           "#FFFFFF"
         ]
+      },
+      "cosmic": {
+        "color": "#7C5CFF",
+        "gradient": [
+          "#120A3A",
+          "#7C5CFF",
+          "#40C4FF",
+          "#FFFFFF"
+        ]
+      },
+      "glitched": {
+        "color": "#00FFA3",
+        "gradient": [
+          "#00FFA3",
+          "#FF2BD6",
+          "#00E5FF",
+          "#00FFA3"
+        ]
+      },
+      "fourthWall": {
+        "color": "#FF6AD5",
+        "gradient": [
+          "#FFFFFF",
+          "#FF6AD5",
+          "#FFD54F",
+          "#FF6AD5"
+        ]
+      },
+      "devsOwn": {
+        "color": "#33D1FF",
+        "gradient": [
+          "#0B1F33",
+          "#33D1FF",
+          "#B9F3FF",
+          "#33D1FF"
+        ]
+      },
+      "patchNotes": {
+        "color": "#FFA726",
+        "gradient": [
+          "#FFFFFF",
+          "#FFA726",
+          "#FF5252",
+          "#FFA726"
+        ]
+      },
+      "sourceCode": {
+        "color": "#39FF14",
+        "gradient": [
+          "#001A00",
+          "#39FF14",
+          "#B6FF9E",
+          "#39FF14"
+        ]
+      },
+      "concept": {
+        "color": "#FFFFFF",
+        "gradient": [
+          "#FFFFFF",
+          "#FF5252",
+          "#FFD54F",
+          "#40C4FF",
+          "#E040FB",
+          "#FFFFFF"
+        ]
       }
     },
     "enemies": {

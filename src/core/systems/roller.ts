@@ -24,6 +24,9 @@ import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
 import { currentLuck, itemOddsOneIn, judgeFinds, luckyEvery, rollRarity } from './luck';
 import { judgeHaul } from './haul';
 import { perkBagMult, perkFx, perkSpinMult, rigSpin } from './perks';
+import { topRarity } from './endless';
+import { autoEquipOn, legendFx } from './legend';
+import { itemUnlockRank } from './unlocks';
 import { addXp } from './progression';
 import { rebirthGoldMult } from './rebirth';
 import { computeStats } from './stats';
@@ -77,11 +80,13 @@ export function drySpell(state: Pick<GameState, 'upgrades'>): number {
 /** Gold multiplier from the Gold upgrade, Golden enchantments, and rebirths. */
 export function goldMult(state: GameState): number {
   const pct = upgradeEffects(state).goldPct + combatEffects(state).goldPct;
-  return (1 + pct / 100) * rebirthGoldMult(state.rebirths);
+  return (1 + pct / 100) * rebirthGoldMult(state.rebirths) * (1 + legendFx(state).goldPct / 100);
 }
 
-function bumpRarity(r: Rarity, by: number): Rarity {
-  const i = Math.min(RARITIES.length - 1, RARITIES.indexOf(r) + by);
+/** A rarity `by` tiers up (Prismatic), never past `top` (unless it already was). */
+function bumpRarity(r: Rarity, by: number, top: Rarity = RARITIES[RARITIES.length - 1]): Rarity {
+  const cap = Math.max(RARITIES.indexOf(r), RARITIES.indexOf(top));
+  const i = Math.min(cap, RARITIES.length - 1, RARITIES.indexOf(r) + by);
   return RARITIES[i];
 }
 
@@ -196,7 +201,7 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
       d.roll.goldenLeft -= 1;
       golden = true;
       luck *= BAL.heist.golden.luckMult;
-    } else if (up.goldenSpin > 0 && rng.chance(up.goldenSpin)) {
+    } else if (up.goldenSpin + legendFx(d).goldenSpin > 0 && rng.chance(up.goldenSpin + legendFx(d).goldenSpin)) {
       golden = true;
       luck *= BAL.roll.goldenLuckMult;
     }
@@ -227,13 +232,13 @@ function rollReelItem(
   } else {
     // Bad luck protection's floor, or a big token chain's (chainFloor), whichever is higher.
     const pity = dz.level >= bl.minDumpsterLevel && dry >= drySpell(d) ? bl.minRarity : 'junk';
-    rarity = rollRarity(luck, rng, floor && rarityAtLeast(floor, pity) ? floor : pity);
+    rarity = rollRarity(luck, rng, floor && rarityAtLeast(floor, pity) ? floor : pity, topRarity(d));
   }
   const slot = slotOverride ?? rollSlot(rng);
   const level = rollItemLevel(d.player.level, rng);
   const enchants = rollEnchants(rng, enchantChance(d), up.enchantTier);
-  rarity = bumpRarity(rarity, rarityBump(enchants));
-  const base = pickBaseItem(slot, theme, rarity, rng, d.rebirths, avoidBase);
+  rarity = bumpRarity(rarity, rarityBump(enchants), topRarity(d));
+  const base = pickBaseItem(slot, theme, rarity, rng, itemUnlockRank(d), avoidBase);
   return createItem(base, rarity, level, theme, rng, d.nextItemUid++, enchants, itemTierFor(d));
 }
 
@@ -400,7 +405,7 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
  */
 export function beginnerLuckDue(d: GameState): boolean {
   const t = BAL.tutorial;
-  if (d.dumpster.beginner.state !== 'pending' || d.rebirths > 0) return false;
+  if (d.dumpster.beginner.state !== 'pending' || d.rebirths > 0 || d.legend.count > 0) return false;
   if (d.roll.count >= t.beginnerAtRolls) return true;
   const open = d.dumpster.openedAtMs;
   const longEnough = open === null || d.playTimeMs - open >= t.beginnerAfterSeconds * 1000;
@@ -439,6 +444,15 @@ function landSpin(d: GameState, ev: CoreEvent[], upTo = Infinity): void {
     else scrapItem(d, item, ev, true);
   });
   spin.landed = spin.reels.every((r) => r.landed);
+  // Personal Stylist (Legend Stars): upgrades go on by themselves.
+  if (autoEquipOn(d)) {
+    for (const it of bestUpgrades(d)) {
+      const idx = d.inventory.findIndex((x) => x.uid === it.uid);
+      if (idx < 0) continue;
+      const [item] = d.inventory.splice(idx, 1);
+      equip(d, snap(item), ev, true);
+    }
+  }
 }
 
 /** True when `item` would beat what is equipped in its slot (or the slot is empty). */

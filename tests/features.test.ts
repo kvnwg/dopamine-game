@@ -3,7 +3,7 @@ import {
   applyAction, FEATURES, featureView, GameStateSchema, introFeature, rebirthTabWorld, Rng, tick, tutorialOver, upgradeCost, type CoreEvent, type Feature,
   type GameState,
 } from '../src/core';
-import { BAL } from '../src/data';
+import { BAL, DATA } from '../src/data';
 import { freshState, T0 } from './helpers';
 
 const clone = (s: GameState) => structuredClone(s) as GameState;
@@ -85,7 +85,8 @@ describe('a new game opens its features one by one', () => {
     st = r.st;
     st.stage.highestCleared = rebirthTabWorld();
     r = step(st);
-    expect(r.opened).toEqual(['rebirth']);
+    // (Today's tasks open with it: a couple of worlds have fallen.)
+    expect(r.opened).toEqual(['rebirth', 'daily']);
     // The first rebirth: Heists.
     st = r.st;
     st.rebirths = BAL.heist.unlockRebirths;
@@ -96,6 +97,16 @@ describe('a new game opens its features one by one', () => {
     st.rebirths = BAL.perks.unlockRebirths;
     r = step(st);
     expect(r.opened).toEqual(['perks']);
+    // World 20 this run: the Endless Dump.
+    st = r.st;
+    st.stage.highestCleared = DATA.worlds.length;
+    r = step(st);
+    expect(r.opened).toEqual(['endless']);
+    // Rebirth 5: Become a Legend.
+    st = r.st;
+    st.rebirths = BAL.legend.unlockRebirths;
+    r = step(st);
+    expect(r.opened).toEqual(['legend']);
     expect([...r.st.features.unlocked].sort()).toEqual([...FEATURES].sort());
     // Nothing opens twice.
     expect(step(r.st).opened).toEqual([]);

@@ -46,7 +46,7 @@ function foe(kind: 'regular' | 'boss', hp: number, atk = 0, atkSpd = 1): EnemySt
   nextUid += 1;
   return {
     uid: nextUid, enemyId: 'alley_rat', kind, hp, maxHp: hp, atk, def: 0, atkSpd, atkProgress: 0, specialTimer: 0, enraged: false,
-    burnDps: 0, burnTime: 0, burnShown: 0,
+    burnDps: 0, burnTime: 0, burnShown: 0, moves: [], tele: 0, moveTimer: 0, shieldLeft: 0, shields: 0, moveEnraged: false, giant: false,
   };
 }
 

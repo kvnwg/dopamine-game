@@ -12,6 +12,25 @@ export function dayKey(ms: number): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+/** The Monday that starts this local week, e.g. "2026-11-02" (the Weekly Dive changes on Mondays). */
+export function weekKey(ms: number): string {
+  const d = new Date(ms);
+  const back = (d.getDay() + 6) % 7;
+  return dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - back, 12).getTime());
+}
+
+/** Ms until the next local midnight (daily tasks), or until next Monday's (`week`). */
+export function msUntilReset(ms: number, week = false): number {
+  const d = new Date(ms);
+  const days = week ? 7 - ((d.getDay() + 6) % 7) : 1;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days).getTime() - ms;
+}
+
+/** A small number for a day or week key ("2026-11-02" -> 20261102), to seed what that day or week gets. */
+export function keySeed(key: string): number {
+  return Number(key.replace(/\D/g, '')) || 0;
+}
+
 export interface ElapsedResult {
   /** Clamped elapsed time in ms (0 if the clock went backward). */
   elapsedMs: number;

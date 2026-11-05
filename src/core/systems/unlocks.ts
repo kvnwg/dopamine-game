@@ -3,6 +3,12 @@
  * (items.json `unlock`: the rebirths an item needs). Codex entries and owned items are never taken away.
  */
 import { DATA, type BaseItem } from '../../data';
+import type { GameState } from '../state';
+
+/** How far the item unlocks go for this raccoon: his rebirths, or all of them after a Legend (unlocks are never taken back). */
+export function itemUnlockRank(state: Pick<GameState, 'rebirths'> & Partial<Pick<GameState, 'legend'>>): number {
+  return (state.legend?.count ?? 0) > 0 ? Infinity : state.rebirths;
+}
 
 /** Whether the dumpster can roll this base item after `rebirths` rebirths. */
 export function isItemUnlocked(base: Pick<BaseItem, 'unlock'>, rebirths: number): boolean {

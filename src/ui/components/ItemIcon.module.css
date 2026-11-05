@@ -309,3 +309,130 @@
     animation: none;
   }
 }
+
+/* Tiers past Grail: odds banners, then a frame of its own for each, more absurd the rarer. */
+.wrap[data-rarity='cosmic'] .odds {
+  background: linear-gradient(90deg, #ffffff, #9c84ff, #40c4ff, #7c5cff, #ffffff);
+  background-size: 200% 100%;
+}
+.wrap[data-rarity='glitched'] .odds {
+  background: linear-gradient(90deg, #00ffa3, #ff2bd6, #00e5ff, #00ffa3, #ff2bd6);
+  background-size: 200% 100%;
+}
+.wrap[data-rarity='fourthWall'] .odds {
+  background: linear-gradient(90deg, #ffffff, #ff6ad5, #ffd54f, #ff6ad5, #ffffff);
+  background-size: 200% 100%;
+}
+.wrap[data-rarity='devsOwn'] .odds {
+  background: linear-gradient(90deg, #b9f3ff, #33d1ff, #0b6b99, #33d1ff, #b9f3ff);
+  background-size: 200% 100%;
+}
+.wrap[data-rarity='patchNotes'] .odds {
+  background: linear-gradient(90deg, #ffffff, #ffa726, #ff5252, #ffa726, #ffffff);
+  background-size: 200% 100%;
+}
+.wrap[data-rarity='sourceCode'] .odds {
+  background: linear-gradient(90deg, #b6ff9e, #39ff14, #0a5c00, #39ff14, #b6ff9e);
+  background-size: 200% 100%;
+}
+.wrap[data-rarity='concept'] .odds {
+  background: linear-gradient(90deg, #ffffff, #ff5252, #ffd54f, #69f0ae, #40c4ff, #e040fb, #ffffff);
+  background-size: 200% 100%;
+}
+/* Cosmic: deep space, stars one art pixel big, a violet border turning. */
+.cosmic {
+  border-color: transparent;
+  background:
+    radial-gradient(var(--px) var(--px) at 20% 30%, #ffffff 98%, transparent) padding-box,
+    radial-gradient(var(--px) var(--px) at 70% 15%, #b9f3ff 98%, transparent) padding-box,
+    radial-gradient(var(--px) var(--px) at 85% 70%, #ffffff 98%, transparent) padding-box,
+    radial-gradient(var(--px) var(--px) at 35% 80%, #e9ddff 98%, transparent) padding-box,
+    linear-gradient(180deg, #120a3a 0 50%, #2a1670 50% 100%) padding-box,
+    conic-gradient(from var(--spin, 0deg), #7c5cff, #40c4ff, #ffffff, #7c5cff) border-box;
+  animation: spin 2.4s linear infinite;
+  box-shadow: 0 var(--px) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(3 * var(--px)) rgba(124, 92, 255, 1);
+}
+/* Glitched: the art splits into red and cyan and jumps a pixel now and then. */
+.glitched {
+  border-color: #00ffa3;
+  background: linear-gradient(180deg, #0f2a22 0 50%, #123d30 50% 100%);
+  box-shadow: 0 var(--px) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(3 * var(--px)) rgba(0, 255, 163, 0.9);
+}
+.glitched .art {
+  filter: drop-shadow(var(--px) 0 0 rgba(255, 43, 214, 0.85)) drop-shadow(calc(-1 * var(--px)) 0 0 rgba(0, 229, 255, 0.85));
+  animation: glitchJump 1.7s steps(1) infinite;
+}
+@keyframes glitchJump {
+  0%, 88%, 100% { transform: none; }
+  90% { transform: translate(var(--px), 0); }
+  94% { transform: translate(calc(-1 * var(--px)), var(--px)); }
+}
+/* Fourth Wall: it leans out of its card to look at you. */
+.fourthWall {
+  border-color: #ff6ad5;
+  background: linear-gradient(180deg, #fff0fa 0 50%, #ffc7ee 50% 100%);
+  box-shadow: 0 var(--px) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(3 * var(--px)) rgba(255, 106, 213, 1);
+  overflow: visible;
+}
+.fourthWall .art {
+  animation: peek 2.2s steps(1) infinite;
+}
+@keyframes peek {
+  0%, 60%, 100% { transform: none; }
+  65%, 85% { transform: translate(0, calc(-2 * var(--px))); }
+}
+/* Dev's Own: a console screen, scanlines one art pixel apart. */
+.devsOwn {
+  border-color: #33d1ff;
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0 var(--px), transparent var(--px) calc(2 * var(--px))),
+    linear-gradient(180deg, #0b1f33 0 50%, #10304d 50% 100%);
+  box-shadow: 0 var(--px) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(3 * var(--px)) rgba(51, 209, 255, 1);
+}
+/* Patch Notes: a fresh "+" in its corner, a hot orange frame. */
+.patchNotes {
+  border-color: #ffa726;
+  background: linear-gradient(180deg, #fff3e0 0 50%, #ffd08a 50% 100%);
+  box-shadow: 0 var(--px) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(3 * var(--px)) rgba(255, 167, 38, 1);
+}
+.patchNotes::before {
+  content: '+';
+  position: absolute;
+  left: var(--px);
+  top: 0;
+  z-index: 5;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  color: #ff5252;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+}
+/* Source Code: the art as a terminal draws it, green on black. */
+.sourceCode {
+  border-color: #39ff14;
+  background: #001a00;
+  box-shadow: 0 var(--px) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(3 * var(--px)) rgba(57, 255, 20, 1);
+}
+.sourceCode .art {
+  filter: grayscale(1) sepia(1) hue-rotate(60deg) saturate(6) brightness(1.1);
+}
+/* The Concept: not the thing, the idea of it. A white silhouette on white, glowing every color. */
+.concept {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, #ffffff 0 50%, #f4f4ff 50% 100%) padding-box,
+    conic-gradient(from var(--spin, 0deg), #ff5252, #ffb300, #fff07a, #69f0ae, #40c4ff, #e040fb, #ff5252) border-box;
+  animation: spin 1.2s linear infinite, grailGlow 0.9s steps(2) infinite;
+}
+.concept .art {
+  filter: brightness(0) invert(1) drop-shadow(0 0 var(--px) #b48cff) drop-shadow(0 0 var(--px) #40c4ff);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cosmic,
+  .concept,
+  .glitched .art,
+  .fourthWall .art {
+    animation: none;
+  }
+}

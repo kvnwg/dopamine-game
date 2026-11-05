@@ -9,7 +9,7 @@
  * world pays, and Rigged Jackpot's rigged spins.
  */
 import { BAL, DATA } from '../data';
-import { currentLuck, formatNumber, luckOddsOneIn, rarityIndex, type CoreEvent, type Item, type RollDrama } from '../core';
+import { currentLuck, formatDuration, formatNumber, luckOddsOneIn, RARITY_ODDS, rarityIndex, type CoreEvent, type Item, type RollDrama } from '../core';
 import { getGame } from '../app/store';
 import { saveNow } from '../app/session';
 import { bus } from '../app/eventBus';
@@ -18,7 +18,7 @@ import { audio, type Material } from '../services/audio';
 import { t } from './i18n';
 import { teasePlan, type Tease } from './reelDrama';
 import { chainMult, itemStopMs } from './reelTiming';
-import { useUi, type RollView } from './uiStore';
+import { announce, useUi, type RollView } from './uiStore';
 
 let rollId = 1;
 /** Big rolls that land while another reveal is showing wait their turn (at most a few). */
@@ -258,6 +258,56 @@ export function installRollController(): () => void {
           break;
         case 'clockWentBackward':
           ui.toast(t('toast.clockBackward'), 'warn');
+          break;
+        // ---- the Endless Dump, Legends, daily tasks
+        case 'dumpUnlocked':
+          if (e.first) announce({ title: t('dump.unlocked'), sub: t('dump.unlockedSub'), color: '#b48cff', grad: 'purple' });
+          else ui.toast(t('dump.unlocked'), 'good');
+          break;
+        case 'tierUnlocked':
+          announce({
+            title: t('tier.unlocked', { name: t(`rarity.${e.rarity}`).toUpperCase() }),
+            sub: t('tier.unlockedSub', { odds: formatNumber(RARITY_ODDS[e.rarity]) }),
+            color: DATA.assets.placeholders.rarities[e.rarity]?.color ?? '#ffffff',
+            grad: 'rainbow',
+          });
+          saveSoon();
+          break;
+        case 'legend':
+          announce({ title: t('legend.done', { n: e.count }), sub: t('legend.doneSub', { stars: e.stars }), color: '#ffd23f', grad: 'gold' });
+          useUi.setState({ tab: 'alley' });
+          audio.bossWin();
+          saveSoon();
+          break;
+        case 'dumpRecord':
+          if (e.kind === 'milestone') announce({ title: t('dump.milestone', { n: e.value }), sub: t('dump.milestoneSub'), color: '#b48cff', grad: 'rainbow' });
+          else ui.toast(t('dump.fastestGate', { time: formatDuration(Math.round(e.value / 1000)) }), 'good');
+          break;
+        case 'dumpDeepest':
+          if (e.gems > BAL.endless.floorGems) ui.toast(t('dump.newDeepest', { n: e.floor }) + ` +${e.gems}`, 'good');
+          break;
+        case 'floorClear':
+          if (e.gate) {
+            audio.bossWin();
+            haptics.impact('heavy');
+          }
+          break;
+        case 'weeklyReward':
+          ui.toast(t('weekly.paid', { floor: e.floor, gems: e.gems }) + (e.stars > 0 ? ` +${e.stars} ★` : ''), 'good');
+          audio.jingle(5);
+          break;
+        case 'dailyNew':
+          if (getGame().features.seen.includes('daily')) ui.toast(t('daily.sub'), 'info');
+          break;
+        case 'dailyClaimed':
+        case 'dailyChest':
+          ui.toast(t('daily.paid', { gems: e.gems }), 'good');
+          break;
+        case 'perfectDodge':
+          haptics.impact('heavy');
+          break;
+        case 'featureUnlocked':
+          if (e.feature === 'legend') announce({ title: t('legend.opened'), sub: t('legend.openedSub'), color: '#ffd23f', grad: 'gold' });
           break;
         case 'scrap':
           if (!e.auto) ui.toast(t('toast.scrapped', { gold: formatNumber(e.coins) }), 'info');

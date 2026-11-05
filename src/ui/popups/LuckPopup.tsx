@@ -1,5 +1,8 @@
 import { BAL, RARITIES } from '../../data';
-import { currentLuck, enchantChance, formatDuration, formatNumber, luckBreakdown, luckyEvery, RARITY_ODDS, rarityChances, formatPct, revealBar } from '../../core';
+import {
+  currentLuck, enchantChance, formatDuration, formatNumber, luckBreakdown, luckyEvery, RARITY_ODDS, rarityAtLeast, rarityChances, formatPct, revealBar,
+  tierFloor, topRarity,
+} from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { fmtOdds } from '../components/AlleyPanel';
@@ -18,8 +21,10 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
   // (The total the rolls use: currentLuck's, never NaN.)
   const b = { ...raw, total: currentLuck(g, now) };
   const bar = revealBar(b.total);
-  const chances = rarityChances(b.total);
-  const lucky = rarityChances(b.total * BAL.roll.luckyRollMult);
+  // (Tiers past the rarest open one can't roll yet: they show the floor that opens them.)
+  const top = topRarity(g);
+  const chances = rarityChances(b.total, 'junk', top);
+  const lucky = rarityChances(b.total * BAL.roll.luckyRollMult, 'junk', top);
   const bl = BAL.dumpster.badLuck;
   const rows: Array<[string, string]> = [
     [t('luck.base'), '100%'],
@@ -33,6 +38,9 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
   }
   // Carb Loading (an Alley perk): luck for every uneaten loaf.
   if (b.perkMult > 1) rows.push([t('luck.perks', { n: g.perks.bread }), `+${formatPct(b.perkMult - 1)}`]);
+  // Star Luck (Legend Stars) and a Lucky Floor in the Endless Dump.
+  if (b.legendMult > 1) rows.push([t('luck.legend'), `+${formatPct(b.legendMult - 1)}`]);
+  if (b.dumpMult > 1) rows.push([t('luck.dumpFloor'), `+${formatPct(b.dumpMult - 1)}`]);
   return (
     <Modal title={t('luck.title')} tone="green" onClose={onClose}>
       <div className={s.luckHero}>
@@ -66,8 +74,16 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
                   {t(`rarity.${r}`)}
                 </td>
                 <td>{r === 'junk' ? '—' : fmtOdds(RARITY_ODDS[r])}</td>
-                <td>{pct(chances[r])}</td>
-                <td>{pct(lucky[r])}</td>
+                {rarityAtLeast(top, r) ? (
+                  <>
+                    <td>{pct(chances[r])}</td>
+                    <td>{pct(lucky[r])}</td>
+                  </>
+                ) : (
+                  <td colSpan={2} style={{ fontSize: 24, color: '#8b7d72' }}>
+                    {t('tier.locked', { floor: tierFloor(r) ?? 0 })}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

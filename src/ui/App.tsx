@@ -62,7 +62,8 @@ export function App() {
   const reveal = useUi((u) => u.celebrate !== null);
   const haul = useUi((u) => u.haul !== null);
   const reborn = useUi((u) => u.rebirthFx !== null);
-  const moment = reveal || haul || reborn;
+  const told = useUi((u) => u.announce !== null);
+  const moment = reveal || haul || reborn || told;
   const [dark, setDark] = useState(false);
   useEffect(() => {
     if (!moment) return setDark(false);
@@ -145,7 +146,7 @@ export function App() {
           <SafeLayer name="mini"><MiniRoller /></SafeLayer>
           <SafeLayer name="tokens" reset={{ tokenFlights: [] }}><TokenFlights /></SafeLayer>
           <SafeLayer name="drag" reset={{ drag: null }}><DragLayer /></SafeLayer>
-          <SafeLayer name="reveal" reset={{ celebrate: null, charging: null, haul: null, rebirthFx: null }}><RevealLayer /></SafeLayer>
+          <SafeLayer name="reveal" reset={{ celebrate: null, charging: null, haul: null, rebirthFx: null, announce: null }}><RevealLayer /></SafeLayer>
           <SafeLayer name="unlocks" reset={{ unlocked: null }}><UnlockedFx /></SafeLayer>
           <SafeLayer name="popups" reset={{ popup: null }}><PopupLayer /></SafeLayer>
           <SafeLayer name="tutorial"><TutorialLayer /></SafeLayer>

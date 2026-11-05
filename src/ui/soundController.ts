@@ -71,7 +71,18 @@ export function installSound(): () => void {
           audio.bossWarn();
           break;
         case 'waveStart':
-          if (isBossWave(e.wave)) audio.bossIntro();
+          if (isBossWave(e.wave, e.stage)) audio.bossIntro();
+          break;
+        // ---- the Endless Dump and Legends (a gate's fall plays bossWin; the announcements their jingle)
+        case 'floorClear':
+          if (!e.gate) audio.stageClear();
+          break;
+        case 'legendPerkBought':
+          audio.coin();
+          audio.jingle(3);
+          break;
+        case 'stenchChanged':
+          audio.heistCurse(e.level === 0);
           break;
         case 'playerDeath':
           audio.death();

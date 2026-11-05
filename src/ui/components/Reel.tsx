@@ -209,6 +209,7 @@ const mergedOf = (r: Pick<Run, 'mults' | 'shown'>) => r.mults.map((m) => r.shown
 /** The stamp's lettering for each tier (as the full-screen reveal's title). */
 const GRAD: Partial<Record<Rarity, Grad>> = {
   legendary: 'gold', mythic: 'rainbow', vintage: 'gold', limited: 'red', prototype: 'blue', mint: 'white', gemMint: 'green', museum: 'purple', grail: 'rainbow',
+  cosmic: 'purple', glitched: 'green', fourthWall: 'red', devsOwn: 'blue', patchNotes: 'gold', sourceCode: 'green', concept: 'rainbow',
 };
 
 interface Fx {

@@ -22,7 +22,16 @@ export interface TokenFlightState {
   step: number;
 }
 
-export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll' | 'save' | 'admin';
+export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll' | 'save' | 'admin' | 'dump' | 'daily';
+
+/** A full-screen announcement: the Endless Dump opening, a new rarity tier, a Legend, a deep milestone. */
+export interface Announce {
+  id: number;
+  title: string;
+  sub: string;
+  color: string;
+  grad: 'gold' | 'purple' | 'rainbow' | 'green' | 'blue' | 'red' | 'white';
+}
 export type Tab = 'alley' | 'heist' | 'bag' | 'upgrades' | 'rebirth' | 'worlds';
 
 export interface RollView {
@@ -106,6 +115,8 @@ export interface UiState {
   afterBoss: { world: number; firstTime: boolean; gems: number; loaves?: number } | null;
   /** Items the last rebirth unlocked (shown after the rebirth burst). */
   unlocked: { count: number; ids: string[] } | null;
+  /** The announcement on screen (RevealLayer). */
+  announce: Announce | null;
   /**
    * Luck tokens on their way from the reel they landed on (`reel`) into their place in the battle's
    * luck row at the top (`row`, the `step`-th token in it), on any tab (TokenFlight, tokenFx.ts).
@@ -143,6 +154,7 @@ export const useUi = create<UiState>((set) => ({
   goldPulse: 0,
   afterBoss: null,
   unlocked: null,
+  announce: null,
   tokenFlights: [],
   devOpen: false,
   setTab: (tab) => set((s) => (tab === 'upgrades' && s.tab !== 'upgrades' ? { tab, prevTab: s.tab } : { tab })),
@@ -154,6 +166,25 @@ export const useUi = create<UiState>((set) => ({
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), Math.max(3500, 1400 + text.length * 55));
   },
 }));
+
+let announceId = 1;
+const announceQueue: Announce[] = [];
+
+/** Shows an announcement (one at a time: the next waits its turn). */
+export function announce(a: Omit<Announce, 'id'>): void {
+  const item = { ...a, id: announceId++ };
+  if (useUi.getState().announce) {
+    if (announceQueue.length < 3) announceQueue.push(item);
+    return;
+  }
+  useUi.setState({ announce: item });
+}
+
+/** Closes announcement `id` (and shows the next waiting one). */
+export function closeAnnounce(id: number): void {
+  if (useUi.getState().announce?.id !== id) return;
+  useUi.setState({ announce: announceQueue.shift() ?? null });
+}
 
 /** The stage's size right now (stage px). */
 export function stageSize(): { w: number; h: number } {

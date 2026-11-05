@@ -908,7 +908,7 @@
   "twist.goldRush.text": "Triple gold on this floor.",
   "twist.lucky.name": "Lucky Floor",
   "twist.lucky.text": "Double luck while you're here.",
-  "twist.pinata.name": "Piñata Party",
+  "twist.pinata.name": "Pinata Party",
   "twist.pinata.text": "Triple Trash Bags from every wave.",
   "move.enrage": "Enrage",
   "move.summon": "Calls for Backup",
@@ -1048,5 +1048,6 @@
   "goals.allTiers": "Every rarity open. Go deeper!",
   "feature.endless": "Endless Dump",
   "feature.legend": "Legend",
-  "feature.daily": "Today"
+  "feature.daily": "Today",
+  "rebirth.reqFloor": "Reach Floor {n} of the Endless Dump"
 }

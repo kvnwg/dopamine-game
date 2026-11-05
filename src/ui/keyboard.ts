@@ -1,6 +1,7 @@
 /**
  * Keys for PC players (Kevin: "make a PC version"): 1 to 6 open the tabs in their bar's order (a locked
- * one answers as a tap would), E is Equip best, Esc closes the open popup, or else the upgrade map.
+ * one answers as a tap would), E is Equip best, D dodges a boss's slam while it winds up, Esc closes the
+ * open popup, or else the upgrade map.
  * (Enter and Space press PLAY on the title screen, TitleScreen.tsx.)
  */
 import { dispatch, getGame } from '../app/store';
@@ -26,6 +27,10 @@ export function installKeyboard(): () => void {
     if (Number.isInteger(n) && n >= 1 && n <= TABS.length) {
       const btn = document.querySelector<HTMLButtonElement>(`nav button[aria-label="${t(`tab.${TABS[n - 1]}`)}"]`);
       btn?.click();
+      return;
+    }
+    if (e.key === 'd' || e.key === 'D') {
+      dispatch({ type: 'dodge' });
       return;
     }
     if (e.key === 'e' || e.key === 'E') {

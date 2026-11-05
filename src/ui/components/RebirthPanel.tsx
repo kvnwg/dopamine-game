@@ -2,7 +2,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { BAL } from '../../data';
 import {
-  canRebirth, formatNumber, perksOpen, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
+  canRebirth, floorOf, formatNumber, isDump, legendOpen, perksOpen, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
 } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
@@ -11,6 +11,8 @@ import { Chunky } from './Chunky';
 import { ArrowUpIcon, CheckIcon, CloverIcon, CoinIcon, RebirthIcon, SwordIcon } from './Icons';
 import s from './panels.module.css';
 import { UnlockPreview } from './Unlocks';
+import { LegendPage } from './LegendPage';
+import e from './endless.module.css';
 
 function discount(n: number): number {
   return Math.round((1 - Math.pow(1 - BAL.rebirth.upgradeDiscountPer, n)) * 100);
@@ -44,7 +46,29 @@ function Req({ label, have, need, done }: { label: string; have: number; need: n
   );
 }
 
+/** The Rebirth tab: rebirths, and from Rebirth 5 a second page, Become a Legend. */
 export function RebirthPanel() {
+  const legend = useGame(legendOpen);
+  const [page, setPage] = useState<'rebirth' | 'legend'>('rebirth');
+  const show = legend ? page : 'rebirth';
+  return (
+    <div className={`${s.panel} ${s.rbPanel}`}>
+      {legend && (
+        <div className={e.pageSwitch}>
+          <button className={`${e.pageBtn} ${show === 'rebirth' ? e.pageOn : ''}`} onClick={() => setPage('rebirth')}>
+            {t('legend.tabRebirth')}
+          </button>
+          <button className={`${e.pageBtn} ${show === 'legend' ? e.pageOn : ''}`} onClick={() => setPage('legend')}>
+            {t('legend.tab')}
+          </button>
+        </div>
+      )}
+      {show === 'legend' ? <LegendPage /> : <RebirthPage />}
+    </div>
+  );
+}
+
+function RebirthPage() {
   const n = useGame((g) => g.rebirths);
   // With perks open, a rebirth also eats the run's loaves and perks.
   const perks = useGame(perksOpen);
@@ -64,8 +88,10 @@ export function RebirthPanel() {
     setArmed(false);
     dispatch({ type: 'rebirth' });
   };
+  // Past World 20 a rebirth asks for a Dump floor.
+  const worldLabel = isDump(req.world) ? t('rebirth.reqFloor', { n: floorOf(req.world) }) : t('rebirth.reqWorld', { n: req.world });
   return (
-    <div className={`${s.panel} ${s.rbPanel}`}>
+    <>
       <div className={`${s.rbHero} card`}>
         <RebirthIcon size="nav" className={s.rbIcon} />
         <div className={s.rbTitles}>
@@ -76,7 +102,7 @@ export function RebirthPanel() {
       </div>
       <div className={`${s.rbCard} card`}>
         <span className={s.cardLabel}>{t('rebirth.need')}</span>
-        <Req label={t('rebirth.reqWorld', { n: req.world })} have={highest} need={req.world} done={highest >= req.world} />
+        <Req label={worldLabel} have={highest} need={req.world} done={highest >= req.world} />
         <Req label={t('rebirth.reqGold', { gold: formatNumber(req.gold) })} have={coins} need={req.gold} done={coins >= req.gold} />
       </div>
       <div className={`${s.rbCard} card`}>
@@ -97,6 +123,6 @@ export function RebirthPanel() {
         <RebirthIcon size="md" />
         {ready ? (armed ? t('rebirth.confirm') : t('rebirth.go')) : t('rebirth.notYet')}
       </button>
-    </div>
+    </>
   );
 }

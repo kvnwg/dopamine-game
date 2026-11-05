@@ -29,3 +29,4 @@ export * from './systems/floors';
 export * from './systems/endless';
 export * from './systems/legend';
 export * from './systems/daily';
+export * from './systems/goals';

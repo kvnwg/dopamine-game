@@ -20,6 +20,8 @@ import { FX, LUCK_TOKENS } from './pixel/ui';
 import { ITEM_SPRITES } from './pixel/items';
 import { VIEW_MARGIN } from './pixel/sceneryTypes';
 import { worldArt, type SceneryKeys } from './worldLook';
+import { floorOf, isDump, isGate } from '../core/systems/floors';
+import { lookWorld, worldDef } from '../core/systems/stages';
 
 const S = HERO_SHEET;
 /**
@@ -342,11 +344,13 @@ const foeExtents = new Map<string, { artL: number; artR: number; reach: number }
  */
 export function enemyTex(scene: Phaser.Scene, enemyId: string, world: number): FoeTex {
   const ph = DATA.assets.placeholders.enemies[enemyId] ?? { shape: 'rat', color: '#888888', accent: '#bbbbbb', size: 110 };
-  const w = DATA.worlds[Math.max(1, Math.min(world, DATA.worlds.length)) - 1];
+  // (A Dump floor's world number: its own gate boss, recolored; the rest as the world it borrows from.)
+  const w = worldDef(world);
+  const gateBoss = isDump(world) && w.boss.id === enemyId && isGate(floorOf(world));
   const foe = w.boss.id === enemyId ? w.boss : w.enemies.find((f) => f.id === enemyId);
   const color = foe?.color ?? ph.color;
   const accent = foe?.accent ?? ph.accent;
-  const key = `foe_${world}_${enemyId}`;
+  const key = `foe_${gateBoss || !isDump(world) ? world : lookWorld(world)}_${enemyId}`;
   const look = FOE_SHEETS[ph.shape];
   let i: AnimInfo;
   /** The anchor column as shown (after facing it left). */

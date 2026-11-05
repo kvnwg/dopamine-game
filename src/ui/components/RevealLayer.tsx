@@ -16,7 +16,7 @@ import { stagePoint } from '../drag';
 import { RAINBOW, raysUrl } from '../rays';
 import { Rays } from './Rays';
 import { t } from '../i18n';
-import { stageSize, useUi, type RollView } from '../uiStore';
+import { closeAnnounce, stageSize, useUi, type RollView } from '../uiStore';
 import { enchantLabel, fmtOdds } from './AlleyPanel';
 import { Chunky, type Grad } from './Chunky';
 import { enchantColor, ItemIcon } from './ItemIcon';
@@ -29,6 +29,7 @@ import s from './overlays.module.css';
 const GRAD: Partial<Record<string, Grad>> = {
   epic: 'purple', legendary: 'gold', mythic: 'rainbow', vintage: 'gold', limited: 'red', prototype: 'blue', mint: 'white', gemMint: 'green',
   museum: 'purple', grail: 'rainbow',
+  cosmic: 'purple', glitched: 'green', fourthWall: 'red', devsOwn: 'blue', patchNotes: 'gold', sourceCode: 'green', concept: 'rainbow',
 };
 const CONFETTI = ['#ff5252', '#ffc233', '#5bc236', '#42a5f5', '#c48bff', '#ffffff'];
 
@@ -576,12 +577,40 @@ function RebirthFx() {
   );
 }
 
+/** The Endless Dump opening, a new rarity tier, a Legend, a deep milestone: a burst, its title and a line. Tap or wait. */
+function AnnounceFx() {
+  const a = useUi((u) => u.announce);
+  const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
+  const busy = useUi((u) => u.rebirthFx !== null || u.celebrate !== null);
+  useEffect(() => {
+    if (!a || busy) return;
+    audio.jingle(5);
+    haptics.impact('heavy');
+    const id = setTimeout(() => closeAnnounce(a.id), 3800);
+    return () => clearTimeout(id);
+  }, [a, busy]);
+  if (!a || busy) return null;
+  return (
+    <div className={s.reveal} onClick={() => closeAnnounce(a.id)} style={{ ['--c' as string]: a.color } as CSSProperties} data-keep-lit>
+      <div className={s.backdrop} />
+      <Rays className={s.rays} url={raysUrl(a.grad === 'rainbow' ? RAINBOW : [a.color])} />
+      <Confetti n={36} />
+      <div className={s.center}>
+        <Chunky text={a.title} size={a.title.length > 18 ? 84 : 112} grad={a.grad} className={s.title} />
+        <span className={s.name}>{a.sub}</span>
+      </div>
+      {!reduceFlashing && <div className={s.flash} />}
+    </div>
+  );
+}
+
 export function RevealLayer() {
   return (
     <>
       <Celebrate />
       <HaulFx />
       <RebirthFx />
+      <AnnounceFx />
     </>
   );
 }

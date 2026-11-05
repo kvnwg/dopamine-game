@@ -512,13 +512,13 @@
       "gemMint": 7,
       "museum": 7,
       "grail": 8,
-      "cosmic": 8,
-      "glitched": 8,
-      "fourthWall": 8,
-      "devsOwn": 8,
-      "patchNotes": 8,
-      "sourceCode": 8,
-      "concept": 8
+      "cosmic": 500000000,
+      "glitched": 1500000000,
+      "fourthWall": 5000000000,
+      "devsOwn": 20000000000,
+      "patchNotes": 100000000000,
+      "sourceCode": 600000000000,
+      "concept": 5000000000000
     },
     "revealSecondsByRarity": {
       "junk": 0.2,
@@ -1446,7 +1446,7 @@
     "dodgeCounterMult": 3,
     "catchUp": { "afterMinutes": 15, "pctPerMinute": 3, "maxPct": 300 },
     "milestones": [25, 50, 100, 150, 200, 300, 500, 750, 1000],
-    "tierFloors": { "cosmic": 10, "glitched": 25, "fourthWall": 45, "devsOwn": 70, "patchNotes": 100, "sourceCode": 140, "concept": 200 },
+    "tierFloors": { "cosmic": 10, "glitched": 20, "fourthWall": 35, "devsOwn": 50, "patchNotes": 75, "sourceCode": 100, "concept": 150 },
     "gateBosses": ["officer_dale", "big_earl", "vinnie_two_lids", "mega_moo", "demon_king", "chef_tony", "mall_cop_doug", "the_concierge"],
     "tints": [
       ["#7C5CFF", "#40C4FF"], ["#00C853", "#B2FF59"], ["#FF5252", "#FFD54F"], ["#E040FB", "#FF80AB"],
@@ -1478,9 +1478,9 @@
     "starsPerRebirthSq": 0.5,
     "starsPerFloor": 1,
     "perks": [
-      { "id": "headStart", "icon": "rocket", "max": 3, "costs": [4, 12, 30], "effect": { "startLevels": 10, "startWorlds": 5 } },
+      { "id": "headStart", "icon": "arrowRight", "max": 3, "costs": [4, 12, 30], "effect": { "startLevels": 10, "startWorlds": 5 } },
       { "id": "loafStash", "icon": "bread", "max": 3, "costs": [3, 8, 18], "effect": { "startLoaves": 2 } },
-      { "id": "autoEquip", "icon": "shirt", "max": 1, "costs": [6], "effect": { "autoEquip": 1 } },
+      { "id": "autoEquip", "icon": "hand", "max": 1, "costs": [6], "effect": { "autoEquip": 1 } },
       { "id": "autoRebirth", "icon": "rebirth", "max": 1, "costs": [10], "effect": { "autoRebirth": 1 } },
       { "id": "keepReels", "icon": "reel", "max": 1, "costs": [25], "effect": { "keepReels": 1 } },
       { "id": "goldenLid", "icon": "reelGold", "max": 3, "costs": [8, 20, 45], "effect": { "goldenSpin": 0.02 } },

@@ -765,3 +765,26 @@
   font-size: 32px;
   color: var(--ink);
 }
+
+/* Tiers past Grail (balance.endless.tierFloors): their own banners. */
+.bigOdds[data-rarity='cosmic'] {
+  background: linear-gradient(90deg, #ffffff, #9c84ff, #40c4ff, #7c5cff, #ffffff);
+}
+.bigOdds[data-rarity='glitched'] {
+  background: linear-gradient(90deg, #00ffa3, #ff2bd6, #00e5ff, #00ffa3, #ff2bd6);
+}
+.bigOdds[data-rarity='fourthWall'] {
+  background: linear-gradient(90deg, #ffffff, #ff6ad5, #ffd54f, #ff6ad5, #ffffff);
+}
+.bigOdds[data-rarity='devsOwn'] {
+  background: linear-gradient(90deg, #b9f3ff, #33d1ff, #0b6b99, #33d1ff, #b9f3ff);
+}
+.bigOdds[data-rarity='patchNotes'] {
+  background: linear-gradient(90deg, #ffffff, #ffa726, #ff5252, #ffa726, #ffffff);
+}
+.bigOdds[data-rarity='sourceCode'] {
+  background: linear-gradient(90deg, #b6ff9e, #39ff14, #0a5c00, #39ff14, #b6ff9e);
+}
+.bigOdds[data-rarity='concept'] {
+  background: linear-gradient(90deg, #ffffff, #ff5252, #ffd54f, #69f0ae, #40c4ff, #e040fb, #ffffff);
+}

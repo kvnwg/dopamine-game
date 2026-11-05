@@ -9,6 +9,7 @@ import { useWorldThumb } from '../worldThumbs';
 import { useUi } from '../uiStore';
 import { CheckIcon, CoinIcon, SkullIcon } from './Icons';
 import { PixelArt } from './PixelArt';
+import { DumpCard, GoalsCard } from './Endless';
 import s from './worlds.module.css';
 
 export const THREAT_COLOR: Record<ThreatLevel, string> = {
@@ -35,7 +36,7 @@ function Thumb({ world }: { world: number }) {
 
 export function WorldsPanel() {
   // Redrawn when what it shows changes, not with every battle tick.
-  const g = useGameWhen((x) => [x.battle.stage, x.stage, tutorialOver(x), x.equipped, x.player.level, x.upgrades, x.codex.entries.length]);
+  const g = useGameWhen((x) => [x.battle.stage, x.stage, tutorialOver(x), x.equipped, x.player.level, x.upgrades, x.codex.entries.length, x.dump.bestEver, x.rebirths]);
   const here = g.battle.stage;
   const best = g.stage.highestCleared;
   // Before the first pick (a new game's raccoon waits for it), no threat ratings: at level 1 every world
@@ -57,6 +58,11 @@ export function WorldsPanel() {
       </div>
       <p className={s.sub}>{t('worlds.sub')}</p>
       <div className={s.scroll}>
+        {/* What's next, and (past World 20) the Endless Dump above the worlds. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(3 * var(--px))', marginBottom: 'calc(4 * var(--px))' }}>
+          {!first && <GoalsCard />}
+          {(g.stage.highestCleared >= DATA.worlds.length - 2 || g.dump.bestEver > 0 || g.rebirths > 0) && <DumpCard />}
+        </div>
         <div className={s.grid}>
           {DATA.worlds.map((w, i) => {
             const n = i + 1;

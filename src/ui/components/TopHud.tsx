@@ -1,12 +1,27 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { formatNumber, xpToNext } from '../../core';
+import { dailyNeedsYou, formatNumber, xpToNext } from '../../core';
 import { useGame } from '../../app/store';
 import { useCountUp } from '../hooks';
 import { useHudFlight } from '../hudFlight';
 import { t } from '../i18n';
 import { useUi } from '../uiStore';
-import { CoinIcon, GearIcon, GemIcon } from './Icons';
+import { CoinIcon, GearIcon, GemIcon, CheckIcon } from './Icons';
 import s from './hud.module.css';
+import e from './endless.module.css';
+
+/** Today's tasks: under the gold, with a badge when one can be claimed (or the chest opened). */
+function DailyButton() {
+  const open = useGame((g) => g.features.unlocked.includes('daily') && g.daily.tasks.length > 0);
+  const badge = useGame(dailyNeedsYou);
+  if (!open) return null;
+  return (
+    <button className={e.hudBtn} data-intro="daily" onClick={() => useUi.getState().openPopup('daily')} aria-label={t('daily.button')}>
+      <CheckIcon size="xs" />
+      {t('daily.button')}
+      {badge && <span className={e.hudBadge}>!</span>}
+    </button>
+  );
+}
 
 /** Level-up sparkles around the badge and the XP bar: where (art px from the plate's top-left corner) and when (ms). */
 const SPARKS = [
@@ -88,6 +103,9 @@ export function TopHud() {
             <GemIcon size="md" className={s.moneyIcon} />
             <span>{formatNumber(gems)}</span>
           </div>
+        </div>
+        <div className={s.row}>
+          <DailyButton />
         </div>
       </div>
     </div>

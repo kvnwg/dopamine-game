@@ -8,8 +8,9 @@
  * raccoon falls back on its own).
  */
 import {
-  affordablePerks, affordableUpgrades, applyAction, canRebirth, computeStats, createInitialState, currentLuck, isUpgrade, perkNodeState,
-  perkTrees, Rng, tick, upgradeCost, upgradePrice, worldCount, worldThreat, TICK_MS, type CoreEvent, type GameAction, type GameState,
+  affordablePerks, affordableUpgrades, applyAction, canBuyLegend, canLegend, canRebirth, computeStats, createInitialState, currentLuck, floorOf,
+  isDump, isUpgrade, legendGain, legendLevel, legendPrice, perkNodeState, perkTrees, Rng, tick, upgradeCost, upgradePrice, worldCount, worldThreat,
+  TICK_MS, type CoreEvent, type GameAction, type GameState,
 } from '../src/core';
 import { BAL, RARITIES, type AlleyPerkDef } from '../src/data';
 
@@ -31,6 +32,19 @@ export interface SimOptions {
   perks?: PerkStrategy;
   startTime?: number;
   sampleEverySeconds?: number;
+  /**
+   * Become a Legend once allowed and no rebirth has come for this many minutes (default 45; 0 never).
+   * Legend Stars go on the cheapest star upgrade the bot can afford.
+   */
+  legendAfterMinutes?: number;
+  /** Tap Dodge on every boss slam (default false: an idle player). */
+  dodge?: boolean;
+  /** Stench level in the Dump (default 0). */
+  stench?: number;
+  /** Start from this game instead of a new one (a saved late game, to try the Dump without the hours before it). */
+  from?: GameState;
+  /** Called once with the game as World 20 first falls (to save it for `from`). */
+  onWorld20?: (state: GameState) => void;
 }
 
 /** The perk the bot buys next, or null to wait. */
@@ -54,6 +68,9 @@ function pickPerk(state: GameState, strategy: PerkStrategy): AlleyPerkDef | null
 export interface SimSample {
   minute: number;
   stage: number;
+  /** The Dump floor fought (0 in a regular world). */
+  floor: number;
+  legends: number;
   highestCleared: number;
   bestEver: number;
   rebirths: number;
@@ -81,15 +98,34 @@ export interface SimResult {
   bossWins: number;
   final: GameState;
   rarityCounts: Record<string, number>;
+  /** Minute each Dump floor was first cleared (any run). */
+  floorAt: Record<number, number>;
+  /** Legends: the minute and the stars each paid. */
+  legendAt: { minute: number; stars: number; rebirths: number; floor: number }[];
+  /** Star upgrades bought, with the minute. */
+  starsBought: { id: string; minute: number }[];
+  dodges: number;
+}
+
+/** The star upgrade the bot buys next: the cheapest affordable one. */
+function pickStarPerk(state: GameState): string | null {
+  let best: { id: string; price: number } | null = null;
+  for (const def of BAL.legend.perks) {
+    if (!canBuyLegend(state, def.id)) continue;
+    const price = legendPrice(def, legendLevel(state, def.id))!;
+    if (!best || price < best.price) best = { id: def.id, price };
+  }
+  return best?.id ?? null;
 }
 
 export function simulate(opts: SimOptions): SimResult {
   const sampleEvery = (opts.sampleEverySeconds ?? 60) * 1000;
   let now = opts.startTime ?? Date.UTC(2026, 0, 5, 12, 0, 0);
-  let state = createInitialState(now, Rng.hashSeed(opts.seed));
-  const rng = new Rng(state.rngState);
+  let state = opts.from ? structuredClone(opts.from) : createInitialState(now, Rng.hashSeed(opts.seed));
+  if (opts.from) now = Math.max(now, opts.from.lastActiveAt);
+  const rng = new Rng(opts.from ? Rng.hashSeed(opts.seed) : state.rngState);
   // The player's first tap knocks the padlock off the dumpster.
-  state = applyAction(state, { type: 'openDumpster' }, rng, now).state;
+  if (!opts.from) state = applyAction(state, { type: 'openDumpster' }, rng, now).state;
   const clearedAt: Record<number, number> = {};
   const rebirthAt: number[] = [];
   const perksBought: SimResult['perksBought'] = [];
@@ -100,20 +136,42 @@ export function simulate(opts: SimOptions): SimResult {
   let deaths = 0;
   let jumps = 0;
   let bossWins = 0;
+  let dodges = 0;
+  const floorAt: Record<number, number> = {};
+  const legendAt: SimResult['legendAt'] = [];
+  const starsBought: SimResult['starsBought'] = [];
+  let lastReset = 0;
+  const legendAfter = (opts.legendAfterMinutes ?? 45) * 60000;
   let elapsed = 0;
   let nextSample = 0;
   let nextShop = 0;
   let nextJump = 0;
 
   let choiceAt: number | null = null;
+  let pendingDodge = false;
+  let w20 = false;
   const onEvents = (events: CoreEvent[]) => {
     for (const e of events) {
       if (e.type === 'bossChoice') choiceAt = elapsed;
-      if (e.type === 'stageClear' && clearedAt[e.stage] === undefined) clearedAt[e.stage] = elapsed / 60000;
+      if (e.type === 'stageClear' && clearedAt[e.stage] === undefined) {
+        clearedAt[e.stage] = elapsed / 60000;
+        if (e.stage === worldCount()) w20 = true;
+      }
       if (e.type === 'playerDeath') deaths++;
       if (e.type === 'bossWin') bossWins++;
       if (e.type === 'roll') rarityCounts[e.item.rarity]++;
-      if (e.type === 'rebirth') rebirthAt.push(elapsed / 60000);
+      if (e.type === 'rebirth') {
+        rebirthAt.push(elapsed / 60000);
+        lastReset = elapsed;
+      }
+      if (e.type === 'floorClear' && e.mode === 'endless' && floorAt[e.floor] === undefined) floorAt[e.floor] = elapsed / 60000;
+      if (e.type === 'legend') {
+        legendAt.push({ minute: elapsed / 60000, stars: e.stars, rebirths: 0, floor: 0 });
+        lastReset = elapsed;
+      }
+      if (e.type === 'legendPerkBought') starsBought.push({ id: e.id, minute: elapsed / 60000 });
+      if (e.type === 'perfectDodge') dodges++;
+      if (e.type === 'bossWindup' && opts.dodge) pendingDodge = true;
       if (e.type === 'breadEarned') breadByRun[state.rebirths] = (breadByRun[state.rebirths] ?? 0) + e.loaves;
       if (e.type === 'perkBought') perksBought.push({ run: state.rebirths, id: e.id, minute: elapsed / 60000 });
     }
@@ -132,9 +190,31 @@ export function simulate(opts: SimOptions): SimResult {
     now += TICK_MS;
     elapsed += TICK_MS;
 
+    if (w20) {
+      w20 = false;
+      opts.onWorld20?.(state);
+    }
+    if (pendingDodge) {
+      pendingDodge = false;
+      act({ type: 'dodge' });
+    }
+
     if (elapsed >= nextShop) {
       nextShop = elapsed + 1000;
       if (opts.rebirth !== false && canRebirth(state)) act({ type: 'rebirth' });
+      // Become a Legend once a run has stalled (no rebirth for a while).
+      if (legendAfter > 0 && canLegend(state) && elapsed - lastReset >= legendAfter) {
+        const info = { rebirths: state.rebirths, floor: floorOf(state.stage.highestCleared), stars: legendGain(state).total };
+        act({ type: 'legend' });
+        const last = legendAt[legendAt.length - 1];
+        if (last) Object.assign(last, info);
+      }
+      for (let guard = 0; guard < 50; guard++) {
+        const id = pickStarPerk(state);
+        if (!id) break;
+        act({ type: 'buyLegendPerk', id });
+      }
+      if ((opts.stench ?? 0) !== state.dump.stench) act({ type: 'setStench', level: opts.stench ?? 0 });
       if (state.dumpster.upgradeEndsAt === null && state.dumpster.level < BAL.dumpster.maxLevel
         && state.currencies.coins >= upgradeCost(state.dumpster.level)) {
         act({ type: 'startDumpsterUpgrade' });
@@ -172,7 +252,8 @@ export function simulate(opts: SimOptions): SimResult {
       continue;
     }
 
-    if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead') {
+    // (In the Endless Dump the floors come one after another by themselves.)
+    if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead' && !isDump(state.battle.stage)) {
       nextJump = elapsed + 10_000;
       let target = 0;
       for (let w = worldCount(); w > state.battle.stage; w--) {
@@ -194,7 +275,9 @@ export function simulate(opts: SimOptions): SimResult {
       for (const it of Object.values(state.equipped)) gear += it?.power ?? 0;
       samples.push({
         minute: Math.round(elapsed / 60000),
-        stage: state.battle.stage,
+        stage: Math.min(state.battle.stage, worldCount()),
+        floor: floorOf(state.battle.stage),
+        legends: state.legend.count,
         highestCleared: state.stage.highestCleared,
         bestEver: Math.max(0, ...Object.keys(clearedAt).map(Number)),
         rebirths: state.rebirths,
@@ -209,5 +292,7 @@ export function simulate(opts: SimOptions): SimResult {
       });
     }
   }
-  return { samples, clearedAt, rebirthAt, perksBought, breadByRun, deaths, jumps, bossWins, final: state, rarityCounts };
+  return {
+    samples, clearedAt, rebirthAt, perksBought, breadByRun, deaths, jumps, bossWins, final: state, rarityCounts, floorAt, legendAt, starsBought, dodges,
+  };
 }

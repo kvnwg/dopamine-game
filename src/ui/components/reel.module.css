@@ -1005,3 +1005,21 @@
   will-change: transform, opacity;
   contain: layout paint;
 }
+
+/* Tiers past Grail. */
+.cell[data-rarity='cosmic'] { --rc: #9c84ff; }
+.cell[data-rarity='glitched'] { --rc: #00ffa3; }
+.cell[data-rarity='fourthWall'] { --rc: #ff6ad5; }
+.cell[data-rarity='devsOwn'] { --rc: #33d1ff; }
+.cell[data-rarity='patchNotes'] { --rc: #ffa726; }
+.cell[data-rarity='sourceCode'] { --rc: #39ff14; }
+.cell[data-rarity='concept'] { --rc: #ffffff; }
+.cell[data-rarity='cosmic'] .odds,
+.cell[data-rarity='glitched'] .odds,
+.cell[data-rarity='fourthWall'] .odds,
+.cell[data-rarity='devsOwn'] .odds,
+.cell[data-rarity='patchNotes'] .odds,
+.cell[data-rarity='sourceCode'] .odds,
+.cell[data-rarity='concept'] .odds {
+  animation: oddsRainbow 0.6s steps(5) infinite;
+}

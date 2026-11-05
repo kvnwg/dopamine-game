@@ -80,13 +80,15 @@ export function AdminPopup({ onClose }: { onClose: () => void }) {
   const [amount, setAmount] = useState('1M');
   const [world, setWorld] = useState('5');
   const [dumpster, setDumpster] = useState('10');
+  const [floor, setFloor] = useState('10');
+  const stars = useGame((g) => g.legend.stars);
   const n = parseAmount(amount);
   const ok = Number.isFinite(n) && n > 0;
 
   return (
     <Modal title="Admin portal" tone="red" onClose={onClose} wide>
       <p className={s.note} style={{ marginTop: 0 }}>
-        Gold {formatNumber(coins)} · Gems {formatNumber(gems)} · Loaves {bread} · Lv {level} · Rebirths {rebirths}
+        Gold {formatNumber(coins)} · Gems {formatNumber(gems)} · Loaves {bread} · Lv {level} · Rebirths {rebirths} · Stars {stars}
       </p>
       <Row label="Gold">
         <B tone="gold" onClick={() => cheat({ kind: 'addCurrency', coins: 1e6 })}>+1M</B>
@@ -121,6 +123,13 @@ export function AdminPopup({ onClose }: { onClose: () => void }) {
         <B onClick={() => cheat({ kind: 'setStage', stage: Number(world) || 1 })}>Go to world</B>
         <input className={s.adminInput} value={dumpster} onChange={(e) => setDumpster(e.target.value)} inputMode="numeric" aria-label="Dumpster level" />
         <B onClick={() => cheat({ kind: 'setDumpsterLevel', level: Number(dumpster) || 1 })}>Dumpster Lv</B>
+      </Row>
+      <Row label="Endless Dump · Legend">
+        <input className={s.adminInput} value={floor} onChange={(e) => setFloor(e.target.value)} inputMode="numeric" aria-label="Floor" />
+        <B onClick={() => cheat({ kind: 'setFloor', floor: Number(floor) || 1 })}>Go to floor</B>
+        <B tone="gold" onClick={() => cheat({ kind: 'addStars', n: 10 })}>+10 stars</B>
+        <B tone="gold" onClick={() => cheat({ kind: 'addStars', n: 100 })}>+100 stars</B>
+        <B tone="green" onClick={() => cheat({ kind: 'addRebirths', n: 5 })}>+5 rebirths</B>
       </Row>
       <Row label="Luck">
         <B tone="green" onClick={() => cheat({ kind: 'luckBoost', seconds: 60 })}>Potion 1 min</B>

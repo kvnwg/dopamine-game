@@ -31,6 +31,7 @@ const ONE_ENCHANT = enchantRarity([{ tier: 1 }]).total;
 const TONE: Partial<Record<Rarity, 'gold' | 'purple' | 'red' | 'green' | 'blue'>> = {
   decent: 'green', epic: 'purple', legendary: 'gold', mythic: 'red', vintage: 'gold', limited: 'red', prototype: 'blue',
   mint: 'gold', gemMint: 'green', museum: 'purple', grail: 'gold',
+  cosmic: 'purple', glitched: 'green', fourthWall: 'red', devsOwn: 'blue', patchNotes: 'gold', sourceCode: 'green', concept: 'purple',
 };
 
 export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => void }) {

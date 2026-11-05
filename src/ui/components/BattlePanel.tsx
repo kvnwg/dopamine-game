@@ -1,7 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import type Phaser from "phaser";
 import { BAL, DATA } from "../../data";
-import { worldCount } from "../../core";
+import { endlessOpen, floorName, floorOf, isDump, worldCount } from "../../core";
 import { dispatch, gameStore, useGame } from "../../app/store";
 import { isHeld, whenStarted } from "../../app/session";
 import { haptics } from "../../services";
@@ -12,9 +12,11 @@ import { useUi } from "../uiStore";
 import { Chunky } from "./Chunky";
 import { ArrowRightIcon, BreadIcon, SkullIcon } from "./Icons";
 import { TopHud } from "./TopHud";
+import { DodgeButton, FloorBox } from "./Endless";
 import s from "./hud.module.css";
 
 export function worldLabel(world: number): string {
+  if (isDump(world)) return t("dump.labelFull", { n: floorOf(world), name: floorName(floorOf(world)) });
   const w = DATA.worlds[world - 1];
   return t("battle.worldLabel", { n: world, name: w?.name ?? "" });
 }
@@ -32,8 +34,11 @@ function BossChoice() {
   const reward = useUi((u) =>
     u.afterBoss?.world === world ? u.afterBoss : null,
   );
+  const dump = useGame(endlessOpen);
   if (!open) return null;
-  const last = world >= worldCount();
+  // After the last world, Next is the Endless Dump (once it's open).
+  const last = world >= worldCount() && !dump;
+  const intoDump = world >= worldCount() && dump;
   const secs = Math.ceil(left);
   const total = BAL.worlds.choiceSeconds;
   const pick = (next: boolean) => {
@@ -90,7 +95,7 @@ function BossChoice() {
                 }
               />
               <span className={s.choiceLabel}>
-                {t("choice.next")}
+                {intoDump ? t("dump.enterAfterBoss") : t("choice.next")}
                 <ArrowRightIcon size="sm" />
               </span>
               <span className={s.choiceAuto}>
@@ -131,6 +136,7 @@ export function BattlePanel() {
   // its pixel font: src/render/BattleScene.ts.)
   const waves = BAL.stages.wavesPerStage;
   const inHeist = useGame((g) => !!g.heist.run);
+  const dumpFloor = useGame((g) => !g.heist.run && isDump(g.battle.stage));
   const drag = useUi((u) => u.drag);
   // Nudge: nothing worn yet but gear waiting in the bag (the tutorial has its own while it runs).
   const bare = useGame(
@@ -156,8 +162,17 @@ export function BattlePanel() {
       )}
       <TopHud />
       <BossChoice />
+      <DodgeButton />
+      {/* In the Endless Dump: the floor, its twist, the next gate (tap: the Dump's card). */}
+      {dumpFloor && (
+        <div className={s.battleActions}>
+          <button className={s.waveBox} onClick={() => useUi.getState().openPopup("dump")} aria-label={worldLabel(world)} style={{ background: "none", border: 0, padding: 0 }}>
+            <FloorBox />
+          </button>
+        </div>
+      )}
       {/* The Alley's wave track (a heist shows its own progress on the Heist tab and the battle's badge). */}
-      {!inHeist && (
+      {!inHeist && !dumpFloor && (
         <div className={s.battleActions}>
           <button
             className={s.waveBox}

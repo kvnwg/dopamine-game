@@ -10,6 +10,8 @@ import { SettingsPopup } from './SettingsPopup';
 import { UpgradePopup } from './UpgradePopup';
 import { ScrapAllPopup } from './ScrapAllPopup';
 import { WorldPopup } from './WorldPopup';
+import { DumpPopup } from './DumpPopup';
+import { DailyPopup } from './DailyPopup';
 
 /** One popup at a time: offline rewards first, then whatever menu is open. */
 export function PopupLayer() {
@@ -39,6 +41,10 @@ export function PopupLayer() {
       return <SavePopup onClose={close} />;
     case 'admin':
       return <AdminPopup onClose={close} />;
+    case 'dump':
+      return <DumpPopup onClose={close} />;
+    case 'daily':
+      return <DailyPopup onClose={close} />;
     default:
       return null;
   }

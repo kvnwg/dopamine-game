@@ -25,8 +25,8 @@
 import Phaser from 'phaser';
 import { BAL, DATA, SLOTS, type Rarity, type Slot } from '../data';
 import {
-  battleMaxHp, battleStats, chainFloor, computeStats, enemyName, formatNumber, perkFx, rarityAtLeast, rarityIndex, runEffects, tokenMult, worldDef, type CoreEvent, type CrewHelper,
-  type GameState, type Item,
+  battleMaxHp, battleStats, chainFloor, computeStats, currentTwist, enemyName, floorName, floorOf, formatNumber, inDump, isDump, lookWorld, perkFx,
+  rarityAtLeast, rarityIndex, runEffects, tokenMult, worldDef, type CoreEvent, type CrewHelper, type GameState, type Item,
 } from '../core';
 import { bus } from '../app/eventBus';
 import { gameStore } from '../app/store';
@@ -472,7 +472,12 @@ class Strip {
 export class BattleScene extends Phaser.Scene {
   private sky!: Phaser.GameObjects.Image;
   private cover!: Phaser.GameObjects.Rectangle;
+  /** The world whose backdrop is up (a Dump floor shows the world it borrows its look from). */
   private worldShown = 0;
+  /** The battle's world as last seen (a Dump floor's world number): a new one gets its title card. */
+  private stageShown = 0;
+  /** The Endless Dump's wash over the backdrop. */
+  private dumpWash: Phaser.GameObjects.Rectangle | null = null;
   private layers!: Record<LayerName, Strip>;
   /** Each layer's scroll (screen px, the texture column at the view's left edge); drawn at whole art pixels. */
   private scroll: Record<LayerName, number> = { far: 0, mid: 0, ground: 0, fg: 0 };
@@ -652,7 +657,7 @@ export class BattleScene extends Phaser.Scene {
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, settle);
     this.events.once(Phaser.Scenes.Events.DESTROY, settle);
-    this.showWorldCard(this.worldShown);
+    this.showWorldCard(this.stageShown);
   }
 
   /** Keeps a tweened object on whole art pixels (until it's destroyed). */
@@ -679,9 +684,11 @@ export class BattleScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ scenery
   private buildBackground() {
-    const world = gameStore.getState().game.battle.stage;
+    const stage = gameStore.getState().game.battle.stage;
+    const world = lookWorld(stage);
     const k = worldTextures(this, world);
     this.worldShown = world;
+    this.stageShown = stage;
     // Back to front: sky (0), stars (0.5), clouds (1), the sun or moon and its halo (1.5), lightning
     // (1.7), the far, mid and ground layers (2 to 4, torches 2.5), particles behind the fighters (5),
     // fighters, the foreground (30), particles in front (31), the vignette (32), effects and UI.
@@ -692,6 +699,13 @@ export class BattleScene extends Phaser.Scene {
     this.layers = { far: new Strip(this, 2), mid: new Strip(this, 3), ground: new Strip(this, 4), fg: new Strip(this, 30) };
     this.vignette = this.add.image(-MARGIN, -MARGIN, k.vignette).setOrigin(0, 0).setScale(P).setDepth(32);
     this.ambience = new Ambience(this, { stars: 0.5, bolt: 1.7, torch: 2.5, back: 5, front: 31, flash: 31.5 });
+    // The Endless Dump: its borrowed world under a purple wash (behind the fighters).
+    const wash = BAL.endless.overlay;
+    this.dumpWash = this.add
+      .rectangle(-MARGIN, -MARGIN, BATTLE_W + 2 * MARGIN, BATTLE_H + 2 * MARGIN, Phaser.Display.Color.HexStringToColor(wash.color).color, wash.alpha)
+      .setOrigin(0, 0)
+      .setDepth(4.6)
+      .setVisible(isDump(stage));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.ambience.destroy());
     this.placeLayers(world, k, true);
   }
@@ -735,6 +749,18 @@ export class BattleScene extends Phaser.Scene {
     return new Set([...this.foes.values()].map((f) => f.tex.key));
   }
 
+  /**
+   * The battle moved to another world or Dump floor: its title card, and (when its look differs) its
+   * backdrop. Floors borrow a world's look for a whole set of 10, so most floors keep the backdrop.
+   */
+  private arriveAt(stage: number) {
+    this.stageShown = stage;
+    this.dumpWash?.setVisible(isDump(stage));
+    const look = lookWorld(stage);
+    if (look !== this.worldShown) this.showWorld(look);
+    this.showWorldCard(stage);
+  }
+
   /** Swaps in another world's sky and scenery, revealed from under a sky-colored cover. */
   private showWorld(world: number) {
     if (world === this.worldShown) return;
@@ -744,7 +770,6 @@ export class BattleScene extends Phaser.Scene {
     this.sky.setTexture(k.sky);
     this.placeLayers(world, k, scenerySet(worldDef(world)) !== before);
     this.releaseLater = releaseWorlds(this, world, this.foeTextures()) > 0;
-    this.showWorldCard(world);
     this.tweens.killTweensOf(this.cover);
     if (this.reduceMotion || this.reduceFlashing) {
       this.cover.setAlpha(0);
@@ -763,8 +788,17 @@ export class BattleScene extends Phaser.Scene {
    */
   private showWorldCard(world: number) {
     this.worldCard?.destroy();
-    const name = DATA.worlds[world - 1]?.name ?? '';
-    const card = this.texts.add(titleLines(t('battle.worldLabel', { n: world, name })), WORLD_CARD).setDepth(48);
+    let label: string;
+    if (isDump(world)) {
+      // "FLOOR 43" over its name, and its twist stamped under the card.
+      const floor = floorOf(world);
+      label = t('dump.labelFull', { n: floor, name: floorName(floor) });
+      const twist = currentTwist(gameStore.getState().game);
+      if (twist) this.time.delayedCall(650, () => this.stamp(BATTLE_W / 2, 46 * P, `${t(`twist.${twist}.name`)}!`, '#B48CFF'));
+    } else {
+      label = t('battle.worldLabel', { n: world, name: DATA.worlds[world - 1]?.name ?? '' });
+    }
+    const card = this.texts.add(titleLines(label), WORLD_CARD).setDepth(48);
     this.worldCard = card;
     const y = 21 * P;
     const still = this.reduceMotion;
@@ -805,7 +839,11 @@ export class BattleScene extends Phaser.Scene {
    */
   private showToughNotice() {
     this.notice?.destroy();
-    const { head, rest } = headline(t('battle.toughHint'));
+    // In the Endless Dump the notice names what beats the floor's twist.
+    const g = gameStore.getState().game;
+    const twist = inDump(g) ? currentTwist(g) : null;
+    const hard = twist && DATA.strings[`dump.toughHint.${twist}`] ? twist : 'none';
+    const { head, rest } = headline(inDump(g) ? t(`dump.toughHint.${hard}`) : t('battle.toughHint'));
     const parts = [
       ...(head ? [renderText(head, { face: 'huge', fill: NOTICE.head, ink: null })] : []),
       renderText(rest, { face: 'big', fill: TEXT_INK, ink: null, maxW: TEXT_MAX_W - 12 }),
@@ -1965,9 +2003,12 @@ export class BattleScene extends Phaser.Scene {
 
   /** What he shows as worn: what he wears, except slots whose new gear is still flying in. */
   private shownEquipped(g: GameState): GameState['equipped'] {
-    if (this.pendingGear.size === 0) return g.equipped;
+    // A gate boss that Steals Your Hat: his head is bare until he gets it back.
+    const bare = g.battle.hatGone > 0 && !g.heist.run;
+    if (this.pendingGear.size === 0 && !bare) return g.equipped;
     const eq = { ...g.equipped };
     for (const [slot, was] of this.pendingGear) eq[slot] = was;
+    if (bare) eq.hat = null;
     return eq;
   }
 
@@ -2238,8 +2279,50 @@ export class BattleScene extends Phaser.Scene {
         }
         case 'enemyHit': {
           const f = this.foes.get(e.enemyUid);
-          if (f) this.lungeAt(f, () => this.heroHurt(e.amount, e.heavy), e.heavy);
+          // (A Spiky floor's prick comes with his own blow: no lunge.)
+          if (f && !e.spikes) this.lungeAt(f, () => this.heroHurt(e.amount, e.heavy), e.heavy);
           else this.heroHurt(e.amount, e.heavy);
+          break;
+        }
+        // ---- the Endless Dump
+        case 'enemyDodge': {
+          const f = this.foes.get(e.enemyUid);
+          if (!f) break;
+          const p = this.foeHitPoint(f);
+          this.number(p.x, p.y - 6 * P, e.lid ? t('battle.lidUp') : t('battle.miss'), { fill: e.lid ? '#ffd23f' : '#9ad7ff', life: 500, floor: this.barTop(f) });
+          break;
+        }
+        case 'bossWindup': {
+          const f = this.foes.get(e.enemyUid);
+          if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 6 * P, '!', '#FF5252');
+          audio.bossWarn();
+          break;
+        }
+        case 'perfectDodge': {
+          audio.dodge();
+          this.heroKnock = this.reduceMotion ? 0 : -6 * P;
+          this.banner(t('battle.perfectDodge'), ['#d8fbff', '#3fd3ff'], FEET_Y - 40 * P);
+          this.bits.burst(16, this.hero.x, FEET_Y - 14 * P, BIG_SPARK);
+          break;
+        }
+        case 'hatStolen':
+        case 'hatBack':
+        case 'lidUp': {
+          const f = this.foes.get(e.enemyUid);
+          const text = e.type === 'hatStolen' ? t('battle.hatStolen') : e.type === 'hatBack' ? t('battle.hatBack') : t('battle.lidUp');
+          const color = e.type === 'hatBack' ? '#7EF08F' : '#FF9800';
+          if (e.type === 'hatBack') this.stamp(this.hero.x, FEET_Y - 30 * P, text, color);
+          else if (f) this.stamp(f.c.x - f.front * 0.3, FEET_Y - f.height - 6 * P, text, color);
+          break;
+        }
+        case 'floorClear': {
+          if (e.gate) {
+            this.banner(t('dump.gateCleared', { n: Math.round(e.floor / BAL.endless.gateEvery) }), GOLD, FEET_Y - 50 * P);
+            this.confetti.burst(60, BATTLE_W / 2, FEET_Y - 50 * P, CONFETTI);
+            this.cheer(1.4);
+          } else {
+            this.stamp(BATTLE_W / 2, FEET_Y - 44 * P, t('dump.cleared', { n: e.floor }), '#B48CFF');
+          }
           break;
         }
         case 'thorns': {
@@ -2830,7 +2913,7 @@ export class BattleScene extends Phaser.Scene {
       c.scroll += (c.speed * P + speed * 0.05) * dt;
       c.strip.scrollTo(c.scroll);
     }
-    if (b.stage !== this.worldShown) this.showWorld(b.stage);
+    if (b.stage !== this.stageShown) this.arriveAt(b.stage);
     this.ambience.update(dt, speed * dt, (name) => snap(this.scroll[name]), {
       reduceMotion: this.reduceMotion,
       reduceFlashing: this.reduceFlashing,

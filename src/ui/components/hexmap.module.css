@@ -1,0 +1,655 @@
+/*
+ * The full-screen upgrade map: a pannable, zoomable honeycomb of tier hexes. The hexes (vector) scale
+ * with the zoom; their pixel icons sit in .icons, which only moves, so they stay 6 px per art pixel.
+ */
+.overlay {
+  --hexclip: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(91, 132, 255, 0.28), transparent 55%),
+    linear-gradient(180deg, #1a2147 0%, #121734 55%, #0b0e22 100%);
+  animation: mapIn 220ms ease-out both;
+}
+@keyframes mapIn {
+  from { opacity: 0; }
+}
+.defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.viewport {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.viewport:active {
+  cursor: grabbing;
+}
+.content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.links {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+.gridHex {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.045);
+  stroke-width: 3;
+}
+.linkEdge {
+  stroke: var(--ink);
+  stroke-width: 34;
+  stroke-linecap: round;
+}
+.linkFill {
+  stroke: #3d4469;
+  stroke-width: 20;
+  stroke-linecap: round;
+}
+.link[data-view='owned'] .linkFill {
+  stroke: #9fe3ff;
+}
+.link[data-view='open'] .linkFill {
+  stroke: #ffd23f;
+}
+
+/* ------------------------------------------------------------ hexes */
+.hex {
+  position: absolute;
+  width: 200px;
+  height: 173.2px;
+}
+.hex[data-sel] {
+  z-index: 3;
+}
+.hex[data-mode='intro'],
+.hexIcon[data-mode='intro'] {
+  animation: hexIn 300ms steps(3) both;
+}
+.hex[data-mode='fresh'][data-view='owned'],
+.hexIcon[data-mode='fresh'][data-view='owned'] {
+  animation: hexBuy 560ms steps(5) both;
+}
+.hex[data-mode='fresh'][data-view='owned'] {
+  z-index: 2;
+}
+.hex[data-mode='fresh'][data-view='open'],
+.hex[data-mode='fresh'][data-view='mystery'],
+.hexIcon[data-mode='fresh'][data-view='open'] {
+  animation: hexReveal 420ms steps(4) both;
+}
+/* Hexes and their icons appear, light up when bought and blink when revealed: no growing or turning. */
+@keyframes hexIn {
+  from { opacity: 0; }
+}
+@keyframes hexBuy {
+  0% { filter: brightness(2.4); }
+  55% { filter: brightness(1.3); }
+  100% { filter: none; }
+}
+@keyframes hexReveal {
+  0% { opacity: 0; filter: brightness(2); }
+  100% { opacity: 1; filter: none; }
+}
+.body {
+  position: absolute;
+  inset: 0;
+}
+/*
+ * An affordable hex glows behind: a soft green light that breathes smoothly (opacity and size only, so
+ * it stays smooth on phones; Kevin: "glowing animation behind upgrades needs to be more smooth").
+ */
+.hex[data-afford]::before {
+  content: '';
+  position: absolute;
+  inset: -26%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(126, 240, 143, 0.9), rgba(126, 240, 143, 0.4) 55%, rgba(126, 240, 143, 0) 100%);
+  pointer-events: none;
+  will-change: opacity, transform;
+  animation: hexGlow 1.8s ease-in-out infinite alternate;
+}
+@keyframes hexGlow {
+  from {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+/* (The bread counter on the Perks tab still pulses: a smooth fade.) */
+@keyframes hexPulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.18); }
+}
+
+/* ------------------------------------------------------------ the icon layer: moves with the map, never scales */
+.icons {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.icons[data-zoom='far'] {
+  display: none;
+}
+/* Zoomed out, hexes show just their icons; further out, just their colors. */
+.content[data-zoom='mid'] .tier,
+.content[data-zoom='mid'] .name,
+.content[data-zoom='mid'] .price,
+.content[data-zoom='far'] .tier,
+.content[data-zoom='far'] .name,
+.content[data-zoom='far'] .price {
+  display: none;
+}
+/* One hex's icon, centered on its spot. */
+.hexIcon {
+  position: absolute;
+  left: calc(-5 * var(--px));
+  top: calc(-5 * var(--px));
+  width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.shape {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+}
+.rim {
+  fill: #5a689e;
+  stroke: var(--ink);
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+.face {
+  fill: url(#hxOpen);
+}
+.shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.ring {
+  fill: none;
+  stroke: none;
+}
+.hex[data-sel] .ring {
+  stroke: #fff27a;
+  stroke-width: 10;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 12px #fff27a);
+}
+.hex[data-view='owned'] .rim {
+  fill: #c4efff;
+}
+.hex[data-view='owned'] .face {
+  fill: url(#hxOwned);
+}
+.hex[data-view='owned'][data-special] .rim {
+  fill: #fff3bf;
+}
+.hex[data-view='owned'][data-special] .face {
+  fill: url(#hxGold);
+}
+.hex[data-view='open'][data-special] .rim {
+  fill: #ffcf4a;
+}
+.hex[data-view='open'][data-afford] .rim {
+  fill: #7ef08f;
+}
+.hex[data-view='open'] .shine {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+.hex[data-view='mystery'] .rim {
+  fill: #3b4166;
+}
+.hex[data-view='mystery'] .face {
+  fill: url(#hxMystery);
+}
+.hex[data-view='mystery'] .shine {
+  stroke: rgba(255, 255, 255, 0.12);
+}
+.hex[data-view='mystery'][data-special] .rim {
+  fill: #a8842a;
+}
+
+.tier {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+}
+.hex[data-view='open'] .tier {
+  color: #ffe58a;
+}
+.name {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 113px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 27px;
+  line-height: 1.02;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+/* A buyable hex shows its price under the icon (its name is on the buy card). */
+.hex[data-view='open'] .name {
+  display: none;
+}
+.price {
+  position: absolute;
+  left: 50%;
+  top: 121px;
+  transform: translateX(-50%);
+  padding: 1px 12px;
+  border: 4px solid var(--ink);
+  background: #0f1329;
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #ffd23f;
+  white-space: nowrap;
+}
+.hex[data-afford] .price {
+  color: #fff;
+}
+.hex[data-afford] .price {
+  background: #3fae2a;
+}
+.bang {
+  position: absolute;
+  right: 26px;
+  top: 4px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 4px solid var(--ink);
+  background: #ef5350;
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+}
+.q {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 96px;
+  color: #fff;
+  -webkit-text-stroke: 9px var(--ink);
+  paint-order: stroke fill;
+}
+.hex[data-special] .q {
+  color: #ffd23f;
+}
+
+/* ------------------------------------------------------------ header */
+.head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 250px;
+  padding: 28px 30px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0.94) 0%, rgba(9, 12, 28, 0.62) 58%, rgba(9, 12, 28, 0) 100%);
+  pointer-events: none;
+}
+.titles {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sub {
+  max-width: 800px;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #cdd5f7;
+}
+.hint {
+  font-size: 30px;
+  font-weight: 500;
+  color: #8790c0;
+}
+/* The switch between the upgrade map and the Perks page (it shows from the first rebirth). */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 8px;
+  pointer-events: auto;
+}
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 84px;
+  padding: 0 26px;
+  font-family: var(--font-display);
+  font-size: 44px;
+  color: #8790c0;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  background: #1c2140;
+  box-shadow: var(--pixel-edge);
+}
+.tab[data-on] {
+  color: #fff;
+  background: linear-gradient(180deg, #9edcf7 0 var(--px), #2a8cf0 var(--px) calc(100% - 2 * var(--px)), #1d5fb0 calc(100% - 2 * var(--px)) 100%);
+}
+.tab[data-perks][data-on] {
+  background: linear-gradient(180deg, #ffe08a 0 var(--px), #d4862a var(--px) calc(100% - 2 * var(--px)), #8e5214 calc(100% - 2 * var(--px)) 100%);
+}
+.tab[data-locked] {
+  color: #5d6491;
+}
+.tab[data-locked] img {
+  opacity: 0.7;
+}
+/* A locked tab shakes its head when tapped, a pixel each way. */
+.tab[data-nope] {
+  animation: tabNope 400ms steps(4) both;
+}
+@keyframes tabNope {
+  25% { transform: translateX(calc(-1 * var(--px))); }
+  75% { transform: translateX(var(--px)); }
+}
+.tabNote {
+  font-size: 30px;
+  font-weight: 500;
+  color: #8790c0;
+}
+/* Loaves waiting to be eaten (green when a perk is affordable). */
+.tabBread {
+  position: absolute;
+  right: -18px;
+  top: -18px;
+  min-width: 46px;
+  height: 46px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 4px solid var(--ink);
+  background: #d4862a;
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--ink);
+}
+.tabBread[data-buy] {
+  background: #3fae2a;
+  animation: hexPulse 0.9s ease-in-out infinite alternate;
+}
+.centerBtn {
+  pointer-events: auto;
+  width: calc(16 * var(--px));
+  height: calc(16 * var(--px));
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ------------------------------------------------------------ footer */
+.foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 110px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0) 0%, rgba(9, 12, 28, 0.85) 24%, rgba(9, 12, 28, 0.97) 100%);
+  pointer-events: none;
+}
+.foot [data-ui] {
+  pointer-events: auto;
+}
+.card {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  padding: calc(3 * var(--px));
+}
+/* The selected upgrade's icon, 16 x 16 at 6 px per pixel, on a tile colored like its hex. */
+.cardTile {
+  flex: none;
+  width: calc(20 * var(--px));
+  height: calc(20 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #8be0ff 0 50%, #2b86e3 50% 100%);
+}
+.cardTile[data-view='open'] {
+  background: linear-gradient(180deg, #3d4772 0 50%, #1c2140 50% 100%);
+}
+.cardTile[data-special] {
+  background: linear-gradient(180deg, #fff09a 0 50%, #f39c12 50% 100%);
+}
+.cardTile[data-view='mystery'] {
+  background: linear-gradient(180deg, #2c3152 0 50%, #181b30 50% 100%);
+}
+.cardQ {
+  font-family: var(--font-display);
+  font-size: 76px;
+  color: #fff;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+}
+.cardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cardName {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 42px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.cardTag {
+  padding: 0 var(--px);
+  box-shadow: var(--pixel-edge);
+  background: #ffc233;
+  font-style: normal;
+  font-size: 30px;
+}
+.cardDesc {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #6b5e57;
+}
+.cardFx {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #7a6a60;
+}
+.cardFx b {
+  color: #5bc236;
+  font-size: 30px;
+}
+.fxNext {
+  color: #2f8a1c;
+}
+.buy {
+  flex: none;
+  min-width: 240px;
+  min-height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 46px;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 124px;
+}
+.coins {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 60px;
+  color: #ffd23f;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink);
+}
+.close {
+  flex: none;
+  width: 340px;
+  height: 120px;
+  font-size: 58px;
+}
+.barRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+/* The raccoon's ATK and DEF (they show only here). */
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: #fff;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+.overlay[data-calm],
+.overlay[data-calm] .hex,
+.overlay[data-calm] .hexIcon,
+.overlay[data-calm] .body,
+.overlay[data-calm] .hex::before,
+.overlay[data-calm] .tab,
+.overlay[data-calm] .tabBread {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hex,
+  .hex::before,
+  .hexIcon,
+  .body,
+  .tab,
+  .tabBread {
+    animation: none !important;
+  }
+}
+
+/*
+ * The wide stage (PC, 2160 x 960): the map gets the whole left side at full height (Kevin: "manage the
+ * space better, there's barely any space to move and look around"). The page's words run in one strip
+ * along its top; the selected upgrade's card, the gold, ATK/DEF and Close stand in a panel down the
+ * right side (UpgradeMap.tsx centres the map in what is left: FOCUS_WIDE).
+ */
+:global([data-layout='wide']) .head {
+  right: 600px;
+  height: auto;
+  padding: 20px 26px 40px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0.92) 0%, rgba(9, 12, 28, 0.55) 70%, rgba(9, 12, 28, 0) 100%);
+}
+:global([data-layout='wide']) .titles {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 32px;
+  align-items: center;
+}
+:global([data-layout='wide']) .titles > :first-child {
+  grid-row: 1 / span 2;
+}
+:global([data-layout='wide']) .sub {
+  max-width: none;
+}
+:global([data-layout='wide']) .foot {
+  left: auto;
+  right: 0;
+  top: 0;
+  width: 600px;
+  padding: 30px 30px 26px;
+  gap: 24px;
+  background: linear-gradient(90deg, rgba(9, 12, 28, 0.9), rgba(9, 12, 28, 0.97) 40px);
+  box-shadow: inset var(--px) 0 0 rgba(255, 255, 255, 0.06);
+  /* Over the map: a drag or the wheel here doesn't move it. */
+  pointer-events: auto;
+}
+:global([data-layout='wide']) .card {
+  flex-wrap: wrap;
+}
+:global([data-layout='wide']) .cardBody {
+  flex: 1 1 260px;
+}
+:global([data-layout='wide']) .buy {
+  flex: 1 1 100%;
+}
+:global([data-layout='wide']) .bar {
+  margin-top: auto;
+  flex-wrap: wrap;
+  height: auto;
+  row-gap: 22px;
+}
+:global([data-layout='wide']) .close {
+  order: 3;
+  flex: 1 1 100%;
+  width: auto;
+}

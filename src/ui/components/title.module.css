@@ -1,0 +1,60 @@
+/*
+ * The title screen (TitleScreen.tsx): the whole stage, over everything. The picture is one canvas of
+ * art pixels shown at exactly 6 stage px per canvas pixel (1080 x 1920 for 180 x 320), never smoothed;
+ * the PLAY button is an invisible hit area over the one drawn in it. While the iris opens on the game
+ * the screen turns see-through (data-phase="open") so the game shows through the hole.
+ */
+.title {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  /* Under the canvas: the sky's deepest blue, so nothing of the game shows before the first frame. */
+  background: #2a62c4;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.title[data-phase='open'] {
+  background: transparent;
+  cursor: default;
+}
+
+.canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  height: 1920px;
+  display: block;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.play {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+}
+.play:focus {
+  outline: none;
+}
+/* Keyboard focus: a white pixel frame a pixel outside the button's border. */
+.play:focus-visible {
+  box-shadow: 0 0 0 var(--px) #ffffff;
+}
+
+.name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,0 +1,1285 @@
+[
+  {
+    "id": "sunny_suburbs",
+    "name": "Sunny Suburbs",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Alley Rat",
+        "color": "#7A6A72",
+        "accent": "#D9A1AE"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Porch Pigeon",
+        "color": "#8E9AAF",
+        "accent": "#5FB49C"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Punk Raccoon",
+        "color": "#77707F",
+        "accent": "#E53935"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Guy Who Is Concerned About Powerful Raccoon",
+      "color": "#2B4C7E",
+      "accent": "#F2C14E"
+    },
+    "look": {
+      "hue": 0,
+      "sat": 1.0,
+      "bright": 1.0,
+      "atmo": {
+        "sky": ["#3C8FE0", "#5CB2F2", "#8DD0FA", "#C6ECFC"],
+        "horizon": 48,
+        "body": {
+          "kind": "sun",
+          "x": 91,
+          "y": 18,
+          "r": 5,
+          "color": "#FFFBE6",
+          "halo": "#FFF4B8",
+          "haloR": 19
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.5,
+          "y": 7,
+          "light": "#FFFFFF",
+          "shade": "#A6CCEE",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.2, "mid": 0.04 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "motes",
+        "vignette": 0.12
+      }
+    }
+  },
+  {
+    "id": "pinecone_park",
+    "name": "Pinecone Park",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Picnic Rat",
+        "color": "#8A7560",
+        "accent": "#E6B07A"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Park Pigeon",
+        "color": "#7FA88C",
+        "accent": "#E8D35A"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Scout Raccoon",
+        "color": "#7B7466",
+        "accent": "#3FA34D"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Big Earl",
+      "color": "#6A5A62",
+      "accent": "#C49A6C"
+    },
+    "look": {
+      "hue": -12,
+      "sat": 1.15,
+      "bright": 1.03,
+      "atmo": {
+        "sky": ["#3B3D78", "#69508E", "#C06E89", "#F0A26D", "#FFD889"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 79,
+          "y": 26,
+          "r": 6,
+          "color": "#FFF6CC",
+          "halo": "#FFD27A",
+          "haloR": 34
+        },
+        "stars": 0.15,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.55,
+          "y": 14,
+          "light": "#FFC98A",
+          "shade": "#93679B",
+          "rim": "#FFF0B0"
+        },
+        "haze": { "color": "#8C5C80", "far": 0.5, "mid": 0.1 },
+        "rim": { "color": "#FFB070", "amount": 0.35 },
+        "ambient": "#D49C8C",
+        "windows": 0.35,
+        "lamps": true,
+        "light": "#FFC65C",
+        "particles": "fireflies",
+        "vignette": 0.3
+      }
+    }
+  },
+  {
+    "id": "drizzle_downtown",
+    "name": "Drizzle Downtown",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Gutter Rat",
+        "color": "#5E6670",
+        "accent": "#9FB4C7"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Rain Pigeon",
+        "color": "#6F7F99",
+        "accent": "#4FC3F7"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Slicker Punk",
+        "color": "#636A78",
+        "accent": "#FFD54F"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie \"Two Lids\"",
+      "color": "#6E6878",
+      "accent": "#7E57C2"
+    },
+    "look": {
+      "hue": 8,
+      "sat": 0.55,
+      "bright": 0.92,
+      "atmo": {
+        "sky": ["#55627D", "#6E7C96", "#8C98AD", "#A9B3C3"],
+        "horizon": 48,
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.85,
+          "y": 2,
+          "light": "#B5BFCF",
+          "shade": "#5A657E",
+          "rim": "#CCD4E0"
+        },
+        "haze": { "far": 0.4, "mid": 0.12 },
+        "ambient": "#C6CDDD",
+        "windows": 0.6,
+        "lamps": true,
+        "light": "#FFD27A",
+        "weather": "rain",
+        "vignette": 0.35
+      }
+    }
+  },
+  {
+    "id": "boardwalk_beach",
+    "name": "Boardwalk Beach",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Sand Rat",
+        "color": "#C9A27A",
+        "accent": "#FF8A65"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Seagull",
+        "color": "#E8ECF2",
+        "accent": "#FFB300"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Surfer Punk",
+        "color": "#8C7F70",
+        "accent": "#26C6DA"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Doug, on His Lunch Break",
+      "color": "#E53935",
+      "accent": "#FFEB3B"
+    },
+    "look": {
+      "hue": 12,
+      "sat": 1.2,
+      "bright": 1.06,
+      "atmo": {
+        "sky": ["#1AA3E8", "#3FC0F2", "#86DCF7", "#DFF6F2", "#FFF0C8"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 18,
+          "y": 19,
+          "r": 6,
+          "color": "#FFFFFF",
+          "halo": "#FFF6C8",
+          "haloR": 24
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.35,
+          "y": 7,
+          "light": "#FFFFFF",
+          "shade": "#9ED0EA",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.22, "mid": 0.04 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "sparkles",
+        "particleColors": ["#FFFFFF", "#FFF6C8"],
+        "vignette": 0.1
+      }
+    }
+  },
+  {
+    "id": "funky_farmland",
+    "name": "Funky Farmland",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "angry_hen",
+        "name": "Angry Hen",
+        "color": "#9C5A2C",
+        "accent": "#D8402A"
+      },
+      {
+        "id": "quacker",
+        "name": "Quacker",
+        "color": "#3E8A4A",
+        "accent": "#E8A030"
+      },
+      {
+        "id": "mad_bunny",
+        "name": "Mad Bunny",
+        "color": "#8A8090",
+        "accent": "#F2A0B0"
+      },
+      {
+        "id": "hog_hooligan",
+        "name": "Hog Hooligan",
+        "color": "#E0907A",
+        "accent": "#B05A50"
+      },
+      {
+        "id": "ram_rager",
+        "name": "Ram Rager",
+        "color": "#2C2830",
+        "accent": "#F4EDE0"
+      }
+    ],
+    "boss": {
+      "id": "mega_moo",
+      "name": "Mega Moo",
+      "color": "#F4F2EC",
+      "accent": "#2C2830"
+    },
+    "look": {
+      "hue": 0,
+      "sat": 1,
+      "bright": 1,
+      "scenery": "farm",
+      "atmo": {
+        "sky": ["#5A7FC4", "#8FA5D0", "#E6B38C", "#FFD09A"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 91,
+          "y": 25,
+          "r": 6,
+          "color": "#FFF2C8",
+          "halo": "#FFC070",
+          "haloR": 29
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.45,
+          "y": 7,
+          "light": "#FFE2C0",
+          "shade": "#B08AA0",
+          "rim": "#FFF3D8"
+        },
+        "haze": { "far": 0.3, "mid": 0.06 },
+        "rim": { "color": "#FFB36B", "amount": 0.3 },
+        "ambient": "#F2D2BC",
+        "windows": 0.1,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "leaves",
+        "vignette": 0.22
+      }
+    }
+  },
+  {
+    "id": "neon_night",
+    "name": "Neon Night Market",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Neon Rat",
+        "color": "#5B4B8A",
+        "accent": "#FF3EA5"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Disco Pigeon",
+        "color": "#4E5BA8",
+        "accent": "#2EE6FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Glowstick Punk",
+        "color": "#5A4E6E",
+        "accent": "#B6FF3B"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie Neon",
+      "color": "#3E2F6B",
+      "accent": "#FF3EA5"
+    },
+    "look": {
+      "hue": 18,
+      "sat": 1.25,
+      "bright": 0.58,
+      "atmo": {
+        "sky": ["#0D0B2A", "#1C1446", "#3A1E66", "#6A2A7E"],
+        "horizon": 53,
+        "body": {
+          "kind": "moon",
+          "x": 84,
+          "y": 19,
+          "r": 5,
+          "color": "#F6EEDC",
+          "accent": "#D8CCE8",
+          "halo": "#B48CFF",
+          "haloR": 19
+        },
+        "stars": 0.6,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.3,
+          "y": 10,
+          "light": "#6A4A9E",
+          "shade": "#2A1E52",
+          "rim": "#C08CFF"
+        },
+        "haze": { "far": 0.35, "mid": 0.1 },
+        "ambient": "#6A64B8",
+        "windows": 0.85,
+        "lamps": true,
+        "light": "#FFB86A",
+        "particles": "sparkles",
+        "particleColors": ["#FF6AD5", "#6AF0FF", "#FFE66A"],
+        "vignette": 0.4
+      }
+    }
+  },
+  {
+    "id": "snowy_summit",
+    "name": "Snowy Summit",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Snow Rat",
+        "color": "#E8EEF5",
+        "accent": "#90CAF9"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Frost Pigeon",
+        "color": "#B8D4EA",
+        "accent": "#4FC3F7"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Yeti Punk",
+        "color": "#DDE6EE",
+        "accent": "#64B5F6"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Gary, Who Is Cold",
+      "color": "#4E7FB5",
+      "accent": "#E3F2FD"
+    },
+    "look": {
+      "hue": 0,
+      "sat": 0.3,
+      "bright": 1.22,
+      "props": ["snowman", "xmasTree", "presentRed", "pineSnowy", "presentBlue"],
+      "atmo": {
+        "sky": ["#7FB6E6", "#A8D0F0", "#D4E9F8", "#F2F8FC"],
+        "horizon": 48,
+        "body": {
+          "kind": "sun",
+          "x": 24,
+          "y": 19,
+          "r": 5,
+          "color": "#FFFFFF",
+          "halo": "#F4FBFF",
+          "haloR": 22
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.5,
+          "y": 5,
+          "light": "#FFFFFF",
+          "shade": "#B4C8E0",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.4, "mid": 0.12 },
+        "rim": { "color": "#FFFFFF", "amount": 0.75 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "weather": "snow",
+        "vignette": 0.15
+      }
+    }
+  },
+  {
+    "id": "dungeon_dumps",
+    "name": "Dungeon Dumps",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "pumpkin_dude",
+        "name": "Pumpkin Dude",
+        "color": "#E8822A",
+        "accent": "#5A8C2B"
+      },
+      {
+        "id": "plague_doc",
+        "name": "Plague Doc",
+        "color": "#2E3448",
+        "accent": "#C9B48A"
+      },
+      {
+        "id": "tin_soldier",
+        "name": "Tin Soldier",
+        "color": "#9AA7B4",
+        "accent": "#8C2F2F"
+      },
+      {
+        "id": "orc_brute",
+        "name": "Orc Brute",
+        "color": "#6FA24A",
+        "accent": "#8A5A2B"
+      }
+    ],
+    "boss": {
+      "id": "demon_king",
+      "name": "Dumpgor the Demon",
+      "color": "#C8323C",
+      "accent": "#FFD54F"
+    },
+    "look": {
+      "hue": 0,
+      "sat": 1,
+      "bright": 1,
+      "scenery": "dungeon",
+      "atmo": {
+        "sky": ["#1A1326", "#3A2840"],
+        "horizon": 48,
+        "stars": 0,
+        "haze": { "far": 0, "mid": 0 },
+        "windows": 0,
+        "lamps": true,
+        "light": "#FFB04A",
+        "particles": "embers",
+        "vignette": 0.55
+      }
+    }
+  },
+  {
+    "id": "toxic_bayou",
+    "name": "Toxic Bayou",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Sludge Rat",
+        "color": "#5C7A4A",
+        "accent": "#B6FF3B"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Swamp Pigeon",
+        "color": "#5E8F6A",
+        "accent": "#C0CA33"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Bog Punk",
+        "color": "#4F6B4A",
+        "accent": "#76FF03"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Gator Vinnie",
+      "color": "#3E6B3A",
+      "accent": "#C6FF00"
+    },
+    "look": {
+      "hue": 55,
+      "sat": 1.3,
+      "bright": 0.86,
+      "props": ["cauldron", "pumpkinPale", "cauldron"],
+      "atmo": {
+        "sky": ["#29392D", "#496A3A", "#88A64A", "#D2E27A"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 72,
+          "y": 25,
+          "r": 6,
+          "color": "#F4FFB0",
+          "halo": "#C8F060",
+          "haloR": 26
+        },
+        "stars": 0.1,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.45,
+          "y": 12,
+          "light": "#C0E080",
+          "shade": "#4A6A40",
+          "rim": "#EAFFA0"
+        },
+        "haze": { "color": "#4A5E3A", "far": 0.45, "mid": 0.1 },
+        "ambient": "#B4C89A",
+        "windows": 0.4,
+        "lamps": true,
+        "light": "#D8FF7A",
+        "particles": "fireflies",
+        "particleColors": ["#C8FF5A", "#9AFF8A"],
+        "vignette": 0.3
+      }
+    }
+  },
+  {
+    "id": "lava_landfill",
+    "name": "Lava Landfill",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Magma Rat",
+        "color": "#5A3A3A",
+        "accent": "#FF7043"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Ember Pigeon",
+        "color": "#6E4A4A",
+        "accent": "#FFB300"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Scorch Punk",
+        "color": "#4A3434",
+        "accent": "#FF3D00"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Man Who Has Called the City Twice",
+      "color": "#B71C1C",
+      "accent": "#FFD54F"
+    },
+    "look": {
+      "hue": -95,
+      "sat": 1.3,
+      "bright": 0.82,
+      "atmo": {
+        "sky": ["#2A0D12", "#5A1A1A", "#A8321E", "#F06A2A", "#FFB050"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 86,
+          "y": 26,
+          "r": 7,
+          "color": "#FFF0A0",
+          "halo": "#FF8A3A",
+          "haloR": 26
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.5,
+          "y": 10,
+          "light": "#FF8A4A",
+          "shade": "#4A1A1E",
+          "rim": "#FFD070"
+        },
+        "haze": { "color": "#6A1E26", "far": 0.45, "mid": 0.1 },
+        "rim": { "color": "#FF7A3A", "amount": 0.4 },
+        "ambient": "#FFB090",
+        "windows": 0.5,
+        "lamps": true,
+        "light": "#FFB050",
+        "particles": "embers",
+        "vignette": 0.35
+      }
+    }
+  },
+  {
+    "id": "candy_corner",
+    "name": "Candy Corner",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Gummy Rat",
+        "color": "#F48FB1",
+        "accent": "#FFF59D"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Sprinkle Pigeon",
+        "color": "#CE93D8",
+        "accent": "#80DEEA"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Taffy Punk",
+        "color": "#F8BBD0",
+        "accent": "#FF4081"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Baron Bonbon",
+      "color": "#E91E63",
+      "accent": "#FFEB3B"
+    },
+    "look": {
+      "hue": 165,
+      "sat": 1.1,
+      "bright": 1.1,
+      "props": ["lollipopRed", "candyCane", "cupcake", "lollipopGreen", "candyCaneGreen", "lollipopSwirl"],
+      "atmo": {
+        "sky": ["#FF9FD8", "#FFB8E2", "#FFD6EE", "#FFF0F8"],
+        "horizon": 48,
+        "body": {
+          "kind": "sun",
+          "x": 22,
+          "y": 18,
+          "r": 5,
+          "color": "#FFFFFF",
+          "halo": "#FFE4F4",
+          "haloR": 19
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "puffy",
+          "cover": 0.55,
+          "y": 6,
+          "light": "#FFFFFF",
+          "shade": "#F2A6D2",
+          "rim": "#FFF6FB"
+        },
+        "haze": { "far": 0.3, "mid": 0.06 },
+        "windows": 0,
+        "lamps": false,
+        "light": "#FFC65C",
+        "particles": "sparkles",
+        "particleColors": ["#FFFFFF", "#FF9FD8"],
+        "vignette": 0.12
+      }
+    }
+  },
+  {
+    "id": "haunted_hollow",
+    "name": "Haunted Hollow",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Ghost Rat",
+        "color": "#C5CAE9",
+        "accent": "#7E57C2"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Spooky Pigeon",
+        "color": "#9FA8DA",
+        "accent": "#B388FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Zombie Punk",
+        "color": "#8BA88A",
+        "accent": "#6A1B9A"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Count Vinnie",
+      "color": "#4A148C",
+      "accent": "#E53935"
+    },
+    "look": {
+      "hue": 200,
+      "sat": 0.6,
+      "bright": 0.62,
+      "props": ["jackOLantern", "tombstone", "ghost", "tombstoneFlowers", "blackCat", "jackOLanternDim"],
+      "atmo": {
+        "sky": ["#120D22", "#241A40", "#3E2C5E", "#5E4A7E"],
+        "horizon": 53,
+        "body": {
+          "kind": "moon",
+          "x": 26,
+          "y": 19,
+          "r": 6,
+          "color": "#E8F0D8",
+          "accent": "#C2CCB0",
+          "halo": "#8AB8A0",
+          "haloR": 24
+        },
+        "stars": 0.4,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.4,
+          "y": 7,
+          "light": "#5A4A7A",
+          "shade": "#1E1634",
+          "rim": "#A8C8B0"
+        },
+        "haze": { "far": 0.4, "mid": 0.15 },
+        "ambient": "#6A6AA0",
+        "windows": 0.35,
+        "lamps": true,
+        "light": "#FFA040",
+        "particles": "wisps",
+        "vignette": 0.5
+      }
+    }
+  },
+  {
+    "id": "glacier_gulch",
+    "name": "Glacier Gulch",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Ice Rat",
+        "color": "#B3E5FC",
+        "accent": "#0288D1"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Glacier Pigeon",
+        "color": "#81D4FA",
+        "accent": "#E1F5FE"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Frostbite Punk",
+        "color": "#90A4AE",
+        "accent": "#00B8D4"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Todd",
+      "color": "#0277BD",
+      "accent": "#B3E5FC"
+    },
+    "look": {
+      "hue": 95,
+      "sat": 0.8,
+      "bright": 1.15,
+      "props": ["snowman", "pineSnowy", "presentBlue", "snowman"],
+      "atmo": {
+        "sky": ["#0E1F3A", "#1E3F66", "#3A7AA0", "#8AD6E0"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 19,
+          "y": 26,
+          "r": 5,
+          "color": "#FFFFFF",
+          "halo": "#BFF4FF",
+          "haloR": 22
+        },
+        "stars": 0.3,
+        "haze": { "far": 0.4, "mid": 0.12 },
+        "rim": { "color": "#EAF8FF", "amount": 0.6 },
+        "ambient": "#C8E8FF",
+        "windows": 0.3,
+        "lamps": true,
+        "light": "#FFD27A",
+        "weather": "snow",
+        "vignette": 0.25
+      }
+    }
+  },
+  {
+    "id": "mushroom_marsh",
+    "name": "Mushroom Marsh",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Spore Rat",
+        "color": "#A1887F",
+        "accent": "#E040FB"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Puffball Pigeon",
+        "color": "#BCAAA4",
+        "accent": "#FF5252"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Toadstool Punk",
+        "color": "#8D6E63",
+        "accent": "#FF1744"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "King Fungus",
+      "color": "#6D4C41",
+      "accent": "#D500F9"
+    },
+    "look": {
+      "hue": 125,
+      "sat": 1.2,
+      "bright": 1.0,
+      "atmo": {
+        "sky": ["#3A2A6A", "#6A4A9E", "#A87AC8", "#E6B8E6"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 84,
+          "y": 25,
+          "r": 6,
+          "color": "#FFF0F8",
+          "halo": "#F0A8E0",
+          "haloR": 26
+        },
+        "stars": 0.2,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.4,
+          "y": 12,
+          "light": "#E8B0E0",
+          "shade": "#5A3A8A",
+          "rim": "#FFF0FF"
+        },
+        "haze": { "color": "#6E4C8E", "far": 0.45, "mid": 0.1 },
+        "ambient": "#CDB4DE",
+        "windows": 0.4,
+        "lamps": true,
+        "light": "#9AFFE8",
+        "particles": "spores",
+        "particleColors": ["#7AFFE0", "#FF9AE8"],
+        "vignette": 0.3
+      }
+    }
+  },
+  {
+    "id": "crystal_caverns",
+    "name": "Crystal Caverns",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Crystal Rat",
+        "color": "#7986CB",
+        "accent": "#18FFFF"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Geode Pigeon",
+        "color": "#9575CD",
+        "accent": "#FF80AB"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Quartz Punk",
+        "color": "#5C6BC0",
+        "accent": "#EA80FC"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie the Gem",
+      "color": "#311B92",
+      "accent": "#18FFFF"
+    },
+    "look": {
+      "hue": 140,
+      "sat": 1.35,
+      "bright": 0.75,
+      "atmo": {
+        "sky": ["#0A0820", "#1A1450", "#3A2A8A", "#6A4AC0"],
+        "horizon": 53,
+        "body": {
+          "kind": "moon",
+          "x": 84,
+          "y": 17,
+          "r": 5,
+          "color": "#E8F0FF",
+          "accent": "#C4CCF0",
+          "halo": "#8A7AFF",
+          "haloR": 22
+        },
+        "stars": 0.7,
+        "haze": { "far": 0.35, "mid": 0.12 },
+        "ambient": "#7A70C8",
+        "windows": 0.7,
+        "lamps": true,
+        "light": "#8AE8FF",
+        "particles": "sparkles",
+        "particleColors": ["#8AE8FF", "#D08AFF"],
+        "vignette": 0.45
+      }
+    }
+  },
+  {
+    "id": "thunder_plateau",
+    "name": "Thunder Plateau",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Storm Rat",
+        "color": "#78909C",
+        "accent": "#FFEA00"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Thunder Pigeon",
+        "color": "#607D8B",
+        "accent": "#FFD600"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Static Punk",
+        "color": "#546E7A",
+        "accent": "#00E5FF"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Neighbor Who Saw Everything",
+      "color": "#263238",
+      "accent": "#FFEA00"
+    },
+    "look": {
+      "hue": 25,
+      "sat": 0.7,
+      "bright": 0.78,
+      "atmo": {
+        "sky": ["#1E2434", "#323A50", "#4A556E", "#6A7690"],
+        "horizon": 48,
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.9,
+          "y": 2,
+          "light": "#6A7690",
+          "shade": "#22283A",
+          "rim": "#A8B4CC"
+        },
+        "haze": { "far": 0.45, "mid": 0.15 },
+        "ambient": "#9AA4C0",
+        "windows": 0.6,
+        "lamps": true,
+        "light": "#FFD27A",
+        "weather": "storm",
+        "vignette": 0.45
+      }
+    }
+  },
+  {
+    "id": "golden_gardens",
+    "name": "Golden Gardens",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Gilded Rat",
+        "color": "#D4AF37",
+        "accent": "#FFF59D"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Golden Pigeon",
+        "color": "#E6C35C",
+        "accent": "#FF6F00"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Bling Punk",
+        "color": "#B8973A",
+        "accent": "#E040FB"
+      }
+    ],
+    "boss": {
+      "id": "big_earl",
+      "name": "Earl the Opulent",
+      "color": "#C9A227",
+      "accent": "#7B1FA2"
+    },
+    "look": {
+      "hue": -42,
+      "sat": 1.45,
+      "bright": 1.12,
+      "props": ["wheat", "pumpkin", "cabbage", "wheat"],
+      "atmo": {
+        "sky": ["#4A5A9A", "#8A7AA8", "#E8A87A", "#FFD88A", "#FFF0B0"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 65,
+          "y": 25,
+          "r": 7,
+          "color": "#FFFBE0",
+          "halo": "#FFE08A",
+          "haloR": 38
+        },
+        "stars": 0,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.35,
+          "y": 12,
+          "light": "#FFE0A0",
+          "shade": "#A07A9A",
+          "rim": "#FFF8D0"
+        },
+        "haze": { "color": "#A07C78", "far": 0.45, "mid": 0.08 },
+        "rim": { "color": "#FFD070", "amount": 0.45 },
+        "ambient": "#E6B898",
+        "windows": 0.2,
+        "lamps": true,
+        "light": "#FFC65C",
+        "particles": "petals",
+        "vignette": 0.25
+      }
+    }
+  },
+  {
+    "id": "moon_junkyard",
+    "name": "Moon Junkyard",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Moon Rat",
+        "color": "#CFD8DC",
+        "accent": "#90A4AE"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Lunar Pigeon",
+        "color": "#B0BEC5",
+        "accent": "#80D8FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Astro Punk",
+        "color": "#ECEFF1",
+        "accent": "#FF6E40"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "Vinnie Moonwalker",
+      "color": "#90A4AE",
+      "accent": "#40C4FF"
+    },
+    "look": {
+      "hue": 0,
+      "sat": 0.15,
+      "bright": 0.85,
+      "atmo": {
+        "sky": ["#03050F", "#070B1F", "#121A38", "#262E52"],
+        "horizon": 53,
+        "body": {
+          "kind": "planet",
+          "x": 84,
+          "y": 20,
+          "r": 7,
+          "color": "#3A7AE0",
+          "accent": "#5DC14C",
+          "halo": "#6AA8FF",
+          "haloR": 22
+        },
+        "stars": 1,
+        "haze": { "far": 0.3, "mid": 0.06 },
+        "ambient": "#8A90B8",
+        "windows": 0.5,
+        "lamps": true,
+        "light": "#FFE0A0",
+        "particles": "motes",
+        "particleColors": ["#C8D0F0"],
+        "vignette": 0.45
+      }
+    }
+  },
+  {
+    "id": "cosmic_compactor",
+    "name": "Cosmic Compactor",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Comet Rat",
+        "color": "#5E35B1",
+        "accent": "#FFD740"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Nebula Pigeon",
+        "color": "#8E24AA",
+        "accent": "#18FFFF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Star Punk",
+        "color": "#4527A0",
+        "accent": "#FF4081"
+      }
+    ],
+    "boss": {
+      "id": "officer_dale",
+      "name": "Brian from the Homeowners Association",
+      "color": "#1A237E",
+      "accent": "#FFD740"
+    },
+    "look": {
+      "hue": 185,
+      "sat": 1.45,
+      "bright": 0.72,
+      "atmo": {
+        "sky": ["#0A0420", "#1A0A3A", "#3A1260", "#6A1A8A"],
+        "horizon": 53,
+        "body": {
+          "kind": "planet",
+          "x": 26,
+          "y": 20,
+          "r": 6,
+          "color": "#E88AD8",
+          "accent": "#FFD0F0",
+          "halo": "#C060FF",
+          "haloR": 22,
+          "ring": true
+        },
+        "stars": 0.9,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.35,
+          "y": 10,
+          "light": "#A04AD0",
+          "shade": "#3A1260",
+          "rim": "#FF8AE8"
+        },
+        "haze": { "far": 0.35, "mid": 0.08 },
+        "ambient": "#9A7AC8",
+        "windows": 0.6,
+        "lamps": true,
+        "light": "#FF9AE8",
+        "particles": "sparkles",
+        "particleColors": ["#FF8AE8", "#8AE8FF"],
+        "vignette": 0.45
+      }
+    }
+  },
+  {
+    "id": "trash_dimension",
+    "name": "The Trash Dimension",
+    "theme": "curbside",
+    "enemies": [
+      {
+        "id": "alley_rat",
+        "name": "Void Rat",
+        "color": "#3A3350",
+        "accent": "#E040FB"
+      },
+      {
+        "id": "porch_pigeon",
+        "name": "Rift Pigeon",
+        "color": "#37474F",
+        "accent": "#00E5FF"
+      },
+      {
+        "id": "punk_raccoon",
+        "name": "Glitch Punk",
+        "color": "#2F3540",
+        "accent": "#76FF03"
+      }
+    ],
+    "boss": {
+      "id": "vinnie_two_lids",
+      "name": "The Trash Titan",
+      "color": "#2D2440",
+      "accent": "#FF1744"
+    },
+    "look": {
+      "hue": 250,
+      "sat": 1.6,
+      "bright": 0.88,
+      "atmo": {
+        "sky": ["#2A0A5A", "#5A3AFF", "#C04AD8", "#FF4FA3", "#FFB0D0"],
+        "horizon": 50,
+        "body": {
+          "kind": "sun",
+          "x": 54,
+          "y": 24,
+          "r": 7,
+          "color": "#FFFFFF",
+          "halo": "#FF8AF0",
+          "haloR": 31
+        },
+        "stars": 0.5,
+        "clouds": {
+          "style": "streaky",
+          "cover": 0.4,
+          "y": 10,
+          "light": "#FF8AD8",
+          "shade": "#3A1A8A",
+          "rim": "#FFFFFF"
+        },
+        "haze": { "far": 0.35, "mid": 0.1 },
+        "ambient": "#D8B0FF",
+        "windows": 0.5,
+        "lamps": true,
+        "light": "#8AFFEA",
+        "particles": "sparkles",
+        "particleColors": ["#FFFFFF", "#8AFFEA", "#FF8AF0"],
+        "vignette": 0.35
+      }
+    }
+  }
+]

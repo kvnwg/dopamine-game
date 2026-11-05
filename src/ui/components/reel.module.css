@@ -1,0 +1,773 @@
+/*
+ * The reel bank: a slot machine of pixel-art reels rolling downward behind a payline, framed by
+ * marquee bulbs. Pixel-ish sizes are art pixels (var(--px) = 6 stage px); --cell is a cell's height,
+ * --win the window's, --frame the bulb frame's, --art the art's size, --ax its left edge in a cell and
+ * --acx its center in a reel (Reel.tsx). Nothing with pixel art in it is scaled or rotated: shakes and
+ * drops are whole-pixel steps, glows are hard-edged rings, and only the light rays (a soft image) turn.
+ */
+
+/* ------------------------------------------------------------ the machine: shake, frame, glow */
+.rig {
+  position: relative;
+  flex: none;
+}
+/* A rare result on its way: the machine shakes by whole pixels, harder near the end. */
+.rig[data-shake='1'] {
+  animation: shake1 0.2s steps(1) infinite;
+}
+.rig[data-shake='2'] {
+  animation: shake2 0.14s steps(1) infinite;
+}
+@keyframes shake1 {
+  0% { transform: translateX(calc(-1 * var(--px))); }
+  50% { transform: translateX(var(--px)); }
+}
+@keyframes shake2 {
+  0% { transform: translate(calc(-1 * var(--px)), 0); }
+  25% { transform: translate(var(--px), calc(-1 * var(--px))); }
+  50% { transform: translate(calc(-1 * var(--px)), var(--px)); }
+  75% { transform: translate(var(--px), 0); }
+}
+
+.bank {
+  --glow: #ffc21a;
+  --prize: #ffc21a;
+  --pay: #ffc21a;
+  --frame-c: #2b2140;
+  --on: #fff3b0;
+  --off: #4b3a6e;
+  position: relative;
+  width: var(--bank-w);
+  height: var(--bank-h);
+  background: var(--frame-c);
+  box-shadow:
+    var(--pixel-edge),
+    inset 0 var(--px) 0 0 #4b3a6e, inset 0 calc(-1 * var(--px)) 0 0 #1c1430;
+}
+/* The build-up's glow: hard rings in the glow's color (Reel.tsx sets --glow as it climbs the tiers). */
+.bank[data-glow='1'] {
+  box-shadow:
+    var(--pixel-edge),
+    inset 0 var(--px) 0 0 #4b3a6e, inset 0 calc(-1 * var(--px)) 0 0 #1c1430,
+    0 0 0 calc(2 * var(--px)) var(--glow);
+}
+.bank[data-glow='2'] {
+  box-shadow:
+    var(--pixel-edge),
+    inset 0 var(--px) 0 0 #4b3a6e, inset 0 calc(-1 * var(--px)) 0 0 #1c1430,
+    0 0 0 calc(2 * var(--px)) var(--glow), 0 0 0 calc(3 * var(--px)) color-mix(in srgb, var(--glow) 50%, transparent);
+}
+.bank[data-glow='3'] {
+  box-shadow:
+    var(--pixel-edge),
+    inset 0 var(--px) 0 0 #4b3a6e, inset 0 calc(-1 * var(--px)) 0 0 #1c1430,
+    0 0 0 calc(2 * var(--px)) var(--glow), 0 0 0 calc(3 * var(--px)) color-mix(in srgb, var(--glow) 60%, transparent),
+    0 0 0 calc(4 * var(--px)) color-mix(in srgb, var(--glow) 30%, transparent);
+  animation: glowBeat 0.24s steps(1) infinite;
+}
+@keyframes glowBeat {
+  50% {
+    box-shadow:
+      var(--pixel-edge),
+      inset 0 var(--px) 0 0 #4b3a6e, inset 0 calc(-1 * var(--px)) 0 0 #1c1430,
+      0 0 0 calc(2 * var(--px)) var(--glow), 0 0 0 calc(3 * var(--px)) var(--glow),
+      0 0 0 calc(4 * var(--px)) color-mix(in srgb, var(--glow) 45%, transparent);
+  }
+}
+.bank[data-glow] {
+  --pay: var(--glow);
+}
+.bank[data-golden] {
+  --frame-c: #6b4a12;
+  --off: #9a6a1c;
+  box-shadow:
+    var(--pixel-edge),
+    inset 0 var(--px) 0 0 #ffc21a, inset 0 calc(-1 * var(--px)) 0 0 #b8501c, 0 0 0 calc(2 * var(--px)) rgba(255, 194, 26, 0.6);
+}
+
+/* ------------------------------------------------------------ marquee bulbs round the frame */
+/*
+ * Bulbs are 2 x 2 art pixels every 4, drawn as a repeating pattern along each edge (one lit, two
+ * dark) and chased by stepping the pattern one bulb at a time: clockwise while the reels spin.
+ */
+.bulbs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bulbs i {
+  position: absolute;
+  display: block;
+}
+.bulbs i:nth-child(1),
+.bulbs i:nth-child(2) {
+  left: 0;
+  right: 0;
+  height: calc(2 * var(--px));
+  background: linear-gradient(
+      90deg,
+      var(--on) 0 calc(2 * var(--px)),
+      transparent calc(2 * var(--px)) calc(4 * var(--px)),
+      var(--off) calc(4 * var(--px)) calc(6 * var(--px)),
+      transparent calc(6 * var(--px)) calc(8 * var(--px)),
+      var(--off) calc(8 * var(--px)) calc(10 * var(--px)),
+      transparent calc(10 * var(--px)) calc(12 * var(--px))
+    )
+    var(--px) 0 / calc(12 * var(--px)) 100% repeat-x;
+}
+.bulbs i:nth-child(1) {
+  top: var(--px);
+}
+.bulbs i:nth-child(2) {
+  bottom: var(--px);
+  animation-name: chaseL;
+}
+.bulbs i:nth-child(3),
+.bulbs i:nth-child(4) {
+  top: var(--frame);
+  bottom: var(--frame);
+  width: calc(2 * var(--px));
+  background: linear-gradient(
+      180deg,
+      var(--on) 0 calc(2 * var(--px)),
+      transparent calc(2 * var(--px)) calc(4 * var(--px)),
+      var(--off) calc(4 * var(--px)) calc(6 * var(--px)),
+      transparent calc(6 * var(--px)) calc(8 * var(--px)),
+      var(--off) calc(8 * var(--px)) calc(10 * var(--px)),
+      transparent calc(10 * var(--px)) calc(12 * var(--px))
+    )
+    0 var(--px) / 100% calc(12 * var(--px)) repeat-y;
+}
+.bulbs i:nth-child(3) {
+  left: var(--px);
+  animation-name: chaseU;
+}
+.bulbs i:nth-child(4) {
+  right: var(--px);
+  animation-name: chaseD;
+}
+.bulbs i:nth-child(1) {
+  animation-name: chaseR;
+}
+.bulbs i {
+  animation-duration: 1.2s;
+  animation-timing-function: steps(3);
+  animation-iteration-count: infinite;
+}
+@keyframes chaseR {
+  from { background-position-x: var(--px); }
+  to { background-position-x: calc(13 * var(--px)); }
+}
+@keyframes chaseL {
+  from { background-position-x: var(--px); }
+  to { background-position-x: calc(-11 * var(--px)); }
+}
+@keyframes chaseD {
+  from { background-position-y: var(--px); }
+  to { background-position-y: calc(13 * var(--px)); }
+}
+@keyframes chaseU {
+  from { background-position-y: var(--px); }
+  to { background-position-y: calc(-11 * var(--px)); }
+}
+/* Spinning: a fast chase. */
+.bank[data-bulbs='spin'] .bulbs i {
+  animation-duration: 0.24s;
+}
+/* Building up: the bulbs take the glow's color and race. */
+.bank[data-bulbs='glow'] {
+  --on: var(--glow);
+  --off: color-mix(in srgb, var(--glow) 35%, #2b2140);
+}
+.bank[data-bulbs='glow'] .bulbs i {
+  animation-duration: 0.15s;
+}
+/* A landing: every bulb flashes white. */
+.bank[data-bulbs='flash'] {
+  --on: #ffffff;
+  --off: #ffffff;
+}
+.bank[data-bulbs='flash'] .bulbs i {
+  animation: none;
+}
+/* After an Epic-or-better result: every bulb blinks in its color until the next spin. */
+.bank[data-bulbs='win'] {
+  --on: var(--prize);
+  --off: var(--prize);
+}
+.bank[data-bulbs='win'] .bulbs i {
+  animation: bulbBlink 0.36s steps(1) infinite;
+}
+@keyframes bulbBlink {
+  50% { opacity: 0.3; }
+}
+.bank[data-calm] .bulbs i {
+  animation: none !important;
+}
+
+/* ------------------------------------------------------------ the reels */
+.reels {
+  position: absolute;
+  left: var(--frame);
+  right: var(--frame);
+  top: var(--frame);
+  bottom: var(--frame);
+  display: flex;
+  justify-content: center;
+}
+.reel {
+  position: relative;
+  flex: none;
+  height: 100%;
+  overflow: hidden;
+  /* A paper reel drum: light in the middle, darker toward the edges, in hard bands. */
+  background: linear-gradient(
+    180deg,
+    #b9b2a3 0 calc(2 * var(--px)),
+    #d8d1bf calc(2 * var(--px)) calc(5 * var(--px)),
+    #efe9da calc(5 * var(--px)) calc(100% - 5 * var(--px)),
+    #d8d1bf calc(100% - 5 * var(--px)) calc(100% - 2 * var(--px)),
+    #b9b2a3 calc(100% - 2 * var(--px)) 100%
+  );
+}
+/* Behind the strip: the build-up's light and an Epic-or-better result's rays, centered on the art. */
+.under {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.light {
+  position: absolute;
+  left: calc(var(--acx) - 240px);
+  top: calc(50% - 240px);
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(
+    circle closest-side,
+    color-mix(in srgb, var(--glow) 60%, #fff) 0 22%,
+    color-mix(in srgb, var(--glow) 55%, transparent) 22% 46%,
+    color-mix(in srgb, var(--glow) 25%, transparent) 46% 72%,
+    transparent 72%
+  );
+  opacity: 0;
+}
+.bank[data-glow='1'] .reel[data-tease] .light {
+  opacity: 0.45;
+}
+.bank[data-glow='2'] .reel[data-tease] .light {
+  opacity: 0.75;
+}
+.bank[data-glow='3'] .reel[data-tease] .light {
+  opacity: 1;
+}
+.rays {
+  /* Drawn once into a small image (src/ui/rays.ts), fade baked in: no mask, one modest layer. */
+  position: absolute;
+  left: calc(var(--acx) - 330px);
+  top: calc(50% - 330px);
+  width: 660px;
+  height: 660px;
+  background: center / 100% 100% no-repeat;
+  animation: raysIn 0.3s steps(3) both, raySpin 12s linear infinite;
+}
+@keyframes raysIn {
+  from { opacity: 0; }
+}
+@keyframes raySpin {
+  to { transform: rotate(360deg); }
+}
+.bank[data-calm] .rays {
+  animation: raysIn 0.3s steps(3) both;
+}
+.strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  will-change: transform;
+}
+/* One item rolling past: its "1 in X" on top (or beside it on a wide reel), then the art. */
+.cell {
+  position: absolute;
+  left: var(--px);
+  right: var(--px);
+  height: var(--cell);
+  padding-top: var(--px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* A dotted groove between items, so each "1 in X" clearly belongs to the item under it. */
+.cell::before {
+  content: '';
+  position: absolute;
+  left: calc(2 * var(--px));
+  right: calc(2 * var(--px));
+  top: 0;
+  height: var(--px);
+  background: repeating-linear-gradient(90deg, rgba(43, 33, 64, 0.32) 0 var(--px), transparent var(--px) calc(2 * var(--px)));
+}
+.art {
+  /* Blacked out while it rolls: only the shape and the odds show. */
+  filter: brightness(0);
+  opacity: 0.86;
+}
+/* Afterimages while a reel flies: hard copies of the silhouette trailing above it, whole pixels apart. */
+.reel[data-speed='fast'] .cell:not([data-revealed]) .art {
+  filter: brightness(0) drop-shadow(0 calc(-1 * var(--trail)) 0 rgba(26, 19, 38, 0.42)) drop-shadow(0 calc(-2 * var(--trail)) 0 rgba(26, 19, 38, 0.2));
+}
+.reel[data-speed='mid'] .cell:not([data-revealed]) .art {
+  filter: brightness(0) drop-shadow(0 calc(-1 * var(--trail)) 0 rgba(26, 19, 38, 0.3));
+}
+.reel[data-speed='fast'] .cell:not([data-revealed]) .odds {
+  opacity: 0.75;
+}
+.cell[data-revealed] .art {
+  filter: none;
+  opacity: 1;
+}
+.cell[data-revealed] {
+  background: color-mix(in srgb, var(--rc, #9e9e9e) 35%, transparent);
+  animation: cellReveal 0.42s steps(3) both;
+}
+/* Shown before this spin began (the last result rolling away, a reel seen again): no flash. */
+.cell[data-settled] {
+  animation: none;
+}
+/* Behind rays the result's row is only tinted, so the light shows through. */
+.reel[data-rays] .cell[data-revealed] {
+  background: color-mix(in srgb, var(--rc, #9e9e9e) 16%, transparent);
+}
+@keyframes cellReveal {
+  0% {
+    background: #ffffff;
+  }
+}
+.bank[data-noflash] .cell[data-revealed] {
+  animation: none;
+}
+.odds {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  height: calc(5 * var(--px));
+  font-family: var(--font-display);
+  font-size: var(--label);
+  line-height: calc(5 * var(--px));
+  color: var(--rc, #9e9e9e);
+  white-space: nowrap;
+  text-shadow:
+    3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink),
+    3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink);
+}
+.odds i {
+  font-style: normal;
+  font-size: 0.72em;
+  color: #ffffff;
+}
+.odds b {
+  font-weight: inherit;
+}
+.tier {
+  display: none;
+}
+
+/* One or two wide reels: the art on the left of center, its odds big beside it, a landed result's tier too. */
+.bank[data-side] .cell {
+  display: block;
+  padding: 0;
+}
+.bank[data-side] .art {
+  position: absolute;
+  left: var(--ax);
+  top: calc(2 * var(--px));
+}
+.bank[data-side] .odds {
+  position: absolute;
+  left: var(--lx);
+  top: calc(2 * var(--px));
+  height: var(--art);
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  font-size: var(--big);
+  line-height: 1;
+  text-shadow: none;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+}
+.bank[data-side] .odds i {
+  font-size: var(--small);
+  -webkit-text-stroke: 6px var(--ink);
+}
+.bank[data-side] .tier {
+  position: absolute;
+  font-family: var(--font-display);
+  white-space: nowrap;
+  color: var(--rc, #9e9e9e);
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+}
+/* One reel: the tier sits on the art's other side; two: under the odds. */
+.bank[data-n='1'] .tier {
+  right: var(--tx);
+  top: calc(2 * var(--px));
+  height: var(--art);
+  align-items: center;
+  font-size: 46px;
+}
+.bank[data-n='2'] .tier {
+  left: var(--lx);
+  top: calc(2 * var(--px) + var(--art) / 2 + 44px);
+  font-size: 30px;
+  -webkit-text-stroke: 5px var(--ink);
+}
+.bank[data-side] .cell[data-revealed] .tier {
+  display: flex;
+  animation: tierIn 0.3s steps(3) both;
+}
+.bank[data-side] .cell[data-settled] .tier {
+  animation: none;
+}
+@keyframes tierIn {
+  from { transform: translateY(calc(-2 * var(--px))); opacity: 0; }
+}
+
+/*
+ * A luck token rolling past or landed: put data-token on its .cell, show luckTokenArt(x) (16 x 16, the
+ * clover reading ×N, src/render/icons.ts) as its art and "×N LUCK" (reel.token) as its line.
+ */
+.cell[data-token] { --rc: #7ef08f; }
+.cell[data-token][data-revealed] { background: color-mix(in srgb, #46d36b 35%, transparent); }
+.cell[data-rarity='junk'] { --rc: #b4b4b4; }
+.cell[data-rarity='decent'] { --rc: #5ad35f; }
+.cell[data-rarity='shiny'] { --rc: #42a8ff; }
+.cell[data-rarity='epic'] { --rc: #c25af0; }
+.cell[data-rarity='legendary'] { --rc: #ffc21a; }
+.cell[data-rarity='mythic'] { --rc: #ff4fa3; }
+.cell[data-rarity='mint'] { --rc: #fff4d6; }
+.cell[data-rarity='vintage'] { --rc: #d2884a; }
+.cell[data-rarity='limited'] { --rc: #ff3b4e; }
+.cell[data-rarity='prototype'] { --rc: #38e8ff; }
+.cell[data-rarity='gemMint'] { --rc: #4dffb4; }
+.cell[data-rarity='museum'] { --rc: #e9ddff; }
+.cell[data-rarity='grail'] { --rc: #fff07a; }
+.cell[data-rarity='legendary'] .odds,
+.cell[data-rarity='mythic'] .odds,
+.cell[data-rarity='vintage'] .odds,
+.cell[data-rarity='limited'] .odds,
+.cell[data-rarity='prototype'] .odds,
+.cell[data-rarity='mint'] .odds,
+.cell[data-rarity='gemMint'] .odds,
+.cell[data-rarity='museum'] .odds,
+.cell[data-rarity='grail'] .odds {
+  animation: oddsBlink 0.5s steps(2) infinite;
+}
+.cell[data-rarity='mythic'] .odds,
+.cell[data-rarity='grail'] .odds {
+  animation: oddsRainbow 0.6s steps(5) infinite;
+}
+@keyframes oddsBlink {
+  50% { color: #ffffff; }
+}
+@keyframes oddsRainbow {
+  0% { color: #ff5252; }
+  20% { color: #ffb300; }
+  40% { color: #69f0ae; }
+  60% { color: #40c4ff; }
+  80% { color: #e040fb; }
+}
+/* The drum's ink frame and its shading toward the top and bottom, over the rolling strip. */
+.curve {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(
+    180deg,
+    rgba(26, 19, 38, 0.55) 0 var(--px),
+    rgba(26, 19, 38, 0.25) var(--px) calc(4 * var(--px)),
+    transparent calc(4 * var(--px)) calc(100% - 4 * var(--px)),
+    rgba(26, 19, 38, 0.25) calc(100% - 4 * var(--px)) calc(100% - var(--px)),
+    rgba(26, 19, 38, 0.55) calc(100% - var(--px)) 100%
+  );
+}
+
+/* ------------------------------------------------------------ the payline */
+/* The win line across every reel: ink just inside the result row, gold (or the glow) just outside, an arrow at each end. */
+.payline {
+  position: absolute;
+  left: var(--frame);
+  right: var(--frame);
+  top: calc(var(--frame) + var(--win) / 2 - var(--cell) / 2);
+  height: var(--cell);
+  pointer-events: none;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--pay), 0 var(--px) 0 0 var(--pay),
+    inset 0 var(--px) 0 0 var(--ink), inset 0 calc(-1 * var(--px)) 0 0 var(--ink);
+}
+/* A landing flashes it white (Reel.tsx animates the opacity). */
+.payFlash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 #ffffff, 0 var(--px) 0 0 #ffffff,
+    inset 0 calc(2 * var(--px)) 0 0 #ffffff, inset 0 calc(-2 * var(--px)) 0 0 #ffffff;
+}
+.arrowL,
+.arrowR {
+  position: absolute;
+  top: calc(50% - 3 * var(--px));
+}
+.arrowL {
+  left: calc(-4 * var(--px));
+}
+.arrowR {
+  right: calc(-4 * var(--px));
+}
+
+/* ------------------------------------------------------------ landing effects */
+.fx {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+/* A point to burst from (the result's art center). */
+.at {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+/* Sparks in the result's color: a plus of art pixels each, flying out in whole-pixel steps. */
+.sparks i {
+  position: absolute;
+  left: calc(-1 * var(--px));
+  top: calc(-1 * var(--px));
+  width: var(--px);
+  height: var(--px);
+  background: #ffffff;
+  box-shadow: 0 calc(-1 * var(--px)) 0 0 var(--c), var(--px) 0 0 0 var(--c), 0 var(--px) 0 0 var(--c), calc(-1 * var(--px)) 0 0 0 var(--c);
+  animation: sparkFly 0.54s steps(6) both;
+}
+@keyframes sparkFly {
+  0% { transform: translate(0, 0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+/* White swooshes rush in from both sides along the payline as a result lands. */
+.swoosh {
+  position: absolute;
+  height: 0;
+}
+.swoosh i {
+  position: absolute;
+  top: calc(-3 * var(--px));
+  height: var(--px);
+  width: calc(12 * var(--px));
+  background: #ffffff;
+  animation: swooshL 0.48s steps(6) both;
+}
+.swoosh i[data-row='2'] {
+  top: calc(2 * var(--px));
+  width: calc(8 * var(--px));
+  animation-delay: 0.06s;
+}
+.swoosh i[data-side='l'] {
+  left: 0;
+}
+.swoosh i[data-side='r'] {
+  right: 0;
+  animation-name: swooshR;
+}
+.swoosh[data-big] i {
+  background: #fff3b0;
+  height: calc(2 * var(--px));
+}
+@keyframes swooshL {
+  0% { transform: translateX(0); opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: translateX(var(--travelL)); opacity: 0; }
+}
+@keyframes swooshR {
+  0% { transform: translateX(0); opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: translateX(calc(-1 * var(--travelR))); opacity: 0; }
+}
+/* The battle's four-point sparkle twinkling round a Legendary-or-better result. */
+.twinkle {
+  position: absolute;
+  opacity: 0;
+  animation: twinkle 0.6s steps(1) 3 both;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0; }
+  25%, 75% { opacity: 1; }
+}
+/* Legendary and up: the tier stamped over the reel's top edge (text only), then it fades. */
+.stamp {
+  position: absolute;
+  z-index: 2;
+  width: 600px;
+  display: flex;
+  justify-content: center;
+  animation: stampIn 0.32s steps(4) both, stampOut 0.3s steps(3) 1.5s forwards;
+}
+@keyframes stampIn {
+  0% { transform: translateY(calc(-5 * var(--px))); opacity: 0; filter: brightness(2.2); }
+  50% { transform: translateY(var(--px)); opacity: 1; filter: brightness(1.6); }
+  100% { transform: none; filter: none; }
+}
+@keyframes stampOut {
+  to { opacity: 0; }
+}
+.bank[data-noflash] .stamp,
+.stamp[data-calm] {
+  animation: stampOut 0.3s steps(3) 1.5s forwards;
+}
+/* Mythic and up: confetti over the machine, 2 x 1 art pixels falling in whole-pixel steps. */
+.confetti {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+}
+.confetti span {
+  position: absolute;
+  top: calc(-2 * var(--px));
+  width: calc(2 * var(--px));
+  height: var(--px);
+  animation-name: confettiFall, confettiFlip;
+  animation-timing-function: steps(40), steps(1);
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: both, none;
+}
+.confetti span[data-tall] {
+  width: var(--px);
+  height: calc(2 * var(--px));
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0); opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(calc(80 * var(--px))); opacity: 0; }
+}
+@keyframes confettiFlip {
+  50% { width: var(--px); height: calc(2 * var(--px)); }
+}
+/* A luck token bursts into little pixel clovers. */
+.burst i {
+  position: absolute;
+  left: calc(-1 * var(--px));
+  top: calc(-1 * var(--px));
+  width: var(--px);
+  height: var(--px);
+  background: #2f8f3a;
+  box-shadow: 0 calc(-1 * var(--px)) 0 0 #7cff6b, var(--px) 0 0 0 #7cff6b, 0 var(--px) 0 0 #7cff6b, calc(-1 * var(--px)) 0 0 0 #7cff6b;
+  animation: cloverFly 0.72s steps(6) both;
+}
+.burst i:nth-child(1) { --dx: 0px; --dy: -144px; }
+.burst i:nth-child(2) { --dx: 108px; --dy: -108px; }
+.burst i:nth-child(3) { --dx: 144px; --dy: 0px; }
+.burst i:nth-child(4) { --dx: 108px; --dy: 108px; }
+.burst i:nth-child(5) { --dx: 0px; --dy: 144px; }
+.burst i:nth-child(6) { --dx: -108px; --dy: 108px; }
+.burst i:nth-child(7) { --dx: -144px; --dy: 0px; }
+.burst i:nth-child(8) { --dx: -108px; --dy: -108px; }
+@keyframes cloverFly {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+/* ------------------------------------------------------------ badges and chains */
+.badges {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-3 * var(--px));
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  gap: calc(2 * var(--px));
+  pointer-events: none;
+}
+.badge {
+  height: calc(5 * var(--px));
+  padding: 0 var(--px);
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: calc(5 * var(--px));
+  color: #ffffff;
+  background: #5a5668;
+  box-shadow: var(--pixel-edge);
+  text-shadow: 2px 2px 0 var(--ink);
+  animation: badgeIn 0.3s steps(3) both;
+}
+.badge[data-kind='golden'] {
+  background: #f5a524;
+}
+.badge[data-kind='lucky'] {
+  background: #2f8a45;
+}
+.badge[data-kind='turbo'] {
+  background: #2f56a6;
+}
+@keyframes badgeIn {
+  from {
+    transform: translateY(calc(2 * var(--px)));
+    opacity: 0;
+  }
+}
+
+/* A reel's stacked-up luck tokens ("×6"): rides on its top edge while it spins on to the item. */
+.chain {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  top: var(--px);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1;
+  color: #7ef08f;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  pointer-events: none;
+  animation: chainDrop 0.27s steps(3) both;
+}
+@keyframes chainDrop {
+  from {
+    transform: translateY(calc(-2 * var(--px)));
+    color: #ffffff;
+  }
+}
+/* Every reel matched a token: the multipliers are squared, in gold, with a bigger drop. */
+.chain[data-gold] {
+  color: #ffd84a;
+  animation: chainGold 0.36s steps(4) both;
+}
+@keyframes chainGold {
+  from {
+    transform: translateY(calc(-4 * var(--px)));
+    color: #ffffff;
+  }
+  50% {
+    transform: translateY(calc(-2 * var(--px)));
+    color: #fff6b0;
+  }
+}
+
+/* The machine shrinking into the mini roller's corner as the Roll tab closes (Reel.tsx shrinkToMini). */
+.shrink {
+  position: absolute;
+  z-index: 22;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+  contain: layout paint;
+}

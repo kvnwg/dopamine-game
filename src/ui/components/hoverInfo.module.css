@@ -1,0 +1,55 @@
+/* Hover info (PC, HoverInfo.tsx): a small card over the piece of gear the mouse rests on. */
+.card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  max-width: 620px;
+  padding: calc(2 * var(--px)) calc(4 * var(--px)) calc(3 * var(--px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--cream);
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  color: var(--ink);
+  pointer-events: none;
+  animation: hoverIn 120ms steps(2) both;
+}
+@keyframes hoverIn {
+  from { opacity: 0; }
+}
+.name {
+  font-family: var(--font-display);
+  font-size: 38px;
+  line-height: 1.1;
+  color: var(--c);
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+}
+.meta {
+  font-size: 30px;
+  color: #7a6a60;
+}
+.power {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 40px;
+}
+.line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 30px;
+}
+.up {
+  color: #2f8a1c;
+}
+.down {
+  color: #c0392b;
+}
+.hint {
+  font-size: 30px;
+  color: #8a7d74;
+}

@@ -1,0 +1,125 @@
+/* The bottom nav: up to six tabs, every icon 16 x 16 art pixels (96 px). Sizes in art pixels (var(--px)). */
+.nav {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  padding: 0 var(--px) var(--px);
+  background: linear-gradient(180deg, #3a3e60 0 var(--px), #2f3250 var(--px) 50%, #262842 50% 100%);
+  border-top: var(--px) solid var(--ink);
+}
+.tab {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: var(--px);
+}
+.icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: calc(17 * var(--px));
+}
+/* A tab that isn't open yet (Heists before the first rebirth): its icon faded, a lock on it. */
+.locked .icon > img:not(.navLock) {
+  opacity: 0.35;
+}
+.locked .label {
+  color: #5d6188;
+}
+.navLock {
+  position: absolute;
+  right: calc(-1 * var(--px));
+  bottom: 0;
+}
+/* The lock of a tab that just opened falls off (whole pixels, gathering speed) and fades. */
+.lockDrop {
+  animation: lockDrop 0.8s both;
+}
+@keyframes lockDrop {
+  0% { transform: translate(0, 0); animation-timing-function: steps(1, end); }
+  12% { transform: translate(var(--px), calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  24% { transform: translate(calc(2 * var(--px)), calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  36% { transform: translate(calc(3 * var(--px)), 0); animation-timing-function: steps(1, end); }
+  48% { transform: translate(calc(4 * var(--px)), calc(4 * var(--px))); animation-timing-function: steps(1, end); }
+  60% { transform: translate(calc(5 * var(--px)), calc(10 * var(--px))); opacity: 1; animation-timing-function: steps(1, end); }
+  72% { transform: translate(calc(6 * var(--px)), calc(18 * var(--px))); opacity: 0.75; animation-timing-function: steps(1, end); }
+  84% { transform: translate(calc(7 * var(--px)), calc(28 * var(--px))); opacity: 0.5; animation-timing-function: steps(1, end); }
+  100% { transform: translate(calc(8 * var(--px)), calc(40 * var(--px))); opacity: 0; }
+}
+/* A locked tab tapped: a quick head shake. */
+.nope .icon {
+  animation: nope 0.36s both;
+}
+@keyframes nope {
+  0% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  25% { transform: translateX(var(--px)); animation-timing-function: steps(1, end); }
+  50% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  75%, 100% { transform: translateX(0); }
+}
+/* A tab being introduced: its outline blinks gold (global [data-new]) inside the bar. */
+.tab[data-new] {
+  outline-offset: calc(-1 * var(--px));
+}
+.label {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: calc(4 * var(--px));
+  color: #8f95bd;
+  white-space: nowrap;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+/* The open tab: a raised plate, its icon one pixel higher. */
+.active {
+  margin-top: calc(-2 * var(--px));
+  background: linear-gradient(180deg, #7880b8 0 var(--px), #5a6299 var(--px) calc(100% - 2 * var(--px)), #3d4470 calc(100% - 2 * var(--px)) 100%);
+  box-shadow: var(--pixel-edge);
+}
+.active .icon {
+  transform: translateY(calc(-1 * var(--px)));
+  filter: drop-shadow(0 var(--px) 0 rgba(0, 0, 0, 0.3));
+}
+.active .label {
+  color: #fff;
+  font-size: 30px;
+}
+.tab:active .icon {
+  transform: translateY(var(--px));
+}
+.badge {
+  position: absolute;
+  top: calc(2 * var(--px));
+  right: calc(3 * var(--px));
+  width: calc(6 * var(--px));
+  height: calc(6 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: #ef5350;
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: #fff;
+  animation: badgeBob 1.2s steps(2) infinite;
+}
+@keyframes badgeBob {
+  50% { transform: translateY(calc(-1 * var(--px))); }
+}
+
+/* The Roll tab's reel hops one pixel while it rolls. */
+.spinIcon img {
+  animation: navRoll 0.7s steps(2) infinite;
+}
+@keyframes navRoll {
+  50% { transform: translateY(var(--px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinIcon img,
+  .badge {
+    animation: none;
+  }
+}

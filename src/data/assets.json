@@ -1,0 +1,368 @@
+{
+  "files": {},
+  "placeholders": {
+    "palette": {
+      "nightSky": "#1B1E3C",
+      "shadow": "#12142A",
+      "walls": "#4A3A5C",
+      "ground": "#2E3A4A",
+      "dumpster": "#2F6B4F",
+      "fur": "#8C8C99",
+      "mask": "#2A2A33",
+      "belly": "#E8E0D0",
+      "window": "#FFB347",
+      "neonPink": "#FF3EA5",
+      "neonCyan": "#2EE6FF",
+      "neonLime": "#B6FF3B",
+      "kraft": "#C49A6C",
+      "tape": "#F2E6C9",
+      "outline": "#2E2523",
+      "gold": "#FFB300",
+      "danger": "#FF5A5A",
+      "heal": "#69F0AE"
+    },
+    "rarities": {
+      "junk": {
+        "color": "#9E9E9E"
+      },
+      "decent": {
+        "color": "#4CAF50"
+      },
+      "shiny": {
+        "color": "#2196F3"
+      },
+      "epic": {
+        "color": "#9C27B0"
+      },
+      "legendary": {
+        "color": "#FFB300"
+      },
+      "mythic": {
+        "color": "#FF4FA3",
+        "gradient": [
+          "#FF5252",
+          "#FFB300",
+          "#69F0AE",
+          "#40C4FF",
+          "#E040FB"
+        ]
+      },
+      "vintage": {
+        "color": "#D2884A",
+        "gradient": [
+          "#FFE3B8",
+          "#D2884A",
+          "#8A4B23"
+        ]
+      },
+      "limited": {
+        "color": "#FF3B4E",
+        "gradient": [
+          "#FFD1D6",
+          "#FF3B4E",
+          "#FFB300",
+          "#FF3B4E"
+        ]
+      },
+      "prototype": {
+        "color": "#38E8FF",
+        "gradient": [
+          "#E8FDFF",
+          "#38E8FF",
+          "#2A6BFF",
+          "#38E8FF"
+        ]
+      },
+      "mint": {
+        "color": "#FFF4D6",
+        "gradient": [
+          "#FFFFFF",
+          "#FFF4D6",
+          "#FFD54F",
+          "#FFFFFF"
+        ]
+      },
+      "gemMint": {
+        "color": "#4DFFB4",
+        "gradient": [
+          "#FFFFFF",
+          "#4DFFB4",
+          "#38E8FF",
+          "#FFFFFF"
+        ]
+      },
+      "museum": {
+        "color": "#E9DDFF",
+        "gradient": [
+          "#FFFFFF",
+          "#E9DDFF",
+          "#FFD54F",
+          "#B48CFF"
+        ]
+      },
+      "grail": {
+        "color": "#FFF07A",
+        "gradient": [
+          "#FFFFFF",
+          "#FFF07A",
+          "#FF5252",
+          "#40C4FF",
+          "#E040FB",
+          "#FFFFFF"
+        ]
+      }
+    },
+    "enemies": {
+      "alley_rat": {
+        "shape": "rat",
+        "color": "#7A6A72",
+        "accent": "#D9A1AE",
+        "size": 110,
+        "label": "RAT"
+      },
+      "porch_pigeon": {
+        "shape": "pigeon",
+        "color": "#8E9AAF",
+        "accent": "#5FB49C",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "punk_raccoon": {
+        "shape": "raccoon",
+        "color": "#77707F",
+        "accent": "#E53935",
+        "size": 150,
+        "label": "PUNK"
+      },
+      "big_earl": {
+        "shape": "ratKing",
+        "color": "#6A5A62",
+        "accent": "#C49A6C",
+        "size": 260,
+        "label": "BIG EARL"
+      },
+      "vinnie_two_lids": {
+        "shape": "raccoonBoss",
+        "color": "#6E6878",
+        "accent": "#7E57C2",
+        "size": 270,
+        "label": "VINNIE"
+      },
+      "officer_dale": {
+        "shape": "officer",
+        "color": "#2B4C7E",
+        "accent": "#F2C14E",
+        "size": 320,
+        "label": "ANIMAL CONTROL"
+      },
+      "pumpkin_dude": {
+        "shape": "pumpkin",
+        "color": "#E8822A",
+        "accent": "#5A8C2B",
+        "size": 120,
+        "label": "PUMPKIN"
+      },
+      "plague_doc": {
+        "shape": "doc",
+        "color": "#2E3448",
+        "accent": "#C9B48A",
+        "size": 120,
+        "label": "DOC"
+      },
+      "tin_soldier": {
+        "shape": "soldier",
+        "color": "#9AA7B4",
+        "accent": "#8C2F2F",
+        "size": 130,
+        "label": "SOLDIER"
+      },
+      "orc_brute": {
+        "shape": "orc",
+        "color": "#6FA24A",
+        "accent": "#8A5A2B",
+        "size": 140,
+        "label": "ORC"
+      },
+      "demon_king": {
+        "shape": "bigDemon",
+        "color": "#C8323C",
+        "accent": "#FFD54F",
+        "size": 280,
+        "label": "DUMPGOR"
+      },
+      "angry_hen": {
+        "shape": "hen",
+        "color": "#9C5A2C",
+        "accent": "#D8402A",
+        "size": 100,
+        "label": "HEN"
+      },
+      "quacker": {
+        "shape": "duck",
+        "color": "#3E8A4A",
+        "accent": "#E8A030",
+        "size": 100,
+        "label": "DUCK"
+      },
+      "mad_bunny": {
+        "shape": "bunny",
+        "color": "#8A8090",
+        "accent": "#F2A0B0",
+        "size": 100,
+        "label": "BUNNY"
+      },
+      "hog_hooligan": {
+        "shape": "pig",
+        "color": "#E0907A",
+        "accent": "#B05A50",
+        "size": 140,
+        "label": "HOG"
+      },
+      "ram_rager": {
+        "shape": "ram",
+        "color": "#2C2830",
+        "accent": "#F4EDE0",
+        "size": 150,
+        "label": "RAM"
+      },
+      "mega_moo": {
+        "shape": "cow",
+        "color": "#F4F2EC",
+        "accent": "#2C2830",
+        "size": 240,
+        "label": "MOO"
+      },
+      "pizza_rat": {
+        "shape": "rat",
+        "color": "#8A6E5E",
+        "accent": "#E8402A",
+        "size": 110,
+        "label": "PIZZA RAT"
+      },
+      "crust_pigeon": {
+        "shape": "pigeon",
+        "color": "#B49A7A",
+        "accent": "#F2C14E",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "dough_boy": {
+        "shape": "raccoon",
+        "color": "#D8D2C4",
+        "accent": "#E8822A",
+        "size": 150,
+        "label": "FLOUR PUNK"
+      },
+      "delivery_dave": {
+        "shape": "officer",
+        "color": "#C8323C",
+        "accent": "#F4EDE0",
+        "size": 260,
+        "label": "DELIVERY DAVE"
+      },
+      "chef_tony": {
+        "shape": "officer",
+        "color": "#F2EEE6",
+        "accent": "#D8402A",
+        "size": 320,
+        "label": "CHEF TONY"
+      },
+      "pretzel_rat": {
+        "shape": "rat",
+        "color": "#9C7A52",
+        "accent": "#F2D06E",
+        "size": 110,
+        "label": "PRETZEL RAT"
+      },
+      "skylight_pigeon": {
+        "shape": "pigeon",
+        "color": "#7E8CA8",
+        "accent": "#9EDCF7",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "mall_rat": {
+        "shape": "raccoon",
+        "color": "#7A7088",
+        "accent": "#2EE6FF",
+        "size": 150,
+        "label": "MALL RAT"
+      },
+      "kiosk_kyle": {
+        "shape": "officer",
+        "color": "#3E8A4A",
+        "accent": "#F2E6C9",
+        "size": 260,
+        "label": "KIOSK KYLE"
+      },
+      "mall_cop_doug": {
+        "shape": "officer",
+        "color": "#4A5A70",
+        "accent": "#F2C14E",
+        "size": 320,
+        "label": "MALL COP DOUG"
+      },
+      "room_service_rat": {
+        "shape": "rat",
+        "color": "#6E6476",
+        "accent": "#F4EFE1",
+        "size": 110,
+        "label": "ROOM SERVICE RAT"
+      },
+      "penthouse_pigeon": {
+        "shape": "pigeon",
+        "color": "#9A92B0",
+        "accent": "#E8C060",
+        "size": 105,
+        "label": "PIGEON"
+      },
+      "valet_raccoon": {
+        "shape": "raccoon",
+        "color": "#6E6878",
+        "accent": "#C8323C",
+        "size": 150,
+        "label": "VALET"
+      },
+      "bellhop": {
+        "shape": "officer",
+        "color": "#B02A3A",
+        "accent": "#F2C14E",
+        "size": 220,
+        "label": "BELLHOP"
+      },
+      "head_bellhop": {
+        "shape": "officer",
+        "color": "#7A1E3A",
+        "accent": "#FFD54F",
+        "size": 260,
+        "label": "HEAD BELLHOP"
+      },
+      "the_concierge": {
+        "shape": "officer",
+        "color": "#2A2238",
+        "accent": "#E8C060",
+        "size": 320,
+        "label": "THE CONCIERGE"
+      }
+    },
+    "raccoon": {
+      "body": "#8C8C99",
+      "mask": "#2A2A33",
+      "belly": "#E8E0D0",
+      "tail": "#8C8C99",
+      "brow": "#C9C9D6"
+    },
+    "slots": {
+      "hat": "HAT",
+      "mask": "MSK",
+      "jacket": "JKT",
+      "weapon": "WPN",
+      "shield": "SHD",
+      "gloves": "GLV",
+      "sneakers": "SNK",
+      "backpack": "BAG",
+      "bling": "BLG",
+      "ring": "RNG"
+    }
+  }
+}

@@ -1,0 +1,206 @@
+/*
+ * The padlocked dumpster (DumpsterLock.tsx). Sizes in art pixels (var(--px) = 6 stage px); every
+ * piece sits on whole pixels (placed from JS), and moves in whole-pixel steps.
+ */
+.lock {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.tint {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 24, 0.55);
+}
+.lock[data-phase='fall'] .tint {
+  animation: tintOut 0.45s steps(3) forwards;
+}
+@keyframes tintOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------ the steel */
+.plate,
+.strap {
+  position: absolute;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 var(--px) var(--ink),
+    0 calc(2 * var(--px)) 0 var(--px) rgba(10, 6, 20, 0.45);
+}
+.plate {
+  left: calc(-2 * var(--px));
+  right: calc(-2 * var(--px));
+  height: calc(11 * var(--px));
+  background: linear-gradient(
+    180deg,
+    #cfcedb 0 var(--px),
+    #a7a5b8 var(--px) calc(4 * var(--px)),
+    #7f7c94 calc(4 * var(--px)) calc(8 * var(--px)),
+    #5b5870 calc(8 * var(--px)) 100%
+  );
+}
+.strap {
+  top: calc(-2 * var(--px));
+  bottom: calc(-2 * var(--px));
+  width: calc(16 * var(--px));
+  background: linear-gradient(
+    90deg,
+    #cfcedb 0 var(--px),
+    #a7a5b8 var(--px) calc(6 * var(--px)),
+    #7f7c94 calc(6 * var(--px)) calc(12 * var(--px)),
+    #5b5870 calc(12 * var(--px)) 100%
+  );
+}
+/* A glint running along the plates now and then. */
+.plate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-4 * var(--px));
+  width: calc(2 * var(--px));
+  background: rgba(255, 255, 255, 0.6);
+  animation: glint 3.2s infinite;
+}
+.plate + .plate::after {
+  animation-delay: 0.25s;
+}
+@keyframes glint {
+  0% {
+    transform: translateX(0);
+    animation-timing-function: steps(30, end);
+  }
+  55%,
+  100% {
+    transform: translateX(calc(180 * var(--px)));
+  }
+}
+.rivet {
+  position: absolute;
+  width: calc(2 * var(--px));
+  height: calc(2 * var(--px));
+  background: #e9e8f0;
+  box-shadow:
+    var(--px) var(--px) 0 0 #3e3a4e,
+    0 0 0 var(--px) var(--ink);
+}
+
+/* ------------------------------------------------------------ the padlock */
+.padlock {
+  position: absolute;
+  width: calc(24 * var(--px));
+  height: calc(35 * var(--px));
+  filter: drop-shadow(0 calc(2 * var(--px)) 0 rgba(10, 6, 20, 0.5));
+}
+.padlock > img {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+/* Idle: a little wiggle every so often. */
+.lock[data-phase='idle'] .padlock > img {
+  animation: wiggle 1.7s infinite;
+}
+@keyframes wiggle {
+  0%,
+  78% {
+    transform: translate(0, 0);
+    animation-timing-function: steps(1, end);
+  }
+  82% {
+    transform: translate(calc(-1 * var(--px)), 0);
+    animation-timing-function: steps(1, end);
+  }
+  86% {
+    transform: translate(var(--px), calc(-1 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  90% {
+    transform: translate(calc(-1 * var(--px)), 0);
+    animation-timing-function: steps(1, end);
+  }
+  94%,
+  100% {
+    transform: translate(0, 0);
+  }
+}
+/* Tapped before a world is picked: it rattles side to side, no (two names, so each tap replays it). */
+.lock[data-phase='idle'][data-nope='a'] .padlock > img {
+  animation: nopeA 0.36s both;
+}
+.lock[data-phase='idle'][data-nope='b'] .padlock > img {
+  animation: nopeB 0.36s both;
+}
+@keyframes nopeA {
+  0% { transform: translateX(calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  25% { transform: translateX(calc(2 * var(--px))); animation-timing-function: steps(1, end); }
+  50% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  75%, 100% { transform: translateX(0); }
+}
+@keyframes nopeB {
+  0% { transform: translateX(calc(-2 * var(--px))); animation-timing-function: steps(1, end); }
+  25% { transform: translateX(calc(2 * var(--px))); animation-timing-function: steps(1, end); }
+  50% { transform: translateX(calc(-1 * var(--px))); animation-timing-function: steps(1, end); }
+  75%, 100% { transform: translateX(0); }
+}
+/* The tap: a jolt. */
+.lock[data-phase='hit'] .padlock > img {
+  animation: jolt 0.17s both;
+}
+@keyframes jolt {
+  0% {
+    transform: translate(calc(2 * var(--px)), calc(1 * var(--px)));
+    animation-timing-function: steps(1, end);
+  }
+  35% {
+    transform: translate(calc(-2 * var(--px)), 0);
+    animation-timing-function: steps(1, end);
+  }
+  70%,
+  100% {
+    transform: translate(var(--px), calc(-1 * var(--px)));
+  }
+}
+/* Sparks out of the keyhole as it breaks. */
+.spark {
+  position: absolute;
+  left: calc(11 * var(--px));
+  top: calc(25 * var(--px));
+  width: calc(2 * var(--px));
+  height: calc(2 * var(--px));
+  background: #fff28c;
+  box-shadow: 0 0 0 var(--px) #ef8a22;
+  animation: spark 0.36s both;
+}
+@keyframes spark {
+  0% {
+    transform: translate(0, 0);
+    animation-timing-function: steps(1, end);
+  }
+  33% {
+    transform: translate(calc(var(--dx) / 3), calc(var(--dy) / 3));
+    animation-timing-function: steps(1, end);
+  }
+  66% {
+    transform: translate(calc(var(--dx) * 2 / 3), calc(var(--dy) * 2 / 3));
+    opacity: 0.8;
+    animation-timing-function: steps(1, end);
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plate::after,
+  .lock[data-phase='idle'] .padlock > img {
+    animation: none;
+  }
+}

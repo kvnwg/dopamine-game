@@ -173,9 +173,13 @@ function decidePlacement(d: GameState, item: Item): RollPlacement {
   return worst >= 0 && item.power > d.inventory[worst].power ? 'bag' : 'scrapped';
 }
 
-/** How many reels roll at once (1, plus the Extra Reel upgrade and Bootleg Reel, an Alley perk). */
-export function reelCount(state: Pick<GameState, 'upgrades'> & PerkPick): number {
-  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels) + Math.round(perkFx(state).extraReels)));
+/**
+ * How many reels roll at once: 1, plus the Extra Reel upgrade, Bootleg Reel (an Alley perk) and, while
+ * it's rented (`rental`), the Duct-Tape Reel boost (boosts.ts), never past roll.maxReels.
+ */
+export function reelCount(state: Pick<GameState, 'upgrades'> & PerkPick & Partial<Pick<GameState, 'boosts'>>, rental = true): number {
+  const rented = rental && state.boosts?.reelEndsAt != null ? 1 : 0;
+  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels) + Math.round(perkFx(state).extraReels) + rented));
 }
 
 /** Lucky and golden are decided once per spin and cover every reel. The tutorial spin is neither. */

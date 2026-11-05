@@ -4,6 +4,7 @@ import { CodexPopup } from './CodexPopup';
 import { ItemDetailPopup } from './ItemDetailPopup';
 import { SavePopup } from './SavePopup';
 import { AdminPopup } from './AdminPopup';
+import { BoostsPopup } from './BoostsPopup';
 import { LuckPopup } from './LuckPopup';
 import { OfflinePopup } from './OfflinePopup';
 import { SettingsPopup } from './SettingsPopup';
@@ -39,6 +40,8 @@ export function PopupLayer() {
       return <SavePopup onClose={close} />;
     case 'admin':
       return <AdminPopup onClose={close} />;
+    case 'boosts':
+      return <BoostsPopup onClose={close} />;
     default:
       return null;
   }

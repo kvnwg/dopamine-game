@@ -1345,5 +1345,21 @@
       { "id": "holyCrust", "tree": "bread", "cost": 3, "requires": ["carbLoading", "breadBait"], "icon": "star", "effect": { "eatenLoafPct": 4 } },
       { "id": "glutenGolem", "tree": "bread", "cost": 4, "requires": ["holyCrust"], "icon": "golem", "effect": { "golemAtkPct": 15, "golemEvery": 2 } }
     ]
+  },
+  "boosts": {
+    "unlockMinutes": 3,
+    "quickDive": { "hours": 2, "perDay": 3, "gems": [50, 100, 200] },
+    "potionBrew": { "mult": 3, "minutes": 5, "perDay": 3, "gems": [60] },
+    "ductTapeReel": { "minutes": 15, "perDay": 2, "gems": [120] },
+    "bonusCrate": {
+      "everyHours": 4,
+      "perDay": 3,
+      "gems": [40],
+      "rewards": [
+        { "kind": "bags", "minutes": 10, "min": 10, "weight": 45 },
+        { "kind": "coins", "minutes": 10, "min": 100, "weight": 35 },
+        { "kind": "potion", "seconds": 120, "weight": 20 }
+      ]
+    }
   }
 }

@@ -31,6 +31,9 @@ export function LuckPopup({ onClose }: { onClose: () => void }) {
   if (b.boostMult > 1 && b.boostEndsAt) {
     rows.push([`${t('luck.boost')} (${t('luck.boostLeft', { time: formatDuration((b.boostEndsAt - now) / 1000) })})`, `+${formatPct(b.boostMult - 1)}`]);
   }
+  if (b.brewMult > 1 && b.brewEndsAt) {
+    rows.push([`${t('luck.brew')} (${t('luck.boostLeft', { time: formatDuration((b.brewEndsAt - now) / 1000) })})`, `+${formatPct(b.brewMult - 1)}`]);
+  }
   // Carb Loading (an Alley perk): luck for every uneaten loaf.
   if (b.perkMult > 1) rows.push([t('luck.perks', { n: g.perks.bread }), `+${formatPct(b.perkMult - 1)}`]);
   return (

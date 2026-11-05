@@ -11,7 +11,9 @@
  *    and only then does the raccoon start fighting (the tutorial points there once its own steps
  *    leave room, if he isn't fighting yet); Rebirth, a couple of worlds before the first rebirth's;
  *  - Heists, with the first rebirth (BAL.heist.unlockRebirths);
- *  - the Upgrades screen's Perks page, with the second rebirth (BAL.perks.unlockRebirths).
+ *  - the Upgrades screen's Perks page, with the second rebirth (BAL.perks.unlockRebirths);
+ *  - the Roll tab's Boosts (rewarded ads and their Gem prices), after the tutorial and
+ *    BAL.boosts.unlockMinutes of play (the spec: no ads in the first 3 minutes).
  * Core decides when each opens; the UI introduces them one at a time (the tutorial points at it) and
  * marks each `seen`. Saves from before this have everything (state.ts).
  */
@@ -27,7 +29,7 @@ import { affordableUpgrades } from './upgrades';
  * The order features are introduced in when several are waiting: as the tutorial ends, Worlds, where
  * the player picks the first world and the fighting starts (stage.chosen).
  */
-export const FEATURE_ORDER: readonly Feature[] = ['roll', 'bag', 'worlds', 'luck', 'codex', 'upgrades', 'dumpster', 'rebirth', 'heist', 'perks'];
+export const FEATURE_ORDER: readonly Feature[] = ['roll', 'bag', 'worlds', 'luck', 'codex', 'upgrades', 'dumpster', 'boosts', 'rebirth', 'heist', 'perks'];
 
 /**
  * Features that open quietly, without the tutorial walking through them (no bubble, hand or popup;
@@ -80,6 +82,8 @@ function ready(d: GameState, f: Feature): boolean {
       return d.rebirths >= BAL.heist.unlockRebirths;
     case 'perks':
       return perksOpen(d);
+    case 'boosts':
+      return tutorialOver(d) && d.playTimeMs >= BAL.boosts.unlockMinutes * 60_000;
   }
 }
 

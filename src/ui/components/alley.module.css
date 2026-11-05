@@ -436,3 +436,20 @@
   display: flex;
   justify-content: center;
 }
+
+/* ------------------------------------------------------------ the Boosts button (its panel holds the rewarded ads) */
+.boostsBtn {
+  position: relative;
+  flex: none;
+  white-space: nowrap;
+}
+/* A Bonus Crate is waiting. */
+.boostsDot {
+  position: absolute;
+  top: calc(-2 * var(--px));
+  right: calc(-2 * var(--px));
+  width: calc(4 * var(--px));
+  height: calc(4 * var(--px));
+  background: #ff3d3d;
+  box-shadow: var(--pixel-edge);
+}

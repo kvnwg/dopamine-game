@@ -20,6 +20,9 @@ export interface LuckBreakdown {
   rebirthMult: number;
   boostMult: number;
   boostEndsAt: number | null;
+  /** Potion Brew (a boost, systems/boosts.ts): its multiplier and when it ends (null: off). */
+  brewMult: number;
+  brewEndsAt: number | null;
   /** Carb Loading (an Alley perk): luck for every uneaten loaf. */
   perkMult: number;
   total: number;
@@ -33,8 +36,18 @@ export function luckBreakdown(state: GameState, now: number): LuckBreakdown {
   const boosting = state.luckBoostEndsAt !== null && now < state.luckBoostEndsAt;
   const boostMult = boosting ? BAL.luck.potion.mult : 1;
   const perkMult = perkLuckMult(state);
-  const total = (1 + upgrades + dumpster + enchants) * rebirthMult * boostMult * perkMult;
-  return { upgrades, dumpster, enchants, rebirthMult, boostMult, boostEndsAt: boosting ? state.luckBoostEndsAt : null, perkMult, total };
+  const brewMult = brewLuckMult(state, now);
+  const brewEndsAt = brewMult > 1 ? state.boosts.brewEndsAt : null;
+  const total = (1 + upgrades + dumpster + enchants) * rebirthMult * boostMult * brewMult * perkMult;
+  return {
+    upgrades, dumpster, enchants, rebirthMult, boostMult, boostEndsAt: boosting ? state.luckBoostEndsAt : null, brewMult, brewEndsAt, perkMult, total,
+  };
+}
+
+/** Potion Brew's luck multiplier at `now` (1 when off). (Here, not in boosts.ts, which needs this file.) */
+export function brewLuckMult(state: Partial<Pick<GameState, 'boosts'>>, now: number): number {
+  const at = state.boosts?.brewEndsAt ?? null;
+  return at !== null && now < at ? BAL.boosts.potionBrew.mult : 1;
 }
 
 export function currentLuck(state: GameState, now: number): number {

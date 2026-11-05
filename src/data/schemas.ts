@@ -517,6 +517,35 @@ export const BalanceSchema = z.object({
   /** Alley perks: a run's Half-Eaten Bread Loaves buy them on the Upgrades screen's Perks page (core/systems/perks.ts). */
   perks: PerksBalanceSchema,
   /**
+   * Boosts (core/systems/boosts.ts): taken for a rewarded ad or Gems, each `perDay` times a day either way.
+   * `gems` is the price of each use in a day (the last one repeats). They open `unlockMinutes` into the
+   * game, after the tutorial.
+   */
+  boosts: z.object({
+    unlockMinutes: nonNeg,
+    /** Offline rolls for `hours` away, right now. */
+    quickDive: z.object({ hours: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** Luck times `mult` for `minutes` (on top of every other luck). */
+    potionBrew: z.object({ mult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** One more reel for `minutes` (never past roll.maxReels). */
+    ductTapeReel: z.object({ minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** A crate every `everyHours`: one of `rewards` by weight (bags or gold: `minutes` of the current rate, at least `min`). */
+    bonusCrate: z.object({
+      everyHours: positive,
+      perDay: z.number().int().positive(),
+      gems: z.array(nonNeg).min(1),
+      rewards: z
+        .array(
+          z.discriminatedUnion('kind', [
+            z.object({ kind: z.literal('bags'), minutes: positive, min: nonNeg, weight: positive }),
+            z.object({ kind: z.literal('coins'), minutes: positive, min: nonNeg, weight: positive }),
+            z.object({ kind: z.literal('potion'), seconds: positive, weight: positive }),
+          ]),
+        )
+        .min(1),
+    }),
+  }),
+  /**
    * The first-run tutorial (new games only). Beginner's luck: one scripted spin early on, its first
    * reel chaining `beginnerTokens` into a `beginnerRarity` item. It comes once the raccoon has put
    * on `beginnerAfterEquips` items (the tutorial's Equip best), `beginnerAfterRolls` items have rolled

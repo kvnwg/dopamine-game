@@ -177,8 +177,8 @@ function HeistLobbyOpen() {
           </button>
         )}
         {adOk && (
-          <button className={`btn gold small ${s.adBtn}`} disabled={gems < BONUS_TICKET_GEMS} onClick={gemTicket}>
-            {t('heistUi.adTicket')}
+          <button className={`btn gold small ${s.adBtn}`} disabled={gems < BONUS_TICKET_GEMS} onClick={gemTicket} aria-label={t('heistUi.adTicket')}>
+            +1
             <span className={s.cost}>
               <GemIcon size="sm" />
               {BONUS_TICKET_GEMS}

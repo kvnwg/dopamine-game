@@ -3,6 +3,7 @@ import type { Feature, ItemSchema, SubstatSchema, ItemEnchantSchema, HeistReward
 import type { HeistNodeKind, LocationId, Rarity, Slot, StatId } from '../data';
 import type { RollDrama } from './systems/luck';
 import type { HaulSize } from './systems/haul';
+import type { BoostId } from './systems/boosts';
 
 export type Item = z.infer<typeof ItemSchema>;
 export type Substat = z.infer<typeof SubstatSchema>;
@@ -138,7 +139,15 @@ export type CoreEvent =
   | { type: 'crewHit'; helper: CrewHelper; enemyUid: number; amount: number; killed: boolean }
   /** Playing Possum: a knockout blow left the raccoon standing at `hp`. */
   | { type: 'secondWind'; hp: number }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** A boost was taken (systems/boosts.ts): after its ad, or for `gems` Gems. */
+  | { type: 'boostUsed'; id: BoostId; via: 'ad' | 'gems'; gems: number }
+  /** A timed boost ran out. */
+  | { type: 'boostEnded'; id: 'potionBrew' | 'ductTapeReel' }
+  /** A Quick Dive rolled `rolls` items at once; `kept` rare finds went to the bag (the best one, `best`). */
+  | { type: 'quickDive'; rolls: number; kept: number; best: Item | null }
+  /** A Bonus Crate paid `amount` Trash Bags or gold, or a Luck Potion of `amount` seconds. */
+  | { type: 'crateOpened'; kind: 'bags' | 'coins' | 'potion'; amount: number };
 
 /** The Alley crew: the pigeon, the sewer rats, the seagull, Raccoon Mafia's recruits and the Gluten Golem. */
 export type CrewHelper = 'pigeon' | 'rats' | 'gull' | 'mafia' | 'golem';
@@ -146,6 +155,8 @@ export type CrewHelper = 'pigeon' | 'rats' | 'gull' | 'mafia' | 'golem';
 export type GameAction =
   /** A new game's first tap: the padlock comes off the dumpster and it starts rolling. */
   | { type: 'openDumpster' }
+  /** Takes a boost (Boosts panel): after its rewarded ad, or for its Gem price. */
+  | { type: 'boost'; id: BoostId; via: 'ad' | 'gems' }
   /** The tutorial has introduced a feature that opened (its tab or button was tapped, or its moment passed). */
   | { type: 'featureSeen'; feature: Feature }
   | { type: 'equipItem'; uid: number }

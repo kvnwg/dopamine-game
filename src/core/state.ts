@@ -41,9 +41,9 @@ export const ItemSchema = z.object({
 /**
  * What a new game opens one by one (src/core/systems/features.ts): the dumpster itself (the player's
  * tap knocks its padlock off), then the Bag, luck, Upgrades, Worlds, the Codex, the dumpster's own
- * upgrades, Rebirth, Heists and the Upgrades screen's Perks page.
+ * upgrades, Rebirth, Heists, the Upgrades screen's Perks page and the Roll tab's Boosts.
  */
-export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks'] as const;
+export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks', 'boosts'] as const;
 export const FeatureSchema = z.enum(FEATURES);
 export type Feature = z.infer<typeof FeatureSchema>;
 
@@ -303,6 +303,23 @@ export const PerkStateSchema = z.object({
 });
 export type PerkState = z.infer<typeof PerkStateSchema>;
 
+/**
+ * Boosts (systems/boosts.ts): how many times each was taken on `day` (a local dayKey), when the timed
+ * ones end (null: off), and when the next Bonus Crate is ready.
+ */
+export const BoostStateSchema = z.object({
+  day: z.string(),
+  used: z.record(z.string(), z.number().int().nonnegative()),
+  brewEndsAt: z.number().nullable(),
+  reelEndsAt: z.number().nullable(),
+  crateAt: z.number(),
+});
+export type BoostState = z.infer<typeof BoostStateSchema>;
+
+export function freshBoosts(): BoostState {
+  return { day: '', used: {}, brewEndsAt: null, reelEndsAt: null, crateAt: 0 };
+}
+
 /** A run with no loaves and no perks (a new game, and every rebirth). */
 export function freshPerks(): PerkState {
   return {
@@ -439,6 +456,8 @@ export const GameStateSchema = z.object({
     .default(() => ({ unlocked: [...FEATURES], seen: [...FEATURES] })),
   /** This run's loaves and perks. Saves from before perks start with none (save.ts counts the worlds already beaten). */
   perks: PerkStateSchema.default(freshPerks),
+  /** Saves from before Boosts start with none taken (a broken value starts over too: it only holds timers). */
+  boosts: BoostStateSchema.default(freshBoosts).catch(freshBoosts),
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
@@ -526,5 +545,6 @@ export function createInitialState(now: number, seed: number): GameState {
     // Worlds is open from the start (features.ts); the rest opens one at a time.
     features: { unlocked: ['worlds'], seen: ['worlds'] },
     perks: freshPerks(),
+    boosts: freshBoosts(),
   };
 }

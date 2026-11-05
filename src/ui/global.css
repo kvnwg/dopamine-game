@@ -192,6 +192,11 @@ button {
   --bd: #2f56a6;
   --bl: #9edcf7;
 }
+.btn.purple {
+  --b: #a463f2;
+  --bd: #6b2fb8;
+  --bl: #d6b8ff;
+}
 .btn.gray {
   --b: #7f7c94;
   --bd: #5b5870;

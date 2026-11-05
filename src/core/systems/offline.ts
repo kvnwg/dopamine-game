@@ -271,7 +271,7 @@ export function onResume(d: GameState, now: number, ev: CoreEvent[], rng?: Rng):
 /** Gems to double an offline haul instead of watching the ad: offline.doubleGems.perHour of time away (at least 1), capped. */
 export function offlineDoubleGems(awayMs: number): number {
   const g = BAL.offline.doubleGems;
-  return Math.min(g.max, Math.max(1, Math.ceil((awayMs / MS_PER_HOUR) * g.perHour)));
+  return Math.min(g.max, Math.max(1, Math.round((awayMs / MS_PER_HOUR) * g.perHour)));
 }
 
 /**

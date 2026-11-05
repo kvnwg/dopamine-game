@@ -16,6 +16,7 @@ import {
   heistAbandon, heistAdTicket, heistBoot, heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistReroll, heistRevive,
   heistsOpen, heistTick, refreshTickets, startHeist,
 } from './systems/heist';
+import { expireBoosts, takeBoost } from './systems/boosts';
 import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { buyPerk } from './systems/perks';
@@ -44,6 +45,7 @@ function run(state: GameState, rng: Rng, fn: (d: GameState, ev: CoreEvent[]) => 
 /** Advance the simulation by `ticks` fixed ticks of 100ms each. */
 export function tick(state: GameState, input: { ticks: number }, rng: Rng, now: number): StepResult<GameState> {
   return run(state, rng, (d, ev) => {
+    expireBoosts(d, now, ev);
     for (let i = 0; i < input.ticks; i++) {
       d.playTimeMs += TICK_MS;
       // A heist's battle replaces the Alley's while the run is on (the reels keep rolling).
@@ -63,6 +65,9 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
     switch (action.type) {
       case 'openDumpster':
         openDumpster(d, ev);
+        break;
+      case 'boost':
+        if (d.features.unlocked.includes('boosts')) takeBoost(d, action.id, action.via, rng, now, ev);
         break;
       case 'featureSeen':
         markFeatureSeen(d, action.feature);
@@ -110,6 +115,8 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         onPause(d, now);
         break;
       case 'resume':
+        // (A reel rented before leaving that ran out meanwhile doesn't roll offline.)
+        expireBoosts(d, now, ev);
         onResume(d, now, ev, rng);
         checkUpgrade(d, now, ev);
         refreshTickets(d, now, ev);
@@ -118,6 +125,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         // Loaded from a save: restart the current stage cleanly (mid-heist, the waiting one), then pay out offline time.
         if (d.heist.run) heistBoot(d);
         else if (d.stage.chosen) startStage(d, d.battle.stage, ev, false);
+        expireBoosts(d, now, ev);
         onResume(d, now, ev, rng);
         checkUpgrade(d, now, ev);
         refreshTickets(d, now, ev);

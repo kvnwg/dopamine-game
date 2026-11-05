@@ -4,7 +4,9 @@
  */
 export type AdPlacement =
   | 'offline_double' | 'heist_ticket' | 'free_crew_call' | 'sugar_rush' | 'heist_revive'
-  | 'perk_reroll' | 'junkyard_key' | 'truck_attempt' | 'dumpster_speedup';
+  | 'perk_reroll' | 'junkyard_key' | 'truck_attempt' | 'dumpster_speedup'
+  /** The Boosts panel (core/systems/boosts.ts). */
+  | 'quick_dive' | 'potion_brew' | 'duct_tape_reel' | 'bonus_crate';
 
 export interface AdResult {
   rewarded: boolean;

@@ -228,6 +228,23 @@ export function installRollController(): () => void {
         case 'upgradeBought':
           haptics.impact('light');
           break;
+        // Boosts (the Boosts panel): what each gave. (A crate's Luck Potion says itself: luckBoost.)
+        case 'quickDive':
+          ui.toast(t(e.kept > 0 ? 'toast.quickDive' : 'toast.quickDiveNone', { n: formatNumber(e.rolls), kept: e.kept }), 'good');
+          if (e.kept > 0) audio.jingle(3);
+          break;
+        case 'boostUsed':
+          if (e.id === 'potionBrew') ui.toast(t('toast.potionBrew', { mult: BAL.boosts.potionBrew.mult, minutes: BAL.boosts.potionBrew.minutes }), 'good');
+          if (e.id === 'ductTapeReel') ui.toast(t('toast.ductTapeReel', { minutes: BAL.boosts.ductTapeReel.minutes }), 'good');
+          if (e.id === 'potionBrew' || e.id === 'ductTapeReel') audio.jingle(3);
+          break;
+        case 'crateOpened':
+          if (e.kind === 'bags') ui.toast(t('toast.crateBags', { n: formatNumber(e.amount) }), 'good');
+          if (e.kind === 'coins') ui.toast(t('toast.crateCoins', { n: formatNumber(e.amount) }), 'good');
+          break;
+        case 'boostEnded':
+          ui.toast(t(e.id === 'potionBrew' ? 'toast.brewEnded' : 'toast.reelEnded'), 'info');
+          break;
         case 'rebirth':
           // The unlock card (UnlockedFx) follows the burst.
           useUi.setState({ rebirthFx: e.count, tab: 'alley', unlocked: e.unlocked.length ? { count: e.count, ids: e.unlocked } : null });

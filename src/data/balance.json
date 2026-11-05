@@ -512,13 +512,13 @@
       "gemMint": 7,
       "museum": 7,
       "grail": 8,
-      "cosmic": 500000000,
-      "glitched": 1500000000,
-      "fourthWall": 5000000000,
-      "devsOwn": 20000000000,
-      "patchNotes": 100000000000,
-      "sourceCode": 600000000000,
-      "concept": 5000000000000
+      "cosmic": 8,
+      "glitched": 8,
+      "fourthWall": 8,
+      "devsOwn": 8,
+      "patchNotes": 8,
+      "sourceCode": 8,
+      "concept": 8
     },
     "revealSecondsByRarity": {
       "junk": 0.2,
@@ -634,13 +634,13 @@
     "gemMint": 5000000,
     "museum": 25000000,
     "grail": 250000000,
-    "cosmic": 1000000000,
-    "glitched": 5000000000,
-    "fourthWall": 25000000000,
-    "devsOwn": 150000000000,
-    "patchNotes": 1000000000000,
-    "sourceCode": 10000000000000,
-    "concept": 100000000000000
+    "cosmic": 500000000,
+    "glitched": 1500000000,
+    "fourthWall": 5000000000,
+    "devsOwn": 20000000000,
+    "patchNotes": 100000000000,
+    "sourceCode": 600000000000,
+    "concept": 5000000000000
   },
   "luck": {
     "potion": {

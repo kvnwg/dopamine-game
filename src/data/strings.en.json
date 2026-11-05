@@ -834,7 +834,7 @@
   "tierFlavor.devsOwn": "The developer left this in the build. Please don't tell anyone.",
   "tierFlavor.patchNotes": "Patch 2.0: this item now does 400% more item.",
   "tierFlavor.sourceCode": "{ \"rarity\": \"sourceCode\", \"power\": \"yes\", \"drawn\": false }",
-  "tierFlavor.concept": "Not a hat. The idea of every hat. You wear it with your mind.",
+  "tierFlavor.concept": "Not the thing. The idea of the thing. You wear it with your mind.",
   "tier.locked": "Locked: reach Floor {floor} of the Endless Dump",
   "tier.unlocked": "NEW RARITY: {name}!",
   "tier.unlockedSub": "1 in {odds}. The dumpster can roll it now.",

@@ -136,3 +136,100 @@ Everything below is placeholder writing generated for Milestone 1, in the game's
 ## UI copy
 
 All UI strings are in `src/data/strings.en.json`, including the Suburbs neon-sign gag ("FREE TRASH (please take it)"). They are first drafts too.
+
+## After World 20 (`src/data/strings.en.json`)
+
+Placeholder writing for the Endless Dump, Become a Legend, the rarities past Grail, Stench, the Weekly Dive and daily tasks. Lists in one string are separated by `|`.
+
+### Floor names (`dump.names.*`, as "The {adj} {place} of {noun}")
+
+- Adjectives: Damp, Sticky, Haunted, Forgotten, Soggy, Moldy, Crunchy, Greasy, Suspicious, Echoing, Lukewarm, Upside-Down, Endless, Overflowing, Rattling, Forbidden, Smelly, Ancient, Discount, Glowing
+- Places: Basement, Landfill, Compactor, Sewer, Storage Unit, Food Court, Parking Garage, Laundromat, Dumpster, Vending Machine, Lost and Found, Junk Drawer, Recycling Bin, Back Alley, Gift Shop, Waiting Room, Ball Pit, Couch Cushion, Glove Box, Tupperware
+- Nouns: Regret, Lost Socks, Old Fries, Expired Coupons, Broken Promises, Wet Cardboard, Mystery Meat, Unpaid Fines, Tangled Cables, Last Week, Rubber Bands, Bad Decisions, Leftovers, Receipts, Loose Change, Bottle Caps, Free Samples, Missing Remotes, Spare Keys, Pigeons
+- Gate boss titles (`dump.titles`): Sergeant of the Void, Duke of Damp, Lord of the Lids, Baron of Bins, Keeper of the Compactor, Warden of Week-Old Pizza, Count of Coupons, Archduke of Garbage Day, Viceroy of the Vents, Grand Marshal of Mold, High Priest of the Pile, Emperor of Leftovers
+
+### Twists (`twist.*`)
+
+| Twist | Text | What beats it |
+|---|---|---|
+| Swarm | Twice the enemies, each weaker. | Thundering or Explosive gear, the sewer rats |
+| Regenerating | Enemies heal fast unless they're burning. | Flaming gear: burning stops the healing |
+| Armored | Normal hits barely scratch them. Crits get through. | Crit chance and crit damage |
+| Spiky | Hitting them hurts you. | Vampiric gear, regen, Dr. Squeaks |
+| Slippery | They dodge 40% of your hits. | Echoing and Swift gear: more swings |
+| Giants | Two huge enemies a wave instead of a crowd. | Boss Damage: it hits giants too |
+| Gold Rush | Triple gold on this floor. |  |
+| Lucky Floor | Double luck while you're here. |  |
+| Pinata Party | Triple Trash Bags from every wave. |  |
+
+### Gate boss moves (`move.*`)
+
+| Move | Text |
+|---|---|
+| Enrage | Below half HP it hits harder and faster. |
+| Calls for Backup | Calls in an enemy every few seconds. |
+| Regenerates | Heals unless it's burning. |
+| Steals Your Hat | Takes your hat (and its stats) until you hit it 15 times. |
+| Lid Up | Hides under its lid twice: direct hits do nothing for 3 s. |
+
+### Stench curses (`stench.*`)
+
+- Wet Socks: enemies +50% HP
+- Fruit Flies: +1 enemy per wave
+- Hot Garbage: enemies +40% ATK
+- Sticky Floor: you attack 15% slower
+- Rotten Luck: gate bosses get one more move
+- Mystery Juice: no lifesteal
+- Rats in the Walls: enemies attack 30% faster
+- Week-Old Pizza: no regen
+- Raccoon Flu: you have 25% less HP
+- The Smell: enemies +100% HP and ATK
+
+### Weekly Dive rules (`weekly.rule.*`)
+
+- Swarm Week: every floor is a swarm
+- Glass Floors: ATK ×2, HP ×0.4
+- Banana Week: every floor is slippery
+- Ironclad: every floor is armored, you have +50% HP
+- Zombie Week: every floor regenerates
+- Cactus Week: every floor is spiky, you have +20% HP
+- Big Boys Week: giants on every floor, ATK +20%
+
+### Legend star upgrades (`legend.perk.*`)
+
+| Name | Text |
+|---|---|
+| Head Start | Every run starts at level +{levels} with {worlds} worlds' gear bonus. |
+| Loaf Stash | Every run starts with {loaves} Half-Eaten Bread Loaves. |
+| Personal Stylist | Puts on upgrades by itself (switch it off any time). |
+| Groundhog Day | Rebirths by itself the moment it can (switch it off any time). |
+| Reel Memory | Extra Reels stay through rebirths. |
+| Golden Lid | +{pct}% chance of a Golden Spin. |
+| Star Luck | +{pct}% luck a level (now +{now}%). No limit. |
+| Star Power | +{pct}% ATK and HP a level (now +{now}%). No limit. |
+| Star Gold | +{pct}% gold a level (now +{now}%). No limit. |
+
+### Rarities past Grail (`rarity.*`, `tierName.*`, `tierFlavor.*`)
+
+| Tier | Item name | Flavor |
+|---|---|---|
+| Cosmic | {legend} (Now in Space) | Same thing, but in space. Space makes everything worth a billion. |
+| Glitched | the Legendary name with letters swapped for digits (loot.ts glitchText) | ERR: flavor_text not found. Please do not wear the error. |
+| Fourth Wall | {legend} (Knows It's in a Game) | It can see you scrolling. Wave at it. |
+| Dev's Own | The Developer's Own {base} | The developer left this in the build. Please don't tell anyone. |
+| Patch Notes | {base} (Buffed in Patch 2.0) | Patch 2.0: this item now does 400% more item. |
+| Source Code | the item's id, e.g. hat_traffic_cone | { "rarity": "sourceCode", "power": "yes", "drawn": false } |
+| The Concept | The Concept of a {slot} | Not the thing. The idea of the thing. You wear it with your mind. |
+
+### Daily tasks (`daily.task.*`)
+
+- Roll {n} items
+- Find {n} Epic or rarer
+- Beat {n} bosses
+- Beat {n} enemies
+- Scrap {n} items
+- Put on {n} items
+- Dodge {n} boss slams (tap DODGE!)
+- Clear {n} Dump floors
+- Beat a gate boss
+- Win a Heist

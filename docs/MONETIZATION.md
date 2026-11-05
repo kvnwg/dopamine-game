@@ -270,12 +270,12 @@ Dumpster Legend's battle and reels never stop, so **"not on an active gameplay s
 | 3 | **Potion Brew** | Boosts panel | Any time | ×3 luck for 5 min | 3 a day | 60 | Built |
 | 4 | **Duct-Tape Reel** | Boosts panel | Any time | One more reel for 15 min (not offered with all 5 on; the Gilded Reel is for later) | 2 a day | 120 | Built |
 | 5 | **Bonus Crate** | Boosts panel, top row | Every 4 hours | Trash Bags or gold (10 minutes' worth) or a 2-minute Luck Potion, odds shown (Bronze Tokens join once tokens exist) | 3 a day | 40 | Built |
-| 6 | **Weather Machine** | Luck popup | Not during weather | Summons Garbage Day | 1 a day | 40 (Raccoon Moon and Dumpster Fire are Gems only, 150; Glitch Alley never) | New |
-| 7 | **Encore Spin** | The full-screen reveal's end card | A reveal that came from a ×25 or larger token chain | One more spin of that reel at the same luck. They keep what they got | 2 a day | 80 | New |
-| 8 | **Polish** | The reveal's end card, and the item card in the Bag | A Mythic or better | Reroll that item's enchantments, or +1 enchant tier | 3 a day | 100 | New |
-| 9 | **Rebirth Blessing** | Rebirth screen, beside Rebirth | Each rebirth | Double spin speed for the first 10 min of the new run | 3 a day | 80 | New |
-| 10 | **Boss Rage** | The world's card (Worlds tab) and the boss popup | After 2 losses to the same boss; never at the moment of a loss | +50% ATK for the next try | 3 a day | 60 | New |
-| 11 | **Gold top-up** | A hex's card on the upgrade map | Short by 25% or less of a hex's price | The missing gold (capped at ~10 min of income) | 3 a day | 20 | New |
+| 6 | **Weather Machine** | Luck popup | Not during weather | Summons Garbage Day | 1 a day | 40 (Raccoon Moon and Dumpster Fire are Gems only, 150; Glitch Alley never) | New (needs the weather states) |
+| 7 | **Encore Spin** | The full-screen reveal's end card, and the Boosts panel for 3 minutes | A spin with a ×25 or larger token chain | The next spin lands that spin's tokens again on every reel. They keep what they got | 2 a day | 80 | Built |
+| 8 | **Polish** | The reveal's end card, and the item card in the Bag | A Mythic or better | +1 tier on its lowest enchantment, or a new Tier I one | 3 a day | 100 | Built |
+| 9 | **Rebirth Blessing** | Rebirth screen, a card above Rebirth (taken before, so the ad is never on the Rebirth button) | Any time | Double spin speed for the first 10 min of the next run | 3 a day | 80 | Built |
+| 10 | **Boss Rage** | The world's card (Worlds tab) and the Boosts panel | After 2 losses in a row at a world; never at the moment of a loss | +50% damage for the next try (it takes him back there) | 3 a day | 60 | Built |
+| 11 | **Gold top-up** | A hex's card on the upgrade map | Short by 25% or less of a hex's price | The missing gold (capped at ~10 min of income) | 3 a day | 20 | Built |
 | 12 | **Dumpster speedup** | `UpgradePopup` | A dumpster upgrade is running | −30 min | 3 a day | 1 Gem per 2 min (built) | Built |
 | 13 | **Heist ticket** | `heistLobby` | Tickets below max | +1 ticket | 1 a day | 100 | Built |
 | 14 | **Heist revive** | `heistEnd` | A run is lost | Revive at 50% HP | 1 per run | 50 (built) | Built |
@@ -292,7 +292,7 @@ Notes:
 
 ## B3. Midgame ads
 
-Only at two major transitions, and only when they don't stack with a rewarded offer:
+**Built (DECISIONS J15).** Only at two major transitions, and only when they don't stack with a rewarded offer:
 
 | Where | When exactly | Why it's allowed |
 |---|---|---|
@@ -381,7 +381,7 @@ Each step is small, testable and measurable with the spec's analytics events (`o
 
 1. **The Gem fix** (section 0) and the Gem sinks. *Done.*
 2. **The CrazyGames fixes** (B4): hide ad buttons when ads can't play, Gem alternatives, matching skip buttons. *Done.*
-3. **The Boosts panel and the new rewarded placements** (B2), and the two midgame placements (B3) in the CrazyGames build. *The Boosts panel is done (rows 2 to 5); still to build: Encore Spin, Polish, Rebirth Blessing, Boss Rage, Gold top-up and the midgame ads.*
+3. **The Boosts panel and the new rewarded placements** (B2), and the two midgame placements (B3) in the CrazyGames build. *Done (DECISIONS J6 to J17), except the Weather Machine, which comes with step 4.*
 4. **Weather states and the Weather Machine.**
 
 At this point the CrazyGames build is complete, and it can go out while the app's store comes together.

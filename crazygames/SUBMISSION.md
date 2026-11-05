@@ -23,7 +23,7 @@ The requirements below were checked against the official docs at <https://docs.c
 
 | What | File | Spec (CrazyGames requirement) |
 |---|---|---|
-| Game build | `crazygames/upload/dumpster-legend-crazygames.zip` (`npm run build:crazygames`) | `index.html` at the root, relative paths only: 26 files, 3.7 MB unzipped, 1.7 MB zipped. Limits: 250 MB total, 1,500 files, 20 MB initial download for the mobile homepage |
+| Game build | `crazygames/upload/dumpster-legend-crazygames.zip` (`npm run build:crazygames`) | `index.html` at the root, relative paths only: 26 files, 3.8 MB unzipped, 1.7 MB zipped. Limits: 250 MB total, 1,500 files, 20 MB initial download for the mobile homepage |
 | Landscape cover | `crazygames/covers/cover-landscape-1920x1080.png` | 16:9, 1920×1080 |
 | Portrait cover | `crazygames/covers/cover-portrait-800x1200.png` | 2:3, 800×1200 |
 | Square cover | `crazygames/covers/cover-square-800x800.png` | 1:1, 800×800 |
@@ -137,7 +137,8 @@ The CrazyGames build is its own Vite mode, so the phone apps and other web build
 - [x] Gameplay is one click away (title screen → PLAY)
 
 **Ads**
-- [x] Rewarded only, through the SDK: offline ×2, heist ticket, heist second chance, perk reroll, dumpster speed-up, and the Boosts panel's four (Bonus Crate, Quick Dive, Potion Brew, Duct-Tape Reel), which opens a few minutes into the game. No midgame ads and no banners yet (the two planned midgame spots are in `docs/MONETIZATION.md` B3)
+- [x] Rewarded, through the SDK: offline ×2, heist ticket, heist second chance, perk reroll, dumpster speed-up, the Boosts panel's four (Bonus Crate, Quick Dive, Potion Brew, Duct-Tape Reel), and five at a moment (Encore after a big luck chain, Boss Rage after two losses at a world, the Rebirth Blessing, Polish on a Mythic-or-better find, a Gold top-up). The boosts open a few minutes into the game
+- [x] Midgame ads at two major transitions only: as a won Heist is claimed, and as the raccoon moves on from a world's first clear in a run (World 3 and up). Not after a lost Heist (it offers a revive ad instead), at most one every 6 minutes, none within 6 minutes of a rewarded ad, none in a player's first 10 minutes or a visit's first 3. Never on menus, Settings or the shop. No banners
 - [x] No rewarded ad button on an active gameplay screen: the boost ads live in a panel the player opens, never over the reels or the battle
 - [x] No ad buttons without effect: they hide when an ad blocker is detected at startup (`ad.hasAdblock()`) and after an `adsDisabled` or `adblock` error (Basic Launch, kids mode); the Gem price stays
 - [x] A used-up rewarded ad shows a timer or hides (Boosts: "Back in 5:12:00", "Next crate in 3:59:59"; the dumpster speed-up and the bonus ticket hide)

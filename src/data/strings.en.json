@@ -452,6 +452,7 @@
   "choice.next": "Next world",
   "choice.auto": "in {s}",
   "choice.rewards": "+{gems} gems and a Luck Potion",
+  "choice.rewardPotion": "+1 Luck Potion",
   "choice.loaf": "+{n} Half-Eaten Bread Loaf",
   "choice.loaves": "+{n} Half-Eaten Bread Loaves",
   "reveal.skip": "Tap to skip",

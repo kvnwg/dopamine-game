@@ -162,6 +162,26 @@ describe('world progression', () => {
     expect(events.some((e) => e.type === 'stageStart' && e.stage === 2 && e.push)).toBe(true);
   });
 
+  it('a world beaten again in a later run (after a rebirth) pays its Luck Potion but no Gems', () => {
+    const rng = new Rng(1);
+    const st = freshState();
+    st.player.level = 40;
+    // A rebirth starts the worlds over, but the best world ever beaten stays (heist.bestWorld).
+    st.heist.bestWorld = 3;
+    const gems0 = st.currencies.gems;
+    const { state, events } = run(st, 90, rng);
+    const first = events.find((e): e is Extract<CoreEvent, { type: 'worldFirstClear' }> => e.type === 'worldFirstClear');
+    expect(first?.world).toBe(1);
+    expect(first?.gems).toBe(0);
+    expect(events.some((e) => e.type === 'luckBoost')).toBe(true);
+    // Only a world past the best ever pays Gems.
+    const paid = events.filter((e): e is Extract<CoreEvent, { type: 'worldFirstClear' }> => e.type === 'worldFirstClear' && e.gems > 0);
+    for (const e of paid) expect(e.world).toBeGreaterThan(3);
+    // (Codex bonuses from the rolls meanwhile pay their own Gems.)
+    const codex = events.reduce((n, e) => n + (e.type === 'codexBonus' ? e.gems : 0), 0);
+    expect(state.currencies.gems - gems0).toBe(paid.reduce((n, e) => n + e.gems, 0) + codex);
+  });
+
   it('every world is open, but a fresh raccoon in World 10 is one-shot, tries World 10 again, and after 3 losses falls back', () => {
     const rng = new Rng(4);
     let st = freshState();

@@ -363,8 +363,10 @@ function onWaveCleared(c: Ctx) {
 }
 
 /**
- * The world's boss is down. The first clear pays Gems and a Luck Potion. Then the battle stops and
- * asks: this world again, or the next one (see resolveAfterBoss)?
+ * The world's boss is down. The first clear this run pays a Luck Potion, and the first clear ever (past
+ * the best world beaten in any run, `heist.bestWorld`, which a rebirth keeps) also pays Gems: a rebirth
+ * starts the worlds over, and paying their Gems again every run gave away about 1,000 Gems an hour.
+ * Then the battle stops and asks: this world again, or the next one (see resolveAfterBoss)?
  */
 function onWorldCleared(c: Ctx) {
   const { d, ev, now } = c;
@@ -373,8 +375,9 @@ function onWorldCleared(c: Ctx) {
   const firstTime = world > s.highestCleared;
   if (firstTime) {
     s.highestCleared = world;
+    const firstEver = world > (d.heist?.bestWorld ?? 0);
     if (d.heist) d.heist.bestWorld = Math.max(d.heist.bestWorld, world);
-    const gems = BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world;
+    const gems = firstEver ? BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world : 0;
     d.currencies.gems += gems;
     ev.push({ type: 'worldFirstClear', world, gems });
     addLuckBoost(d, now, potionSeconds(d), ev);

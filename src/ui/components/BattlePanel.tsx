@@ -54,7 +54,7 @@ function BossChoice() {
         />
         {reward?.firstTime && (
           <span className={s.choiceReward}>
-            {t("choice.rewards", { gems: reward.gems })}
+            {reward.gems > 0 ? t("choice.rewards", { gems: reward.gems }) : t("choice.rewardPotion")}
           </span>
         )}
         {!!reward?.loaves && (

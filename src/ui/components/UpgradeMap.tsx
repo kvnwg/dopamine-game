@@ -15,7 +15,7 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BAL, DATA, nodeKey, type HexNode } from '../../data';
-import { affordablePerks, computeStats, drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, perksOpen, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
+import { affordablePerks, computeStats, topUpGold, drySpell, enchantTierWeights, formatNumber, inventoryCapacity, luckyEvery, perksOpen, potionSeconds, reelCount, spinCycle, upgradeDef, upgradeEffects, upgradeLevel, upgradeNodeState, upgradePrice, type GameState, type UpgradeDef, formatPct } from '../../core';
 import { dispatch, getGame, useGame } from '../../app/store';
 import { uiIcon } from '../../render/icons';
 import type { UiIcon } from '../../render/pixel/ui';
@@ -29,6 +29,7 @@ import { useUi } from '../uiStore';
 import { Chunky } from './Chunky';
 import { BreadIcon, CheckIcon, CoinIcon, LockIcon, ShieldIcon, SwordIcon, TargetIcon } from './Icons';
 import { PerksPage } from './PerksPage';
+import { BoostButtons } from './BoostButtons';
 import { PixelArt } from './PixelArt';
 import { drawMap, fontReset, hexAt, HH, nodeX, nodeY, R, DRAW, wrapName, type DrawHex, type DrawState, type HexView, type View } from './hexMapDraw';
 import s from './hexmap.module.css';
@@ -233,6 +234,8 @@ function BuyCard({ node }: { node: HexNode }) {
   const level = upgradeLevel(g, def.id);
   const cost = upgradePrice(g, def);
   const afford = useGame((x) => x.currencies.coins >= cost);
+  // Gold top-up (a boost): a little short (and not much gold), the missing gold for an ad or Gems.
+  const topUp = useGame((x) => (x.features.unlocked.includes('boosts') ? topUpGold(x, def.id, Date.now()) : 0));
   const hold = useHoldRepeat(buySelected);
   const prev = node.prev ? BY_KEY.get(node.prev) : undefined;
   if (view === 'mystery') {
@@ -280,10 +283,18 @@ function BuyCard({ node }: { node: HexNode }) {
           {t('upgrades.owned')}
         </button>
       ) : (
-        <button className={`btn ${afford ? '' : 'gray'} ${s.buy}`} {...hold}>
-          <CoinIcon />
-          {formatNumber(cost)}
-        </button>
+        <div className={s.buyCol}>
+          <button className={`btn ${afford ? '' : 'gray'} ${s.buy}`} {...hold}>
+            <CoinIcon />
+            {formatNumber(cost)}
+          </button>
+          {!afford && topUp > 0 && (
+            <>
+              <span className={s.topUpLabel}>{t('boosts.goldTopUp', { gold: formatNumber(topUp) })}</span>
+              <BoostButtons id="goldTopUp" target={{ upgradeId: def.id }} watchLabel={`+${formatNumber(topUp)}`} />
+            </>
+          )}
+        </div>
       )}
     </div>
   );

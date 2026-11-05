@@ -2,15 +2,19 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { BAL } from '../../data';
 import {
-  canRebirth, formatNumber, perksOpen, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
+  boostBlocked, boostEndsAt, boostUsesLeft, canRebirth, formatNumber, perksOpen, rebirthGoldMult, rebirthLuckMult, rebirthRequirement,
 } from '../../core';
-import { dispatch, useGame } from '../../app/store';
+import { dispatch, getGame, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { t } from '../i18n';
 import { Chunky } from './Chunky';
-import { ArrowUpIcon, CheckIcon, CloverIcon, CoinIcon, RebirthIcon, SwordIcon } from './Icons';
+import { ArrowUpIcon, CheckIcon, CloverIcon, CoinIcon, PotionIcon, RebirthIcon, SwordIcon } from './Icons';
 import s from './panels.module.css';
 import { UnlockPreview } from './Unlocks';
+import { BoostButtons } from './BoostButtons';
+import { clockText, msToMidnight } from './heistShared';
+import { useNow } from '../hooks';
+import pop from '../popups/popups.module.css';
 
 function discount(n: number): number {
   return Math.round((1 - Math.pow(1 - BAL.rebirth.upgradeDiscountPer, n)) * 100);
@@ -93,10 +97,44 @@ export function RebirthPanel() {
       <div className={`${s.rbCard} card`}>
         <UnlockPreview />
       </div>
+      <Blessing />
       <button className={`btn ${ready ? 'gold breathe' : 'gray'} ${s.rbGo}`} disabled={!ready} onClick={go}>
         <RebirthIcon size="md" />
         {ready ? (armed ? t('rebirth.confirm') : t('rebirth.go')) : t('rebirth.notYet')}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Rebirth Blessing (a boost, core/systems/boosts.ts): taken here, for an ad or Gems, before rebirthing,
+ * so the ad is never on the Rebirth button itself (a rebirth can't be undone). The next rebirth's first
+ * minutes then spin faster. Shows once Boosts are open.
+ */
+function Blessing() {
+  const now = useNow(1000);
+  const open = useGame((g) => g.features.unlocked.includes('boosts'));
+  const blocked = useGame((g) => boostBlocked(g, 'rebirthBlessing', now));
+  const ready = useGame((g) => g.boosts.blessReady);
+  const endsAt = useGame((g) => boostEndsAt(g, 'rebirthBlessing', now));
+  if (!open) return null;
+  const B = BAL.boosts.rebirthBlessing;
+  const status = ready
+    ? t('boosts.blessingReady')
+    : endsAt !== null
+      ? t('boosts.active', { time: clockText(endsAt - now) })
+      : blocked === 'limit'
+        ? t('boosts.limit', { time: clockText(msToMidnight(now)) })
+        : t('boosts.left', { n: boostUsesLeft(getGame(), 'rebirthBlessing', now), max: B.perDay });
+  return (
+    <div className={`${pop.boostOffer} ${s.rbBless}`}>
+      <PotionIcon size="nav" />
+      <div className={pop.boostOfferText}>
+        <b>{t('boosts.rebirthBlessing')}</b>
+        <span>{t('boosts.blessingText', { minutes: B.minutes, mult: B.speedMult })}</span>
+        <span className={ready || endsAt !== null ? pop.boostOn : pop.boostStatus}>{status}</span>
+      </div>
+      <BoostButtons id="rebirthBlessing" column />
     </div>
   );
 }

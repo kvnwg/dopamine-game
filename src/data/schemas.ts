@@ -513,6 +513,13 @@ export const BalanceSchema = z.object({
     }),
   }),
   mockAds: z.object({ watchSeconds: nonNeg }),
+  /**
+   * CrazyGames' midgame ads (src/app/crazygames.ts), at two transitions only: a Heist won, and moving on
+   * from a world's first clear in a run from `minWorld`. At most one every `gapMinutes` (none that soon
+   * after a rewarded ad either), none in a player's first `firstVisitMinutes` of play or a visit's first
+   * `sessionMinutes`.
+   */
+  midgame: z.object({ gapMinutes: nonNeg, firstVisitMinutes: nonNeg, sessionMinutes: nonNeg, minWorld: z.number().int().positive() }),
   heist: HeistBalanceSchema,
   /** Alley perks: a run's Half-Eaten Bread Loaves buy them on the Upgrades screen's Perks page (core/systems/perks.ts). */
   perks: PerksBalanceSchema,
@@ -529,6 +536,16 @@ export const BalanceSchema = z.object({
     potionBrew: z.object({ mult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
     /** One more reel for `minutes` (never past roll.maxReels). */
     ductTapeReel: z.object({ minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** Taken before a rebirth: the new run's first `minutes` spin `speedMult` times as fast. */
+    rebirthBlessing: z.object({ speedMult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** After `afterLosses` losses in a row at a world: the raccoon's hits times `atkMult` for the next try there. */
+    bossRage: z.object({ atkMult: positive, afterLosses: z.number().int().positive(), perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** A spin with a luck token chain of `minMult` or more can be played again (its tokens) for `minutes` after. */
+    encore: z.object({ minMult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** A find of `minRarity` or rarer: +1 tier on an enchantment (or a new one). */
+    polish: z.object({ minRarity: RaritySchema, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** Short of an upgrade by `maxShortPct`% of its price or less (and `maxMinutes` of gold at most): the missing gold. */
+    goldTopUp: z.object({ maxShortPct: positive, maxMinutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
     /** A crate every `everyHours`: one of `rewards` by weight (bags or gold: `minutes` of the current rate, at least `min`). */
     bonusCrate: z.object({
       everyHours: positive,

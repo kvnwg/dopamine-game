@@ -11,7 +11,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  boostBlocked, currentLuck, drySpell, dumpsterUpgradeReady, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
+  boostBlocked, currentLuck, encoreOffer, drySpell, dumpsterUpgradeReady, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
 } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
@@ -207,8 +207,11 @@ export function AlleyPanel() {
   const wide = useUi((u) => u.wide);
   const turboShort = boostsView !== 'locked' && !wide;
   // A Bonus Crate waiting, or a timed boost running (its time shows on the button).
-  const crateReady = useGame((g) => boostBlocked(g, 'bonusCrate', now) === null);
-  const boostTimer = useGame((g) => Math.max(g.boosts.brewEndsAt ?? 0, g.boosts.reelEndsAt ?? 0) - now);
+  // (A dot for a waiting crate, an Encore on offer, or Boss Rage offered.)
+  const crateReady = useGame(
+    (g) => boostBlocked(g, 'bonusCrate', now) === null || (encoreOffer(g, now) !== null && boostBlocked(g, 'encore', now) === null) || boostBlocked(g, 'bossRage', now) === null,
+  );
+  const boostTimer = useGame((g) => Math.max(g.boosts.brewEndsAt ?? 0, g.boosts.reelEndsAt ?? 0, g.boosts.blessEndsAt ?? 0) - now);
   const open = (p: 'upgrade' | 'luck' | 'codex' | 'boosts') => {
     haptics.impact('light');
     seeFeature(p === 'upgrade' ? 'dumpster' : p);

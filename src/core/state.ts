@@ -313,11 +313,21 @@ export const BoostStateSchema = z.object({
   brewEndsAt: z.number().nullable(),
   reelEndsAt: z.number().nullable(),
   crateAt: z.number(),
+  /** Rebirth Blessing: taken, waiting for the next rebirth; then when its fast spins end. */
+  blessReady: z.boolean().default(false),
+  blessEndsAt: z.number().nullable().default(null),
+  /** Boss Rage: the world it's offered for (lost there `afterLosses` times in a row), and the world it's on for. */
+  rageOffer: z.number().int().nullable().default(null),
+  rageWorld: z.number().int().nullable().default(null),
+  /** Encore: the last big chain's tokens (each reel's) and when that spin started. */
+  encore: z.object({ tokens: z.array(z.array(z.number())), mult: z.number(), at: z.number() }).nullable().default(null),
 });
 export type BoostState = z.infer<typeof BoostStateSchema>;
 
 export function freshBoosts(): BoostState {
-  return { day: '', used: {}, brewEndsAt: null, reelEndsAt: null, crateAt: 0 };
+  return {
+    day: '', used: {}, brewEndsAt: null, reelEndsAt: null, crateAt: 0, blessReady: false, blessEndsAt: null, rageOffer: null, rageWorld: null, encore: null,
+  };
 }
 
 /** A run with no loaves and no perks (a new game, and every rebirth). */

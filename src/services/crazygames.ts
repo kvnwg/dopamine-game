@@ -55,6 +55,8 @@ let inGameplay = false;
 let loading = false;
 let adsDisabled = false;
 let adblocked = false;
+/** When the last rewarded ad finished (ms): no midgame ad right after one (src/app/crazygames.ts). */
+let lastRewardedAt = -Infinity;
 const listeners: Record<AdEvent, Set<() => void>> = { adStart: new Set(), adEnd: new Set(), adFailed: new Set() };
 /** Told when ads turn out to be unavailable, so ad buttons can hide (CrazyGames: no ad buttons without effect). */
 const availability = new Set<() => void>();
@@ -150,6 +152,12 @@ export const crazyGames = {
   happytime(): void {
     call((s) => s.game.happytime());
   },
+  /** A midgame ad (no reward). The SDK keeps them at least 3 minutes apart and ignores one too soon. */
+  requestMidgame(): Promise<boolean> {
+    return requestAd('midgame');
+  },
+  /** When the last rewarded ad finished (Date.now() ms), or -Infinity. */
+  lastRewardedAt: (): number => lastRewardedAt,
   muteAudio(): boolean {
     if (!usable()) return false;
     try {
@@ -242,6 +250,7 @@ export class CrazyGamesAdsService implements AdsService {
   }
   async showRewarded(_placement: AdPlacement): Promise<AdResult> {
     const ok = await requestAd('rewarded');
+    if (ok) lastRewardedAt = Date.now();
     if (!ok) emit('adFailed');
     return { rewarded: ok };
   }

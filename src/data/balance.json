@@ -515,6 +515,7 @@
   "mockAds": {
     "watchSeconds": 1.5
   },
+  "midgame": { "gapMinutes": 6, "firstVisitMinutes": 10, "sessionMinutes": 3, "minWorld": 3 },
   "tutorial": {
     "warmupRarities": ["junk", "decent", "shiny"],
     "beginnerAfterRolls": 8,
@@ -1351,6 +1352,11 @@
     "quickDive": { "hours": 2, "perDay": 3, "gems": [50, 100, 200] },
     "potionBrew": { "mult": 3, "minutes": 5, "perDay": 3, "gems": [60] },
     "ductTapeReel": { "minutes": 15, "perDay": 2, "gems": [120] },
+    "rebirthBlessing": { "speedMult": 2, "minutes": 10, "perDay": 3, "gems": [80] },
+    "bossRage": { "atkMult": 1.5, "afterLosses": 2, "perDay": 3, "gems": [60] },
+    "encore": { "minMult": 25, "minutes": 3, "perDay": 2, "gems": [80] },
+    "polish": { "minRarity": "mythic", "perDay": 3, "gems": [100] },
+    "goldTopUp": { "maxShortPct": 25, "maxMinutes": 10, "perDay": 3, "gems": [20] },
     "bonusCrate": {
       "everyHours": 4,
       "perDay": 3,

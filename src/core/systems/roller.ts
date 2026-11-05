@@ -18,6 +18,7 @@ import type { GameState } from '../state';
 import type { CoreEvent, Item, RollPlacement } from '../types';
 import { rarityAtLeast, snap } from '../util';
 import { registerCodex } from './codex';
+import { offerEncore } from './boostHooks';
 import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
@@ -37,12 +38,14 @@ type PerkPick = Partial<Pick<GameState, 'perks'>>;
  * Seconds for one spin cycle (spin + rest) at the current Spin Speed; turbo spins are faster. Alley perks
  * go on top, past the usual floor (Greased Gears doubles the speed, Bootleg Reel slows every spin).
  */
-export function spinCycle(state: Pick<GameState, 'upgrades'> & PerkPick, turbo = false): number {
+export function spinCycle(state: Pick<GameState, 'upgrades'> & PerkPick & Partial<Pick<GameState, 'boosts'>>, turbo = false): number {
   const r = BAL.roll;
   const levels = upgradeEffects(state).rollSpeed;
   const cycle = Math.max(r.minCycleSeconds, (r.spinSeconds + r.restSeconds) * Math.pow(1 - r.speedPerLevel, levels));
   const base = turbo ? Math.max(r.minTurboCycleSeconds, cycle / (r.turboSpeedMult + upgradeEffects(state).turboPower)) : cycle;
-  return base * perkSpinMult(state);
+  // A Rebirth Blessing (a boost) running: its fast spins, past the usual floor like Greased Gears.
+  const blessed = state.boosts?.blessEndsAt != null ? 1 / BAL.boosts.rebirthBlessing.speedMult : 1;
+  return base * perkSpinMult(state) * blessed;
 }
 
 /** The share of a cycle spent spinning (the rest is the pause on the result). */
@@ -351,6 +354,8 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   d.dumpster.forcedTokensAll = false;
   d.dumpster.forcedReelTokens = null;
   const matched = comboSteps(tokens);
+  // A big chain anywhere: this spin's tokens are on offer as an Encore for a few minutes (boosts.ts).
+  if (!scripted && !warmup) offerEncore(d, tokens, Math.max(...tokens.map((_, i) => tokenMult(tokens, i, matched))), now);
   for (let i = 0; i < n; i++) {
     const mults = tokens[i];
     const beginner = scripted === 'beginner' && i === 0;

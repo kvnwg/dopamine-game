@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAction, boostBlocked, boostGems, boostUsesLeft, crateOdds, currentLuck, GameStateSchema, luckBreakdown, MS_PER_HOUR,
-  MS_PER_MINUTE, quickDiveRolls, reelCount, Rng, tick, type BoostId, type CoreEvent, type GameState,
+  applyAction, boostBlocked, boostGems, boostUsesLeft, canPolish, crateOdds, currentLuck, encoreOffer, GameStateSchema, luckBreakdown,
+  MS_PER_HOUR, MS_PER_MINUTE, performSpin, quickDiveRolls, reelCount, rebirthRequirement, Rng, spinCycle, tick, topUpGold, upgradeDef, upgradePrice,
+  type BoostId, type CoreEvent, type GameState, type Item,
 } from '../src/core';
 import { BAL } from '../src/data';
 import { freshState, T0 } from './helpers';
@@ -47,7 +48,13 @@ describe('boosts open after the tutorial and a few minutes of play', () => {
     const raw = clone(ready()) as unknown as Record<string, unknown>;
     delete raw.boosts;
     const parsed = GameStateSchema.parse(raw);
-    expect(parsed.boosts).toEqual({ day: '', used: {}, brewEndsAt: null, reelEndsAt: null, crateAt: 0 });
+    expect(parsed.boosts).toEqual({
+      day: '', used: {}, brewEndsAt: null, reelEndsAt: null, crateAt: 0, blessReady: false, blessEndsAt: null, rageOffer: null, rageWorld: null, encore: null,
+    });
+    // A save from the first Boosts (four of them) keeps its counts and gets the rest empty.
+    const first = clone(ready()) as unknown as { boosts: Record<string, unknown> };
+    first.boosts = { day: '2026-01-05', used: { quickDive: 2 }, brewEndsAt: null, reelEndsAt: null, crateAt: 0 };
+    expect(GameStateSchema.parse(first).boosts.used).toEqual({ quickDive: 2 });
   });
 });
 
@@ -183,5 +190,151 @@ describe('the four boosts', () => {
       counts[e.kind] = (counts[e.kind] ?? 0) + 1;
     }
     for (const { reward, chance } of crateOdds()) expect(Math.abs((counts[reward.kind] ?? 0) / 10_000 - chance)).toBeLessThan(0.01);
+  });
+});
+
+describe('the boosts that come up at a moment', () => {
+  /** One whole spin of `st` (it starts and every reel lands), with its events. */
+  function spin(st: GameState, seed = 7) {
+    const events: CoreEvent[] = [];
+    performSpin(st, new Rng(seed), T0, events);
+    return events;
+  }
+
+  it('Encore: a spin with a chain of x25 or more is on offer for a few minutes; taking it lands the same tokens again next spin', () => {
+    const st = ready();
+    st.currencies.bags = 0;
+    st.upgrades.extraReel = 1;
+    st.dumpster.forcedReelTokens = [[5, 10], [2]];
+    spin(st);
+    const offer = encoreOffer(st, T0 + 1000)!;
+    expect(offer.mult).toBeGreaterThanOrEqual(B.encore.minMult);
+    expect(offer.tokens).toEqual([[5, 10], [2]]);
+    expect(encoreOffer(st, T0 + B.encore.minutes * MS_PER_MINUTE)).toBeNull();
+    const taken = take(st, 'encore', 'ad', T0 + 1000).state;
+    expect(taken.boosts.encore).toBeNull();
+    const again = clone(taken);
+    const events = spin(again, 9);
+    const start = events.find((e): e is Extract<CoreEvent, { type: 'spinStart' }> => e.type === 'spinStart')!;
+    expect(start.reels.map((r) => r.mults)).toEqual([[5, 10], [2]]);
+    // A small chain isn't on offer.
+    const small = ready();
+    small.currencies.bags = 0;
+    small.dumpster.forcedReelTokens = [[2, 3]];
+    spin(small);
+    expect(encoreOffer(small, T0 + 1000)).toBeNull();
+  });
+
+  it('Boss Rage: offered after two losses in a row at a world; it brings him back there, his hits do +50% until the next win or loss there', () => {
+    const rng = new Rng(4);
+    let st = ready();
+    st = applyAction(st, { type: 'travel', world: 10 }, rng, T0).state;
+    let s = clone(st);
+    for (let i = 0; i < 120 && s.stage.losses < B.bossRage.afterLosses; i++) s = tick(s, { ticks: 10 }, rng, T0 + i * 1000).state;
+    expect(s.boosts.rageOffer).toBe(10);
+    expect(boostBlocked(s, 'bossRage', T0)).toBeNull();
+    // Back in World 1 (as if he'd fallen back): Rage takes him to World 10.
+    const away = clone(s);
+    away.battle.stage = 1;
+    const raged = take(away, 'bossRage', 'ad', T0);
+    expect(raged.state.boosts.rageWorld).toBe(10);
+    expect(raged.state.boosts.rageOffer).toBeNull();
+    expect(raged.state.battle.stage).toBe(10);
+    expect(boostBlocked(raged.state, 'bossRage', T0)).toBe('active');
+    // The same first swing, with and without Rage.
+    const hit = (state: GameState) => {
+      let x = clone(state);
+      for (let i = 0; i < 200; i++) {
+        const r = tick(x, { ticks: 1 }, new Rng(5), T0);
+        x = r.state;
+        const h = r.events.find((e): e is Extract<CoreEvent, { type: 'playerHit' }> => e.type === 'playerHit');
+        if (h) return h.amount;
+      }
+      return 0;
+    };
+    const plain = clone(raged.state);
+    plain.boosts.rageWorld = null;
+    expect(hit(raged.state) / hit(plain)).toBeCloseTo(B.bossRage.atkMult, 5);
+    // His next loss there uses it up.
+    let r2 = clone(raged.state);
+    for (let i = 0; i < 120 && r2.boosts.rageWorld !== null; i++) r2 = tick(r2, { ticks: 10 }, rng, T0 + i * 1000).state;
+    expect(r2.boosts.rageWorld).toBeNull();
+  });
+
+  it('Rebirth Blessing: taken before a rebirth, the new run spins twice as fast for its minutes', () => {
+    const st = ready();
+    const blessed = take(st, 'rebirthBlessing', 'gems', T0).state;
+    expect(blessed.boosts.blessReady).toBe(true);
+    expect(boostBlocked(blessed, 'rebirthBlessing', T0)).toBe('active');
+    const can = clone(blessed);
+    const req = rebirthRequirement(can.rebirths);
+    can.stage.highestCleared = req.world;
+    can.currencies.coins = req.gold;
+    const before = spinCycle(can);
+    const r = applyAction(can, { type: 'rebirth' }, new Rng(1), T0);
+    expect(r.state.rebirths).toBe(can.rebirths + 1);
+    expect(r.events.some((e) => e.type === 'blessingStarted')).toBe(true);
+    expect(r.state.boosts.blessReady).toBe(false);
+    // (The new run has no Spin Speed upgrades: compare like with like.)
+    const fresh = clone(r.state);
+    fresh.boosts.blessEndsAt = null;
+    expect(spinCycle(r.state)).toBeCloseTo(spinCycle(fresh) / B.rebirthBlessing.speedMult);
+    expect(before).toBeGreaterThan(0);
+    const end = T0 + B.rebirthBlessing.minutes * MS_PER_MINUTE;
+    const after = tick(r.state, { ticks: 1 }, new Rng(1), end);
+    expect(after.events).toContainEqual({ type: 'boostEnded', id: 'rebirthBlessing' });
+    expect(spinCycle(after.state)).toBeCloseTo(spinCycle(fresh));
+  });
+
+  it('Polish: a Mythic-or-better item gets +1 tier on its lowest enchantment (or a new one) and more power; never its rarity', () => {
+    const st = ready();
+    const base: Item = clone(st).inventory[0] ?? (spin(st), st.inventory[0]);
+    expect(base).toBeTruthy();
+    const mythic: Item = { ...structuredClone(base), uid: 9001, rarity: 'mythic', enchants: [{ id: 'swift', tier: 1 }], power: base.power };
+    const s1 = clone(st);
+    s1.inventory = [mythic];
+    expect(canPolish(mythic)).toBe(true);
+    const r = take(s1, 'polish', 'ad', T0, 3);
+    // (No target: nothing.)
+    expect(r.events.some((e) => e.type === 'itemPolished')).toBe(false);
+    const p = applyAction(s1, { type: 'boost', id: 'polish', via: 'ad', uid: 9001 }, new Rng(3), T0).state;
+    const after = p.inventory[0];
+    expect(after.rarity).toBe('mythic');
+    expect(after.enchants).toEqual([{ id: 'swift', tier: 2 }]);
+    expect(after.power).toBeGreaterThan(s1.inventory[0].power);
+    // Every enchantment at its top tier: a new one comes, Tier I.
+    const top: Item = { ...mythic, enchants: [{ id: 'swift', tier: 3 }] };
+    const s2 = clone(st);
+    s2.inventory = [top];
+    const added = applyAction(s2, { type: 'boost', id: 'polish', via: 'ad', uid: 9001 }, new Rng(3), T0).state.inventory[0];
+    expect(added.enchants).toHaveLength(2);
+    expect(added.enchants[1].tier).toBe(1);
+    // Below Mythic: no.
+    expect(canPolish({ ...mythic, rarity: 'legendary' })).toBe(false);
+  });
+
+  it('Gold top-up: an upgrade a little out of reach gets exactly the missing gold; too far short, nothing', () => {
+    const st = ready();
+    const def = upgradeDef('luck')!;
+    const price = upgradePrice(st, def);
+    const near = clone(st);
+    near.currencies.coins = price * 0.9;
+    // (The current rate covers it: the bot's fallback rate in World 1 is plenty for a first upgrade.)
+    const short = topUpGold(near, 'luck', T0);
+    expect(short).toBe(Math.ceil(price - price * 0.9));
+    const r = applyAction(near, { type: 'boost', id: 'goldTopUp', via: 'ad', upgradeId: 'luck' }, new Rng(1), T0);
+    expect(r.state.currencies.coins).toBeGreaterThanOrEqual(price);
+    expect(r.events).toContainEqual({ type: 'goldTopUp', gold: short });
+    const far = clone(st);
+    far.currencies.coins = price * 0.5;
+    expect(topUpGold(far, 'luck', T0)).toBe(0);
+    const enough = clone(st);
+    enough.currencies.coins = price;
+    expect(topUpGold(enough, 'luck', T0)).toBe(0);
+    // A line already at its last tier has nothing to top up.
+    const maxed = clone(st);
+    maxed.upgrades.luck = upgradeDef('luck')!.max;
+    maxed.currencies.coins = 0;
+    expect(topUpGold(maxed, 'luck', T0)).toBe(0);
   });
 });

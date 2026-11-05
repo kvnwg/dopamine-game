@@ -11,6 +11,7 @@ import type { Rng } from '../rng';
 import type { EnemyState, GameState, HeistFight, PerkState } from '../state';
 import type { CoreEvent, CrewHelper, Stats } from '../types';
 import { combatEffects, type CombatEffects } from './enchants';
+import { rageAfterClear, rageAfterDeath } from './boostHooks';
 import { addXp } from './progression';
 import { recordRewards } from './offline';
 import { earnBread, NO_PERKS, perkFoes, perkFx, perksWorldStart, type PerkFx } from './perks';
@@ -204,11 +205,15 @@ function runOnHit(c: Ctx, uid: number, crit: boolean, killed: boolean) {
   }
 }
 
-/** An Alley hit: Hold My Soda (an Alley perk) multiplies it while the raccoon is low. */
+/**
+ * An Alley hit: Hold My Soda (an Alley perk) multiplies it while the raccoon is low, and Boss Rage (a
+ * boost, boosts.ts) while it's on for this world.
+ */
 function alleyRoll(c: Ctx, target: EnemyState): { amount: number; crit: boolean } {
   const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, c.k);
   const fx = c.perk;
   if (fx && fx.rageMult > 1 && (c.d.battle.playerHp / Math.max(1, c.stats.HP)) * 100 < fx.rageBelowPct) roll.amount *= fx.rageMult;
+  if (c.d.boosts.rageWorld === c.d.battle.stage) roll.amount *= BAL.boosts.bossRage.atkMult;
   return roll;
 }
 
@@ -384,6 +389,7 @@ function onWorldCleared(c: Ctx) {
   }
   // Half-Eaten Bread Loaves: the first time this world's boss falls this run (perks open).
   earnBread(d, world, ev);
+  rageAfterClear(d, world);
   d.lifetime.bossesBeaten += 1;
   ev.push({ type: 'stageClear', stage: world, firstTime });
   ev.push({ type: 'bossWin', stage: world });
@@ -432,6 +438,7 @@ function onDeathResolved(d: GameState, ev: CoreEvent[]) {
   s.showToughHint = d.dumpster.beginner.state === 'done';
   if (push) s.powerAtDeath = playerPower(d);
   s.losses += 1;
+  rageAfterDeath(d, world, s.losses, push);
   if (s.losses < BAL.worlds.lossesBeforeBack) {
     s.mode = push ? 'push' : 'farm';
     startStage(d, world, ev, push);

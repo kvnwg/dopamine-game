@@ -5,7 +5,9 @@
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { DATA, RARITIES, type Rarity } from '../../data';
-import { currentLuck, formatNumber, itemName, RARITY_ODDS, rarityAtLeast, rarityIndex, rebirthGoldMult, rebirthLuckMult } from '../../core';
+import {
+  boostBlocked, currentLuck, encoreOffer, formatNumber, itemName, RARITY_ODDS, rarityAtLeast, rarityIndex, rebirthGoldMult, rebirthLuckMult,
+} from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { sparkleArt, UI_PX } from '../../render/icons';
@@ -20,6 +22,7 @@ import { stageSize, useUi, type RollView } from '../uiStore';
 import { enchantLabel, fmtOdds } from './AlleyPanel';
 import { Chunky, type Grad } from './Chunky';
 import { enchantColor, ItemIcon } from './ItemIcon';
+import { BoostButtons } from './BoostButtons';
 import { CoinIcon } from './Icons';
 import { HyperBands, HyperFx, type HyperHandle, type RevealClock } from './HyperFx';
 import { haptics } from '../../services/haptics';
@@ -433,6 +436,7 @@ function RareReveal({ view }: { view: RollView }) {
               {view.lucky && <span className={`${s.tag} ${s.tagLucky}`}>{t('reveal.lucky')}</span>}
               {view.newRecord && !hyper && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
             </div>
+            {!hyper && <RevealOffers item={it} />}
             {it.enchants.length > 0 && (
               <div className={s.enchants}>
                 {it.enchants.map((en) => (
@@ -452,6 +456,38 @@ function RareReveal({ view }: { view: RollView }) {
       {lit && !noFlash && <div key={phase} className={s.flash} />}
       {!locked && (
         <span className={`${s.tap} ${hyper ? s.tapNow : ''}`}>{landed ? (view.placed === 'bag' ? t('reveal.dragHint') : t('reveal.tap')) : t('reveal.skip')}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Boosts offered on a big reveal's landed card (core/systems/boosts.ts): an Encore when this spin had a big
+ * luck token chain (its tokens again next spin), Polish for a Mythic-or-better find in the bag. A result
+ * screen, so CrazyGames allows the ads here; their buttons keep their taps from closing the reveal.
+ */
+function RevealOffers({ item }: { item: RollView['item'] }) {
+  const now = Date.now();
+  const open = useGame((g) => g.features.unlocked.includes('boosts'));
+  const encore = useGame((g) => (boostBlocked(g, 'encore', now) === null ? encoreOffer(g, now) : null));
+  const polish = useGame((g) => boostBlocked(g, 'polish', now, { uid: item.uid }) === null);
+  if (!open) return null;
+  if (!encore && !polish) return null;
+  return (
+    <div className={s.revealOffers} onClick={(e) => e.stopPropagation()}>
+      {encore && (
+        <div className={s.revealOffer}>
+          <span className={s.revealOfferText}>{t('boosts.encoreText', { mult: formatNumber(encore.mult) })}</span>
+          <BoostButtons id="encore" watchLabel={t('boosts.encoreWatch')} />
+        </div>
+      )}
+      {polish && (
+        <div className={s.revealOffer}>
+          <span className={s.revealOfferText}>
+            <b>{t('boosts.polish')}:</b> {t('boosts.polishText')}
+          </span>
+          <BoostButtons id="polish" target={{ uid: item.uid }} />
+        </div>
       )}
     </div>
   );

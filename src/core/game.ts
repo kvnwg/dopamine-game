@@ -16,6 +16,7 @@ import {
   heistAbandon, heistAdTicket, heistBoot, heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistReroll, heistRevive,
   heistsOpen, heistTick, refreshTickets, startHeist,
 } from './systems/heist';
+import { blessRebirth } from './systems/boostHooks';
 import { expireBoosts, takeBoost } from './systems/boosts';
 import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
@@ -67,7 +68,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         openDumpster(d, ev);
         break;
       case 'boost':
-        if (d.features.unlocked.includes('boosts')) takeBoost(d, action.id, action.via, rng, now, ev);
+        if (d.features.unlocked.includes('boosts')) takeBoost(d, action.id, action.via, rng, now, ev, { uid: action.uid, upgradeId: action.upgradeId });
         break;
       case 'featureSeen':
         markFeatureSeen(d, action.feature);
@@ -94,7 +95,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         buyPerk(d, action.id, ev);
         break;
       case 'rebirth':
-        doRebirth(d, ev);
+        if (doRebirth(d, ev)) blessRebirth(d, now, ev);
         break;
       case 'travel':
         travelTo(d, action.world, ev);

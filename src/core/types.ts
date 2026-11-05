@@ -143,7 +143,13 @@ export type CoreEvent =
   /** A boost was taken (systems/boosts.ts): after its ad, or for `gems` Gems. */
   | { type: 'boostUsed'; id: BoostId; via: 'ad' | 'gems'; gems: number }
   /** A timed boost ran out. */
-  | { type: 'boostEnded'; id: 'potionBrew' | 'ductTapeReel' }
+  | { type: 'boostEnded'; id: 'potionBrew' | 'ductTapeReel' | 'rebirthBlessing' }
+  /** A Rebirth Blessing started with the new run: fast spins until `endsAt`. */
+  | { type: 'blessingStarted'; endsAt: number }
+  /** Polish (a boost) raised an item's enchantment, or gave it a new one. */
+  | { type: 'itemPolished'; uid: number; enchants: ItemEnchant[] }
+  /** A Gold top-up (a boost) paid the gold an upgrade was short of. */
+  | { type: 'goldTopUp'; gold: number }
   /** A Quick Dive rolled `rolls` items at once; `kept` rare finds went to the bag (the best one, `best`). */
   | { type: 'quickDive'; rolls: number; kept: number; best: Item | null }
   /** A Bonus Crate paid `amount` Trash Bags or gold, or a Luck Potion of `amount` seconds. */
@@ -155,8 +161,8 @@ export type CrewHelper = 'pigeon' | 'rats' | 'gull' | 'mafia' | 'golem';
 export type GameAction =
   /** A new game's first tap: the padlock comes off the dumpster and it starts rolling. */
   | { type: 'openDumpster' }
-  /** Takes a boost (Boosts panel): after its rewarded ad, or for its Gem price. */
-  | { type: 'boost'; id: BoostId; via: 'ad' | 'gems' }
+  /** Takes a boost: after its rewarded ad, or for its Gem price (`uid`: the item to polish, `upgradeId`: the upgrade to top up). */
+  | { type: 'boost'; id: BoostId; via: 'ad' | 'gems'; uid?: number; upgradeId?: string }
   /** The tutorial has introduced a feature that opened (its tab or button was tapped, or its moment passed). */
   | { type: 'featureSeen'; feature: Feature }
   | { type: 'equipItem'; uid: number }

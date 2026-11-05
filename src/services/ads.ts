@@ -6,7 +6,9 @@ export type AdPlacement =
   | 'offline_double' | 'heist_ticket' | 'free_crew_call' | 'sugar_rush' | 'heist_revive'
   | 'perk_reroll' | 'junkyard_key' | 'truck_attempt' | 'dumpster_speedup'
   /** The Boosts panel (core/systems/boosts.ts). */
-  | 'quick_dive' | 'potion_brew' | 'duct_tape_reel' | 'bonus_crate';
+  | 'quick_dive' | 'potion_brew' | 'duct_tape_reel' | 'bonus_crate'
+  /** Boosts offered at a moment (the big reveal, a world's card, the Rebirth tab, an item, an upgrade). */
+  | 'encore_spin' | 'boss_rage' | 'rebirth_blessing' | 'polish' | 'gold_top_up';
 
 export interface AdResult {
   rewarded: boolean;

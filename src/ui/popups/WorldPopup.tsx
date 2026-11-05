@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { DATA } from '../../data';
+import { BAL, DATA } from '../../data';
 import { formatNumber, itemTierFor, worldRewards, worldThreat } from '../../core';
 import { dispatch, useGame } from '../../app/store';
 import { haptics } from '../../services';
+import { BoostButtons } from '../components/BoostButtons';
+import { SwordIcon } from '../components/Icons';
 import { PixelArt } from '../components/PixelArt';
 import { ThreatChip } from '../components/WorldsPanel';
 import { t } from '../i18n';
@@ -74,6 +76,18 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
         {t('worlds.rewards', { gold: formatNumber(r.gold), xp: formatNumber(r.xp), items: formatNumber(r.items) })}
       </p>
       <p className={s.note}>{t('worlds.gearNote', { tier })}</p>
+      {/* Boss Rage (a boost): lost here twice in a row, +50% damage for the next try (it brings him back here). */}
+      {g.features.unlocked.includes('boosts') && (g.boosts.rageOffer === world || g.boosts.rageWorld === world) && (
+        <div className={s.boostOffer}>
+          <SwordIcon size="nav" />
+          <div className={s.boostOfferText}>
+            <b>{t('boosts.bossRage')}</b>
+            <span>{t('boosts.bossRageText', { pct: Math.round((BAL.boosts.bossRage.atkMult - 1) * 100), n: world, name: def.name })}</span>
+            {g.boosts.rageWorld === world && <span className={s.boostOn}>{t('boosts.rageOn', { n: world })}</span>}
+          </div>
+          <BoostButtons id="bossRage" column />
+        </div>
+      )}
       <div className={s.actions}>
         {here ? (
           <button className="btn gray" disabled>

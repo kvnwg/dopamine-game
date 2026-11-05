@@ -821,3 +821,31 @@
   right: auto;
   width: 1080px;
 }
+
+/* Boosts on a big reveal's landed card: an Encore, Polish (RevealOffers). */
+.revealOffers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  margin-top: calc(3 * var(--px));
+  animation: fadeUp 400ms steps(3) 700ms backwards;
+}
+.revealOffer {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  max-width: calc(170 * var(--px));
+  padding: calc(2 * var(--px)) calc(3 * var(--px));
+  background: rgba(10, 6, 20, 0.72);
+  box-shadow: var(--pixel-edge);
+}
+.revealOfferText {
+  font-size: 28px;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: var(--pixel-text);
+}
+.revealOfferText b {
+  color: #ffd23f;
+}

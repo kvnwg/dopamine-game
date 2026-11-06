@@ -8,23 +8,26 @@
  * (the game's BBQ Spatula item art) are the game's own pixels, both at one big pixel size and never
  * smoothed. Only the background is soft.
  *
- * With ?label=IDLE%20RPG, the words go in the free sky in the logo's own lettering (logoArt.ts, as the
- * loading screen shows it): the first word in DUMPSTER's glossy green, its letters tossed about, the
- * second in LEGEND's gold on a gentle arch, all on the logo's cream die-cut sticker so they read on the
- * orange sky. Kept clear of the raccoon, his spatula and the bottom of the tile (where CrazyGames lays
- * its own title).
+ * With ?label=IDLE%20RPG it's the store's usual key art instead (like the CrazyGames tiles Kevin
+ * pointed at): the game's logo big in the middle on its sticker (titleLogo, as the loading screen shows
+ * it), the words on a nailed wooden sign hung across its foot in the logo's own lettering (cream), and
+ * under it the raccoon on the left, spatula raised, facing off with an Orc Brute on the right. In the
+ * tall tile the orc stands further back so the blade doesn't cover his face; the raccoon is drawn in
+ * front of the title, the orc behind it.
  *   ?w=800&h=800 : the output size.
  */
 import { TITLE } from '../../src/render/titleScene';
 import { CLOUD_SCROLL0, LAYER_NAMES, layerRow, viewAtmo, worldArt, worldSeed } from '../../src/render/worldLook';
 import { glowOverlay, paintClouds, paintSky } from '../../src/render/pixel/atmosphere';
 import { DATA } from '../../src/data';
-import { blank, blit, fromRows, type PixelBuf } from '../../src/render/pixel/buf';
+import { blank, blit, fromRows, outline, setPx, type PixelBuf } from '../../src/render/pixel/buf';
 import { composeHero } from '../../src/render/pixel/hero';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
 import { FX } from '../../src/render/pixel/ui';
 import { toCanvas } from '../../src/render/pixel';
-import { GOLD, GREEN, LOGO_H, letterMask, paintLetter, stickerOf } from '../../src/render/logoArt';
+import { GOLD, LOGO_H, letterMask, paintLetter } from '../../src/render/logoArt';
+import { titleLogo } from '../../src/render/titleScene';
+import { ENEMY_ART, recolorEnemy, type EnemyShape } from '../../src/render/pixel/enemies';
 
 const q = new URLSearchParams(location.search);
 const W = Number(q.get('w')) || 800;
@@ -170,96 +173,227 @@ const spAt = { x: heroAt.x + PAW.x - GRIP.x, y: heroAt.y + PAW.y - GRIP.y };
 // The spatula behind his paw, so the paw grips its handle.
 blit(fig, spatula, spAt.x, spAt.y);
 blit(fig, hero, heroAt.x, heroAt.y);
+/** Where his feet are in `fig` (game px). */
+const FEET = { x: heroAt.x + 11.5, y: heroAt.y + 19.7 };
 
-const P = PX;
-const fx = (L.fig.x - heroAt.x) * P;
-const fy = (L.fig.y - heroAt.y) * P;
-// A light behind his head, then a soft shadow under the figure to lift it off the background.
-{
-  const hx = fx + (heroAt.x + 12) * P;
-  const hy = fy + (heroAt.y + 10) * P;
-  const r = 14 * P;
-  const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r);
-  g.addColorStop(0, 'rgba(255,250,225,0.55)');
-  g.addColorStop(1, 'rgba(255,250,225,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(hx - r, hy - r, r * 2, r * 2);
-}
-// A soft shadow on the ground under his feet.
-{
-  const feet = { x: fx + (heroAt.x + 11.5) * P, y: fy + (heroAt.y + 19.7) * P };
+/** A soft shadow on the ground, `rx` wide (screen px) around (x, y). */
+function groundShadow(x: number, y: number, rx: number, ry: number, p: number) {
   ctx.save();
-  ctx.filter = `blur(${Math.round(P * 0.5)}px)`;
+  ctx.filter = `blur(${Math.round(p * 0.5)}px)`;
   ctx.fillStyle = 'rgba(15,30,45,0.4)';
   ctx.beginPath();
-  ctx.ellipse(feet.x, feet.y, 7.5 * P, 1.1 * P, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
-ctx.save();
-ctx.imageSmoothingEnabled = false;
-ctx.shadowColor = 'rgba(10,30,70,0.45)';
-ctx.shadowBlur = P * 1.2;
-ctx.shadowOffsetY = P * 0.35;
-ctx.drawImage(cv(fig), fx, fy, fig.w * P, fig.h * P);
-ctx.restore();
 
-// The game's sparkles glinting on the spatula's blade.
-{
+/** A sprite at `p` screen px per game px, crisp, lifted off the background by a soft shadow. */
+function drawSprite(buf: PixelBuf, x: number, y: number, p: number) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.shadowColor = 'rgba(10,30,70,0.45)';
+  ctx.shadowBlur = p * 1.2;
+  ctx.shadowOffsetY = p * 0.35;
+  ctx.drawImage(cv(buf), x, y, buf.w * p, buf.h * p);
+  ctx.restore();
+}
+
+/**
+ * The raccoon and his spatula with his feet at (x, y), `p` screen px per game px. In two parts, so a
+ * title can go between: 'back' is the light behind his head and his shadow on the ground, 'front' is
+ * him, and the game's sparkles glinting on the blade.
+ */
+function drawHero(x: number, y: number, p: number, part: 'back' | 'front' | 'both' = 'both') {
+  const fx = x - FEET.x * p;
+  const fy = y - FEET.y * p;
+  if (part !== 'front') {
+    const hx = fx + (heroAt.x + 12) * p;
+    const hy = fy + (heroAt.y + 10) * p;
+    const r = 14 * p;
+    const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r);
+    g.addColorStop(0, 'rgba(255,250,225,0.55)');
+    g.addColorStop(1, 'rgba(255,250,225,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(hx - r, hy - r, r * 2, r * 2);
+    groundShadow(x, y, 7.5 * p, 1.1 * p, p);
+  }
+  if (part === 'back') return;
+  drawSprite(fig, fx, fy, p);
   const sp = cv(fromRows(FX.sparkle));
-  const blade = { x: fx + (spAt.x + 11) * P, y: fy + (spAt.y + 3) * P };
+  const blade = { x: fx + (spAt.x + 11) * p, y: fy + (spAt.y + 3) * p };
   ctx.imageSmoothingEnabled = false;
   for (const [dx, dy, s] of [[2.6, -3.2, 1], [-3.4, -1.6, 0.75], [4.2, 2.4, 0.6]] as const) {
-    const size = sp.width * P * 0.5 * s;
-    ctx.drawImage(sp, blade.x + dx * P - size / 2, blade.y + dy * P - size / 2, size, size);
+    const size = sp.width * p * 0.5 * s;
+    ctx.drawImage(sp, blade.x + dx * p - size / 2, blade.y + dy * p - size / 2, size, size);
   }
 }
 
-// ---- the label (?label=): words in the logo's lettering, on its sticker
+// ---- the title (?label=IDLE%20RPG): the game's logo, and the words on a wooden sign under it
 const label = (q.get('label') ?? '').trim().toUpperCase();
-if (label) {
-  /** Tilts and bobs per letter: the first word tossed like DUMPSTER, the second arched like LEGEND. */
-  const TOSS = [{ deg: -7, dy: 2 }, { deg: 6, dy: -1 }, { deg: -5, dy: 1 }, { deg: 7, dy: -2 }, { deg: -6, dy: 2 }];
-  const ARCH = (i: number, n: number) => ({ deg: Math.round(((i - (n - 1) / 2) / Math.max(1, (n - 1) / 2)) * 5), dy: Math.round(Math.abs(i - (n - 1) / 2) * 1.5) });
+
+/** Wood for the sign: light top edge, face bands, shade, the seam between its two boards, grain, nails. */
+const WOOD = {
+  edge: '#f2be7e',
+  face: ['#dca062', '#d09254', '#c3844a'],
+  low: '#a7683a',
+  side: ['#8a4f2a', '#6a3a1e'],
+  seam: '#5b2f17',
+  grain: '#a86c3c',
+  knot: '#7a4424',
+  nail: ['#f4f4f8', '#a9a9b8', '#62627a'],
+};
+/** The words' paint: cream, glossy, on a drop the color of dark wood. */
+const CREAM: typeof GOLD = {
+  face: ['#ffffff', '#fffaf0', '#fff3dc', '#ffe9c4', '#ffdca8'],
+  light: '#ffffff',
+  shade: '#eebf86',
+  gloss: '#ffffff',
+  drop: ['#7a3f1c', '#4e2610'],
+};
+
+function px(b: PixelBuf, x: number, y: number, hex: string) {
+  if (x >= 0 && y >= 0 && x < b.w && y < b.h) setPx(b, x, y, hex);
+}
+
+/**
+ * A wooden sign w x h (art px) of two boards, nailed, its ends a little ragged, standing on a few rows
+ * of its own darker edge (its thickness), with an ink outline. Its face is (1, 1) to (w, h) in the result.
+ */
+function woodSign(w: number, h: number): PixelBuf {
+  const SIDE = 3;
+  const r = 3;
+  const inBox = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return false;
+    const cx = x < r ? r - 0.5 : x >= w - r ? w - r - 0.5 : x;
+    const cy = y < r ? r - 0.5 : y >= h - r ? h - r - 0.5 : y;
+    return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
+  };
+  // Ragged ends: a few bites out of the left and right edges.
+  const chips = new Set(['0,6', '0,7', '1,7', `${w - 1},4`, `${w - 1},${h - 6}`, `${w - 2},${h - 6}`, `${w - 1},${h - 5}`, '0,' + (h - 4)]);
+  const face = (x: number, y: number) => inBox(x, y) && !chips.has(`${x},${y}`);
+  const b = blank(w, h + SIDE);
+  // Its thickness under it.
+  for (let y = 0; y < h + SIDE; y++) for (let x = 0; x < w; x++) if (!face(x, y)) for (let d = 1; d <= SIDE; d++) if (face(x, y - d)) { px(b, x, y, d === 1 ? WOOD.side[0] : WOOD.side[1]); break; }
+  const seam = Math.floor(h / 2);
+  let s = 7;
+  const rnd = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!face(x, y)) continue;
+      const top = y < seam ? 0 : seam + 1;
+      const bottom = y < seam ? seam - 1 : h - 1;
+      const t = (y - top) / Math.max(1, bottom - top);
+      let c = WOOD.face[Math.min(2, Math.floor(t * 3))];
+      if (y === seam) c = WOOD.seam;
+      else if (y === top || !face(x, y - 1)) c = WOOD.edge;
+      else if (y === bottom || !face(x, y + 1)) c = WOOD.low;
+      else if (!face(x - 1, y)) c = WOOD.edge;
+      else if (!face(x + 1, y)) c = WOOD.low;
+      px(b, x, y, c);
+    }
+  }
+  // Grain: short streaks along each board, and a knot on each.
+  for (const [top, bottom] of [[2, seam - 2], [seam + 2, h - 3]]) {
+    for (let i = 0; i < Math.round(w / 9); i++) {
+      const y = top + Math.floor(rnd() * (bottom - top + 1));
+      const x0 = 3 + Math.floor(rnd() * (w - 12));
+      const len = 4 + Math.floor(rnd() * 10);
+      for (let x = x0; x < Math.min(w - 3, x0 + len); x++) if (face(x, y)) px(b, x, y, WOOD.grain);
+    }
+    const kx = 6 + Math.floor(rnd() * (w - 14));
+    const ky = Math.round((top + bottom) / 2);
+    for (const [dx, dy, c] of [[0, 0, WOOD.knot], [1, 0, WOOD.seam], [2, 0, WOOD.knot], [-1, 0, WOOD.grain], [3, 0, WOOD.grain], [1, -1, WOOD.grain], [1, 1, WOOD.grain]] as const) px(b, kx + dx, ky + dy, c);
+  }
+  // Nails at the ends of each board.
+  for (const y of [Math.floor(seam / 2), seam + Math.ceil((h - seam) / 2)]) {
+    for (const x of [3, w - 5]) {
+      px(b, x, y - 1, WOOD.nail[0]);
+      px(b, x + 1, y - 1, WOOD.nail[1]);
+      px(b, x, y, WOOD.nail[1]);
+      px(b, x + 1, y, WOOD.nail[2]);
+    }
+  }
+  return outline(b, '#1a1326');
+}
+
+/** The words for the sign, in the logo's lettering (cream), each letter leaning a little its own way. */
+function signWords(text: string): PixelBuf {
+  const tilts = [-4, 3, -3, 4, -2, 3];
   const placed: Array<{ buf: PixelBuf; x: number; y: number }> = [];
   let x = 0;
-  label.split(/\s+/).forEach((word, wi) => {
-    const chars = [...word];
-    chars.forEach((ch, i) => {
-      const plan = wi === 0 ? TOSS[i % TOSS.length] : ARCH(i, chars.length);
-      const art = paintLetter(letterMask(ch, plan.deg), wi === 0 ? GREEN : GOLD);
-      placed.push({ buf: art.buf, x: x - art.ox, y: plan.dy - art.oy + Math.round((LOGO_H - art.h) / 2) });
-      x += art.w + (wi === 0 ? -1 : 0);
-    });
+  let n = 0;
+  text.split(/\s+/).forEach((word) => {
+    for (const ch of word) {
+      const art = paintLetter(letterMask(ch, tilts[n++ % tilts.length]), CREAM);
+      placed.push({ buf: art.buf, x: x - art.ox, y: -art.oy + Math.round((LOGO_H - art.h) / 2) });
+      x += art.w - 1;
+    }
     x += 7;
   });
   const x0 = Math.min(...placed.map((p) => p.x));
   const y0 = Math.min(...placed.map((p) => p.y));
-  const words = blank(Math.max(...placed.map((p) => p.x + p.buf.w)) - x0, Math.max(...placed.map((p) => p.y + p.buf.h)) - y0);
-  for (const p of placed) blit(words, p.buf, p.x - x0, p.y - y0);
-  const sticker = stickerOf(words, 3);
-  const art = blank(sticker.buf.w, sticker.buf.h);
-  blit(art, sticker.buf, 0, 0);
-  blit(art, words, sticker.pad, sticker.pad);
-  // Where it goes, and how big (screen px per art px, whole numbers so its pixels stay square): the
-  // sky to the raccoon's upper left (square, landscape), the top of the tall portrait, centered.
-  const spot = {
-    square: { k: Math.floor(W / 168), x: W * 0.05, y: H * 0.05, center: false },
-    port: { k: Math.floor(W / 120), x: W / 2, y: H * 0.08, center: true },
-    // (Smaller than the others' share: the wide tile's raccoon stands tall, his ears near the top.)
-    land: { k: Math.floor(W / 300), x: W * 0.035, y: H * 0.05, center: false },
+  const out = blank(Math.max(...placed.map((p) => p.x + p.buf.w)) - x0, Math.max(...placed.map((p) => p.y + p.buf.h)) - y0);
+  for (const p of placed) blit(out, p.buf, p.x - x0, p.y - y0);
+  return out;
+}
+
+/** The whole title: the logo on its sticker, and the sign hung across its foot (art px). */
+function titleArt(text: string): PixelBuf {
+  const logo = titleLogo();
+  const words = signWords(text);
+  const padX = 9;
+  const padY = 5;
+  const sign = woodSign(words.w + padX * 2, words.h + padY * 2);
+  blit(sign, words, 1 + padX, 1 + padY);
+  const OVERLAP = 7;
+  const w = Math.max(logo.w, sign.w);
+  const out = blank(w, logo.h + sign.h - OVERLAP);
+  blit(out, logo, Math.floor((w - logo.w) / 2), 0);
+  const sx = Math.floor((w - sign.w) / 2);
+  const sy = logo.h - OVERLAP;
+  blit(out, sign, sx, sy);
+  return out;
+}
+
+if (!label) {
+  // The plain cover: the raccoon big in the frame (no text).
+  drawHero((L.fig.x - heroAt.x + FEET.x) * PX, (L.fig.y - heroAt.y + FEET.y) * PX, PX);
+} else {
+  /** Who he faces (?foe=): the Orc Brute in green (it stands out on the orange sky), or Dumpgor the Demon. */
+  const FOES: Record<string, { shape: EnemyShape; color: string; accent: string }> = {
+    orc: { shape: 'orc', color: '#5f9a3a', accent: '#b3542a' },
+    demon: { shape: 'bigDemon', color: '#c8323c', accent: '#ffd054' },
+  };
+  const foe = FOES[q.get('foe') ?? 'orc'] ?? FOES.orc;
+  const foeArt = ENEMY_ART[foe.shape];
+  const foeBuf = recolorEnemy(foe.shape, foe.color, foe.accent);
+  const title = titleArt(label);
+  /**
+   * Per format: k = screen px per art px for the title (whole, so its pixels stay square), its middle
+   * and top; p = screen px per game px for the two of them, and where each one's feet are.
+   */
+  const S = {
+    land: { k: Math.floor(W / 320), tx: W / 2, ty: H * 0.02, p: W / 82, hero: { x: W * 0.105, y: H * 0.97 }, foe: { x: W * 0.84, y: H * 0.97 } },
+    // (The tall tile has room to stand the foe further back, so the spatula doesn't cover his face.)
+    port: { k: Math.floor(W / 155), tx: W / 2, ty: H * 0.04, p: W / 36, hero: { x: W * 0.28, y: H * 0.97 }, foe: { x: W * 0.7, y: H * 0.8 } },
+    // (Side by side, just far enough apart that the blade stops short of his face.)
+    square: { k: W >= 700 ? Math.floor(W / 190) : W / 190, tx: W / 2, ty: H * 0.03, p: W / 47, hero: { x: W * 0.185, y: H * 0.97 }, foe: { x: W * 0.77, y: H * 0.97 } },
   }[layout];
-  const lw = art.w * spot.k;
-  const lh = art.h * spot.k;
-  const lx = Math.round(spot.center ? spot.x - lw / 2 : spot.x);
+  const pf = S.p;
+  // The foe first (behind), its feet on the same ground as his.
+  groundShadow(S.foe.x, S.foe.y, (foeArt.feet.x + 2) * pf * 0.75, 1.1 * pf, pf);
+  drawSprite(foeBuf, S.foe.x - (foeArt.feet.x + 0.5) * pf, S.foe.y - (foeArt.feet.y + 1) * pf, pf);
+  drawHero(S.hero.x, S.hero.y, pf, 'back');
+  // The title over the foe (in the tall tile his head goes behind its sign), then the raccoon in front.
+  const k = S.k;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  ctx.shadowColor = 'rgba(40,10,10,0.45)';
-  ctx.shadowBlur = spot.k * 3;
-  ctx.shadowOffsetY = spot.k * 1.5;
-  // (Not turned as a whole: its letters lean on their own, and every pixel stays square.)
-  ctx.drawImage(cv(art), lx, Math.round(spot.y), lw, lh);
+  ctx.shadowColor = 'rgba(40,10,10,0.5)';
+  ctx.shadowBlur = k * 4;
+  ctx.shadowOffsetY = k * 2;
+  ctx.drawImage(cv(title), Math.round(S.tx - (title.w * k) / 2), Math.round(S.ty), title.w * k, title.h * k);
   ctx.restore();
+  drawHero(S.hero.x, S.hero.y, pf, 'front');
 }
 
 (window as unknown as { __coverReady: boolean }).__coverReady = true;

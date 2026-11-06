@@ -1,7 +1,8 @@
 // Renders the CrazyGames store covers and the logo from the game's own pixel art (tools/crazygames/cover.ts).
 //   node tools/crazygames/renderCovers.mjs
-// They carry LABEL ("IDLE RPG", Kevin's ask: the store won't let him change the game's name) in the logo's
-// lettering; the same images without it go to no-text/ beside each set (COVER_LABEL= for none).
+// They're key art: the game's logo with LABEL ("IDLE RPG", Kevin's ask: the store won't let him change the
+// game's name) on a wooden sign under it, the raccoon and an orc either side; the plain raccoon-only images
+// go to no-text/ beside each set (COVER_LABEL= for those only).
 // Needs Playwright with Chromium: npm i -D playwright && npx playwright install chromium
 import fs from 'node:fs';
 import path from 'node:path';

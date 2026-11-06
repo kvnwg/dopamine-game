@@ -6,6 +6,29 @@
 export const LOGO_H = 20;
 
 export const LOGO_GLYPHS: Readonly<Record<string, readonly string[]>> = {
+  // (I: for the CrazyGames covers' IDLE RPG, tools/crazygames/cover.ts. A stem as thick as T's.)
+  I: [
+    '.####.',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '######',
+    '.####.',
+  ],
   D: [
     '.##########.....',
     '#############...',

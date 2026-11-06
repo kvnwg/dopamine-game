@@ -7,6 +7,12 @@
  * The raccoon (his cheer pose, frame 13, as the battle shows him: hero.ts composeHero) and the spatula
  * (the game's BBQ Spatula item art) are the game's own pixels, both at one big pixel size and never
  * smoothed. Only the background is soft.
+ *
+ * With ?label=IDLE%20RPG, the words go in the free sky in the logo's own lettering (logoArt.ts, as the
+ * loading screen shows it): the first word in DUMPSTER's glossy green, its letters tossed about, the
+ * second in LEGEND's gold on a gentle arch, all on the logo's cream die-cut sticker so they read on the
+ * orange sky. Kept clear of the raccoon, his spatula and the bottom of the tile (where CrazyGames lays
+ * its own title).
  *   ?w=800&h=800 : the output size.
  */
 import { TITLE } from '../../src/render/titleScene';
@@ -18,6 +24,7 @@ import { composeHero } from '../../src/render/pixel/hero';
 import { ITEM_SPRITES } from '../../src/render/pixel/items';
 import { FX } from '../../src/render/pixel/ui';
 import { toCanvas } from '../../src/render/pixel';
+import { GOLD, GREEN, LOGO_H, letterMask, paintLetter, stickerOf } from '../../src/render/logoArt';
 
 const q = new URLSearchParams(location.search);
 const W = Number(q.get('w')) || 800;
@@ -206,6 +213,53 @@ ctx.restore();
     const size = sp.width * P * 0.5 * s;
     ctx.drawImage(sp, blade.x + dx * P - size / 2, blade.y + dy * P - size / 2, size, size);
   }
+}
+
+// ---- the label (?label=): words in the logo's lettering, on its sticker
+const label = (q.get('label') ?? '').trim().toUpperCase();
+if (label) {
+  /** Tilts and bobs per letter: the first word tossed like DUMPSTER, the second arched like LEGEND. */
+  const TOSS = [{ deg: -7, dy: 2 }, { deg: 6, dy: -1 }, { deg: -5, dy: 1 }, { deg: 7, dy: -2 }, { deg: -6, dy: 2 }];
+  const ARCH = (i: number, n: number) => ({ deg: Math.round(((i - (n - 1) / 2) / Math.max(1, (n - 1) / 2)) * 5), dy: Math.round(Math.abs(i - (n - 1) / 2) * 1.5) });
+  const placed: Array<{ buf: PixelBuf; x: number; y: number }> = [];
+  let x = 0;
+  label.split(/\s+/).forEach((word, wi) => {
+    const chars = [...word];
+    chars.forEach((ch, i) => {
+      const plan = wi === 0 ? TOSS[i % TOSS.length] : ARCH(i, chars.length);
+      const art = paintLetter(letterMask(ch, plan.deg), wi === 0 ? GREEN : GOLD);
+      placed.push({ buf: art.buf, x: x - art.ox, y: plan.dy - art.oy + Math.round((LOGO_H - art.h) / 2) });
+      x += art.w + (wi === 0 ? -1 : 0);
+    });
+    x += 7;
+  });
+  const x0 = Math.min(...placed.map((p) => p.x));
+  const y0 = Math.min(...placed.map((p) => p.y));
+  const words = blank(Math.max(...placed.map((p) => p.x + p.buf.w)) - x0, Math.max(...placed.map((p) => p.y + p.buf.h)) - y0);
+  for (const p of placed) blit(words, p.buf, p.x - x0, p.y - y0);
+  const sticker = stickerOf(words, 3);
+  const art = blank(sticker.buf.w, sticker.buf.h);
+  blit(art, sticker.buf, 0, 0);
+  blit(art, words, sticker.pad, sticker.pad);
+  // Where it goes, and how big (screen px per art px, whole numbers so its pixels stay square): the
+  // sky to the raccoon's upper left (square, landscape), the top of the tall portrait, centered.
+  const spot = {
+    square: { k: Math.floor(W / 168), x: W * 0.05, y: H * 0.05, center: false },
+    port: { k: Math.floor(W / 120), x: W / 2, y: H * 0.08, center: true },
+    // (Smaller than the others' share: the wide tile's raccoon stands tall, his ears near the top.)
+    land: { k: Math.floor(W / 300), x: W * 0.035, y: H * 0.05, center: false },
+  }[layout];
+  const lw = art.w * spot.k;
+  const lh = art.h * spot.k;
+  const lx = Math.round(spot.center ? spot.x - lw / 2 : spot.x);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.shadowColor = 'rgba(40,10,10,0.45)';
+  ctx.shadowBlur = spot.k * 3;
+  ctx.shadowOffsetY = spot.k * 1.5;
+  // (Not turned as a whole: its letters lean on their own, and every pixel stays square.)
+  ctx.drawImage(cv(art), lx, Math.round(spot.y), lw, lh);
+  ctx.restore();
 }
 
 (window as unknown as { __coverReady: boolean }).__coverReady = true;

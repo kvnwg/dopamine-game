@@ -9,8 +9,8 @@ const opaque = (b: { w: number; px: Uint8ClampedArray }, x: number, y: number) =
 
 // The title's logo (drawn letter by letter, a raccoon in the U's trash can) and its PLAY button.
 describe('the logo and PLAY', () => {
-  it('has a hand-drawn letter for every letter of DUMPSTER LEGEND and PLAY, each LOGO_H rows of even width', () => {
-    for (const ch of 'DUMPSTERLEGENDPLAY') {
+  it('has a hand-drawn letter for every letter of DUMPSTER LEGEND, PLAY and the covers\' IDLE RPG, each LOGO_H rows of even width', () => {
+    for (const ch of 'DUMPSTERLEGENDPLAYIDLERPG') {
       const rows = LOGO_GLYPHS[ch];
       expect(rows, ch).toBeDefined();
       expect(rows).toHaveLength(LOGO_H);

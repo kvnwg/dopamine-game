@@ -1,5 +1,7 @@
 // Renders the CrazyGames store covers and the logo from the game's own pixel art (tools/crazygames/cover.ts).
 //   node tools/crazygames/renderCovers.mjs
+// They carry LABEL ("IDLE RPG", Kevin's ask: the store won't let him change the game's name) in the logo's
+// lettering; the same images without it go to no-text/ beside each set (COVER_LABEL= for none).
 // Needs Playwright with Chromium: npm i -D playwright && npx playwright install chromium
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +11,9 @@ import { createServer } from 'vite';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const OUT = path.join(ROOT, 'crazygames', 'covers');
+
+/** The words on the covers and the logo (an empty COVER_LABEL leaves them plain). */
+export const LABEL = process.env.COVER_LABEL ?? 'IDLE RPG';
 
 /** The logo: the square close-up on its own (crazygames/logo/), at the usual icon sizes. */
 export const LOGOS = [
@@ -41,11 +46,11 @@ export async function startVite() {
   return { base: `http://127.0.0.1:${port}`, close: () => server.close() };
 }
 
-/** Renders one cover to `file` (also used for the preview videos' opening frames). */
-export async function renderCover(browser, base, file, w, h, k) {
+/** Renders one cover to `file`, with `label` on it if given (the preview videos' opening frames have none). */
+export async function renderCover(browser, base, file, w, h, k, label = '') {
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error('cover page error:', e.message));
-  await page.goto(`${base}/tools/crazygames/cover.html?w=${w}&h=${h}&k=${k}`);
+  await page.goto(`${base}/tools/crazygames/cover.html?w=${w}&h=${h}&k=${k}${label ? `&label=${encodeURIComponent(label)}` : ''}`);
   await page.waitForFunction(() => window.__coverReady === true, null, { timeout: 60000 });
   await page.locator('#c').screenshot({ path: file });
   await page.close();
@@ -57,17 +62,21 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const vite = await startVite();
   const browser = await chromium.launch();
   try {
-    for (const [name, w, h, k] of COVERS) {
-      const file = path.join(OUT, name);
-      await renderCover(browser, vite.base, file, w, h, k);
-      console.log('wrote', path.relative(ROOT, file));
-    }
     const logoDir = path.join(ROOT, 'crazygames', 'logo');
-    fs.mkdirSync(logoDir, { recursive: true });
-    for (const [name, w, h] of LOGOS) {
-      const file = path.join(logoDir, name);
-      await renderCover(browser, vite.base, file, w, h, 1);
-      console.log('wrote', path.relative(ROOT, file));
+    const sets = [
+      ...COVERS.map(([name, w, h, k]) => [OUT, name, w, h, k]),
+      ...LOGOS.map(([name, w, h]) => [logoDir, name, w, h, 1]),
+    ];
+    for (const [dir, name, w, h, k] of sets) {
+      const plainDir = LABEL ? path.join(dir, 'no-text') : dir;
+      fs.mkdirSync(plainDir, { recursive: true });
+      const plain = path.join(plainDir, name);
+      await renderCover(browser, vite.base, plain, w, h, k);
+      console.log('wrote', path.relative(ROOT, plain));
+      if (!LABEL) continue;
+      const file = path.join(dir, name);
+      await renderCover(browser, vite.base, file, w, h, k, LABEL);
+      console.log('wrote', path.relative(ROOT, file), `("${LABEL}")`);
     }
   } finally {
     await browser.close();

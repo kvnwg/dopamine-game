@@ -13,6 +13,7 @@ const OUT = path.join(ROOT, 'crazygames', 'covers');
 /** The logo: the square close-up on its own (crazygames/logo/), at the usual icon sizes. */
 export const LOGOS = [
   ['logo-1024x1024.png', 1024, 1024],
+  ['logo-800x800.png', 800, 800],
   ['logo-512x512.png', 512, 512],
 ];
 

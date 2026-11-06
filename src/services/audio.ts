@@ -128,6 +128,10 @@ class AudioEngine {
   private recs = new Map<string, Recording>();
   private loading: Promise<void> | null = null;
   private loaded = false;
+  /** The title screen's few recordings (preloadFirst), and every recording's own load. */
+  private first: Promise<void> | null = null;
+  private fetching = new Map<string, Promise<void>>();
+  private dec: OfflineAudioContext | null = null;
   /** What a build-up's sounds play through, so they all stop as its find lands (endRamp). */
   private rampBus: GainNode | null = null;
   /** Sound effects playing right now (MAX_SFX_VOICES). */
@@ -152,11 +156,13 @@ class AudioEngine {
   }
 
   /**
-   * Decodes the recordings, so they are ready by the first tap (decoding needs none): call at startup.
-   * A sound whose recording fails to load stays synthesized.
+   * Decodes the recordings, so they are ready by the first tap (decoding needs none). A sound whose
+   * recording fails to load stays synthesized. The start loads the few the title screen plays first
+   * (preloadFirst), then the rest once the battle's code has arrived, so the two don't share the
+   * connection (soundController.ts).
    */
   preload(): Promise<void> {
-    this.loading ??= this.load()
+    this.loading ??= this.load(Object.keys(SOUND_FILES))
       .catch(() => {})
       .then(() => {
         this.loaded = true;
@@ -164,20 +170,34 @@ class AudioEngine {
     return this.loading;
   }
 
-  private async load(): Promise<void> {
-    const names = Object.keys(SOUND_FILES);
+  /** Decodes just these recordings now (the rest wait for preload). */
+  preloadFirst(names: string[]): Promise<void> {
+    this.first ??= this.load(names.filter((n) => n in SOUND_FILES)).catch(() => {});
+    return this.first;
+  }
+
+  private async load(names: string[]): Promise<void> {
     const OAC = window.OfflineAudioContext ?? (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
     if (!OAC || names.length === 0) return;
     // Decoded at 48 kHz, the rate most devices play at (any other is resampled as it plays).
-    const dec = new OAC(2, 1, 48000);
+    this.dec ??= new OAC(2, 1, 48000);
+    const dec = this.dec;
     await Promise.all(
       names.map(async (name) => {
-        try {
-          const buf = await decode(dec, await bytesOf(SOUND_FILES[name]));
-          this.recs.set(name, { buf, from: leadIn(buf) });
-        } catch {
-          /* stays synthesized */
+        // (One already loaded or on its way, by preloadFirst, isn't fetched again.)
+        let p = this.fetching.get(name);
+        if (!p) {
+          p = (async () => {
+            try {
+              const buf = await decode(dec, await bytesOf(SOUND_FILES[name]));
+              this.recs.set(name, { buf, from: leadIn(buf) });
+            } catch {
+              /* stays synthesized */
+            }
+          })();
+          this.fetching.set(name, p);
         }
+        await p;
       }),
     );
   }
@@ -1390,12 +1410,13 @@ class AudioEngine {
   private whenRunning(play: (ctx: AudioContext) => void): void {
     const ctx = this.ctx;
     if (!ctx) return;
-    if (ctx.state === 'running' && (this.loaded || !this.loading)) {
+    const pending = this.loaded ? null : (this.loading ?? this.first);
+    if (ctx.state === 'running' && !pending) {
       play(ctx);
       return;
     }
     const asked = performance.now();
-    const ready = Promise.race([this.loading, new Promise((r) => setTimeout(r, 250))]);
+    const ready = Promise.race([pending, new Promise((r) => setTimeout(r, 250))]);
     Promise.all([ctx.resume(), ready]).then(
       () => {
         // Much later it would no longer go with what it was for.

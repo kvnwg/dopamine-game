@@ -113,6 +113,7 @@ The CrazyGames build is its own Vite mode, so the phone apps and other web build
 - `npm run dev:crazygames` runs the same mode on localhost, where the SDK's "local" mode logs every call and shows a text overlay instead of ads.
 - A few lines at the top of `<body>` (also from that plugin) start the SDK and call `loadingStart()` the moment the page opens, before the game's code downloads, so CrazyGames' "Loading started" counts every player who stays past the first instant. The game's code then waits for that same start (DECISIONS J19).
 - The battle (Phaser) is a second download that starts once the title screen is up, so the title needs only half the code (DECISIONS J20).
+- The sounds wait for the battle's code (except the three the title plays), and a production build skips re-checking the game data at load (DECISIONS J22, J23).
 
 | File | What it does |
 |---|---|

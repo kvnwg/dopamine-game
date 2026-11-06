@@ -77,9 +77,11 @@ async function init(): Promise<boolean> {
     console.info('[crazygames] SDK not loaded; running without it');
     return false;
   }
+  // The page's early script (vite.config.ts) may have started the SDK already: wait for that, not a second init.
+  const early = (window as unknown as { __cgInit?: Promise<unknown> }).__cgInit;
   try {
     await Promise.race([
-      found.init(),
+      early ?? found.init(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('SDK init timed out')), 8000)),
     ]);
     sdk = found;
@@ -130,6 +132,8 @@ export const crazyGames = {
   loadingStart(): void {
     if (loading) return;
     loading = true;
+    // (The page's early script told CrazyGames already, as the page opened: vite.config.ts.)
+    if ((window as unknown as { __cgLoadingStarted?: boolean }).__cgLoadingStarted) return;
     call((s) => s.game.loadingStart());
   },
   loadingStop(): void {

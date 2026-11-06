@@ -5,7 +5,6 @@ import { worldCount } from "../../core";
 import { dispatch, gameStore, useGame } from "../../app/store";
 import { isHeld, whenStarted } from "../../app/session";
 import { haptics } from "../../services";
-import { createBattleGame } from "../../render/BattleScene";
 import { t } from "../i18n";
 import { featureView, seeFeature } from "../features";
 import { useUi } from "../uiStore";
@@ -104,21 +103,38 @@ function BossChoice() {
   );
 }
 
+/**
+ * The battle (Phaser and its scene) is its own download, fetched as the page first renders: the title
+ * screen doesn't need it, so the game reaches its title without downloading and starting Phaser first
+ * (about half the code, and the biggest part of the start-up work on a phone). It's ready by PLAY.
+ */
+const battleModule = () => import("../../render/BattleScene");
+
 export function BattlePanel() {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let game: Phaser.Game | null = null;
-    if (host.current) game = createBattleGame(host.current);
-    // Behind the title screen the battle waits too, drawing nothing, and starts on PLAY (world card and all).
-    if (isHeld()) game?.pause();
-    const off = whenStarted(() => game?.resume());
+    let gone = false;
+    let started = false;
     // Under a full-screen moment (the upgrade map, a big reveal...) it can't be seen: it keeps going
     // (so nothing piles up for later) but stops drawing, leaving the phone's time to what's on screen.
     const show = (covered: boolean) => game?.scene.getScenes(false).forEach((sc) => sc.sys.setVisible(!covered));
+    void battleModule().then(({ createBattleGame }) => {
+      if (gone || !host.current) return;
+      game = createBattleGame(host.current);
+      // Behind the title screen the battle waits too, drawing nothing, and starts on PLAY (world card and all).
+      if (isHeld() && !started) game.pause();
+      show(useUi.getState().blackout);
+    });
+    const off = whenStarted(() => {
+      started = true;
+      game?.resume();
+    });
     const offCover = useUi.subscribe((u, prev) => {
       if (u.blackout !== prev.blackout) show(u.blackout);
     });
     return () => {
+      gone = true;
       off();
       offCover();
       game?.destroy(true);

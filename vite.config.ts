@@ -19,6 +19,29 @@ function bootScreen(): Plugin {
   };
 }
 
+/**
+ * The battle's code (Phaser and its scene, src/ui/battleLoad.ts) is its own chunk, imported only once the
+ * title is up. A prefetch in the page starts its download at once, at the lowest priority (after the
+ * game's main script), so it arrives while the phone is still busy building the title instead of being
+ * asked for afterwards; the import then finds it in the cache. (No chunk, as in the artifact build: none.)
+ */
+function battlePrefetch(): Plugin {
+  return {
+    name: 'battle-prefetch',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        const chunk = Object.values(ctx.bundle ?? {}).find(
+          (c) => c.type === 'chunk' && !!c.facadeModuleId?.replace(/\\/g, '/').endsWith('/src/render/BattleScene.ts'),
+        );
+        if (!chunk) return [];
+        return [{ tag: 'link', attrs: { rel: 'prefetch', href: `./${chunk.fileName}`, crossorigin: '' }, injectTo: 'head' }];
+      },
+    },
+  };
+}
+
 // `--mode artifact` builds one self-contained page for the claude.ai artifact viewer
 // (fonts and lazy chunks inlined; tools/buildArtifact.mjs folds the JS and CSS into the HTML).
 /**
@@ -59,7 +82,7 @@ export default defineConfig(({ mode }) => {
   // `--mode crazygames` (npm run build:crazygames): real SDK ads and saves, see src/services/crazygames.ts.
   const crazygames = mode === 'crazygames';
   return {
-    plugins: [react(), bootScreen(), ...(crazygames ? [crazyGamesSdk()] : [])],
+    plugins: [react(), bootScreen(), battlePrefetch(), ...(crazygames ? [crazyGamesSdk()] : [])],
     base: './',
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),

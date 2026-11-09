@@ -6,6 +6,7 @@ import { dispatch, gameStore, useGame } from "../../app/store";
 import { isHeld, whenStarted } from "../../app/session";
 import { haptics } from "../../services";
 import { loadBattle } from "../battleLoad";
+import { bootGone } from "../boot";
 import { t } from "../i18n";
 import { featureView, seeFeature } from "../features";
 import { useUi } from "../uiStore";
@@ -104,9 +105,10 @@ function BossChoice() {
   );
 }
 
-// The battle (Phaser and its scene) is its own download, fetched as the page first renders: the title
-// screen doesn't need it, so the game reaches its title without downloading and starting Phaser first
-// (about half the code, and the biggest part of the start-up work on a phone). It's ready by PLAY.
+// The battle (Phaser and its scene) is its own download, prefetched as the page opens (quietly, while the
+// phone is busy building the title) and started once the loading screen has gone: the title screen doesn't
+// need it, so the game reaches its title without downloading and starting Phaser first (about half the
+// code, and the biggest part of the start-up work on a phone).
 
 export function BattlePanel() {
   const host = useRef<HTMLDivElement>(null);
@@ -117,13 +119,17 @@ export function BattlePanel() {
     // Under a full-screen moment (the upgrade map, a big reveal...) it can't be seen: it keeps going
     // (so nothing piles up for later) but stops drawing, leaving the phone's time to what's on screen.
     const show = (covered: boolean) => game?.scene.getScenes(false).forEach((sc) => sc.sys.setVisible(!covered));
-    void loadBattle().then(({ createBattleGame }) => {
-      if (gone || !host.current) return;
-      game = createBattleGame(host.current);
-      // Behind the title screen the battle waits too, drawing nothing, and starts on PLAY (world card and all).
-      if (isHeld() && !started) game.pause();
-      show(useUi.getState().blackout);
-    });
+    // Run once the loading screen has left (its glide stays smooth, and the title can be tapped at once);
+    // the download itself begins as the page opens (the battle prefetch, vite.config.ts).
+    void bootGone()
+      .then(loadBattle)
+      .then(({ createBattleGame }) => {
+        if (gone || !host.current) return;
+        game = createBattleGame(host.current);
+        // Behind the title screen the battle waits too, drawing nothing, and starts on PLAY (world card and all).
+        if (isHeld() && !started) game.pause();
+        show(useUi.getState().blackout);
+      });
     const off = whenStarted(() => {
       started = true;
       game?.resume();

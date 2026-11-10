@@ -125,7 +125,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'boot':
         // Loaded from a save: restart the current stage cleanly (mid-heist, the waiting one), then pay out offline time.
         if (d.heist.run) heistBoot(d);
-        else if (d.stage.chosen) startStage(d, d.battle.stage, ev, false);
+        else startStage(d, d.battle.stage, ev, false);
         expireBoosts(d, now, ev);
         onResume(d, now, ev, rng);
         checkUpgrade(d, now, ev);
@@ -198,7 +198,6 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       d.stage.mode = 'push';
       d.stage.powerAtDeath = null;
       d.stage.showToughHint = false;
-      d.stage.chosen = true;
       startStage(d, stage, ev, true);
       break;
     }

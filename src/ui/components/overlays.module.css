@@ -206,6 +206,47 @@
   color: rgba(255, 255, 255, 0.65);
   animation: fadeUp 400ms ease-out 1200ms backwards;
 }
+/* A tutorial find's reveal: the tap puts it on, and a big green button says so (it hops in, then bobs). */
+.wearBtn {
+  margin-top: calc(3 * var(--px));
+  min-height: calc(20 * var(--px));
+  padding: 0 calc(10 * var(--px));
+  font-size: 60px;
+  cursor: pointer;
+  animation:
+    wearIn 360ms steps(4) 500ms backwards,
+    wearBob 0.9s steps(2) 860ms infinite;
+}
+@keyframes wearIn {
+  0% { transform: translateY(calc(6 * var(--px))); opacity: 0; }
+  50% { transform: translateY(calc(-2 * var(--px))); opacity: 1; }
+  75% { transform: translateY(var(--px)); }
+}
+@keyframes wearBob {
+  50% { transform: translateY(calc(-1 * var(--px))); }
+}
+/* The wide stage has no room for the button under the item: there the hint's own line says it, as a green plate. */
+.wearHint {
+  display: none;
+}
+:global([data-layout='wide']) .wearBtn {
+  display: none;
+}
+:global([data-layout='wide']) .wearHint {
+  display: block;
+  bottom: calc(2 * var(--px));
+  padding: var(--px) calc(6 * var(--px));
+  font-family: var(--font-display);
+  font-size: 42px;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: var(--pixel-text);
+  background: linear-gradient(180deg, #b0ec6c 0 var(--px), #5dc14c var(--px) calc(100% - var(--px)), #2f8a45 calc(100% - var(--px)) 100%);
+  box-shadow: var(--pixel-edge);
+  animation:
+    fadeUp 400ms ease-out 500ms backwards,
+    wearBob 0.9s steps(2) 900ms infinite;
+}
 /* A haul's hint shows once its coins are in (it waits for a tap, like the reveal). */
 .tapNow {
   animation-delay: 0ms;

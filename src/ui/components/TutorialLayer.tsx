@@ -1,18 +1,17 @@
 /**
- * The first-run tutorial (new games only; see BAL.tutorial and dumpster.beginner in core). Quick
- * steps, each paid off with as much fanfare as the game has:
- *  - First a world (Kevin: "have them start on a world, and then unlock the roller"): the game opens
- *    on the Worlds tab and the hand points at World 1; picked, the raccoon starts fighting there, and
- *    the player stays on Worlds until the hand points them to the Roll tab.
- *  - Then the dumpster, padlocked under steel: the hand taps the padlock (DumpsterLock), the metal
- *    falls off, and it rolls the first item by itself: the Traffic Cone of Destiny, with the big reveal.
- *  1. Put it on: a pointing hand carries a ghost of it from its tile up to the raccoon, over and over,
- *     until you drag it there (then the equip slam and the power count). If it isn't on screen, the
- *     hand points at the Bag tab.
- *  2. Equip best: the hand taps the button (or the Bag tab first) and everything better slams on.
- *  3. Beginner's luck: a little later the reels chain two luck tokens into a Limited Edition hat (the
- *     big reveal calls it beginner's luck). Put it on and the tutorial ends: a full-screen celebration
- *     and a gem gift.
+ * The first-run tutorial (new games only; see BAL.tutorial and dumpster.beginner in core). The first
+ * minute decides whether a new player stays, so it has no menu in it: the raccoon is already fighting
+ * in World 1 as the title opens, and every step is one tap, paid off with as much fanfare as the game has:
+ *  1. Bust the dumpster open: the hand taps the padlock (DumpsterLock), the metal falls off and it
+ *     rolls by itself: one quick everyday find, then the Traffic Cone of Destiny with the big reveal.
+ *  2. Wear it: the reveal's tap puts it on (TAP TO WEAR IT, RevealLayer): it leaps out of the reveal
+ *     and slams onto the raccoon, and his power counts up.
+ *  3. Equip best: once a couple more finds are waiting, the hand taps the Bag tab and the button, and
+ *     everything better slams on.
+ *  4. Beginner's luck: a meter in the bubble fills while the reels roll (and the Roll tab's first
+ *     upgrades come up to buy, FirstBuy.tsx: the hand points at Buy for the first one). Full, the
+ *     reels chain two luck tokens into a Limited Edition hat (the big reveal calls it beginner's luck);
+ *     its tap puts it on and the tutorial ends: a full-screen celebration and a gem gift.
  * A bubble over the bottom of the battle says what to do, with four pips that light up (and chime,
  * a step higher each time) as the steps are done. Everything moves in whole art pixels.
  *
@@ -21,10 +20,10 @@
  * tapped (or its moment passes), then the next one gets its turn (ui/features.ts).
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { bestUpgrades, type CoreEvent, type Feature, type GameState } from '../../core';
+import { beginnerLuckCharge, bestUpgrades, tutorialOver, type CoreEvent, type Feature, type GameState } from '../../core';
 import { BAL } from '../../data';
 import { bus } from '../../app/eventBus';
-import { useGame } from '../../app/store';
+import { getGame, useGame } from '../../app/store';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { slamPoint } from '../../render/equipSlam';
@@ -36,39 +35,47 @@ import { t } from '../i18n';
 import { raysUrl } from '../rays';
 import { Rays } from './Rays';
 import { stageSize, useUi } from '../uiStore';
-import { GemIcon, HandIcon } from './Icons';
+import { firstBuyName, firstBuyOffer } from './FirstBuy';
+import { CloverIcon, GemIcon, HandIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import s from './tutorial.module.css';
 
-type Step = 'world' | 'open' | 'roll' | 'best' | 'fight' | 'lucky';
+type Step = 'open' | 'roll' | 'wear' | 'best' | 'fight' | 'lucky';
 
 const snap = (v: number) => Math.round(v / UI_PX) * UI_PX;
 
 /** Where the tutorial is, from the game itself (nothing extra is saved): null when it's over. */
-function stepOf(g: GameState): { step: Step | null; uid: number | null } {
+function stepOf(g: GameState): Step | null {
   const b = g.dumpster.beginner;
-  if (b.state === 'done') return { step: null, uid: null };
-  // First a world, then the dumpster (whose padlock waits for it, DumpsterLock).
-  if (!g.features.unlocked.includes('roll')) return { step: g.stage.chosen ? 'open' : 'world', uid: null };
+  if (b.state === 'done') return null;
+  // He's already fighting; the first thing to do is the padlocked dumpster.
+  if (!g.features.unlocked.includes('roll')) return 'open';
   const worn = g.lifetime.itemsEquipped > 0;
-  // The warm-up spins and the tutorial's own find rolling in (Kevin: "get them accustomed a bit first").
+  // The warm-up spin and the tutorial's own find rolling in.
   const findIn = worn || g.inventory.some((x) => x.baseId === BAL.dumpster.tutorialItem.baseId);
-  if (!g.dumpster.firstDiveDone || !findIn) return { step: 'roll', uid: null };
-  // Its find (and the warm-up's) go on with Equip best, no dragging (Kevin: "just take them to equip best").
-  if (!worn) return { step: 'best', uid: null };
-  // Beginner's luck: once its item has landed in the bag, put it on (Equip best again).
-  if (b.state === 'rolled' && g.inventory.some((x) => x.uid === b.uid)) return { step: 'lucky', uid: null };
-  // Then wear the best of the rest at once (done for good after a few items have gone on).
-  if (g.lifetime.itemsEquipped < 3 && bestUpgrades(g).length >= 2) return { step: 'best', uid: null };
-  return { step: 'fight', uid: null };
+  if (!g.dumpster.firstDiveDone || !findIn) return 'roll';
+  // Its find goes on from its reveal (TAP TO WEAR IT). Without the reveal (the game was reloaded on
+  // it), Equip best puts it on.
+  if (!worn) return 'wear';
+  // Beginner's luck has landed: it goes on from its reveal too.
+  if (b.state === 'rolled' && g.inventory.some((x) => x.uid === b.uid)) return 'lucky';
+  // The rest of what has rolled goes on with Equip best (taught once: after a few items are on, no more).
+  if (g.lifetime.itemsEquipped < BAL.tutorial.beginnerAfterEquips && bestUpgrades(g).length >= 2) return 'best';
+  return 'fight';
 }
 
-/** How many of the four steps are done. */
-function doneCount(step: Step): number {
-  // Start on a world, bust the dumpster open, dress him with Equip best, put beginner's luck on.
-  return step === 'world' ? 0 : step === 'open' ? 1 : step === 'roll' || step === 'best' ? 2 : 3;
+/** How many of the four steps are done: the dumpster open, the first find on, dressed with Equip best, beginner's luck on. */
+function doneCount(g: GameState): number {
+  if (g.dumpster.beginner.state === 'done') return STEPS;
+  if (!g.features.unlocked.includes('roll')) return 0;
+  const n = g.lifetime.itemsEquipped;
+  return n === 0 ? 1 : n < BAL.tutorial.beginnerAfterEquips ? 2 : 3;
 }
 const STEPS = 4;
+/** The beginner's luck meter, in art pixels across. */
+const METER = 40;
+/** How long the hand points at the first-upgrade card's Buy button (time on screen) once its price is in. */
+const BUY_POINT_MS = 20_000;
 
 /** A nav tab's button. */
 const navTab = (tab: string) => `nav button[aria-label="${t(`tab.${tab}`)}"]`;
@@ -218,8 +225,12 @@ function Hand({
   );
 }
 
-/** The bubble: what to do now, and three pips for the steps. */
-function Bubble({ text, done, gold }: { text: string; done: number | null; gold?: boolean }) {
+/**
+ * The bubble: what to do now, and four pips for the steps. While beginner's luck is on its way it also
+ * shows how close it is (`charge`, 0 to METER): as a meter beside the words when the bubble is about
+ * the luck itself (`meter`), else as a thin gold strip along its bottom edge.
+ */
+function Bubble({ text, done, gold, charge, meter }: { text: string; done: number | null; gold?: boolean; charge?: number | null; meter?: boolean }) {
   return (
     <div className={s.bubbleWrap}>
       <div key={text} className={`${s.bubble} ${gold ? s.bubbleGold : ''}`}>
@@ -230,7 +241,14 @@ function Bubble({ text, done, gold }: { text: string; done: number | null; gold?
             ))}
           </div>
         )}
+        {meter && <CloverIcon size="md" />}
         <span className={s.text}>{text}</span>
+        {meter && charge != null && (
+          <span className={s.meter} aria-hidden>
+            <span className={s.meterFill} style={{ ['--fill' as string]: charge } as CSSProperties} />
+          </span>
+        )}
+        {!meter && charge != null && <span className={s.strip} style={{ ['--fill' as string]: charge / METER } as CSSProperties} aria-hidden />}
       </div>
     </div>
   );
@@ -278,71 +296,83 @@ function Finale({ gems, onClose }: { gems: number; onClose: () => void }) {
 }
 
 export function TutorialLayer() {
-  const step = useGame((g) => stepOf(g).step);
+  const step = useGame(stepOf);
+  const done = useGame(doneCount);
   const intro = useGame(introFeature);
-  const uid = useGame((g) => stepOf(g).uid);
-  const baseId = useGame((g) => (uid !== null ? g.inventory.find((x) => x.uid === uid)?.baseId ?? null : null));
   const busyUi = useUi(
     (u) => u.celebrate !== null || u.popup !== null || u.drag !== null || u.tab === 'upgrades' || u.powerShow || u.rebirthFx !== null || u.unlocked !== null,
   );
   // The offline-rewards popup shows from game state, not the UI's popup.
   const busy = useGame((g) => g.offline.pending !== null) || busyUi;
-  const worldsOpen = useGame((g) => g.features.unlocked.includes('worlds'));
-  const chosen = useGame((g) => g.stage.chosen);
   const tab = useUi((u) => u.tab);
   const [finale, setFinale] = useState<number | null>(null);
-  /** The "keep rolling" bubble after the first equip shows for a few seconds only. */
-  const [fightUntil, setFightUntil] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
-  const last = useRef<Step | null>(step);
-
-  // A step done: the pips light up with a chime a step higher each time.
+  // From beginner's luck going on until the finale has closed, nothing else asks for attention.
+  const [ending, setEnding] = useState(false);
+  // An unfinished tutorial that features no longer wait for (features.ts tutorialOver).
+  const past = useGame(tutorialOver);
+  // Beginner's luck on its way: how full its meter is (whole art pixels), and whether its spin is rolling now.
+  const charging = useGame((g) => g.dumpster.beginner.state !== 'done' && g.lifetime.itemsEquipped > 0);
+  const charge = useGame((g) => Math.round(beginnerLuckCharge(g) * METER));
+  const incoming = useGame((g) => {
+    const b = g.dumpster.beginner;
+    return b.state === 'rolled' && !g.inventory.some((x) => x.uid === b.uid);
+  });
+  // The first-upgrade card's price is in (FirstBuy.tsx): the hand points at its Buy button for a while.
+  const offer = useGame((g) => {
+    const o = firstBuyOffer(g);
+    return o?.afford ? `${o.id}:${o.price}` : '';
+  });
+  const [buyTired, setBuyTired] = useState('');
+  const buyShown = useRef({ key: '', ms: 0 });
+  // The very first one only (after that the card's own glow says when the next is affordable; the card
+  // itself waits until he's dressed, so Equip best comes first), and never over beginner's luck's own spin.
+  const firstBuy = useGame((g) => Object.keys(g.upgrades).length === 0);
+  const buying = step === 'fight' && firstBuy && done >= 3 && !incoming && offer !== '' && buyTired !== offer;
   useEffect(() => {
-    const before = last.current;
-    last.current = step;
-    if (!before || !step || before === step) return;
-    const n = doneCount(step);
-    if (n > doneCount(before)) setTimeout(() => audio.tierPass(4 + n * 2), 400);
-    if (step === 'fight' && before === 'best') setFightUntil(Date.now() + 5200);
-  }, [step]);
+    if (!buying || busy || ending) return;
+    if (buyShown.current.key !== offer) buyShown.current = { key: offer, ms: 0 };
+    const from = Date.now();
+    const id = setTimeout(() => setBuyTired(offer), Math.max(0, BUY_POINT_MS - buyShown.current.ms));
+    return () => {
+      clearTimeout(id);
+      buyShown.current.ms += Date.now() - from;
+    };
+  }, [buying, busy, ending, offer]);
 
+  // A step done: the pips light up with a chime a step higher each time (the last one is the finale's).
+  const lastDone = useRef(done);
   useEffect(() => {
-    if (!fightUntil) return;
-    // (Ticks only until its time is up: it used to tick every half second for the rest of the session.)
-    const id = setInterval(() => {
-      const t0 = Date.now();
-      setNow(t0);
-      if (t0 > fightUntil) clearInterval(id);
-    }, 500);
-    return () => clearInterval(id);
-  }, [fightUntil]);
+    const before = lastDone.current;
+    lastDone.current = done;
+    if (done > before && done < STEPS) setTimeout(() => audio.tierPass(4 + done * 2), 400);
+  }, [done]);
 
   // The end: after the equip slam and the power count have had their moment.
-  useEffect(
-    () =>
-      bus.on((events: CoreEvent[]) => {
-        const done = events.find((e): e is Extract<CoreEvent, { type: 'tutorialDone' }> => e.type === 'tutorialDone');
-        // After the slam (about a second) and the power count (about two more) have had their moment.
-        if (done) setTimeout(() => setFinale(done.gems), 3900);
-      }),
-    [],
-  );
-
-  // A brand-new game opens on the Worlds tab, its first step.
   useEffect(() => {
-    if (step === 'world') useUi.getState().setTab('worlds');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const off = bus.on((events: CoreEvent[]) => {
+      const over = events.find((e): e is Extract<CoreEvent, { type: 'tutorialDone' }> => e.type === 'tutorialDone');
+      if (!over) return;
+      setEnding(true);
+      // (A boss that fell just now has its own card up, asking again or next: the finale waits for it.)
+      const show = () => {
+        if (getGame().battle.phase === 'choice') timer = setTimeout(show, 400);
+        else setFinale(over.gems);
+      };
+      // After the slam (about a second) and the power count (about two more) have had their moment.
+      timer = setTimeout(show, 3900);
+    });
+    return () => {
+      off();
+      clearTimeout(timer);
+    };
   }, []);
 
-  let bubble: { text: string; gold?: boolean; intro?: boolean } | null = null;
+  let bubble: { text: string; gold?: boolean; intro?: boolean; meter?: boolean } | null = null;
   let hand = false;
   let target: { target: string; fallback?: string } | null = null;
-  if (step === 'world') {
-    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.goWorlds') };
-    hand = true;
-    target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
-  } else if (step === 'open') {
-    // He's fighting; the player goes to the Roll tab, then busts the dumpster open there.
+  if (step === 'open') {
+    // He's fighting already; the player busts the dumpster open (on the Roll tab, where a new game opens).
     hand = true;
     if (tab === 'alley') {
       bubble = { text: t('tut.open') };
@@ -352,34 +382,36 @@ export function TutorialLayer() {
       target = { target: navTab('alley') };
     }
   } else if (step === 'roll') bubble = { text: t('tut.roll') };
-  else if (step === 'best') {
-    bubble = { text: t('tut.best') };
+  else if (step === 'wear') {
+    bubble = { text: t('tut.wear') };
     hand = true;
-  } else if (step === 'fight' && now < fightUntil) bubble = { text: t('tut.fight') };
-  else if (step === 'lucky') {
+  } else if (step === 'lucky') {
     bubble = { text: t('tut.lucky'), gold: true };
     hand = true;
+  } else if (incoming) {
+    // Its spin is rolling (tokens and all): nothing else asks for attention.
+    bubble = { text: t('tut.chargeNow'), gold: true };
+  } else if (step === 'best') {
+    bubble = { text: t('tut.best') };
+    hand = true;
+  } else if (step === 'fight') bubble = { text: t('tut.charge'), meter: true };
+  // The first upgrades, one at a time, as each one's price comes in.
+  if (buying) {
+    bubble = { text: t('tut.buy', { name: firstBuyName(offer.split(':')[0]) }), gold: true };
+    hand = true;
+    target = { target: '[data-intro="firstBuy"]', fallback: navTab('alley') };
   }
-  // A feature that just opened, once the tutorial's own steps leave room (the Bag also opens during
-  // the Equip best step, whose hand taps the Bag tab anyway).
-  const introducing = intro && (step === null || step === 'fight') ? intro : null;
+  // A feature that just opened, once the tutorial is over (or has gone on so long that the features
+  // stopped waiting for it): while it runs, its own steps are all there is to follow (its Equip best
+  // step taps the Bag tab; Worlds, open once World 1's boss falls, waits for the finale).
+  const introducing = intro && (step === null || (step === 'fight' && past && !incoming && !buying)) ? intro : null;
   if (introducing && introducing !== 'roll') {
     bubble = { text: t(`tut.intro.${introducing}`), gold: true, intro: true };
     hand = true;
     target = INTRO[introducing];
   }
-  // A new game's first world: the raccoon waits until one is picked (stage.chosen). Worlds' own
-  // introduction points at its tab; once it's met, the hand stays on the tab (or World 1's card, on
-  // the Worlds tab) until he's fighting. It comes after the Bag, and anything introduced after it
-  // (Upgrades, say) waits until he's fighting.
-  const before = introducing === 'bag';
-  const picking = !before && (step === null || step === 'fight') && worldsOpen && !chosen;
-  if (picking) {
-    bubble = { text: tab === 'worlds' ? t('tut.pickWorld') : t('tut.goWorlds'), gold: true, intro: true };
-    hand = true;
-    target = { target: '[data-intro="world1"]', fallback: navTab('worlds') };
-  }
-  const showing = !busy && introducing !== null && !picking;
+  const quiet = busy || ending;
+  const showing = !quiet && introducing !== null;
   useEffect(() => {
     if (!showing || !introducing || introducing === 'roll') return;
     // Not tapped in time: the next one gets its turn.
@@ -388,11 +420,27 @@ export function TutorialLayer() {
   }, [showing, introducing]);
   return (
     <div className={s.layer}>
-      {!busy && bubble && <Bubble text={bubble.text} done={bubble.intro ? null : step ? doneCount(step) : STEPS} gold={bubble.gold} />}
-      {!busy && hand && (
-        <Hand uid={target ? null : uid} baseId={target ? null : baseId} best={step === 'best' || step === 'lucky'} target={target?.target} fallback={target?.fallback} />
+      {!quiet && bubble && (
+        <Bubble
+          text={bubble.text}
+          done={bubble.intro ? null : done}
+          gold={bubble.gold}
+          meter={bubble.meter}
+          charge={charging && !incoming && !bubble.intro ? charge : null}
+        />
       )}
-      {finale !== null && <Finale gems={finale} onClose={() => setFinale(null)} />}
+      {!quiet && hand && (
+        <Hand uid={null} baseId={null} best={step === 'wear' || step === 'best' || step === 'lucky'} target={target?.target} fallback={target?.fallback} />
+      )}
+      {finale !== null && (
+        <Finale
+          gems={finale}
+          onClose={() => {
+            setFinale(null);
+            setEnding(false);
+          }}
+        />
+      )}
     </div>
   );
 }

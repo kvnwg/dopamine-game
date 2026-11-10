@@ -38,9 +38,6 @@ export function WorldsPanel() {
   const g = useGameWhen((x) => [x.battle.stage, x.stage, tutorialOver(x), x.equipped, x.player.level, x.upgrades, x.codex.entries.length]);
   const here = g.battle.stage;
   const best = g.stage.highestCleared;
-  // Before the first pick (a new game's raccoon waits for it), no threat ratings: at level 1 every world
-  // reads as deadly (he levels up through the waves), and World 1 says where to start.
-  const first = !g.stage.chosen;
   // During the tutorial he can't fall in World 1 (combat.ts): no scary rating on it.
   const safeStart = !tutorialOver(g);
   const threats = useMemo(
@@ -66,7 +63,6 @@ export function WorldsPanel() {
               <button
                 key={w.id}
                 className={`${s.card} ${isHere ? s.cardHere : ''}`}
-                data-intro={n === 1 ? 'world1' : undefined}
                 style={{ ['--tc' as string]: THREAT_COLOR[level] } as CSSProperties}
                 onClick={() => {
                   haptics.impact('light');
@@ -77,7 +73,7 @@ export function WorldsPanel() {
                   <Thumb world={n} />
                   <span className={s.num}>{n}</span>
                   {isHere ? (
-                    <span className={s.here}>{first ? t('worlds.startHere') : t('worlds.here')}</span>
+                    <span className={s.here}>{t('worlds.here')}</span>
                   ) : n <= best ? (
                     <CheckIcon size="md" className={s.done} />
                   ) : null}
@@ -85,7 +81,7 @@ export function WorldsPanel() {
                 <div className={s.info}>
                   <span className={s.name}>{w.name}</span>
                   <div className={s.row}>
-                    {!first && !(n === 1 && safeStart) && <ThreatChip level={level} />}
+                    {!(n === 1 && safeStart) && <ThreatChip level={level} />}
                     <span className={s.gold}>
                       <CoinIcon />×{formatNumber(worldRewards(n).gold)}
                     </span>

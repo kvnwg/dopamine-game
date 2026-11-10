@@ -232,6 +232,8 @@ function begin(): void {
   }
   sessionStartedAt = clock.now();
   analytics.track('session_start');
+  // A brand-new game's PLAY: the start of its funnel (funnel.ts).
+  if (getGame().playTimeMs === 0) analytics.track('funnel', { step: 'play', t: 0 });
   lastFrame = performance.now();
   accumulator = 0;
 }

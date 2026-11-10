@@ -166,13 +166,8 @@ export function simulate(opts: SimOptions): SimResult {
       act({ type: 'afterBoss', next: true });
     }
 
-    // A new game's raccoon waits for his first world: the player picks World 1 when the Worlds tab opens.
-    if (!state.stage.chosen) {
-      if (state.features.unlocked.includes('worlds')) act({ type: 'travel', world: 1 });
-      continue;
-    }
-
-    if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead') {
+    // (The Worlds tab opens once World 1's boss has fallen: no jumping ahead before that.)
+    if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead' && state.features.unlocked.includes('worlds')) {
       nextJump = elapsed + 10_000;
       let target = 0;
       for (let w = worldCount(); w > state.battle.stage; w--) {

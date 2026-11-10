@@ -322,11 +322,11 @@ export function tokenMult(all: ReadonlyArray<readonly number[]>, reel: number, c
  */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
-  // A new game's first spins warm up: everyday finds climbing BAL.tutorial.warmupRarities (no tokens,
-  // nothing scripted). Then the tutorial scripts two spins: its own find (rollReelItem gives the
-  // tutorial item) and, a little later, beginner's luck: its first reel chains BAL.tutorial's tokens
-  // into a rare item. The reels rest on either find while it waits in the bag to be put on (rollTick
-  // ends the rest when it goes).
+  // A new game's first spin warms up: an everyday find (BAL.tutorial.warmupRarities: no tokens, nothing
+  // scripted), quick, so the tutorial's own find isn't the very first thing the reels do. Then the
+  // tutorial scripts two spins: its own find (rollReelItem gives the tutorial item) and, a little
+  // later, beginner's luck: its first reel chains BAL.tutorial's tokens into a rare item. The reels
+  // rest on either find while it waits in the bag to be put on (rollTick ends the rest when it goes).
   const warm = BAL.tutorial.warmupRarities;
   const warmup = !d.dumpster.firstDiveDone && d.roll.count < warm.length ? warm[d.roll.count] : null;
   const scripted = warmup ? null : !d.dumpster.firstDiveDone ? 'first' : beginnerLuckDue(d) ? 'beginner' : null;
@@ -371,13 +371,15 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     rolled.push({ item, mults });
   }
   // The finds decide the pace: a build-up (a scripted spin always has one, and its find the reveal)
-  // needs the spin's full length, and the warm-up spins roll at their own easy pace (the bags wait).
+  // needs the spin's full length. The warm-up spin is a quick one of its own (`warmupTurbo`: turbo
+  // speed, and the bags wait), so the Legendary after it comes in the game's first seconds.
   const judged = judgeFinds(d, rolled.map((r) => r.item), currentLuck(d, now));
   if (scripted) judged.drama[0] ??= 'big';
   const buildsUp = scripted !== null || judged.tease > 0 || judged.drama.some((x) => x !== null);
   const turbo = d.currencies.bags >= 1 && !buildsUp && !warmup;
   if (turbo) d.currencies.bags -= 1;
-  const cycle = spinCycle(d, turbo);
+  // (The warm-up goes by as fast as a turbo spin, but isn't one: no bag spent, no TURBO badge.)
+  const cycle = spinCycle(d, turbo || (warmup !== null && BAL.tutorial.warmupTurbo));
   const baseSpinSeconds = cycle * spinShare();
   const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
@@ -414,6 +416,24 @@ export function beginnerLuckDue(d: GameState): boolean {
   const open = d.dumpster.openedAtMs;
   const longEnough = open === null || d.playTimeMs - open >= t.beginnerAfterSeconds * 1000;
   return longEnough && d.roll.count >= t.beginnerAfterRolls && d.lifetime.itemsEquipped >= t.beginnerAfterEquips;
+}
+
+/**
+ * How close beginner's luck is, 0 to 1, for the tutorial's meter (it fills while the player waits,
+ * so the wait has an end in sight): the least of what beginnerLuckDue waits for (rolls, items worn,
+ * seconds since the padlock), or the rolls that bring it regardless, whichever is further along.
+ * 1 exactly when the next spin is it (and from then on).
+ */
+export function beginnerLuckCharge(d: GameState): number {
+  const t = BAL.tutorial;
+  if (d.dumpster.beginner.state !== 'pending') return 1;
+  if (d.rebirths > 0) return 0;
+  if (beginnerLuckDue(d)) return 1;
+  const open = d.dumpster.openedAtMs;
+  const time = open === null || t.beginnerAfterSeconds <= 0 ? 1 : (d.playTimeMs - open) / (t.beginnerAfterSeconds * 1000);
+  const main = Math.min(time, d.roll.count / t.beginnerAfterRolls, d.lifetime.itemsEquipped / t.beginnerAfterEquips);
+  // (Not due yet, so never quite full.)
+  return Math.max(0, Math.min(0.99, Math.max(main, d.roll.count / t.beginnerAtRolls)));
 }
 
 /**

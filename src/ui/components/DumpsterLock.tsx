@@ -10,7 +10,6 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { dispatch, useGame } from '../../app/store';
-import { useUi } from '../uiStore';
 import { haptics } from '../../services';
 import { audio } from '../../services/audio';
 import { uiBitArt, UI_PX } from '../../render/icons';
@@ -51,10 +50,7 @@ const SPARKS = [
 
 export function DumpsterLock() {
   const locked = useGame((g) => !g.features.unlocked.includes('roll'));
-  const onWorld = useGame((g) => g.stage.chosen);
   const [phase, setPhase] = useState<Phase | null>(locked ? 'idle' : null);
-  /** Bumped by a tap before a world is picked: the padlock rattles, no. */
-  const [nope, setNope] = useState(0);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const pieces = useRef<Partial<Record<Piece, HTMLElement | null>>>({});
@@ -103,13 +99,6 @@ export function DumpsterLock() {
 
   const open = () => {
     if (phase !== 'idle') return;
-    if (!onWorld) {
-      setNope((n) => n + 1);
-      audio.lockHit();
-      haptics.impact('light');
-      useUi.getState().toast(t('toast.pickWorldFirst'), 'info');
-      return;
-    }
     setPhase('hit');
     audio.lockHit();
     haptics.impact('medium');
@@ -145,7 +134,6 @@ export function DumpsterLock() {
       ref={root}
       className={s.lock}
       data-phase={phase}
-      data-nope={nope ? (nope % 2 ? 'a' : 'b') : undefined}
       data-dumpster-lock
       role="button"
       tabIndex={0}

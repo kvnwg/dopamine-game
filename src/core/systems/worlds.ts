@@ -1,5 +1,5 @@
 /**
- * World travel and threat. Every world is open from the start; one far above the raccoon's
+ * World travel and threat. Every world is open once World 1 is beaten; one far above the raccoon's
  * power simply one-shots it. Items rolled while fighting take the world's tier, capped at one
  * world past the best world beaten (so a suicide trip to World 20 can't farm World 20 loot).
  */
@@ -17,10 +17,8 @@ export function travelTo(d: GameState, world: number, ev: CoreEvent[]): boolean 
   if (!Number.isFinite(w)) return false;
   // The raccoon is out on a heist: the Alley waits.
   if (d.heist?.run) return false;
-  // (Before the first pick he stands in World 1 without fighting: picking it starts the fight.)
-  if (w < 1 || w > worldCount() || (w === d.battle.stage && d.stage.chosen)) return false;
+  if (w < 1 || w > worldCount() || w === d.battle.stage) return false;
   const s = d.stage;
-  s.chosen = true;
   s.returnTo = w > d.battle.stage ? d.battle.stage : w;
   s.mode = w > s.highestCleared ? 'push' : 'farm';
   s.powerAtDeath = null;

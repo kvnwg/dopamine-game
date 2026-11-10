@@ -2,7 +2,46 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## Monetization: Gems once per world, CrazyGames ad rules, Boosts, the moment offers, midgame ads (Nov 5, newest)
+## The first minute: land in the fight, every step one tap (Nov 10, newest)
+
+Kevin: "i need to increase gameplay conversion for the 1st minute of the game, they need to play past one minute and right now the first minute is just too slow", then "ok lets do it" to the plan below. CrazyGames counts a player as converted once they have played for a minute, and says top titles convert 80% or more.
+
+Measured first, with a bot that takes 2.5 s to read and act on each ask (a fresh game in a headless browser, seconds from the page opening): the raccoon started fighting at 14 s, the dumpster started rolling at 22 s, the first Legendary landed at 35 s and was on him at 48 s, beginner's luck landed at 66 s, World 1's boss fell at 69 s, and the first upgrade could be bought from 76 s. The game's three best hooks all sat just past the minute.
+
+| # | Decision | Why |
+|---|---|---|
+| Y1 | A new game lands in the fight: the raccoon is already walking into World 1's first wave as the title's iris opens, and the game opens on the Roll tab with the hand on the padlock. No world is picked first (*replaces F1, F2, P3 and E4's wait*): `stage.chosen` is gone, a new battle starts in `walking`, and a save from when he waited (the battle `idle`) starts fighting on load. | The world list, World 1's popup with its numbers, START THE FIGHT and the trip to the Roll tab were four asks and about 14 s before anything rolled. CrazyGames' own requirement for a full launch is "land directly in gameplay". |
+| Y2 | The Worlds tab opens when World 1's boss falls (`highestCleared >= 1`), introduced with a NEW bubble like the others; it was open from the start. | Until then there is nowhere else worth going, and one less tab to look at in the first minute. |
+| Y3 | One warm-up spin, not three (`tutorial.warmupRarities`: Junk), at a turbo spin's speed (`warmupTurbo`) without spending a Trash Bag or showing the TURBO badge. The Traffic Cone lands about 4.5 s after the padlock. *Trims E5 and E12.* | Three spins at 3.5 s each were 10 s of watching junk roll with nothing to tap. One still shows what an everyday find looks like before the Legendary. |
+| Y4 | A tutorial find goes on from its reveal: once the odds have landed, the reveal shows TAP TO WEAR IT! (a green button under the item; on the wide stage, where there is no room, a green plate on the hint's line) and that tap closes the reveal and equips it. It leaps out of the reveal's own picture and slams onto him. Both scripted finds work this way, so beginner's luck ends the tutorial with one tap. If the game is reloaded with the find still in the bag, the old step is the fallback: "Tap EQUIP BEST to wear your find!". | It replaces two taps on the reveal, the Bag tab and Equip best (13 s measured). The reveal's hint also still said "drag it onto your raccoon" while the tutorial said Equip best. |
+| Y5 | Equip best is taught on the next finds instead: once the first find is on and two upgrades are waiting, the hand taps the Bag tab and the button (until three items have gone on, as before). The Bag isn't given a NEW bubble of its own while the tutorial runs. | Still one thing taught at a time; and beginner's luck still waits for three items worn. |
+| Y6 | The first upgrades are bought on the Roll tab: once he is dressed (three items on, so after the Equip best step) and until the tutorial ends, a card under the last roll shows the cheapest upgrade open to buy (Luck I at 15 gold, then the cheapest line hanging off it), a bar filling toward its price, and one Buy button (`FirstBuy.tsx`, `cheapestUpgrade`). The hand points at Buy for the first one only, for 20 s on screen; after that the card's gold edge says when the next is affordable. When the tutorial ends the Upgrades screen opens even with nothing affordable if one was bought here. | A new player held 53 gold at 55 s with nothing to spend it on: Upgrades opened only when the tutorial ended (76 s or later). Buying something is the clearest sign of a player who stays. The whole honeycomb map in the first minute would be the "too much going on" of E1. |
+| Y7 | Beginner's luck has a meter: from the first item on, the tutorial's bubble reads BEGINNER'S LUCK with a bar (`beginnerLuckCharge`: the least of the rolls, the items worn and the seconds it waits for, or the rolls that bring it regardless; full exactly when the next spin is it). Under a bubble about something else it is a green strip along the bubble's bottom edge. While its spin rolls the bubble reads "BEGINNER'S LUCK: HERE IT COMES!". Its timing is unchanged (P2: 35 s after the padlock). | The wait between dressing up and the jackpot had nothing in it; a bar that is nearly full is a reason to stay. With the padlock coming off at about 5 s instead of 22 s, the find lands at about 50 s of play without moving its gate. |
+| Y8 | World 1's boss: a BOSS NEXT! banner on the wave before a boss he hasn't beaten (the BOSS! banner on its own wave was already there). A first-run raccoon can't fall in World 1 until that boss has fallen once (`firstWorldSafe`; it was until the tutorial ended, F3). | The boss arrives 42 to 59 s into play and falls at 55 to 78 s (12 seeds), so its fight covers the one-minute mark. The tutorial now ends at about 56 s, mid-boss: without the longer rule a new player's first minute could end on a K.O. |
+| Y9 | Opened features take their turns in the order they opened (`introFeature` follows `features.unlocked`), not a fixed order, and none is introduced while the tutorial runs. From beginner's luck going on until the finale has closed, no bubble or hand shows, and the finale waits for a boss's "again or next?" card to go. | Worlds now opens at about a minute, as Upgrades does: in the fixed order one NEW bubble cut the other off after 3 s, and its tab locked again. |
+| Y10 | A first-session funnel (`src/app/funnel.ts`): `play`, `dumpster_open`, `first_roll`, `first_find`, `first_equip`, `dressed`, `first_upgrade`, `second_upgrade`, `beginner_spin`, `beginner_find`, `tutorial_done` or `tutorial_left`, `first_boss`, `world_1_clear`, and `played_15s` to `played_300s`, each once per game with its second of play, sent as `funnel` events through services/analytics. Read off each change of the game, nothing saved. | The numbers here are pacing from a bot, not where real players leave. No analytics service is connected yet (the events show in a dev build's console): one has to be chosen before they become a chart. |
+| Y11 | The PLAY sequence (the hop and the iris, 1.7 s) is left as it is. | The 2 to 3 s measured from PLAY to the game on screen was mostly the dev server loading the battle's code; trimming the animation itself would save about a third of a second. |
+| Y12 | The balance test runs seed 1 (it was 2). | Two fewer warm-up spins deal every seed's luck differently, and seed 2 now chains its way to World 9 at 71 minutes, past the test's "World 9 not yet" (as seeds 6 and 8 already did). Over 8 seeds the balance is the same before and after: the best world at 75 minutes averages 7.4 both ways, the first rebirth 21.8 and 22.3 minutes. |
+
+**Result**, the same bot on the new first minute, in seconds of play since PLAY (the game's clock starts about 5 s after the page opens for this bot: 4 s to press PLAY, then the iris). Before: the one browser run above. Now: 12 seeds through the core, matching the browser runs on the phone and PC layouts.
+
+| Moment | Before | Now |
+|---|---|---|
+| Raccoon fighting | 9 s | 0 s (first enemies at 1 s) |
+| Dumpster rolling | 17 s | 4.6 s |
+| First Legendary lands | 30 s | 9 s |
+| Wearing it | 43 s | 15 s |
+| Dressed (Equip best) | 43 s | 24 to 28 s |
+| First upgrade can be bought | 70 s or later | 24 to 28 s (its card comes up as he is dressed, the hand on Buy) |
+| Beginner's luck spin starts | 52 s | 40 to 43 s |
+| Beginner's luck lands | 61 s | 49 to 52 s |
+| Tutorial done | 70 s | 55 to 58 s |
+| World 1's boss arrives | 53 s | 42 to 59 s |
+| World 1's boss falls | 64 s | 55 to 78 s |
+
+A slower player (4 s for each ask) sees the Legendary at 12 s and has beginner's luck rolling before 56 s, so the minute passes mid build-up.
+
+## Monetization: Gems once per world, CrazyGames ad rules, Boosts, the moment offers, midgame ads (Nov 5)
 
 Kevin: "for the app version i want ingame purchases for sure. for crazygames i just need the right ad placements", then "ok do it" to the first steps of [`docs/MONETIZATION.md`](docs/MONETIZATION.md) (the Gem fix, CrazyGames' ad rules, the Boosts panel), then "once [you're] done make me the crazygames zip" for the rest of its placements (J9 on).
 

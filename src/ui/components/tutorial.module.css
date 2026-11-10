@@ -24,6 +24,7 @@
   width: 1080px;
 }
 .bubble {
+  position: relative;
   display: flex;
   align-items: center;
   gap: calc(3 * var(--px));
@@ -55,7 +56,33 @@
   font-size: 34px;
   white-space: nowrap;
 }
-/* Three pips, one per step; a done one is green. */
+/* Beginner's luck on its way: a gold meter beside the words (40 art pixels across)... */
+.meter {
+  position: relative;
+  flex: none;
+  width: calc(40 * var(--px));
+  height: calc(5 * var(--px));
+  background: #3b3350;
+  box-shadow: var(--pixel-edge);
+}
+.meterFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--fill) * var(--px));
+  background: linear-gradient(180deg, #d8ffd0 0 var(--px), #46d36b var(--px) calc(100% - var(--px)), #2fb150 calc(100% - var(--px)) 100%);
+}
+/* ...or, under a bubble about something else, a strip along its bottom edge. */
+.strip {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(var(--fill) * 100%);
+  height: var(--px);
+  background: #46d36b;
+}
+/* Four pips, one per step; a done one is green. */
 .pips {
   display: flex;
   gap: var(--px);

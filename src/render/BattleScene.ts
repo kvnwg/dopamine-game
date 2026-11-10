@@ -2293,6 +2293,10 @@ export class BattleScene extends Phaser.Scene {
           const boss = g.battle.enemies.some((x) => x.kind !== 'regular');
           if (boss) this.time.delayedCall(700, () => this.banner(t('battle.bossIncoming'), ['#ffd0c0', '#ff4d3d']));
           else if (e.wave === 0) this.time.delayedCall(700, () => this.banner(t('battle.fight'), GOLD));
+          // The last wave before a boss he hasn't beaten: a heads-up, so there is a fight worth staying for.
+          else if (!g.heist.run && e.wave === BAL.stages.wavesPerStage - 2 && e.stage > g.stage.highestCleared) {
+            this.time.delayedCall(700, () => this.banner(t('battle.bossNext'), ['#ffe9c0', '#ff8a3d']));
+          }
           break;
         }
         case 'worldFirstClear':

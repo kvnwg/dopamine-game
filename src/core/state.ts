@@ -361,12 +361,8 @@ export const GameStateSchema = z.object({
     showToughHint: z.boolean(),
     /** Losses in a row in this world: it is retried until worlds.lossesBeforeBack, then it falls back. */
     losses: z.number().int().nonnegative().default(0),
-    /**
-     * A world has been picked. A new game's raccoon waits in his street (the battle idle) until the
-     * player picks his first world on the Worlds tab (Kevin: "raccoon doesn't start attacking until u
-     * show and select a world"). Saves from before this are already fighting.
-     */
-    chosen: z.boolean().default(true),
+    // (Saves from Nov 2026 also carry `chosen`: whether the first world had been picked yet. A new game
+    // starts in World 1's fight now, so it is dropped on load, and such a raccoon starts fighting.)
   }),
   battle: BattleSchema,
   dumpster: z.object({
@@ -513,13 +509,13 @@ export function createInitialState(now: number, seed: number): GameState {
     equipped: emptyEquipment(),
     inventory: [],
     nextItemUid: 1,
-    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0, chosen: false },
+    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0 },
     battle: {
       stage: 1,
       wave: 0,
-      // Waiting for the player to pick a world (stage.chosen).
-      phase: 'idle',
-      phaseTime: 0,
+      // A new game lands in the fight: he walks into World 1's first wave as the title opens.
+      phase: 'walking',
+      phaseTime: BAL.combat.walkSeconds,
       playerHp: BAL.player.base.HP,
       playerAtkProgress: 0,
       enemies: [],
@@ -552,8 +548,8 @@ export function createInitialState(now: number, seed: number): GameState {
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, soundVolume: 1, musicVolume: 1, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
-    // Worlds is open from the start (features.ts); the rest opens one at a time.
-    features: { unlocked: ['worlds'], seen: ['worlds'] },
+    // Everything starts locked and opens one thing at a time (features.ts); the dumpster's padlock is the first tap.
+    features: { unlocked: [], seen: [] },
     perks: freshPerks(),
     boosts: freshBoosts(),
   };

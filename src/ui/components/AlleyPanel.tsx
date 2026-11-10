@@ -5,8 +5,9 @@
  * Bag tab; items are equipped by dragging them up onto the raccoon.
  *
  * Layout (800 stage px below the battle, no scrolling): the machine card (a row of info, the reel bank
- * across the whole card, another row of info; Reel.tsx), the last roll and the rarest-roll line. The
- * machine is the same size for one to five reels: the reels share its width.
+ * across the whole card, another row of info; Reel.tsx), the last roll and, during a new game's
+ * tutorial, the first-upgrade card (FirstBuy.tsx). The machine is the same size for one to five reels:
+ * the reels share its width.
  */
 import { useMemo, type CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
@@ -25,6 +26,7 @@ import { ArrowDownIcon, ArrowUpIcon, BookIcon, BoltIcon, CheckIcon, CloverIcon, 
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { PixelArt } from './PixelArt';
 import { DumpsterLock } from './DumpsterLock';
+import { FirstBuy } from './FirstBuy';
 import { ReelBank } from './Reel';
 import s from './alley.module.css';
 
@@ -89,12 +91,10 @@ function LastRoll() {
     return wornPower(g, it) - (worn ? wornPower(g, worn) : 0);
   });
   const sparkle = useMemo(() => sparkleArt(), []);
-  // A new game's first step is a world; the padlock waits for it.
-  const onWorld = useGame((g) => g.stage.chosen);
   if (!last) {
     return (
       <div className={`${s.last} card`}>
-        <span className={s.waiting}>{t(onWorld ? 'roll.firstRoll' : 'roll.firstWorld')}</span>
+        <span className={s.waiting}>{t('roll.firstRoll')}</span>
       </div>
     );
   }
@@ -303,6 +303,7 @@ export function AlleyPanel() {
         )}
       </div>
       <LastRoll />
+      <FirstBuy />
     </div>
   );
 }

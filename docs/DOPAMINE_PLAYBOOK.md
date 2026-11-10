@@ -263,7 +263,7 @@ A few tricks raise spending for a week, then bring refunds, store rejections, re
 
 What the build already does from this playbook (the rest is scheduled in `DECISIONS.md`):
 
-- Scripted Legendary on the very first roll (first few seconds).
+- Scripted Legendary on the second roll, about 5 seconds after the dumpster opens (one quick everyday find first), worn with the reveal's own tap. A new game lands in the fight, and beginner's luck has a meter that fills toward its spin (DECISIONS Y1 to Y8).
 - Constant small wins: the dumpster's reels roll on their own and land an item every 2.6 seconds per reel, faster with the Spin Speed upgrade and Trash Bag turbo spins; Extra Reels (expensive) add more items per spin.
 - Near misses on free spins only: the blacked-out items rolling past show their odds and lean much rarer than the real odds, often with a Legendary-or-better right next to the result. Only landed results use the real odds. This must stay off any spin bought with real money (see "Lines not to cross").
 - A visible variable-ratio beat: the Lucky Spin meter fills toward a x2-luck spin, and once unlocked, a Golden Spin (x5 luck) can strike any spin.

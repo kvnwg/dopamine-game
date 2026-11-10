@@ -517,7 +517,8 @@
   },
   "midgame": { "gapMinutes": 6, "firstVisitMinutes": 10, "sessionMinutes": 3, "minWorld": 3 },
   "tutorial": {
-    "warmupRarities": ["junk", "decent", "shiny"],
+    "warmupRarities": ["junk"],
+    "warmupTurbo": true,
     "beginnerAfterRolls": 8,
     "beginnerAfterEquips": 3,
     "beginnerAfterSeconds": 35,

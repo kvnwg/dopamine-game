@@ -127,6 +127,8 @@ const ICONS: Record<string, UiIcon> = {
   titan: 'heart',
 };
 const iconOf = (id: string): UiIcon => ICONS[id] ?? 'star';
+/** An upgrade line's icon (also on the Roll tab's first-upgrade card, FirstBuy.tsx). */
+export const upgradeIcon = iconOf;
 
 export function nodeName(n: HexNode): string {
   const name = t(`upgrade.${n.id}`);

@@ -62,8 +62,6 @@ export function fallbackRate(state: GameState): Rate {
 export function currentRate(state: GameState, now: number): Rate {
   // During a heist the Alley is paused: the rate is the one from when the run started.
   if (state.heist?.run) return { ...state.heist.run.mainRate };
-  // No world picked yet: he isn't fighting.
-  if (!state.stage.chosen) return { bags: 0, coins: 0, xp: 0 };
   const o = state.offline;
   const windowMs = BAL.offline.rateWindowMinutes * MS_PER_MINUTE;
   if (o.trackingSince === null) return fallbackRate(state);

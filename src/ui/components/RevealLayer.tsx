@@ -8,13 +8,14 @@ import { DATA, RARITIES, type Rarity } from '../../data';
 import {
   boostBlocked, currentLuck, encoreOffer, formatNumber, itemName, RARITY_ODDS, rarityAtLeast, rarityIndex, rebirthGoldMult, rebirthLuckMult,
 } from '../../core';
-import { useGame } from '../../app/store';
+import { dispatch, useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { sparkleArt, UI_PX } from '../../render/icons';
 import { audio } from '../../services/audio';
 import { revealLanded, skipReveal } from '../rollController';
 import { DRAMA_LEVEL, HYPER_LOCK_MS, revealPhases } from '../revealTiming';
 import { stagePoint } from '../drag';
+import { noteEquipSource } from '../equipSource';
 import { RAINBOW, raysUrl } from '../rays';
 import { Rays } from './Rays';
 import { t } from '../i18n';
@@ -187,7 +188,9 @@ const GLOW_START = RARITIES.indexOf('shiny');
  * colors as it climbs past their odds) and slams down on the real odds. The light (motes, glow disc,
  * rays, shock ring) starts at a low tier's color and flickers up tier by tier with the counter, so it
  * only reaches the item's own color as the odds land. A tutorial roll (the first find, beginner's
- * luck) gets its own banner over the title. Tap skips to the result; tap again closes it.
+ * luck) gets its own banner over the title. Tap skips to the result; tap again closes it. A tutorial
+ * roll goes on with that tap (TAP TO WEAR IT!): it leaps out of the reveal and slams onto the raccoon,
+ * with no trip to the Bag in between.
  *
  * HYPER RARE (the rarest find of the whole game, luck.ts judgeFinds) plays the same reveal on a longer
  * clock inside its own showcase (HyperFx): warning bands and a summoning that can't be skipped for its
@@ -213,6 +216,9 @@ function RareReveal({ view }: { view: RollView }) {
   const skip = useRef(false);
   const phaseRef = useRef<Phase>('black');
   const rootRef = useRef<HTMLDivElement>(null);
+  const itemRef = useRef<HTMLDivElement>(null);
+  // A tutorial find still in the bag goes on from here: one tap closes the reveal and wears it.
+  const wearable = useGame((g) => view.scripted !== undefined && g.inventory.some((x) => x.uid === view.item.uid));
   const raysRefs = useRef<(HTMLImageElement | null)[]>([]);
   // The light's tier (climbs with the counter); the rays follow once a step has settled.
   const glowRef = useRef(Math.min(itemTier, GLOW_START));
@@ -341,8 +347,16 @@ function RareReveal({ view }: { view: RollView }) {
   const tap = () => {
     // HYPER RARE's summoning plays out whatever (Kevin: "unskippable ... at least for the first 2 seconds").
     if (hyper && performance.now() - clock.current.t0 < HYPER_LOCK_MS) return;
-    if (phaseRef.current === 'landed') skipReveal();
-    else skip.current = true;
+    if (phaseRef.current !== 'landed') {
+      skip.current = true;
+      return;
+    }
+    if (wearable) {
+      // Its flight starts from the reveal's own picture of it (equipSource.ts), then the reveal goes.
+      noteEquipSource(it.uid, itemRef.current);
+      dispatch({ type: 'equipItem', uid: it.uid });
+    }
+    skipReveal();
   };
   const title = it.rarity === 'mint' ? t('reveal.mintStamp') : `${t(`rarity.${it.rarity}`).toUpperCase()}!`;
   const lit = phase === 'count' || phase === 'landed';
@@ -410,7 +424,7 @@ function RareReveal({ view }: { view: RollView }) {
           )}
         </div>
         {risen && (
-          <div className={`${s.rareItem} ${lit ? s.rareLit : ''}`}>
+          <div ref={itemRef} className={`${s.rareItem} ${lit ? s.rareLit : ''}`}>
             <ItemIcon item={it} scale={3} showOdds={false} />
             {lit && <span className={s.glint} />}
             {lit && !calm && <Sparkles n={[6, 9, 12, 14][lvl]} />}
@@ -449,14 +463,17 @@ function RareReveal({ view }: { view: RollView }) {
                 ))}
               </div>
             )}
+            {/* (The whole reveal takes the tap; this says what it does. Sideways there's no room for it here: wearHint.) */}
+            {wearable && <span className={`btn ${s.wearBtn}`}>{t('reveal.wear')}</span>}
           </>
         )}
       </div>
       {phase === 'appear' && !noFlash && !hyper && <div className={s.flashLate} />}
       {lit && !noFlash && <div key={phase} className={s.flash} />}
-      {!locked && (
+      {!locked && !(landed && wearable) && (
         <span className={`${s.tap} ${hyper ? s.tapNow : ''}`}>{landed ? (view.placed === 'bag' ? t('reveal.dragHint') : t('reveal.tap')) : t('reveal.skip')}</span>
       )}
+      {landed && wearable && <span className={`${s.tap} ${s.wearHint}`}>{t('reveal.wear')}</span>}
     </div>
   );
 }

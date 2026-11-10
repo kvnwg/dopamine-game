@@ -278,6 +278,16 @@ export function inTutorial(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'>)
   return d.dumpster.beginner.state !== 'done' && d.rebirths === 0 && d.roll.count < BAL.tutorial.overAtRolls;
 }
 
+/**
+ * A first-run raccoon can't fall in World 1 until its boss has fallen once (he holds on at 1 HP): he is
+ * fighting there from the game's first second, undressed, and the tutorial ends about when that boss
+ * arrives, so without this a new player's first minute could end on a K.O. From World 2 on, and in
+ * World 1 once it's beaten, he falls and tries again as ever.
+ */
+export function firstWorldSafe(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll' | 'stage'>): boolean {
+  return inTutorial(d) || (d.rebirths === 0 && d.stage.highestCleared === 0);
+}
+
 /** `unavoidable`: a charge, which can't be dodged or blocked. */
 function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoidable = false) {
   const { d, stats, rng, ev } = c;
@@ -294,10 +304,9 @@ function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoi
   let amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng), c.k);
   if (c.run && c.run.fx.armorPct) amount *= Math.max(0.1, 1 - c.run.fx.armorPct / 100);
   d.battle.playerHp -= amount;
-  // A new game's raccoon starts on World 1 before the dumpster is even open (Kevin's order), still
-  // undressed: there, until the tutorial is over, he holds on at 1 HP instead of falling. (Sent further
-  // on his own, he falls and tries again as ever.)
-  if (!c.run && d.battle.playerHp < 1 && d.battle.stage === 1 && inTutorial(d)) d.battle.playerHp = 1;
+  // A new game's raccoon is fighting in World 1 before the dumpster is even open, still undressed:
+  // there he holds on at 1 HP instead of falling (firstWorldSafe).
+  if (!c.run && d.battle.playerHp < 1 && d.battle.stage === 1 && firstWorldSafe(d)) d.battle.playerHp = 1;
   ev.push({ type: 'enemyHit', enemyUid: e.uid, amount, heavy });
   if (c.run) {
     if (d.battle.playerHp <= 0) {
@@ -457,9 +466,9 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
   const stats = computeStats(d);
   if (b.playerHp > stats.HP) b.playerHp = stats.HP;
 
-  // A new game's raccoon waits in his street until a world is picked (stage.chosen).
-  if (b.phase === 'idle' || !d.stage.chosen) {
-    b.playerHp = stats.HP;
+  // (A save from when a new game's raccoon waited for his first world to be picked: he starts fighting.)
+  if (b.phase === 'idle') {
+    startStage(d, b.stage, ev, d.stage.mode === 'push');
     return;
   }
 

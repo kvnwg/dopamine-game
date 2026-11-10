@@ -576,8 +576,11 @@ export const BalanceSchema = z.object({
     /**
      * A new game's first spins warm the player up before the tutorial's own find (Kevin: "get them
      * accustomed a bit first to rolling"): one everyday find per spin, at these rarities in turn.
+     * One is enough to show what an everyday find looks like before the Legendary; with
+     * `warmupTurbo` it spins at a Trash Bag's turbo speed without spending one.
      */
     warmupRarities: z.array(RaritySchema),
+    warmupTurbo: z.boolean().default(false),
     beginnerAfterRolls: z.number().int().positive(),
     beginnerAfterEquips: z.number().int().positive(),
     beginnerAfterSeconds: nonNeg,

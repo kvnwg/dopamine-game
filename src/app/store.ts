@@ -10,6 +10,7 @@ import {
 } from '../core';
 import { analytics, haptics } from '../services';
 import { bus } from './eventBus';
+import { funnelSteps } from './funnel';
 
 export const clock = new GameClock();
 
@@ -54,8 +55,11 @@ export function replaceGame(state: GameState): void {
 }
 
 function commit(state: GameState, events: CoreEvent[]): CoreEvent[] {
+  const before = getGame();
   gameStore.setState({ game: state });
   trackEvents(events, state);
+  // A new game's first minutes, step by step (funnel.ts).
+  for (const h of funnelSteps(before, state, events)) analytics.track('funnel', { step: h.step, t: h.t });
   bus.emit(events);
   return events;
 }

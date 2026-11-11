@@ -1,0 +1,91 @@
+import { useState } from 'react';
+import { BAL, DATA } from '../../data';
+import { formatNumber, itemTierFor, worldRewards, worldThreat } from '../../core';
+import { dispatch, useGame } from '../../app/store';
+import { haptics } from '../../services';
+import { BoostButtons } from '../components/BoostButtons';
+import { SwordIcon } from '../components/Icons';
+import { PixelArt } from '../components/PixelArt';
+import { ThreatChip } from '../components/WorldsPanel';
+import { t } from '../i18n';
+import { useUi } from '../uiStore';
+import { useWorldThumb } from '../worldThumbs';
+import { Modal } from './Modal';
+import s from './popups.module.css';
+
+/** One world: preview, how it matches up against you (real numbers), what it pays, and Travel. */
+export function WorldPopup({ world, onClose }: { world: number; onClose: () => void }) {
+  const g = useGame((x) => x);
+  const [armed, setArmed] = useState(false);
+  const thumb = useWorldThumb(world, 'popup');
+  const def = DATA.worlds[world - 1];
+  if (!def) return null;
+  const threat = worldThreat(g, world);
+  const r = worldRewards(world);
+  const here = g.battle.stage === world;
+  const risky = threat.level === 'deadly' || threat.level === 'oneShot';
+  const tier = itemTierFor({ battle: { ...g.battle, stage: world }, stage: g.stage });
+  const go = () => {
+    if (risky && !armed) {
+      setArmed(true);
+      haptics.impact('medium');
+      setTimeout(() => setArmed(false), 3000);
+      return;
+    }
+    haptics.impact('heavy');
+    dispatch({ type: 'travel', world });
+    useUi.getState().toast(t('toast.travel', { n: world, name: def.name }), 'info');
+    useUi.getState().setTab('alley');
+    onClose();
+  };
+  const tone = threat.level === 'easy' ? 'green' : threat.level === 'tough' ? 'gold' : 'red';
+  return (
+    <Modal title={t('battle.worldLabel', { n: world, name: def.name })} tone={tone} onClose={onClose}>
+      <div className={s.worldThumb}>{thumb && <PixelArt art={thumb} />}</div>
+      <div className={s.threatRow}>
+        <ThreatChip level={threat.level} big />
+        <span className={s.threatText}>{t(`worlds.margin${threat.level[0].toUpperCase()}${threat.level.slice(1)}`)}</span>
+      </div>
+      <div className={s.inset}>
+        <div className={s.statRow}>
+          <span className={s.statSub}>{t('worlds.enemyHit', { hit: formatNumber(threat.enemyHit), hp: formatNumber(threat.playerHp) })}</span>
+        </div>
+        <div className={s.statRow}>
+          <span className={s.statSub}>{t('worlds.yourHit', { hit: formatNumber(threat.playerHit), hp: formatNumber(threat.enemyHp) })}</span>
+        </div>
+        <div className={s.statRow}>
+          <span className={s.statSub}>
+            {t('worlds.boss', { name: def.boss.name })} · {formatNumber(threat.bossHp)} HP
+          </span>
+        </div>
+      </div>
+      <p className={s.rewardLine}>
+        {t('worlds.rewards', { gold: formatNumber(r.gold), xp: formatNumber(r.xp), items: formatNumber(r.items) })}
+      </p>
+      <p className={s.note}>{t('worlds.gearNote', { tier })}</p>
+      {/* Boss Rage (a boost): lost here twice in a row, +50% damage for the next try (it brings him back here). */}
+      {g.features.unlocked.includes('boosts') && (g.boosts.rageOffer === world || g.boosts.rageWorld === world) && (
+        <div className={s.boostOffer}>
+          <SwordIcon size="nav" />
+          <div className={s.boostOfferText}>
+            <b>{t('boosts.bossRage')}</b>
+            <span>{t('boosts.bossRageText', { pct: Math.round((BAL.boosts.bossRage.atkMult - 1) * 100), n: world, name: def.name })}</span>
+            {g.boosts.rageWorld === world && <span className={s.boostOn}>{t('boosts.rageOn', { n: world })}</span>}
+          </div>
+          <BoostButtons id="bossRage" column />
+        </div>
+      )}
+      <div className={s.actions}>
+        {here ? (
+          <button className="btn gray" disabled>
+            {t('worlds.youAreHere')}
+          </button>
+        ) : (
+          <button className={`btn ${risky ? 'red' : ''}`} onClick={go}>
+            {risky ? (armed ? t('worlds.confirm') : t('worlds.goAnyway')) : t('worlds.go')}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}

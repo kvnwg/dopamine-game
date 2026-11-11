@@ -1,0 +1,189 @@
+/* The Worlds tab. Pixel-ish sizes are art pixels (var(--px) = 6 stage px). */
+.panel {
+  position: absolute;
+  inset: 0;
+  padding: calc(2 * var(--px)) 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--px);
+}
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: calc(2 * var(--px));
+}
+.title {
+  font-family: var(--font-display);
+  font-size: 46px;
+  color: #fff;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink);
+}
+.best {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #ffd23f;
+}
+.sub {
+  margin: 0 0 6px;
+  font-size: 30px;
+  color: #a9aed0;
+}
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -24px;
+  padding: var(--px) 24px calc(4 * var(--px));
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+/* Two cards across; each preview is 81 art pixels (486 px) wide inside its one-pixel border. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, calc(83 * var(--px)));
+  justify-content: space-between;
+  row-gap: calc(6 * var(--px));
+}
+.card {
+  --tc: #5bc236;
+  display: flex;
+  flex-direction: column;
+  border: var(--px) solid var(--ink);
+  background: var(--cream);
+  box-shadow: 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55);
+  overflow: hidden;
+  text-align: left;
+  color: var(--ink);
+}
+.card:active {
+  transform: translateY(var(--px));
+}
+.cardHere {
+  border-color: #7ef08f;
+  box-shadow: 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.55), 0 0 calc(4 * var(--px)) rgba(126, 240, 143, 0.7);
+}
+.thumb {
+  position: relative;
+  height: calc(39 * var(--px));
+  border-bottom: var(--px) solid var(--ink);
+  overflow: hidden;
+  background: #2a2d48;
+}
+.num {
+  position: absolute;
+  left: calc(2 * var(--px));
+  top: calc(2 * var(--px));
+  min-width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #ffffff 0 50%, #e6e9f4 50% 100%);
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--ink);
+}
+.here {
+  position: absolute;
+  right: calc(2 * var(--px));
+  top: calc(2 * var(--px));
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  border: var(--px) solid var(--ink);
+  background: #5bc236;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: calc(6 * var(--px));
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+  animation: hereBob 1.2s steps(2) infinite;
+}
+@keyframes hereBob {
+  50% { transform: translateY(calc(-1 * var(--px))); }
+}
+.done {
+  position: absolute;
+  right: calc(2 * var(--px));
+  top: calc(2 * var(--px));
+}
+.info {
+  padding: calc(2 * var(--px)) calc(3 * var(--px)) calc(3 * var(--px));
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--px));
+}
+.name {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--px);
+}
+.gold {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #b8860b;
+}
+.threat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--px);
+  height: calc(8 * var(--px));
+  padding: 0 calc(2 * var(--px));
+  border: var(--px) solid var(--ink);
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+}
+.threatBig {
+  height: calc(12 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  font-size: 40px;
+  -webkit-text-stroke-width: 6px;
+}
+.threatOneShot {
+  animation: oneShotBlink 0.9s steps(2) infinite;
+}
+@keyframes oneShotBlink {
+  50% { filter: brightness(1.35); }
+}
+
+.thumbImg {
+  animation: thumbIn 220ms steps(2);
+}
+@keyframes thumbIn {
+  from { opacity: 0; }
+}
+/* Placeholder while a preview is being made. */
+.thumbWait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2a2d48 0 50%, #3a3e60 50% 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .here,
+  .threatOneShot {
+    animation: none;
+  }
+}

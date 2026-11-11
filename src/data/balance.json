@@ -1,0 +1,1553 @@
+{
+  "tickRate": 10,
+  "player": {
+    "base": {
+      "HP": 100,
+      "ATK": 10,
+      "DEF": 0,
+      "ATK_SPD": 1.0,
+      "CRIT": 5,
+      "CRIT_DMG": 150,
+      "DODGE": 0,
+      "LIFESTEAL": 0,
+      "REGEN": 1,
+      "BAG_FIND": 0,
+      "COIN_FIND": 0,
+      "BOSS_DMG": 0
+    },
+    "perLevel": {
+      "HP": 12,
+      "ATK": 1.5,
+      "DEF": 0.5,
+      "ATK_SPD": 0,
+      "CRIT": 0,
+      "CRIT_DMG": 0,
+      "DODGE": 0,
+      "LIFESTEAL": 0,
+      "REGEN": 0.1,
+      "BAG_FIND": 0,
+      "COIN_FIND": 0,
+      "BOSS_DMG": 0
+    },
+    "caps": {
+      "CRIT": 75,
+      "DODGE": 60,
+      "ATK_SPD": 5.0
+    },
+    "levelCap": 100,
+    "xpCurve": {
+      "base": 60,
+      "exponent": 1.7,
+      "early": [0.15, 0.25, 0.4, 0.55, 0.7, 0.85]
+    }
+  },
+  "combat": {
+    "damageVariance": {
+      "min": 0.95,
+      "max": 1.05
+    },
+    "defConstant": 100,
+    "engagedEnemies": 1,
+    "walkSeconds": 1.2,
+    "deathSeconds": 1.5,
+    "waveHealPct": 20,
+    "minDamage": 1
+  },
+  "stages": {
+    "wavesPerStage": 5,
+    "enemiesPerWave": {
+      "min": 3,
+      "max": 5
+    }
+  },
+  "worlds": {
+    "enemyGrowth": {
+      "hp": 3.0,
+      "atk": 2.6,
+      "def": 2.6
+    },
+    "defConstantGrowth": 2.6,
+    "itemGrowth": 1.8,
+    "goldGrowth": 3.0,
+    "xpGrowth": 1.35,
+    "boss": {
+      "hpMult": 5,
+      "atkMult": 1.3,
+      "xpMult": 4,
+      "coinMult": 15,
+      "bags": 3,
+      "potionChance": 0.15
+    },
+    "firstClearGems": 10,
+    "firstClearGemsPerWorld": 5,
+    "choiceSeconds": 5,
+    "lossesBeforeBack": 3,
+    "threat": {
+      "waveSize": 4,
+      "easyMargin": 2.5
+    }
+  },
+  "drops": {
+    "killCoins": {
+      "base": 5
+    },
+    "killXp": {
+      "base": 3
+    },
+    "bagsPerWave": 1
+  },
+  "rarities": {
+    "junk": {
+      "mult": 1.0,
+      "substats": 0,
+      "recycleXp": 5,
+      "recycleCoins": 10
+    },
+    "decent": {
+      "mult": 1.4,
+      "substats": 1,
+      "recycleXp": 12,
+      "recycleCoins": 25
+    },
+    "shiny": {
+      "mult": 2.0,
+      "substats": 1,
+      "recycleXp": 30,
+      "recycleCoins": 60
+    },
+    "epic": {
+      "mult": 3.0,
+      "substats": 2,
+      "recycleXp": 80,
+      "recycleCoins": 150
+    },
+    "legendary": {
+      "mult": 4.8,
+      "substats": 3,
+      "recycleXp": 250,
+      "recycleCoins": 450
+    },
+    "mythic": {
+      "mult": 8.0,
+      "substats": 4,
+      "recycleXp": 800,
+      "recycleCoins": 1400
+    },
+    "vintage": {
+      "mult": 9.5,
+      "substats": 4,
+      "recycleXp": 1100,
+      "recycleCoins": 1900
+    },
+    "limited": {
+      "mult": 11.0,
+      "substats": 4,
+      "recycleXp": 1500,
+      "recycleCoins": 2500
+    },
+    "prototype": {
+      "mult": 12.5,
+      "substats": 4,
+      "recycleXp": 2000,
+      "recycleCoins": 3200
+    },
+    "mint": {
+      "mult": 14.0,
+      "substats": 4,
+      "recycleXp": 2500,
+      "recycleCoins": 4000
+    },
+    "gemMint": {
+      "mult": 18.0,
+      "substats": 4,
+      "recycleXp": 4000,
+      "recycleCoins": 6500
+    },
+    "museum": {
+      "mult": 23.0,
+      "substats": 4,
+      "recycleXp": 6500,
+      "recycleCoins": 10000
+    },
+    "grail": {
+      "mult": 30.0,
+      "substats": 4,
+      "recycleXp": 10000,
+      "recycleCoins": 16000
+    },
+    "cosmic": {
+      "mult": 38.0,
+      "substats": 4,
+      "recycleXp": 15000,
+      "recycleCoins": 25000
+    },
+    "glitched": {
+      "mult": 48.0,
+      "substats": 4,
+      "recycleXp": 22000,
+      "recycleCoins": 38000
+    },
+    "fourthWall": {
+      "mult": 60.0,
+      "substats": 4,
+      "recycleXp": 32000,
+      "recycleCoins": 56000
+    },
+    "devsOwn": {
+      "mult": 75.0,
+      "substats": 4,
+      "recycleXp": 46000,
+      "recycleCoins": 82000
+    },
+    "patchNotes": {
+      "mult": 95.0,
+      "substats": 4,
+      "recycleXp": 66000,
+      "recycleCoins": 120000
+    },
+    "sourceCode": {
+      "mult": 120.0,
+      "substats": 4,
+      "recycleXp": 95000,
+      "recycleCoins": 175000
+    },
+    "concept": {
+      "mult": 150.0,
+      "substats": 4,
+      "recycleXp": 140000,
+      "recycleCoins": 260000
+    }
+  },
+  "recycle": {
+    "perItemLevel": 0.05
+  },
+  "items": {
+    "levelScalePerLevel": 0.05,
+    "power": {
+      "base": 30,
+      "oddsExponent": 0.2
+    },
+    "levelOffset": {
+      "min": -2,
+      "max": 1
+    },
+    "levelCap": 100,
+    "slots": {
+      "hat": {
+        "main": [
+          {
+            "stat": "HP",
+            "base": 30
+          }
+        ]
+      },
+      "mask": {
+        "main": [
+          {
+            "stat": "CRIT",
+            "base": 1.5
+          },
+          {
+            "stat": "ATK",
+            "base": 2
+          }
+        ]
+      },
+      "jacket": {
+        "main": [
+          {
+            "stat": "HP",
+            "base": 18
+          },
+          {
+            "stat": "DEF",
+            "base": 2
+          }
+        ]
+      },
+      "weapon": {
+        "main": [
+          {
+            "stat": "ATK",
+            "base": 6
+          }
+        ]
+      },
+      "shield": {
+        "main": [
+          {
+            "stat": "DEF",
+            "base": 3
+          },
+          {
+            "stat": "HP",
+            "base": 8
+          }
+        ]
+      },
+      "gloves": {
+        "main": [
+          {
+            "stat": "ATK_SPD",
+            "base": 0.04
+          },
+          {
+            "stat": "ATK",
+            "base": 2
+          }
+        ]
+      },
+      "sneakers": {
+        "main": [
+          {
+            "stat": "DODGE",
+            "base": 1.2
+          },
+          {
+            "stat": "HP",
+            "base": 10
+          }
+        ]
+      },
+      "backpack": {
+        "main": [
+          {
+            "stat": "BAG_FIND",
+            "base": 2
+          },
+          {
+            "stat": "HP",
+            "base": 12
+          }
+        ]
+      },
+      "bling": {
+        "main": [
+          {
+            "stat": "CRIT_DMG",
+            "base": 6
+          },
+          {
+            "stat": "ATK",
+            "base": 2
+          }
+        ]
+      },
+      "ring": {
+        "main": [
+          {
+            "stat": "LIFESTEAL",
+            "base": 1
+          },
+          {
+            "stat": "HP",
+            "base": 10
+          }
+        ]
+      }
+    }
+  },
+  "power": {
+    "flat": {
+      "HP": 1,
+      "ATK": 6,
+      "DEF": 4,
+      "ATK_SPD": 250,
+      "CRIT": 8,
+      "CRIT_DMG": 2,
+      "DODGE": 8,
+      "LIFESTEAL": 10,
+      "REGEN": 15,
+      "BAG_FIND": 6,
+      "COIN_FIND": 3,
+      "BOSS_DMG": 3
+    },
+    "pct": {
+      "HP": 6,
+      "ATK": 8,
+      "DEF": 4,
+      "ATK_SPD": 8,
+      "CRIT": 0,
+      "CRIT_DMG": 0,
+      "DODGE": 0,
+      "LIFESTEAL": 0,
+      "REGEN": 0,
+      "BAG_FIND": 0,
+      "COIN_FIND": 0,
+      "BOSS_DMG": 0
+    },
+    "perPlayerLevel": 10
+  },
+  "dumpster": {
+    "maxLevel": 30,
+    "slotWeights": {
+      "hat": 1,
+      "mask": 1,
+      "jacket": 1,
+      "weapon": 1,
+      "shield": 1,
+      "gloves": 1,
+      "sneakers": 1,
+      "backpack": 1,
+      "bling": 1,
+      "ring": 1
+    },
+    "upgradeCost": {
+      "base": 400,
+      "growth": 2.2
+    },
+    "upgradeTime": {
+      "baseSeconds": 60,
+      "growth": 1.4,
+      "capSeconds": 7200
+    },
+    "gemSpeedup": {
+      "minutesPerGem": 2,
+      "minGems": 1
+    },
+    "adSpeedup": {
+      "minutes": 30,
+      "perDay": 3
+    },
+    "badLuck": {
+      "minDumpsterLevel": 3,
+      "drySpell": 40,
+      "minRarity": "epic"
+    },
+    "uniqueLegendaryChance": 0.15,
+    "tutorialItem": {
+      "baseId": "hat_traffic_cone",
+      "rarity": "legendary",
+      "level": 1
+    },
+    "defaultTheme": "curbside",
+    "luckPerLevel": 0.05
+  },
+  "codex": {
+    "entriesPerBonus": 10,
+    "gemsPerBonus": 10,
+    "bonusCycle": [
+      {
+        "stat": "ATK",
+        "mode": "pct",
+        "value": 1
+      },
+      {
+        "stat": "HP",
+        "mode": "pct",
+        "value": 1
+      },
+      {
+        "stat": "BAG_FIND",
+        "mode": "flat",
+        "value": 1
+      }
+    ]
+  },
+  "offline": {
+    "capHours": 8,
+    "efficiency": 0.75,
+    "rateWindowMinutes": 10,
+    "minRateMinutes": 1,
+    "fallbackStageSeconds": 75,
+    "fallbackEnemiesPerWave": 4,
+    "adDoubleMinAwayMinutes": 30,
+    "doubleGems": { "perHour": 10, "max": 80 },
+    "minAwaySecondsForPopup": 60,
+    "maxTickGapSeconds": 5,
+    "rollSlowdown": 10,
+    "maxRolls": 1000,
+    "keepRarity": "epic",
+    "scrapShare": 0,
+    "keepListMax": 30
+  },
+  "start": {
+    "coins": 0,
+    "gems": 50,
+    "bags": 3
+  },
+  "save": {
+    "autosaveSeconds": 30,
+    "backups": 2
+  },
+  "feel": {
+    "lidFlipSeconds": 0.95,
+    "lidRattleSeconds": 0.45,
+    "teaseFlashSeconds": 0.15,
+    "autoFlipSeconds": 0.25,
+    "legendarySlowMoSeconds": 0.3,
+    "rattleBeatSeconds": 0.15,
+    "buildUp": {
+      "windowMinutes": [0.5, 2],
+      "tierOneIn": 6
+    },
+    "bigRoll": {
+      "windowMinutes": [5, 50, 500],
+      "coverShare": 0.1,
+      "minHistoryMinutes": 2,
+      "tierOneIn": 20,
+      "historyMax": 48,
+      "hyperOneIn": 100000,
+      "hyperWatchMinutes": 10
+    },
+    "haul": {
+      "trendWeight": 0.6,
+      "slopeWeight": 0.5,
+      "maxGapMinutes": 10,
+      "warmup": 2,
+      "big": 2.5,
+      "huge": 6,
+      "mega": 20
+    },
+    "rattleBeatsByRarity": {
+      "junk": 3,
+      "decent": 3,
+      "shiny": 3,
+      "epic": 4,
+      "legendary": 5,
+      "mythic": 6,
+      "vintage": 6,
+      "limited": 6,
+      "prototype": 6,
+      "mint": 6,
+      "gemMint": 7,
+      "museum": 7,
+      "grail": 8,
+      "cosmic": 8,
+      "glitched": 8,
+      "fourthWall": 8,
+      "devsOwn": 8,
+      "patchNotes": 8,
+      "sourceCode": 8,
+      "concept": 8
+    },
+    "revealSecondsByRarity": {
+      "junk": 0.2,
+      "decent": 0.3,
+      "shiny": 0.5,
+      "epic": 1.0,
+      "legendary": 2.5,
+      "mythic": 3.5,
+      "vintage": 3.8,
+      "limited": 4.1,
+      "prototype": 4.5,
+      "mint": 5.0,
+      "gemMint": 5.5,
+      "museum": 6.0,
+      "grail": 7.0,
+      "cosmic": 7.0,
+      "glitched": 7.0,
+      "fourthWall": 7.0,
+      "devsOwn": 7.0,
+      "patchNotes": 7.0,
+      "sourceCode": 7.0,
+      "concept": 7.0
+    },
+    "hotDumpsterStartPct": 50,
+    "maxCatchUpTicksPerFrame": 50,
+    "reels": {
+      "fillerWeights": {
+        "junk": 12,
+        "decent": 16,
+        "shiny": 18,
+        "epic": 20,
+        "legendary": 18,
+        "mythic": 10,
+        "vintage": 8,
+        "limited": 7,
+        "prototype": 6,
+        "mint": 6,
+        "gemMint": 4,
+        "museum": 3,
+        "grail": 2,
+        "cosmic": 1,
+        "glitched": 1,
+        "fourthWall": 1,
+        "devsOwn": 1,
+        "patchNotes": 1,
+        "sourceCode": 1,
+        "concept": 1
+      },
+      "nearMissChance": 0.65,
+      "flairChance": 0.3,
+      "cellsPerSecond": 13,
+      "minCells": 9,
+      "firstStopShare": 0.55
+    }
+  },
+  "mockAds": {
+    "watchSeconds": 1.5
+  },
+  "midgame": { "gapMinutes": 6, "firstVisitMinutes": 10, "sessionMinutes": 3, "minWorld": 3 },
+  "tutorial": {
+    "warmupRarities": ["junk"],
+    "warmupTurbo": true,
+    "beginnerAfterRolls": 8,
+    "beginnerAfterEquips": 3,
+    "beginnerAfterSeconds": 35,
+    "beginnerAtRolls": 14,
+    "beginnerRarity": "limited",
+    "beginnerTokens": [3, 5],
+    "rewardGems": 50,
+    "holdSeconds": 30,
+    "overAtRolls": 40,
+    "rebirthTabWorldsEarly": 2
+  },
+  "roll": {
+    "spinSeconds": 2.6,
+    "restSeconds": 0.9,
+    "minCycleSeconds": 0.7,
+    "speedPerLevel": 0.06,
+    "turboSpeedMult": 2,
+    "minTurboCycleSeconds": 0.45,
+    "maxRollsPerTick": 3,
+    "maxReels": 5,
+    "luckyRollEvery": 10,
+    "luckyRollMinEvery": 4,
+    "luckyRollMult": 2,
+    "goldenLuckMult": 5,
+    "multiplier": {
+      "chance": 0.05,
+      "chainChance": 0.5,
+      "maxSteps": 4,
+      "holdSeconds": 0.6,
+      "values": [
+        { "x": 2, "weight": 60 },
+        { "x": 3, "weight": 25 },
+        { "x": 5, "weight": 11 },
+        { "x": 10, "weight": 4 }
+      ],
+      "floors": [
+        { "x": 25, "rarity": "epic" },
+        { "x": 50, "rarity": "legendary" },
+        { "x": 250, "rarity": "mythic" }
+      ]
+    }
+  },
+  "rarityOdds": {
+    "decent": 3,
+    "shiny": 12,
+    "epic": 80,
+    "legendary": 1000,
+    "mythic": 25000,
+    "vintage": 60000,
+    "limited": 150000,
+    "prototype": 400000,
+    "mint": 1000000,
+    "gemMint": 5000000,
+    "museum": 25000000,
+    "grail": 250000000,
+    "cosmic": 500000000,
+    "glitched": 1500000000,
+    "fourthWall": 5000000000,
+    "devsOwn": 20000000000,
+    "patchNotes": 100000000000,
+    "sourceCode": 600000000000,
+    "concept": 5000000000000
+  },
+  "luck": {
+    "potion": {
+      "mult": 2,
+      "seconds": 60,
+      "waveDropChance": 0.005
+    }
+  },
+  "inventory": {
+    "baseCapacity": 20
+  },
+  "economy": {
+    "scrapGoldMult": 0.5,
+    "scrapXpMult": 0.15,
+    "tierGrowth": [10, 30, 100, 300, 300, 300, 300]
+  },
+  "rebirth": {
+    "baseWorld": 5,
+    "worldPer": 2,
+    "goldBase": 3000,
+    "goldPerRebirth": 4,
+    "luckPer": 0.25,
+    "goldMultPer": 0.5,
+    "statPctPer": 10,
+    "upgradeDiscountPer": 0.1
+  },
+  "upgrades": [
+    {
+      "id": "luck",
+      "effect": "luck",
+      "perLevel": 0.15,
+      "max": 8,
+      "cost": {
+        "base": 15,
+        "growth": 100
+      },
+      "path": "n*7"
+    },
+    {
+      "id": "clover",
+      "effect": "luck",
+      "perLevel": 0.3,
+      "max": 1,
+      "cost": {
+        "base": 400000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "luck",
+        "level": 8
+      },
+      "special": true,
+      "path": "n"
+    },
+    {
+      "id": "extraReel",
+      "effect": "reels",
+      "perLevel": 1,
+      "max": 4,
+      "cost": {
+        "base": 250000000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 1
+      },
+      "special": true,
+      "path": "nw*4"
+    },
+    {
+      "id": "rollSpeed",
+      "effect": "rollSpeed",
+      "perLevel": 2.5,
+      "max": 8,
+      "cost": {
+        "base": 30,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 1
+      },
+      "path": "ne*8"
+    },
+    {
+      "id": "bagFind",
+      "effect": "bagFind",
+      "perLevel": 15,
+      "max": 6,
+      "cost": {
+        "base": 120,
+        "growth": 100
+      },
+      "requires": {
+        "id": "rollSpeed",
+        "level": 2
+      },
+      "path": "se ne se ne se ne"
+    },
+    {
+      "id": "luckyRoll",
+      "effect": "luckyEvery",
+      "perLevel": 1,
+      "max": 5,
+      "cost": {
+        "base": 300,
+        "growth": 100
+      },
+      "requires": {
+        "id": "rollSpeed",
+        "level": 3
+      },
+      "path": "n*5"
+    },
+    {
+      "id": "luckyMult",
+      "effect": "luckyMult",
+      "perLevel": 0.5,
+      "max": 4,
+      "cost": {
+        "base": 3000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luckyRoll",
+        "level": 2
+      },
+      "path": "ne*4"
+    },
+    {
+      "id": "goldenWheel",
+      "effect": "goldenSpin",
+      "perLevel": 0.02,
+      "max": 1,
+      "cost": {
+        "base": 100000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "luckyMult",
+        "level": 2
+      },
+      "special": true,
+      "path": "n"
+    },
+    {
+      "id": "goldenSpin",
+      "effect": "goldenSpin",
+      "perLevel": 0.02,
+      "max": 4,
+      "cost": {
+        "base": 200000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "goldenWheel",
+        "level": 1
+      },
+      "path": "n n ne ne"
+    },
+    {
+      "id": "turboPower",
+      "effect": "turboPower",
+      "perLevel": 0.5,
+      "max": 4,
+      "cost": {
+        "base": 4000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "rollSpeed",
+        "level": 6
+      },
+      "path": "se*4"
+    },
+    {
+      "id": "enchant",
+      "effect": "enchantChance",
+      "perLevel": 0.03,
+      "max": 8,
+      "cost": {
+        "base": 200,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 3
+      },
+      "path": "nw*8"
+    },
+    {
+      "id": "enchantTier",
+      "effect": "enchantTier",
+      "perLevel": 1,
+      "max": 5,
+      "cost": {
+        "base": 3000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "enchant",
+        "level": 3
+      },
+      "path": "n*5"
+    },
+    {
+      "id": "pity",
+      "effect": "pity",
+      "perLevel": 4,
+      "max": 5,
+      "cost": {
+        "base": 20000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "enchant",
+        "level": 6
+      },
+      "path": "n*5"
+    },
+    {
+      "id": "arcaneAltar",
+      "effect": "enchantChance",
+      "perLevel": 0.06,
+      "max": 1,
+      "cost": {
+        "base": 2000000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "enchant",
+        "level": 8
+      },
+      "special": true,
+      "path": "nw"
+    },
+    {
+      "id": "gold",
+      "effect": "goldPct",
+      "perLevel": 25,
+      "max": 8,
+      "cost": {
+        "base": 20,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 1
+      },
+      "path": "se*8"
+    },
+    {
+      "id": "scrapPct",
+      "effect": "scrapPct",
+      "perLevel": 50,
+      "max": 6,
+      "cost": {
+        "base": 300,
+        "growth": 100
+      },
+      "requires": {
+        "id": "gold",
+        "level": 3
+      },
+      "path": "s*6"
+    },
+    {
+      "id": "xpPct",
+      "effect": "xpPct",
+      "perLevel": 30,
+      "max": 6,
+      "cost": {
+        "base": 500,
+        "growth": 100
+      },
+      "requires": {
+        "id": "gold",
+        "level": 4
+      },
+      "path": "ne se ne se ne se"
+    },
+    {
+      "id": "potionTime",
+      "effect": "potionTime",
+      "perLevel": 20,
+      "max": 6,
+      "cost": {
+        "base": 2000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "gold",
+        "level": 5
+      },
+      "path": "s*6"
+    },
+    {
+      "id": "offlinePct",
+      "effect": "offlinePct",
+      "perLevel": 40,
+      "max": 5,
+      "cost": {
+        "base": 8000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "potionTime",
+        "level": 2
+      },
+      "path": "se*5"
+    },
+    {
+      "id": "coinVault",
+      "effect": "goldPct",
+      "perLevel": 100,
+      "max": 1,
+      "cost": {
+        "base": 500000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "gold",
+        "level": 8
+      },
+      "special": true,
+      "path": "se"
+    },
+    {
+      "id": "bagSpace",
+      "effect": "capacity",
+      "perLevel": 5,
+      "max": 8,
+      "cost": {
+        "base": 40,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 1
+      },
+      "path": "s*8"
+    },
+    {
+      "id": "megaBackpack",
+      "effect": "capacity",
+      "perLevel": 10,
+      "max": 1,
+      "cost": {
+        "base": 200000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "bagSpace",
+        "level": 8
+      },
+      "special": true,
+      "path": "s"
+    },
+    {
+      "id": "strength",
+      "effect": "atkPct",
+      "perLevel": 15,
+      "max": 8,
+      "cost": {
+        "base": 20,
+        "growth": 100
+      },
+      "requires": {
+        "id": "luck",
+        "level": 1
+      },
+      "path": "sw*8"
+    },
+    {
+      "id": "critChance",
+      "effect": "critChance",
+      "perLevel": 3,
+      "max": 8,
+      "cost": {
+        "base": 150,
+        "growth": 100
+      },
+      "requires": {
+        "id": "strength",
+        "level": 1
+      },
+      "path": "nw sw nw sw nw sw nw sw"
+    },
+    {
+      "id": "critDmg",
+      "effect": "critDmg",
+      "perLevel": 30,
+      "max": 8,
+      "cost": {
+        "base": 1000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "critChance",
+        "level": 3
+      },
+      "path": "nw*8"
+    },
+    {
+      "id": "bossDmg",
+      "effect": "bossDmg",
+      "perLevel": 15,
+      "max": 6,
+      "cost": {
+        "base": 5000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "critDmg",
+        "level": 4
+      },
+      "path": "sw*6"
+    },
+    {
+      "id": "champion",
+      "effect": "atkPct",
+      "perLevel": 30,
+      "max": 1,
+      "cost": {
+        "base": 500000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "strength",
+        "level": 8
+      },
+      "special": true,
+      "path": "sw"
+    },
+    {
+      "id": "toughness",
+      "effect": "hpPct",
+      "perLevel": 15,
+      "max": 8,
+      "cost": {
+        "base": 40,
+        "growth": 100
+      },
+      "requires": {
+        "id": "strength",
+        "level": 2
+      },
+      "path": "s*8"
+    },
+    {
+      "id": "lifesteal",
+      "effect": "lifesteal",
+      "perLevel": 2,
+      "max": 5,
+      "cost": {
+        "base": 2000,
+        "growth": 100
+      },
+      "requires": {
+        "id": "toughness",
+        "level": 3
+      },
+      "path": "sw*5"
+    },
+    {
+      "id": "titan",
+      "effect": "hpPct",
+      "perLevel": 30,
+      "max": 1,
+      "cost": {
+        "base": 1000000000,
+        "growth": 1
+      },
+      "requires": {
+        "id": "toughness",
+        "level": 8
+      },
+      "special": true,
+      "path": "s"
+    }
+  ],
+  "enchant": {
+    "baseChance": 0.05,
+    "countWeights": [
+      80,
+      17,
+      3
+    ],
+    "tierWeights": [
+      70,
+      25,
+      5
+    ],
+    "powerPerTier": [
+      0.15,
+      0.3,
+      0.55
+    ],
+    "burnSeconds": 2,
+    "chainDamage": 0.5,
+    "burnEventSeconds": 0.5,
+    "tierShiftPerLevel": [
+      -12,
+      7,
+      5
+    ]
+  },
+  "heist": {
+    "unlockRebirths": 1,
+    "tickets": {
+      "perDay": 3,
+      "max": 6,
+      "adPerDay": 1,
+      "bonusGems": 100,
+      "start": 3
+    },
+    "fightSpeed": 2,
+    "nodesPerAct": 6,
+    "actMult": [
+      1.0,
+      1.4,
+      1.9
+    ],
+    "nodeWeights": [
+      {
+        "fight": 40,
+        "elite": 0,
+        "choice": 25,
+        "treasure": 10,
+        "shop": 8,
+        "shrine": 7,
+        "trap": 5,
+        "wheel": 5
+      },
+      {
+        "fight": 30,
+        "elite": 10,
+        "choice": 25,
+        "treasure": 10,
+        "shop": 8,
+        "shrine": 7,
+        "trap": 5,
+        "wheel": 5
+      },
+      {
+        "fight": 26,
+        "elite": 14,
+        "choice": 25,
+        "treasure": 10,
+        "shop": 8,
+        "shrine": 7,
+        "trap": 5,
+        "wheel": 5
+      }
+    ],
+    "minFights": [
+      2,
+      2,
+      2
+    ],
+    "golden": {
+      "chance": 0.01,
+      "spins": 10,
+      "luckMult": 10
+    },
+    "scaling": {
+      "HP": 1,
+      "ATK": 1,
+      "DEF": 1,
+      "ATK_SPD": 1,
+      "CRIT": 1,
+      "CRIT_DMG": 1,
+      "DODGE": 1,
+      "LIFESTEAL": 0.5,
+      "REGEN": 0.5,
+      "BAG_FIND": 0,
+      "COIN_FIND": 0,
+      "BOSS_DMG": 1
+    },
+    "enemies": {
+      "refMargin": 4.4,
+      "hpMult": 3,
+      "atkMult": 1.2,
+      "elite": {
+        "hpMult": 1,
+        "atkMult": 1
+      },
+      "boss": {
+        "hpMult": 0.6,
+        "atkMult": 1.2
+      },
+      "firstRunMult": 0.84,
+      "fightSize": [
+        {
+          "min": 2,
+          "max": 3
+        },
+        {
+          "min": 2,
+          "max": 4
+        },
+        {
+          "min": 3,
+          "max": 4
+        }
+      ],
+      "eliteAdds": [
+        0,
+        1,
+        1
+      ]
+    },
+    "levels": [
+      3,
+      7,
+      12,
+      18,
+      25,
+      33,
+      42
+    ],
+    "xp": {
+      "regular": 1,
+      "elite": 4
+    },
+    "coins": {
+      "regular": 2,
+      "elite": 8,
+      "start": 10
+    },
+    "maxPerks": 8,
+    "rarityWeights": {
+      "common": 70,
+      "rare": 25,
+      "epic": 5
+    },
+    "offerSize": 3,
+    "maxEvolutionsPerOffer": 2,
+    "fullHealPct": 20,
+    "rerolls": {
+      "free": 1,
+      "gems": 10
+    },
+    "revive": {
+      "hpPct": 50,
+      "gems": 50
+    },
+    "lossKeepPct": 50,
+    "treasure": {
+      "coins": {
+        "min": 12,
+        "max": 24
+      },
+      "bags": {
+        "min": 3,
+        "max": 6
+      },
+      "bagsChance": 0.4
+    },
+    "trap": {
+      "damagePct": 12,
+      "curseChance": 0.5
+    },
+    "shrine": {
+      "maxHpPct": 20
+    },
+    "shop": {
+      "healPct": 30,
+      "maxHpChance": 0.75,
+      "perks": 2,
+      "prices": {
+        "heal": 15,
+        "common": 25,
+        "rare": 40,
+        "epic": 60,
+        "removeCurse": 30,
+        "reroll": 10
+      }
+    },
+    "wheel": [
+      {
+        "kind": "coins",
+        "value": 30,
+        "weight": 26
+      },
+      {
+        "kind": "heal",
+        "value": 40,
+        "weight": 22
+      },
+      {
+        "kind": "bags",
+        "value": 8,
+        "weight": 20
+      },
+      {
+        "kind": "perk",
+        "value": 1,
+        "weight": 16
+      },
+      {
+        "kind": "gems",
+        "value": 5,
+        "weight": 10
+      },
+      {
+        "kind": "coins",
+        "value": 100,
+        "weight": 6
+      }
+    ],
+    "locations": {
+      "pizza": {
+        "difficulty": 1.0,
+        "bags": 20,
+        "gems": 5,
+        "coins": 600
+      },
+      "mall": {
+        "difficulty": 1.16,
+        "bags": 40,
+        "gems": 10,
+        "coins": 900
+      },
+      "hotel": {
+        "difficulty": 1.4,
+        "bags": 60,
+        "gems": 15,
+        "coins": 1200
+      }
+    },
+    "ring": {
+      "chance": 0.02,
+      "luckMult": 10,
+      "minRarity": "legendary"
+    },
+    "logMax": 120
+  },
+  "perks": {
+    "unlockRebirths": 2,
+    "loavesPerWorld": 1,
+    "trees": [
+      { "id": "crew", "icon": "pigeon" },
+      { "id": "chaos", "icon": "skull" },
+      { "id": "reels", "icon": "reelGold" },
+      { "id": "bread", "icon": "bread" }
+    ],
+    "list": [
+      { "id": "pigeonWingman", "tree": "crew", "cost": 1, "requires": [], "icon": "pigeon", "effect": { "pigeonAtkPct": 40, "pigeonEvery": 1 } },
+      { "id": "sewerCousins", "tree": "crew", "cost": 2, "requires": ["pigeonWingman"], "icon": "rat", "effect": { "ratAtkPct": 12, "ratEvery": 1 } },
+      { "id": "drSqueaks", "tree": "crew", "cost": 2, "requires": ["pigeonWingman"], "icon": "heart", "effect": { "healPct": 2, "healEvery": 1 } },
+      { "id": "seagullStrike", "tree": "crew", "cost": 3, "requires": ["sewerCousins", "drSqueaks"], "icon": "gull", "effect": { "gullAtkPct": 150, "gullEvery": 6 } },
+      { "id": "raccoonMafia", "tree": "crew", "cost": 4, "requires": ["seagullStrike"], "icon": "fedora", "effect": { "recruitAtkPct": 30, "recruitEvery": 1, "recruitMax": 4 } },
+
+      { "id": "energyDrink", "tree": "chaos", "cost": 1, "requires": [], "icon": "bolt", "effect": { "atkSpdPct": 50, "hpCutPct": 25 } },
+      { "id": "glassCannon", "tree": "chaos", "cost": 2, "requires": ["energyDrink"], "icon": "power", "effect": { "atkMult": 2, "hpMult": 0.5 } },
+      { "id": "playingPossum", "tree": "chaos", "cost": 2, "requires": ["energyDrink"], "icon": "potion", "effect": { "secondWindPct": 40 } },
+      { "id": "holdMySoda", "tree": "chaos", "cost": 3, "requires": ["glassCannon", "playingPossum"], "icon": "flame", "effect": { "rageBelowPct": 35, "rageMult": 2.5 } },
+      { "id": "yolo", "tree": "chaos", "cost": 4, "requires": ["holdMySoda"], "icon": "skull", "effect": { "bossDmgMult": 2, "regularAtkPct": 60 } },
+
+      { "id": "fourLeafLitter", "tree": "reels", "cost": 1, "requires": [], "icon": "clover", "effect": { "tokenChanceMult": 3, "bagCutPct": 50 } },
+      { "id": "pawnShopHustle", "tree": "reels", "cost": 2, "requires": ["fourLeafLitter"], "icon": "coin", "effect": { "scrapGoldMult": 2 } },
+      { "id": "bootlegReel", "tree": "reels", "cost": 2, "requires": ["fourLeafLitter"], "icon": "reel", "effect": { "extraReels": 1, "spinTimePct": 50 } },
+      { "id": "greasedGears", "tree": "reels", "cost": 3, "requires": ["pawnShopHustle", "bootlegReel"], "icon": "gear", "effect": { "spinSpeedMult": 2, "bossAtkPct": 100 } },
+      { "id": "riggedJackpot", "tree": "reels", "cost": 4, "requires": ["greasedGears"], "icon": "dice", "effect": { "jackpotEvery": 25 }, "rarity": "legendary" },
+
+      { "id": "sourdoughStarter", "tree": "bread", "cost": 1, "requires": [], "icon": "bread", "effect": { "bonusLoafEvery": 3 } },
+      { "id": "carbLoading", "tree": "bread", "cost": 2, "requires": ["sourdoughStarter"], "icon": "backpack", "effect": { "heldLoafLuckPct": 10 } },
+      { "id": "breadBait", "tree": "bread", "cost": 2, "requires": ["sourdoughStarter"], "icon": "target", "effect": { "extraLoaves": 1, "bossHpPct": 50 } },
+      { "id": "holyCrust", "tree": "bread", "cost": 3, "requires": ["carbLoading", "breadBait"], "icon": "star", "effect": { "eatenLoafPct": 4 } },
+      { "id": "glutenGolem", "tree": "bread", "cost": 4, "requires": ["holyCrust"], "icon": "golem", "effect": { "golemAtkPct": 15, "golemEvery": 2 } }
+    ]
+  },
+  "endless": {
+    "floorStep": 0.2,
+    "wavesPerFloor": 3,
+    "gateEvery": 10,
+    "sawtooth": [0.86, 0.88, 0.91, 0.94, 0.97, 1.0, 1.03, 1.06, 1.14, 1.0],
+    "lossesBeforeBack": 3,
+    "gate": { "hpMult": 7, "atkMult": 1.35, "gems": 25, "gemsPerGate": 5, "movesFirst": 1, "movesEveryGates": 3, "maxMoves": 3 },
+    "floorGems": 2,
+    "twistChance": 0.6,
+    "goodAfterGate": 2,
+    "twists": {
+      "swarm": { "countMult": 2, "hpMult": 0.45 },
+      "regen": { "pctPerSecond": 6, "bossPctPerSecond": 1.2 },
+      "armored": { "nonCritPct": 25 },
+      "spiky": { "atkShare": 0.18 },
+      "slippery": { "dodgePct": 40 },
+      "giants": { "count": 2, "hpMult": 2.4 },
+      "goldRush": { "goldMult": 3 },
+      "lucky": { "luckMult": 2 },
+      "pinata": { "bagMult": 3 }
+    },
+    "moves": {
+      "enrage": { "belowHpPct": 50, "atkMult": 1.3, "atkSpdMult": 1.5 },
+      "summon": { "everySeconds": 8, "max": 2 },
+      "regen": { "pctPerSecond": 1.5 },
+      "hatSteal": { "hits": 15 },
+      "shield": { "atHpPct": [66, 33], "seconds": 3 }
+    },
+    "windupSeconds": 1.2,
+    "dodgeCounterMult": 3,
+    "catchUp": { "afterMinutes": 15, "pctPerMinute": 3, "maxPct": 300 },
+    "milestones": [25, 50, 100, 150, 200, 300, 500, 750, 1000],
+    "tierFloors": { "cosmic": 10, "glitched": 20, "fourthWall": 35, "devsOwn": 50, "patchNotes": 75, "sourceCode": 100, "concept": 150 },
+    "gateBosses": ["officer_dale", "big_earl", "vinnie_two_lids", "mega_moo", "demon_king", "chef_tony", "mall_cop_doug", "the_concierge"],
+    "tints": [
+      ["#7C5CFF", "#40C4FF"], ["#00C853", "#B2FF59"], ["#FF5252", "#FFD54F"], ["#E040FB", "#FF80AB"],
+      ["#00E5FF", "#FFFFFF"], ["#FF9100", "#3E2723"], ["#212121", "#FF1744"], ["#FFEA00", "#6200EA"]
+    ],
+    "overlay": { "color": "#5B2BB5", "alpha": 0.16 },
+    "floorsPerRebirthWorld": 5,
+    "goldRebirthsCap": 8
+  },
+  "stench": {
+    "max": 10,
+    "goldXpPerLevel": 0.3,
+    "starsPerLevel": 0.15,
+    "curses": [
+      { "id": "wetSocks", "effect": { "enemyHpPct": 50 } },
+      { "id": "fruitFlies", "effect": { "extraEnemies": 1 } },
+      { "id": "hotGarbage", "effect": { "enemyAtkPct": 40 } },
+      { "id": "stickyFloor", "effect": { "atkSpdCutPct": 15 } },
+      { "id": "rottenLuck", "effect": { "gateMoves": 1 } },
+      { "id": "mysteryJuice", "effect": { "lifestealCutPct": 100 } },
+      { "id": "ratsInTheWalls", "effect": { "enemyAtkSpdPct": 30 } },
+      { "id": "weekOldPizza", "effect": { "regenCutPct": 100 } },
+      { "id": "raccoonFlu", "effect": { "hpCutPct": 25 } },
+      { "id": "theSmell", "effect": { "enemyHpPct": 100, "enemyAtkPct": 100 } }
+    ]
+  },
+  "legend": {
+    "unlockRebirths": 5,
+    "starsPerRebirthSq": 0.5,
+    "starsPerFloor": 1,
+    "perks": [
+      { "id": "headStart", "icon": "arrowRight", "max": 3, "costs": [4, 12, 30], "effect": { "startLevels": 10, "startWorlds": 5 } },
+      { "id": "loafStash", "icon": "bread", "max": 3, "costs": [3, 8, 18], "effect": { "startLoaves": 2 } },
+      { "id": "autoEquip", "icon": "hand", "max": 1, "costs": [6], "effect": { "autoEquip": 1 } },
+      { "id": "autoRebirth", "icon": "rebirth", "max": 1, "costs": [10], "effect": { "autoRebirth": 1 } },
+      { "id": "keepReels", "icon": "reel", "max": 1, "costs": [25], "effect": { "keepReels": 1 } },
+      { "id": "goldenLid", "icon": "reelGold", "max": 3, "costs": [8, 20, 45], "effect": { "goldenSpin": 0.02 } },
+      { "id": "starLuck", "icon": "clover", "max": 0, "cost": { "base": 3, "growth": 1.35 }, "effect": { "luckPct": 10 } },
+      { "id": "starPower", "icon": "power", "max": 0, "cost": { "base": 3, "growth": 1.3 }, "effect": { "powerPct": 20 } },
+      { "id": "starGold", "icon": "coin", "max": 0, "cost": { "base": 2, "growth": 1.3 }, "effect": { "goldPct": 25 } }
+    ]
+  },
+  "daily": {
+    "count": 3,
+    "chest": { "gems": 50, "potionSeconds": 120 },
+    "tasks": [
+      { "id": "rolls", "event": "roll", "target": 300, "gems": 15 },
+      { "id": "epics", "event": "epicFind", "target": 5, "gems": 20 },
+      { "id": "bosses", "event": "bossWin", "target": 10, "gems": 20 },
+      { "id": "kills", "event": "kill", "target": 600, "gems": 15 },
+      { "id": "scraps", "event": "scrap", "target": 80, "gems": 15 },
+      { "id": "equips", "event": "equip", "target": 10, "gems": 15 },
+      { "id": "dodges", "event": "perfectDodge", "target": 3, "gems": 25 },
+      { "id": "floors", "event": "floorClear", "target": 15, "gems": 25, "needs": "endless" },
+      { "id": "gates", "event": "gateClear", "target": 1, "gems": 30, "needs": "endless" },
+      { "id": "heist", "event": "heistWin", "target": 1, "gems": 25, "needs": "heist" }
+    ]
+  },
+  "weekly": {
+    "rules": [
+      { "id": "allSwarm", "twist": "swarm", "atkMult": 1, "hpMult": 1, "goldMult": 1.5 },
+      { "id": "glassFloors", "twist": null, "atkMult": 2, "hpMult": 0.4, "goldMult": 1.5 },
+      { "id": "slipperyWeek", "twist": "slippery", "atkMult": 1, "hpMult": 1, "goldMult": 1.5 },
+      { "id": "ironclad", "twist": "armored", "atkMult": 1, "hpMult": 1.5, "goldMult": 1.5 },
+      { "id": "zombieWeek", "twist": "regen", "atkMult": 1, "hpMult": 1, "goldMult": 1.5 },
+      { "id": "cactusWeek", "twist": "spiky", "atkMult": 1, "hpMult": 1.2, "goldMult": 1.5 },
+      { "id": "bigBoysWeek", "twist": "giants", "atkMult": 1.2, "hpMult": 1, "goldMult": 1.5 }
+    ],
+    "rewards": [
+      { "floor": 5, "gems": 20, "stars": 0 },
+      { "floor": 10, "gems": 30, "stars": 1 },
+      { "floor": 20, "gems": 40, "stars": 2 },
+      { "floor": 35, "gems": 60, "stars": 3 },
+      { "floor": 50, "gems": 80, "stars": 5 },
+      { "floor": 75, "gems": 100, "stars": 8 },
+      { "floor": 100, "gems": 150, "stars": 12 }
+    ]
+  },
+  "boosts": {
+    "unlockMinutes": 3,
+    "quickDive": { "hours": 2, "perDay": 3, "gems": [50, 100, 200] },
+    "potionBrew": { "mult": 3, "minutes": 5, "perDay": 3, "gems": [60] },
+    "ductTapeReel": { "minutes": 15, "perDay": 2, "gems": [120] },
+    "rebirthBlessing": { "speedMult": 2, "minutes": 10, "perDay": 3, "gems": [80] },
+    "bossRage": { "atkMult": 1.5, "afterLosses": 2, "perDay": 3, "gems": [60] },
+    "encore": { "minMult": 25, "minutes": 3, "perDay": 2, "gems": [80] },
+    "polish": { "minRarity": "mythic", "perDay": 3, "gems": [100] },
+    "goldTopUp": { "maxShortPct": 25, "maxMinutes": 10, "perDay": 3, "gems": [20] },
+    "bonusCrate": {
+      "everyHours": 4,
+      "perDay": 3,
+      "gems": [40],
+      "rewards": [
+        { "kind": "bags", "minutes": 10, "min": 10, "weight": 45 },
+        { "kind": "coins", "minutes": 10, "min": 100, "weight": 35 },
+        { "kind": "potion", "seconds": 120, "weight": 20 }
+      ]
+    }
+  }
+}

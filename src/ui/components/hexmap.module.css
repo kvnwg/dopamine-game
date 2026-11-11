@@ -1,0 +1,391 @@
+/*
+ * The full-screen upgrade map: a pannable, zoomable honeycomb of tier hexes. The hexes (vector) scale
+ * with the zoom; their pixel icons sit in .icons, which only moves, so they stay 6 px per art pixel.
+ */
+.overlay {
+  --hexclip: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(91, 132, 255, 0.28), transparent 55%),
+    linear-gradient(180deg, #1a2147 0%, #121734 55%, #0b0e22 100%);
+}
+.viewport {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.viewport:active {
+  cursor: grabbing;
+}
+/* The faint honeycomb behind the hexes: one screen of it, its tile moved and scaled with the map. */
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+/*
+ * The map itself: one canvas the size of the screen (hexMapDraw.ts), its pixels matched to the
+ * screen's. Taps and drags go to the viewport under it. Its box is half the screen's, scaled up 2x:
+ * Safari keeps a canvas's layer at 3 pixels per box pixel whatever the transforms (it ignores the
+ * stage's shrink to fit the phone), so a full-size box made a 75 MB layer, redrawn whole on every
+ * pan. Half-size, it is a quarter of that and still 1.5 pixels per stage pixel, sharper than any
+ * phone or PC shows the stage.
+ */
+.canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 50%;
+  transform: scale(2);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+/* (The bread counter on the Perks tab still pulses: a smooth fade.) */
+@keyframes hexPulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.18); }
+}
+
+/* ------------------------------------------------------------ header */
+.head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 250px;
+  padding: 28px 30px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0.94) 0%, rgba(9, 12, 28, 0.62) 58%, rgba(9, 12, 28, 0) 100%);
+  pointer-events: none;
+}
+.titles {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sub {
+  max-width: 800px;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #cdd5f7;
+}
+.hint {
+  font-size: 30px;
+  font-weight: 500;
+  color: #8790c0;
+}
+/* The switch between the upgrade map and the Perks page (it shows from the first rebirth). */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 8px;
+  pointer-events: auto;
+}
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 84px;
+  padding: 0 26px;
+  font-family: var(--font-display);
+  font-size: 44px;
+  color: #8790c0;
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  background: #1c2140;
+  box-shadow: var(--pixel-edge);
+}
+.tab[data-on] {
+  color: #fff;
+  background: linear-gradient(180deg, #9edcf7 0 var(--px), #2a8cf0 var(--px) calc(100% - 2 * var(--px)), #1d5fb0 calc(100% - 2 * var(--px)) 100%);
+}
+.tab[data-perks][data-on] {
+  background: linear-gradient(180deg, #ffe08a 0 var(--px), #d4862a var(--px) calc(100% - 2 * var(--px)), #8e5214 calc(100% - 2 * var(--px)) 100%);
+}
+.tab[data-locked] {
+  color: #5d6491;
+}
+.tab[data-locked] img {
+  opacity: 0.7;
+}
+/* A locked tab shakes its head when tapped, a pixel each way. */
+.tab[data-nope] {
+  animation: tabNope 400ms steps(4) backwards;
+}
+@keyframes tabNope {
+  25% { transform: translateX(calc(-1 * var(--px))); }
+  75% { transform: translateX(var(--px)); }
+}
+.tabNote {
+  font-size: 30px;
+  font-weight: 500;
+  color: #8790c0;
+}
+/* Loaves waiting to be eaten (green when a perk is affordable). */
+.tabBread {
+  position: absolute;
+  right: -18px;
+  top: -18px;
+  min-width: 46px;
+  height: 46px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 4px solid var(--ink);
+  background: #d4862a;
+  font-size: 30px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--ink);
+}
+.tabBread[data-buy] {
+  background: #3fae2a;
+  animation: hexPulse 0.9s ease-in-out infinite alternate;
+}
+.centerBtn {
+  pointer-events: auto;
+  width: calc(16 * var(--px));
+  height: calc(16 * var(--px));
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ------------------------------------------------------------ footer */
+.foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 110px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0) 0%, rgba(9, 12, 28, 0.85) 24%, rgba(9, 12, 28, 0.97) 100%);
+  pointer-events: none;
+}
+.foot [data-ui] {
+  pointer-events: auto;
+}
+.card {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  padding: calc(3 * var(--px));
+}
+/* The selected upgrade's icon, 16 x 16 at 6 px per pixel, on a tile colored like its hex. */
+.cardTile {
+  flex: none;
+  width: calc(20 * var(--px));
+  height: calc(20 * var(--px));
+  display: grid;
+  place-items: center;
+  border: var(--px) solid var(--ink);
+  background: linear-gradient(180deg, #8be0ff 0 50%, #2b86e3 50% 100%);
+}
+.cardTile[data-view='open'] {
+  background: linear-gradient(180deg, #3d4772 0 50%, #1c2140 50% 100%);
+}
+.cardTile[data-special] {
+  background: linear-gradient(180deg, #fff09a 0 50%, #f39c12 50% 100%);
+}
+.cardTile[data-view='mystery'] {
+  background: linear-gradient(180deg, #2c3152 0 50%, #181b30 50% 100%);
+}
+.cardQ {
+  font-family: var(--font-display);
+  font-size: 76px;
+  color: #fff;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+}
+.cardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cardName {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 42px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.cardTag {
+  padding: 0 var(--px);
+  box-shadow: var(--pixel-edge);
+  background: #ffc233;
+  font-style: normal;
+  font-size: 30px;
+}
+.cardDesc {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #6b5e57;
+}
+.cardFx {
+  font-family: var(--font-display);
+  font-size: 30px;
+  color: #7a6a60;
+}
+.cardFx b {
+  color: #5bc236;
+  font-size: 30px;
+}
+.fxNext {
+  color: #2f8a1c;
+}
+.buy {
+  flex: none;
+  min-width: 240px;
+  min-height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 46px;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 124px;
+}
+.coins {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 60px;
+  color: #ffd23f;
+  -webkit-text-stroke: 8px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink);
+}
+.close {
+  flex: none;
+  width: 340px;
+  height: 120px;
+  font-size: 58px;
+}
+.barRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+/* The raccoon's ATK and DEF (they show only here). */
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: #fff;
+  -webkit-text-stroke: 7px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+.overlay[data-calm],
+.overlay[data-calm] .tab,
+.overlay[data-calm] .tabBread {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .tabBread {
+    animation: none !important;
+  }
+}
+
+/*
+ * The wide stage (PC, 2160 x 960): the map gets the whole left side at full height (Kevin: "manage the
+ * space better, there's barely any space to move and look around"). The page's words run in one strip
+ * along its top; the selected upgrade's card, the gold, ATK/DEF and Close stand in a panel down the
+ * right side (UpgradeMap.tsx centres the map in what is left: FOCUS_WIDE).
+ */
+:global([data-layout='wide']) .head {
+  right: 600px;
+  height: auto;
+  padding: 20px 26px 40px;
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0.92) 0%, rgba(9, 12, 28, 0.55) 70%, rgba(9, 12, 28, 0) 100%);
+}
+:global([data-layout='wide']) .titles {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 32px;
+  align-items: center;
+}
+:global([data-layout='wide']) .titles > :first-child {
+  grid-row: 1 / span 2;
+}
+:global([data-layout='wide']) .sub {
+  max-width: none;
+}
+:global([data-layout='wide']) .foot {
+  left: auto;
+  right: 0;
+  top: 0;
+  width: 600px;
+  padding: 30px 30px 26px;
+  gap: 24px;
+  background: linear-gradient(90deg, rgba(9, 12, 28, 0.9), rgba(9, 12, 28, 0.97) 40px);
+  box-shadow: inset var(--px) 0 0 rgba(255, 255, 255, 0.06);
+  /* Over the map: a drag or the wheel here doesn't move it. */
+  pointer-events: auto;
+}
+:global([data-layout='wide']) .card {
+  flex-wrap: wrap;
+}
+:global([data-layout='wide']) .cardBody {
+  flex: 1 1 260px;
+}
+:global([data-layout='wide']) .buy {
+  flex: 1 1 100%;
+}
+:global([data-layout='wide']) .bar {
+  margin-top: auto;
+  flex-wrap: wrap;
+  height: auto;
+  row-gap: 22px;
+}
+:global([data-layout='wide']) .close {
+  order: 3;
+  flex: 1 1 100%;
+  width: auto;
+}
+/* The Buy button, and under it a Gold top-up (a boost) when an upgrade is a little out of reach. */
+.buyCol {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.topUpLabel {
+  font-size: 26px;
+  text-align: center;
+  color: #7a6a60;
+}

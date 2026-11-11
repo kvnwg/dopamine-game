@@ -1,0 +1,669 @@
+/**
+ * Full-screen moments: the big reveal for a roll that is rare at the raccoon's luck (black screen,
+ * the item rising and shining in Scale3x, its "1 in X" counting up to the real odds; see RareReveal),
+ * the Scrap All haul and the rebirth celebration. Pixel art moves by whole 6 px art pixels.
+ */
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { DATA, RARITIES, type Rarity } from '../../data';
+import {
+  boostBlocked, currentLuck, encoreOffer, formatNumber, itemName, RARITY_ODDS, rarityAtLeast, rarityIndex, rebirthGoldMult, rebirthLuckMult,
+} from '../../core';
+import { dispatch, useGame } from '../../app/store';
+import { rarityColor } from '../../render/art';
+import { sparkleArt, UI_PX } from '../../render/icons';
+import { audio } from '../../services/audio';
+import { revealLanded, skipReveal } from '../rollController';
+import { DRAMA_LEVEL, HYPER_LOCK_MS, revealPhases } from '../revealTiming';
+import { stagePoint } from '../drag';
+import { noteEquipSource } from '../equipSource';
+import { RAINBOW, raysUrl } from '../rays';
+import { Rays } from './Rays';
+import { t } from '../i18n';
+import { closeAnnounce, stageSize, useUi, type RollView } from '../uiStore';
+import { enchantLabel, fmtOdds } from './AlleyPanel';
+import { Chunky, type Grad } from './Chunky';
+import { enchantColor, ItemIcon } from './ItemIcon';
+import { BoostButtons } from './BoostButtons';
+import { CoinIcon } from './Icons';
+import { HyperBands, HyperFx, type HyperHandle, type RevealClock } from './HyperFx';
+import { haptics } from '../../services/haptics';
+import { PixelArt } from './PixelArt';
+import s from './overlays.module.css';
+
+const GRAD: Partial<Record<string, Grad>> = {
+  epic: 'purple', legendary: 'gold', mythic: 'rainbow', vintage: 'gold', limited: 'red', prototype: 'blue', mint: 'white', gemMint: 'green',
+  museum: 'purple', grail: 'rainbow',
+  cosmic: 'purple', glitched: 'green', fourthWall: 'red', devsOwn: 'blue', patchNotes: 'gold', sourceCode: 'green', concept: 'rainbow',
+};
+const CONFETTI = ['#ff5252', '#ffc233', '#5bc236', '#42a5f5', '#c48bff', '#ffffff'];
+
+function Confetti({ n }: { n: number }) {
+  const bits = useMemo(
+    () =>
+      Array.from({ length: n }, (_, i) => ({
+        left: (i * 137.5) % 100,
+        delay: (i * 53) % 900,
+        dur: 1500 + ((i * 97) % 1100),
+        color: CONFETTI[i % CONFETTI.length],
+        // Pieces are 2 x 1 or 1 x 2 art pixels and flip between the two as they fall.
+        tall: i % 2 === 0,
+        flip: 180 + ((i * 41) % 260),
+      })),
+    [n],
+  );
+  return (
+    <div className={s.confetti}>
+      {bits.map((b, i) => (
+        <span
+          key={i}
+          data-tall={b.tall || undefined}
+          style={{
+            left: `${Math.round((b.left / 100) * (stageSize().w / UI_PX)) * UI_PX}px`,
+            background: b.color,
+            animationDelay: `${b.delay}ms, ${b.delay}ms`,
+            animationDuration: `${b.dur}ms, ${b.flip}ms`,
+          } as CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
+function enchantDesc(id: string, tier: number): string {
+  const def = DATA.enchantsById.get(id);
+  if (!def) return '';
+  const e = def.effect;
+  const raw = e.values[tier - 1];
+  const pct = ['burn', 'chain', 'echo', 'explode', 'thorns'].includes(e.type);
+  const v = pct ? Math.round(raw * 100) : raw;
+  if (e.type === 'mod') return t(`enchant.mod.${e.stat}`, { v });
+  return t(`enchant.${e.type}`, { v });
+}
+export { enchantDesc };
+
+type Phase = 'black' | 'dark' | 'appear' | 'count' | 'landed';
+
+/** Light motes drifting in from the dark toward where the item will appear. */
+function Motes({ n, ms }: { n: number; ms: number }) {
+  const motes = useMemo(
+    () =>
+      Array.from({ length: n }, (_, i) => {
+        const a = i * 2.39996;
+        const r = 380 + ((i * 97) % 260);
+        return { x: Math.round((Math.cos(a) * r) / UI_PX) * UI_PX, y: Math.round((Math.sin(a) * r) / UI_PX) * UI_PX, d: ms * (0.55 + ((i * 37) % 40) / 100), delay: (i * 61) % Math.max(1, ms * 0.4) };
+      }),
+    [n, ms],
+  );
+  return (
+    <div className={s.motes}>
+      {motes.map((m, i) => (
+        <span
+          key={i}
+          className={s.mote}
+          style={{ ['--x' as string]: `${m.x}px`, ['--y' as string]: `${m.y}px`, animationDuration: `${m.d}ms`, animationDelay: `${m.delay}ms` } as CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** The battle's four-point sparkle (7 x 7 art pixels) twinkling on and off around the item. */
+function Sparkles({ n }: { n: number }) {
+  const art = sparkleArt();
+  return (
+    <>
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2 + 0.4;
+        const r = 190 + ((i * 53) % 70);
+        // Whole art pixels from the item's center (the sprite is 7 x 7, 42 px: its middle pixel starts 18 px in).
+        const x = Math.round((Math.cos(a) * r) / UI_PX) * UI_PX - 3 * UI_PX;
+        const y = Math.round((Math.sin(a) * r) / UI_PX) * UI_PX - 3 * UI_PX;
+        return (
+          <PixelArt
+            key={i}
+            art={art}
+            className={s.sparkle}
+            style={{ left: `calc(50% + ${x}px)`, top: `calc(50% + ${y}px)`, animationDelay: `${(i * 173) % 1100}ms` }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+/** `hex` mixed with white (`w` of white), as CSS color-mix(in srgb, hex, #fff w) would. */
+function mixWhite(hex: string, w: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.round(v + (255 - v) * w);
+  return `rgb(${ch((n >> 16) & 255)}, ${ch((n >> 8) & 255)}, ${ch(n & 255)})`;
+}
+
+/**
+ * The landing's shock wave: a one-art-pixel square ring growing from the item to 1512 px and fading,
+ * in 16 steps over 0.72 s, then gone. Drawn on a canvas of one pixel per art pixel (scaled up crisp):
+ * as a growing bordered box it was a layer as big as itself, redrawn every step, and stayed after.
+ */
+function ShockRing({ color }: { color: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c?.getContext('2d');
+    if (!c || !ctx) return;
+    const t0 = performance.now();
+    let raf = 0;
+    let shown = -1;
+    const frame = (now: number) => {
+      const k = Math.min(15, Math.floor(((now - t0) / SHOCK_MS) * 16));
+      if (k !== shown) {
+        shown = k;
+        ctx.clearRect(0, 0, SHOCK_ART, SHOCK_ART);
+        const size = Math.max(2, Math.round((108 + (SHOCK_ART * UI_PX - 108) * (k / 16)) / UI_PX));
+        const o = Math.floor((SHOCK_ART - size) / 2);
+        ctx.globalAlpha = 1 - k / 16;
+        ctx.fillStyle = color;
+        ctx.fillRect(o, o, size, 1);
+        ctx.fillRect(o, o + size - 1, size, 1);
+        ctx.fillRect(o, o, 1, size);
+        ctx.fillRect(o + size - 1, o, 1, size);
+      }
+      if (now - t0 < SHOCK_MS) raf = requestAnimationFrame(frame);
+      else setDone(true);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [color]);
+  return done ? null : <canvas ref={ref} className={s.shock} width={SHOCK_ART} height={SHOCK_ART} aria-hidden />;
+}
+const SHOCK_MS = 720;
+/** The ring's canvas in art pixels (1512 stage px across at the end). */
+const SHOCK_ART = 252;
+
+/** The reveal's light starts no higher than Shiny's blue, so it never gives the ceiling away. */
+const GLOW_START = RARITIES.indexOf('shiny');
+
+/**
+ * The big reveal for a roll that is rare at the raccoon's luck: the screen goes black, a heartbeat in
+ * the dark while light gathers, the item rises out of the dark as a silhouette and bursts into color,
+ * shining, while its "1 in X" counts up from 1 (slowing near the end, its plate taking each tier's
+ * colors as it climbs past their odds) and slams down on the real odds. The light (motes, glow disc,
+ * rays, shock ring) starts at a low tier's color and flickers up tier by tier with the counter, so it
+ * only reaches the item's own color as the odds land. A tutorial roll (the first find, beginner's
+ * luck) gets its own banner over the title. Tap skips to the result; tap again closes it. A tutorial
+ * roll goes on with that tap (TAP TO WEAR IT!): it leaps out of the reveal and slams onto the raccoon,
+ * with no trip to the Bag in between.
+ *
+ * HYPER RARE (the rarest find of the whole game, luck.ts judgeFinds) plays the same reveal on a longer
+ * clock inside its own showcase (HyperFx): warning bands and a summoning that can't be skipped for its
+ * first HYPER_LOCK_MS, a burst the item rises out of, fireworks through the count, and its own banner.
+ */
+function RareReveal({ view }: { view: RollView }) {
+  const calm = useGame((g) => g.settings.reduceMotion);
+  const noFlash = useGame((g) => g.settings.reduceFlashing);
+  const luck = useGame((g) => currentLuck(g, Date.now()));
+  const drama = view.drama ?? 'big';
+  const lvl = DRAMA_LEVEL[drama];
+  const ph = useMemo(() => revealPhases(drama, calm), [drama, calm]);
+  const hyper = drama === 'hyper';
+  const clock = useRef<RevealClock>({ t0: performance.now(), offset: 0 });
+  const fx = useRef<HyperHandle | null>(null);
+  // HYPER RARE can't be skipped at first; the hint shows once it can.
+  const [locked, setLocked] = useState(hyper);
+  const it = view.item;
+  const itemTier = RARITIES.indexOf(it.rarity);
+  const [phase, setPhase] = useState<Phase>('black');
+  const [tier, setTier] = useState<Rarity>('junk');
+  const [num, setNum] = useState('1');
+  const skip = useRef(false);
+  const phaseRef = useRef<Phase>('black');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const itemRef = useRef<HTMLDivElement>(null);
+  // A tutorial find still in the bag goes on from here: one tap closes the reveal and wears it.
+  const wearable = useGame((g) => view.scripted !== undefined && g.inventory.some((x) => x.uid === view.item.uid));
+  const raysRefs = useRef<(HTMLImageElement | null)[]>([]);
+  // The light's tier (climbs with the counter); the rays follow once a step has settled.
+  const glowRef = useRef(Math.min(itemTier, GLOW_START));
+  const raysTierRef = useRef(glowRef.current);
+  // The counter climbs through every tier from Decent up to the item's own.
+  const ladder = useMemo(() => RARITIES.filter((r) => r !== 'junk' && rarityAtLeast(it.rarity, r)), [it.rarity]);
+  // The biggest deals end on rainbow rays (HYPER RARE's are rainbow all along); until then the rays take the light's color.
+  const raysFor = (k: number) =>
+    hyper || (drama === 'insane' && k >= itemTier) ? raysUrl(RAINBOW, 24, 0.5) : raysUrl([rarityColor(RARITIES[k])]);
+
+  useEffect(() => {
+    const t0 = performance.now();
+    clock.current = { t0, offset: 0 };
+    const tDark = ph.black;
+    const tAppear = tDark + ph.dark;
+    const tCount = tAppear + ph.appear;
+    const tLand = tCount + ph.count;
+    let offset = 0;
+    let beats = 0;
+    let cur: Phase = 'black';
+    let shownTier: Rarity = 'junk';
+    let lastText = '1';
+    let raf = 0;
+    // The light: its tier, the one before it and when it stepped up (it flickers between them a moment).
+    let glow = glowRef.current;
+    let glowPrev = glow;
+    let glowAt = -1e9;
+    let glowShown = -1;
+    // Draw each tier's rays ahead of time in the dark, one per frame (rays.ts caches them).
+    const pending = ladder.map((r) => RARITIES.indexOf(r)).filter((k) => k >= glow);
+    let stillLocked = hyper;
+    let dropped = false;
+    let boomed = false;
+    if (hyper) audio.hyperIntro(tAppear / 1000);
+    else audio.blackout();
+    const step = () => {
+      if (skip.current) {
+        skip.current = false;
+        offset = Math.max(offset, tLand - (performance.now() - t0));
+        clock.current.offset = offset;
+      }
+      const el = performance.now() - t0 + offset;
+      if (stillLocked && performance.now() - t0 >= HYPER_LOCK_MS) {
+        stillLocked = false;
+        setLocked(false);
+      }
+      // A breath of silence right before HYPER RARE bursts, then the boom.
+      if (hyper && !dropped && el >= tAppear - 130) {
+        dropped = true;
+        audio.silenceDrop(0.12);
+      }
+      if (hyper && !boomed && el >= tAppear) {
+        boomed = true;
+        audio.hyperBoom();
+        [0, 110, 220].forEach((ms) => setTimeout(() => haptics.impact('heavy'), ms));
+      }
+      const next: Phase = el < tDark ? 'black' : el < tAppear ? 'dark' : el < tCount ? 'appear' : el < tLand ? 'count' : 'landed';
+      if ((next === 'black' || next === 'dark') && pending.length) raysFor(pending.shift()!);
+      if (next === 'black' || next === 'dark') {
+        while (beats < ph.beats && el >= tDark + (beats * ph.dark) / ph.beats) {
+          audio.heartbeat(beats++);
+          if (hyper) haptics.impact(beats > ph.beats - 2 ? 'medium' : 'light');
+        }
+      }
+      // The light climbs with the counter's tier (never past the item's own), and lands on the item's.
+      const reachedTier = next === 'landed' ? itemTier : next === 'count' ? Math.max(RARITIES.indexOf(shownTier), glow) : glow;
+      if (reachedTier > glow) {
+        glowPrev = glow;
+        glow = Math.min(itemTier, reachedTier);
+        glowAt = el;
+        glowRef.current = glow;
+      }
+      const flick = !noFlash && el - glowAt < 180 && Math.floor((el - glowAt) / 45) % 2 === 1;
+      const lightTier = flick ? glowPrev : glow;
+      if (lightTier !== glowShown) {
+        glowShown = lightTier;
+        rootRef.current?.style.setProperty('--c', rarityColor(RARITIES[lightTier]));
+      }
+      if (el - glowAt >= 180 && raysTierRef.current !== glow) {
+        raysTierRef.current = glow;
+        const url = raysFor(glow);
+        raysRefs.current.forEach((r) => {
+          if (r && r.getAttribute('src') !== url) r.src = url;
+        });
+      }
+      if (next !== cur) {
+        if (next === 'appear') audio.emerge(ph.appear / 1000);
+        if (next === 'landed') {
+          audio.slam(lvl);
+          revealLanded(view);
+        }
+        cur = next;
+        phaseRef.current = next;
+        setPhase(next);
+      }
+      if (next === 'count' || next === 'landed') {
+        const k = next === 'landed' ? 1 : (el - tCount) / ph.count;
+        const eased = 1 - Math.pow(1 - k, 3);
+        const v = next === 'landed' ? view.odds : Math.max(1, Math.round(Math.exp(Math.log(view.odds) * eased)));
+        const text = fmtOdds(v);
+        if (text !== lastText) {
+          lastText = text;
+          setNum(text);
+          if (next === 'count') audio.countTick(k);
+        }
+        let reached: Rarity = 'junk';
+        for (const r of ladder) if (v >= RARITY_ODDS[r]) reached = r;
+        if (reached !== shownTier) {
+          shownTier = reached;
+          setTier(reached);
+          if (next === 'count') {
+            audio.tierPass(rarityIndex(reached));
+            // HYPER RARE: a firework in each tier's color as the counter passes it.
+            fx.current?.firework(rarityColor(reached));
+          }
+        }
+      }
+      // After the landing it runs on until the light's last step has flickered and settled.
+      if (next !== 'landed' || el - glowAt < 400 || raysTierRef.current !== glow) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.id]);
+
+  const tap = () => {
+    // HYPER RARE's summoning plays out whatever (Kevin: "unskippable ... at least for the first 2 seconds").
+    if (hyper && performance.now() - clock.current.t0 < HYPER_LOCK_MS) return;
+    if (phaseRef.current !== 'landed') {
+      skip.current = true;
+      return;
+    }
+    if (wearable) {
+      // Its flight starts from the reveal's own picture of it (equipSource.ts), then the reveal goes.
+      noteEquipSource(it.uid, itemRef.current);
+      dispatch({ type: 'equipItem', uid: it.uid });
+    }
+    skipReveal();
+  };
+  const title = it.rarity === 'mint' ? t('reveal.mintStamp') : `${t(`rarity.${it.rarity}`).toUpperCase()}!`;
+  const lit = phase === 'count' || phase === 'landed';
+  const risen = lit || phase === 'appear';
+  const landed = phase === 'landed';
+  const forYou = landed && luck >= 1.2 && view.luckOdds < view.odds;
+  // The light's color right now (the effect steps it up the tiers straight on the DOM).
+  const raysNow = raysFor(raysTierRef.current);
+  const banner = view.scripted === 'beginner' ? t('reveal.beginner') : view.scripted === 'first' ? t('reveal.firstFind') : null;
+  return (
+    <div
+      ref={rootRef}
+      className={s.rare}
+      data-keep-lit
+      data-phase={phase}
+      data-drama={drama}
+      data-calm={calm || undefined}
+      data-noflash={noFlash || undefined}
+      onClick={tap}
+      style={{ ['--c' as string]: rarityColor(RARITIES[Math.min(itemTier, GLOW_START)]), ['--appear' as string]: `${ph.appear}ms` } as CSSProperties}
+    >
+      <div className={s.rareBlack} />
+      {!lit && !calm && !hyper && <Motes n={[14, 22, 32, 40][lvl]} ms={ph.black + ph.dark + ph.appear} />}
+      {phase === 'dark' && !hyper && <div className={s.rareSpark} />}
+      {lit && <div className={s.rareGlow} />}
+      {lit && !calm && (
+        <Rays
+          className={s.rays}
+          url={raysNow}
+          imgRef={(el) => {
+            raysRefs.current[0] = el;
+          }}
+        />
+      )}
+      {lit && !calm && lvl > 0 && (
+        <Rays
+          className={`${s.rays} ${s.raysBack}`}
+          url={raysNow}
+          imgRef={(el) => {
+            raysRefs.current[1] = el;
+          }}
+        />
+      )}
+      {landed && !calm && !hyper && <Confetti n={[30, 44, 60, 70][lvl]} />}
+      {landed && !calm && !hyper && <ShockRing color={mixWhite(rarityColor(it.rarity), 0.3)} />}
+      {/* (After the rays, which are layers anyway, and under the item: nothing more needs a layer of its own over it.) */}
+      {hyper && <HyperFx clock={clock} ph={ph} color={rarityColor(it.rarity)} calm={calm} noFlash={noFlash} fxRef={fx} />}
+      {hyper && (phase === 'black' || phase === 'dark') && <HyperBands words={t('reveal.hyperBand')} />}
+      <div className={s.center}>
+        <div className={s.rareTitle}>
+          {landed && hyper && (
+            <div className={s.hyperBanner}>
+              <Chunky text={t('reveal.hyper')} size={96} grad="rainbow" />
+            </div>
+          )}
+          {landed && banner && (
+            <div className={s.scriptedBanner}>
+              <Chunky text={banner} size={72} grad="gold" />
+            </div>
+          )}
+          {landed && (
+            <div className={s.title}>
+              <Chunky text={title} size={it.rarity === 'mint' ? 96 : 112} grad={GRAD[it.rarity] ?? 'gold'} />
+            </div>
+          )}
+        </div>
+        {risen && (
+          <div ref={itemRef} className={`${s.rareItem} ${lit ? s.rareLit : ''}`}>
+            <ItemIcon item={it} scale={3} showOdds={false} />
+            {lit && <span className={s.glint} />}
+            {lit && !calm && <Sparkles n={[6, 9, 12, 14][lvl]} />}
+          </div>
+        )}
+        {lit && (
+          <span
+            className={`${s.odds} ${s.rareOdds} ${landed ? s.oddsLanded : ''}`}
+            data-rarity={tier}
+            style={{ ['--c' as string]: rarityColor(tier) } as CSSProperties}
+          >
+            <i>1 in</i>
+            <b key={tier}>{num}</b>
+          </span>
+        )}
+        {landed && (
+          <>
+            <span className={s.name}>{itemName(it)}</span>
+            {hyper && <span className={s.hyperSub}>{t('reveal.hyperSub')}</span>}
+            {forYou && <span className={s.forYou}>{t('reveal.forYou', { odds: fmtOdds(view.luckOdds) })}</span>}
+            <div className={s.tags}>
+              {view.golden && <span className={`${s.tag} ${s.tagGold}`}>{t('reel.golden')}</span>}
+              {view.lucky && <span className={`${s.tag} ${s.tagLucky}`}>{t('reveal.lucky')}</span>}
+              {view.newRecord && !hyper && <span className={`${s.tag} ${s.tagRecord}`}>{t('reveal.newRecord')}</span>}
+            </div>
+            {!hyper && <RevealOffers item={it} />}
+            {it.enchants.length > 0 && (
+              <div className={s.enchants}>
+                {it.enchants.map((en) => (
+                  <div key={en.id} className={s.enchant}>
+                    <span className={s.enchantName} style={{ background: enchantColor(en.id) }}>
+                      {enchantLabel(en.id, en.tier)}
+                    </span>
+                    <span className={s.enchantDesc}>{enchantDesc(en.id, en.tier)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* (The whole reveal takes the tap; this says what it does. Sideways there's no room for it here: wearHint.) */}
+            {wearable && <span className={`btn ${s.wearBtn}`}>{t('reveal.wear')}</span>}
+          </>
+        )}
+      </div>
+      {phase === 'appear' && !noFlash && !hyper && <div className={s.flashLate} />}
+      {lit && !noFlash && <div key={phase} className={s.flash} />}
+      {!locked && !(landed && wearable) && (
+        <span className={`${s.tap} ${hyper ? s.tapNow : ''}`}>{landed ? (view.placed === 'bag' ? t('reveal.dragHint') : t('reveal.tap')) : t('reveal.skip')}</span>
+      )}
+      {landed && wearable && <span className={`${s.tap} ${s.wearHint}`}>{t('reveal.wear')}</span>}
+    </div>
+  );
+}
+
+/**
+ * Boosts offered on a big reveal's landed card (core/systems/boosts.ts): an Encore when this spin had a big
+ * luck token chain (its tokens again next spin), Polish for a Mythic-or-better find in the bag. A result
+ * screen, so CrazyGames allows the ads here; their buttons keep their taps from closing the reveal.
+ */
+function RevealOffers({ item }: { item: RollView['item'] }) {
+  const now = Date.now();
+  const open = useGame((g) => g.features.unlocked.includes('boosts'));
+  const encore = useGame((g) => (boostBlocked(g, 'encore', now) === null ? encoreOffer(g, now) : null));
+  const polish = useGame((g) => boostBlocked(g, 'polish', now, { uid: item.uid }) === null);
+  if (!open) return null;
+  if (!encore && !polish) return null;
+  return (
+    <div className={s.revealOffers} onClick={(e) => e.stopPropagation()}>
+      {encore && (
+        <div className={s.revealOffer}>
+          <span className={s.revealOfferText}>{t('boosts.encoreText', { mult: formatNumber(encore.mult) })}</span>
+          <BoostButtons id="encore" watchLabel={t('boosts.encoreWatch')} />
+        </div>
+      )}
+      {polish && (
+        <div className={s.revealOffer}>
+          <span className={s.revealOfferText}>
+            <b>{t('boosts.polish')}:</b> {t('boosts.polishText')}
+          </span>
+          <BoostButtons id="polish" target={{ uid: item.uid }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Celebrate() {
+  const view = useUi((u) => u.celebrate);
+  if (!view) return null;
+  return <RareReveal key={view.id} view={view} />;
+}
+
+const HAUL_LEVEL = { big: 0, huge: 1, mega: 2 } as const;
+
+/**
+ * A big Scrap All haul: gold rays, the haul counting up from zero, what it is worth in fighting,
+ * and a burst of coins that fly into the gold counter (which pulses as they land). It stays until the
+ * player taps it away.
+ */
+function Haul({ haul }: { haul: NonNullable<ReturnType<typeof useUi.getState>['haul']> }) {
+  const calm = useGame((g) => g.settings.reduceMotion);
+  const lvl = HAUL_LEVEL[haul.size];
+  const dur = [2600, 3200, 4000][lvl];
+  const [shown, setShown] = useState(0);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    const t0 = performance.now();
+    const ms = dur * 0.5;
+    let raf = 0;
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms);
+      setShown(haul.coins * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    // (No timer closes it: the hint shows once the count and the coins are done.)
+    const ready = setTimeout(() => setDone(true), dur);
+    const pulses = [950, 1150, 1350, 1600].map((ms2) => setTimeout(() => useUi.setState((u) => ({ goldPulse: u.goldPulse + 1 })), ms2));
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(ready);
+      pulses.forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [haul.id]);
+  // Where the coins fly: the gold counter, relative to the burst point (stage coordinates).
+  const coins = useMemo(() => {
+    const el = document.querySelector('[data-gold-target]');
+    const r = el?.getBoundingClientRect();
+    const target = r ? stagePoint(r.left + r.width * 0.2, r.top + r.height / 2) : { x: 880, y: 60 };
+    // The burst point (stage px, matching .haulCoin in overlays.module.css).
+    const cx = 540;
+    const cy = 806;
+    // Few enough to stay smooth on phones.
+    const n = [14, 20, 26][lvl];
+    return Array.from({ length: n }, (_, i) => {
+      const a = i * 2.39996;
+      const r2 = 120 + ((i * 89) % 260);
+      return {
+        bx: Math.round(Math.cos(a) * r2), by: Math.round(Math.sin(a) * r2 * 0.8), tx: Math.round(target.x - cx), ty: Math.round(target.y - cy),
+        delay: (i * 37) % 420, d: 1000 + ((i * 53) % 500),
+      };
+    });
+  }, [lvl]);
+  // Against the run's usual haul (haul.ts judgeHaul): "That's 4.2× your usual haul!".
+  const times = haul.usual ? haul.coins / haul.usual : 0;
+  const worth = times > 0 ? t('haul.usual', { x: times >= 10 ? formatNumber(Math.round(times)) : times.toFixed(1) }) : t('haul.first');
+  return (
+    <div className={s.haul} data-size={haul.size} onClick={() => useUi.setState({ haul: null })} data-keep-lit>
+      <div className={s.haulBack} />
+      {!calm && <Rays className={s.haulRays} url={raysUrl(['#ffd23f'], 18, 0.42)} />}
+      <div className={s.haulCenter}>
+        <div className={s.title}>
+          <Chunky text={t(`haul.${haul.size}`)} size={[100, 112, 128][lvl]} grad="gold" />
+        </div>
+        <span className={s.haulAmount}>
+          <CoinIcon size="lg" />+{formatNumber(Math.round(shown))}
+        </span>
+        <span className={s.haulSub}>{worth}</span>
+        <span className={s.haulCount}>{t('haul.items', { n: haul.count })}</span>
+      </div>
+      {done && <span className={`${s.tap} ${s.tapNow}`}>{t('reveal.tap')}</span>}
+      {!calm &&
+        coins.map((c, i) => (
+          <span
+            key={i}
+            className={s.haulCoin}
+            style={{
+              ['--bx' as string]: `${c.bx}px`, ['--by' as string]: `${c.by}px`, ['--tx' as string]: `${c.tx}px`, ['--ty' as string]: `${c.ty}px`,
+              animationDelay: `${c.delay}ms`, animationDuration: `${c.d}ms`,
+            } as CSSProperties}
+          >
+            <CoinIcon size="md" />
+          </span>
+        ))}
+    </div>
+  );
+}
+
+function HaulFx() {
+  const haul = useUi((u) => u.haul);
+  if (!haul) return null;
+  return <Haul key={haul.id} haul={haul} />;
+}
+
+function RebirthFx() {
+  const n = useUi((u) => u.rebirthFx);
+  const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
+  if (n === null) return null;
+  return (
+    <div className={s.reveal} onClick={() => useUi.setState({ rebirthFx: null })} style={{ ['--c' as string]: '#c48bff' } as CSSProperties} data-keep-lit>
+      <div className={s.backdrop} />
+      <Rays className={s.rays} url={raysUrl(['#c48bff'])} />
+      <Confetti n={40} />
+      <div className={s.center}>
+        <Chunky text={t('rebirth.done', { n })} size={124} grad="purple" className={s.title} />
+        <span className={s.name}>
+          {t('rebirth.doneSub', { luck: rebirthLuckMult(n).toFixed(2), gold: rebirthGoldMult(n).toFixed(1) })}
+        </span>
+      </div>
+      {!reduceFlashing && <div className={s.flash} />}
+    </div>
+  );
+}
+
+/** The Endless Dump opening, a new rarity tier, a Legend, a deep milestone: a burst, its title and a line. Tap or wait. */
+function AnnounceFx() {
+  const a = useUi((u) => u.announce);
+  const reduceFlashing = useGame((g) => g.settings.reduceFlashing);
+  const busy = useUi((u) => u.rebirthFx !== null || u.celebrate !== null);
+  useEffect(() => {
+    if (!a || busy) return;
+    audio.jingle(5);
+    haptics.impact('heavy');
+    const id = setTimeout(() => closeAnnounce(a.id), 3800);
+    return () => clearTimeout(id);
+  }, [a, busy]);
+  if (!a || busy) return null;
+  return (
+    <div className={s.reveal} onClick={() => closeAnnounce(a.id)} style={{ ['--c' as string]: a.color } as CSSProperties} data-keep-lit>
+      <div className={s.backdrop} />
+      <Rays className={s.rays} url={raysUrl(a.grad === 'rainbow' ? RAINBOW : [a.color])} />
+      <Confetti n={36} />
+      <div className={s.center}>
+        <Chunky text={a.title} size={a.title.length > 18 ? 84 : 112} grad={a.grad} className={s.title} />
+        <span className={s.name}>{a.sub}</span>
+      </div>
+      {!reduceFlashing && <div className={s.flash} />}
+    </div>
+  );
+}
+
+export function RevealLayer() {
+  return (
+    <>
+      <Celebrate />
+      <HaulFx />
+      <RebirthFx />
+      <AnnounceFx />
+    </>
+  );
+}

@@ -2,7 +2,19 @@
 
 Choices made where the spec was silent or ambiguous (spec instruction: pick the simplest option and record it here). Numbers referenced live in `src/data/balance.json` unless noted.
 
-## A tutorial that says what to do and why (Nov 11, newest)
+## A shorter wait for the first Legendary (Nov 11, newest)
+
+Kevin: "we're still waiting so long for the first legendary to appear".
+
+Timed on the built page with a quick player: the Legendary landed 19 s after PLAY, and 13 s of that was watching three warm-up spins at the normal pace (3.5 s each) before the tutorial's own spin. The taps before it (World 1, START THE FIGHT!, Roll, the lock) take about 6 s and are the player's own.
+
+| # | Decision | Why |
+|---|---|---|
+| W1 | Two warm-up spins instead of three (Junk, then Shiny; `tutorial.warmupRarities`), and quick ones: 1.3 s of spinning and 0.7 s on the find (`warmupSpinSeconds`, `warmupRestSeconds`) against the usual 2.6 s and 0.9 s. The tutorial's own spin keeps its full 2.6 s. The Legendary now lands 6.6 s after the lock comes off (13.1 s before), about 12.7 s after PLAY for a quick player (19.2 s). Replaces E5's three spins and E12's normal pace. | Still "a bit" of rolling first, as Kevin asked in E5, at half the wait. The build-up before the Legendary is what the wait is for, so it stays whole. Each find stays listed under the reel while the next spins, so it can still be read. |
+| W2 | Each warm-up find is for a gear slot of its own, and never the tutorial item's (`warmupSlot` in roller.ts). | With only two warm-up finds picked at random, the first Equip best put on fewer than three items in 29% of new games (86 of 300), and the tutorial had to ask for Equip best again. Now it always puts on three: the cone and both finds. It also ends T10's case for good: a warm-up find can no longer be a plain traffic cone. |
+| W3 | Beginner's luck stays where it was: it starts about 35 s after the lock comes off and lands about 45 s in (300 simulated new games: median 35.6 s, 44.6 s). | Kevin asked for that timing earlier; only the first find moved. |
+
+## A tutorial that says what to do and why (Nov 11)
 
 Kevin: "confusing tutorial apparently, try to explain things a bit more, but don't use too much text. keep everything simply worded. make it less confusing. can u use ur logic to make the flow make sense".
 
@@ -268,14 +280,14 @@ Kevin: "theres kind of too much going on, my girlfriend played and said it was o
 | E2 | Leaving the Roll tab, the machine glides into the mini roller's corner in one smooth eased move (0.38 s), fading as it lands while the mini roller fades and settles in. Replaces M3's five steps. | "Choppy and bad." |
 | E3 | Off the Roll tab the mini roller is silent: only a luck token's chime and slam sound (tokenFx.ts). | Kevin changed his mind about the mini roller's sounds. |
 | E4 | *Luck and the Codex no longer walked through: E13.* A new game's raccoon stands in his street without fighting (battle idle, no enemies, no offline fight pay) until the player picks a world (`stage.chosen`; saves from before are already fighting). When the tutorial ends, Luck (the rarity odds) and the Codex (every item) are introduced first, each opening its popup by itself if not tapped within 7 s, then Worlds: the hand points at its tab, then at World 1 ("START HERE"; before the first pick no threat ratings, which read "deadly" everywhere at level 1), whose popup has a friendly line and START THE FIGHT!. Anything introduced after Worlds waits until he's fighting. | Kevin's idea for a calmer start, and the odds and items explained for sure (before, their NEW bubbles gave up after 12 s, easy to miss). |
-| E5 | The tutorial warms up first: three everyday spins (Junk, Decent, Shiny; `tutorial.warmupRarities`, no tokens) before the Traffic Cone of Destiny. The Bag opens when the cone lands and the tutorial points at Equip best (it puts on the cone and the warm-up finds); beginner's luck goes on with Equip best too. No step asks for a drag. | Kevin's two requests. |
+| E5 | *Two quick spins now: W1.* The tutorial warms up first: three everyday spins (Junk, Decent, Shiny; `tutorial.warmupRarities`, no tokens) before the Traffic Cone of Destiny. The Bag opens when the cone lands and the tutorial points at Equip best (it puts on the cone and the warm-up finds); beginner's luck goes on with Equip best too. No step asks for a drag. | Kevin's two requests. |
 | E6 | The UI font's C is open all down its right side (no hooks) and its 8 is a snowman (a smaller loop on a bigger one, both with the bold stroke; B has a straight back), in Dumpster Digits (tools/fonts/digits.py; now C, 0, 2, 5, 6, 8). The battle font's C opens up too and its small 8 gets round loops. Supersedes G7's pinched 8, which blurred into a blob at small sizes. | "The C looks like an O, and the 8's look like B's." |
 | E7 | Every UI font size under 30 stage px is raised to 30 (the very smallest by 6 px; tile badges a little less), toasts stay up 3.5 s or longer for long ones, and the luck slam holds 1.9 s before it lifts away. | "Font is too small or things moved too fast." |
 | E8 | Body text uses the pixel font's regular weight (500) with 0.05 em between letters; headings, buttons and big numbers keep their bold, and small description text that forced bold goes regular. The bold fills in the small holes of e, a, s, C and 8 at reading sizes; still the same pixel font. | "Text can be hard to read because it's pixelated, keep it pixelated but come up with a solution." |
 | E9 | Dumpster upgrades cost more and take less time: price 400 x 2.2^(level - 1) gold (was x1.85), time 60 s x 1.4^(level - 1) capped at 2 hours (was x1.65, capped at 24 h). Level 10 went from 100K gold and 1.5 h to 480K and 21 min; level 15 from 2.2M and 18 h to 25M and 1.9 h. In the simulator (8 seeds, 100 min) the first rebirth averages 23.8 min (24.6 before), the second 54.8 (55.9), and the dumpster reaches level 11 (9). A steeper price (x2.6) slowed the first rebirth to 32.6 min. | "Way too cheap for how long it takes to upgrade." |
 | E10 | Scrap All with upgrades in the bag asks first: "N of these would make him stronger", with a green Keep upgrades (scraps the rest; core `scrapAll` with `keepUpgrades`) and a red Scrap all. Without upgrades it stays the two-tap button. | Kevin's request. |
 | E11 | The upgrade map's affordable hexes glow with a soft green light that breathes smoothly (opacity and size of a layer behind the hex, 1.8 s each way), instead of a two-step blink of an animated shadow. | "Glowing animation behind upgrades needs to be more smooth." |
-| E12 | The warm-up spins run at normal speed even with Trash Bags in hand (the bags wait), so the player actually watches the dumpster roll. | Part of E5. |
+| E12 | *Their own quick pace now: W1.* The warm-up spins run at normal speed even with Trash Bags in hand (the bags wait), so the player actually watches the dumpster roll. | Part of E5. |
 | E13 | The tutorial no longer walks through Luck and the Codex: when it ends they open quietly (their buttons just appear, already seen; no bubble, hand or popup), and Worlds is introduced at once, so beginner's luck leads straight to picking World 1. | "In tutorial, no more walking through luck and codex." |
 
 ## Perks: Half-Eaten Bread Loaves and four perk trees (Nov 4)

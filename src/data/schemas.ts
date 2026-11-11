@@ -693,8 +693,13 @@ export const BalanceSchema = z.object({
     /**
      * A new game's first spins warm the player up before the tutorial's own find (Kevin: "get them
      * accustomed a bit first to rolling"): one everyday find per spin, at these rarities in turn.
+     * They are quick ones, `warmupSpinSeconds` of spinning and `warmupRestSeconds` on the find, so
+     * the first Legendary isn't a long wait (Kevin: "we're still waiting so long for the first
+     * legendary to appear").
      */
     warmupRarities: z.array(RaritySchema),
+    warmupSpinSeconds: positive,
+    warmupRestSeconds: positive,
     beginnerAfterRolls: z.number().int().positive(),
     beginnerAfterEquips: z.number().int().positive(),
     beginnerAfterSeconds: nonNeg,

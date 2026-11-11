@@ -52,6 +52,13 @@ describe('a new game opens its features one by one', () => {
     const own = starts[BAL.tutorial.warmupRarities.length];
     expect(own.scripted).toBe('first');
     expect(own.reels[0].item.baseId).toBe(BAL.dumpster.tutorialItem.baseId);
+    // The warm-up spins are quick ones, so the first Legendary isn't a long wait (Kevin: "we're still
+    // waiting so long for the first legendary to appear"): it lands within 7 s of the lock coming off.
+    for (const e of warm) expect(e.spinSeconds + e.restSeconds).toBeLessThan(BAL.roll.spinSeconds + BAL.roll.restSeconds);
+    const wait = warm.reduce((a, e) => a + e.spinSeconds + e.restSeconds, 0) + own.spinSeconds;
+    expect(wait).toBeLessThanOrEqual(7);
+    // The tutorial's own find still takes a full spin: its build-up needs the time.
+    expect(own.spinSeconds).toBeCloseTo(BAL.roll.spinSeconds, 5);
     // The Bag opens with it in (its Equip best puts it on).
     expect(s.features.unlocked).not.toContain('bag');
     for (let i = 0; i < 100 && !s.features.unlocked.includes('bag'); i++) s = tick(s, { ticks: 1 }, rng, T0 + 40_000 + i * 100).state;

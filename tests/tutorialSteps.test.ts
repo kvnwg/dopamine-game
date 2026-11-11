@@ -59,7 +59,7 @@ describe('the tutorial, step by step', () => {
   });
 
   it('never asks for the Bag before its own find has landed and the Bag has opened, whatever the warm-up rolls', () => {
-    // (A warm-up find can be the tutorial item's own base, a plain traffic cone: it used to count as
+    // (A warm-up find could once be the tutorial item's own base, a plain traffic cone: it counted as
     // the tutorial's find, and the hand pointed at the Bag tab, still locked, as the real one spun.)
     for (let seed = 1; seed <= 80; seed++) {
       const rng = new Rng(seed);
@@ -69,6 +69,20 @@ describe('the tutorial, step by step', () => {
       expect(st.features.unlocked, `seed ${seed}`).toContain('bag');
       expect(st.roll.current?.landed, `seed ${seed}`).toBe(true);
       expect(st.inventory.some((x) => x.baseId === BAL.dumpster.tutorialItem.baseId && x.rarity === BAL.dumpster.tutorialItem.rarity), `seed ${seed}`).toBe(true);
+    }
+  });
+
+  it('the first Equip best puts on the tutorial\'s find and every warm-up find: each is for a slot of its own', () => {
+    for (let seed = 1; seed <= 80; seed++) {
+      const rng = new Rng(seed);
+      let st = applyAction(applyAction(freshState(seed, T0, true), { type: 'travel', world: 1 }, rng, T0).state, { type: 'openDumpster' }, rng, T0).state;
+      st = run(st, rng, (g) => stepOf(g) !== 'roll');
+      const finds = BAL.tutorial.warmupRarities.length + 1;
+      expect(new Set(st.inventory.map((x) => x.slot)).size, `seed ${seed}`).toBe(finds);
+      st = applyAction(st, { type: 'equipBest' }, rng, T0).state;
+      expect(st.lifetime.itemsEquipped, `seed ${seed}`).toBe(finds);
+      // Enough for beginner's luck to come on time (it waits for this many items worn).
+      expect(finds).toBeGreaterThanOrEqual(BAL.tutorial.beginnerAfterEquips);
     }
   });
 

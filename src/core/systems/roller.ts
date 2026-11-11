@@ -12,7 +12,7 @@
  * - new items go to the bag; the player equips by dragging them onto the raccoon;
  * - the bag has limited space and always keeps the highest-power items (the rest are scrapped).
  */
-import { BAL, DATA, RARITIES, type Rarity, type Slot } from '../../data';
+import { BAL, DATA, RARITIES, SLOTS, type Rarity, type Slot } from '../../data';
 import type { Rng } from '../rng';
 import type { GameState } from '../state';
 import type { CoreEvent, Item, RollPlacement } from '../types';
@@ -210,6 +210,20 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
 }
 
 /**
+ * A warm-up find's slot (startSpin): one that neither the tutorial's own find nor anything found so
+ * far takes, so the tutorial's first Equip best puts every one of them on, and none is a second
+ * traffic cone.
+ */
+function warmupSlot(d: GameState, rng: Rng, spin: readonly Item[]): Slot {
+  const taken = new Set<Slot>([...d.inventory, ...spin].map((x) => x.slot));
+  for (const s of SLOTS) if (d.equipped[s]) taken.add(s);
+  const own = DATA.itemsById.get(BAL.dumpster.tutorialItem.baseId)?.slot;
+  if (own) taken.add(own);
+  const free = SLOTS.filter((s) => !taken.has(s));
+  return free.length > 0 ? rng.weighted(free.map((s) => [s, BAL.dumpster.slotWeights[s]] as [Slot, number])) : rollSlot(rng);
+}
+
+/**
  * Rolls one reel's item at `luck`. `dry` is the bad-luck streak as of this reel (earlier reels in
  * the same spin count), so protection triggers at most once per streak.
  */
@@ -320,8 +334,8 @@ export function tokenMult(all: ReadonlyArray<readonly number[]>, reel: number, c
  */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
-  // A new game's first spins warm up: everyday finds climbing BAL.tutorial.warmupRarities (no tokens,
-  // nothing scripted). Then the tutorial scripts two spins: its own find (rollReelItem gives the
+  // A new game's first spins warm up: quick everyday finds climbing BAL.tutorial.warmupRarities, each
+  // for a slot of its own (no tokens, nothing scripted). Then the tutorial scripts two spins: its own find (rollReelItem gives the
   // tutorial item) and, a little later, beginner's luck: its first reel chains BAL.tutorial's tokens
   // into a rare item. The reels rest on either find while it waits in the bag to be put on (rollTick
   // ends the rest when it goes).
@@ -358,7 +372,7 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     if (beginner) d.dumpster.forcedRarity = BAL.tutorial.beginnerRarity;
     // Beginner's luck lands in the tutorial item's slot: it upgrades what the raccoon got first.
     const tut = BAL.dumpster.tutorialItem.baseId;
-    const slot = beginner ? DATA.itemsById.get(tut)?.slot : undefined;
+    const slot = beginner ? DATA.itemsById.get(tut)?.slot : warmup ? warmupSlot(d, rng, rolled.map((r) => r.item)) : undefined;
     const mult = tokenMult(tokens, i, matched);
     const floor = higherFloor(chainFloor(mult), rigged);
     const item = rollReelItem(d, rng, luck * mult, dry, slot, beginner ? tut : undefined, floor, scripted === 'first' && i === 0);
@@ -367,15 +381,17 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     rolled.push({ item, mults });
   }
   // The finds decide the pace: a build-up (a scripted spin always has one, and its find the reveal)
-  // needs the spin's full length, and the warm-up spins roll at their own easy pace (the bags wait).
+  // needs the spin's full length, and the warm-up spins roll at their own quick pace (the bags wait).
   const judged = judgeFinds(d, rolled.map((r) => r.item), currentLuck(d, now));
   if (scripted) judged.drama[0] ??= 'big';
   const buildsUp = scripted !== null || judged.tease > 0 || judged.drama.some((x) => x !== null);
   const turbo = d.currencies.bags >= 1 && !buildsUp && !warmup;
   if (turbo) d.currencies.bags -= 1;
   const cycle = spinCycle(d, turbo);
-  const baseSpinSeconds = cycle * spinShare();
-  const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
+  const baseSpinSeconds = warmup ? Math.min(BAL.tutorial.warmupSpinSeconds, cycle * spinShare()) : cycle * spinShare();
+  const restSeconds = warmup
+    ? BAL.tutorial.warmupRestSeconds
+    : scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
   const reels = rolled.map((r, i) => ({
     item: r.item, odds: itemOddsOneIn(r.item), mults: r.mults, landAt: baseSpinSeconds + r.mults.length * stepSeconds, landed: false,

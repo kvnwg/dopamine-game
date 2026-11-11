@@ -21,8 +21,8 @@ export function stepOf(g: GameState): Step | null {
   if (!g.features.unlocked.includes('roll')) return g.stage.chosen ? 'open' : 'world';
   const worn = g.lifetime.itemsEquipped > 0;
   // The warm-up spins and the tutorial's own find rolling in (Kevin: "get them accustomed a bit first"),
-  // until that find has landed. (Its spin, not its kind of item in the bag: a warm-up find can be a
-  // plain traffic cone too, and the Bag only opens as the real one lands.)
+  // until that find has landed. (Its spin, not its kind of item in the bag: the Bag only opens as the
+  // real one lands.)
   if (!g.dumpster.firstDiveDone) return 'roll';
   const spin = g.roll.current;
   if (!worn && spin !== null && spin.scripted === 'first' && !spin.landed) return 'roll';

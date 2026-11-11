@@ -11,7 +11,7 @@ import { useWorldThumb } from '../worldThumbs';
 import { Modal } from './Modal';
 import s from './popups.module.css';
 
-/** One world: preview, how it matches up against you (real numbers), what it pays, and Travel. */
+/** One world: preview, how it matches up against you (real numbers), what it pays, and Travel. A new game's first pick is just the picture, one line and the button. */
 export function WorldPopup({ world, onClose }: { world: number; onClose: () => void }) {
   const g = useGame((x) => x);
   const [armed, setArmed] = useState(false);
@@ -57,23 +57,28 @@ export function WorldPopup({ world, onClose }: { world: number; onClose: () => v
           <span className={s.threatText}>{t(`worlds.margin${threat.level[0].toUpperCase()}${threat.level.slice(1)}`)}</span>
         </div>
       )}
-      <div className={s.inset}>
-        <div className={s.statRow}>
-          <span className={s.statSub}>{t('worlds.enemyHit', { hit: formatNumber(threat.enemyHit), hp: formatNumber(threat.playerHp) })}</span>
-        </div>
-        <div className={s.statRow}>
-          <span className={s.statSub}>{t('worlds.yourHit', { hit: formatNumber(threat.playerHit), hp: formatNumber(threat.enemyHp) })}</span>
-        </div>
-        <div className={s.statRow}>
-          <span className={s.statSub}>
-            {t('worlds.boss', { name: def.boss.name })} · {formatNumber(threat.bossHp)} HP
-          </span>
-        </div>
-      </div>
-      <p className={s.rewardLine}>
-        {t('worlds.rewards', { gold: formatNumber(r.gold), xp: formatNumber(r.xp), items: formatNumber(r.items) })}
-      </p>
-      <p className={s.note}>{t('worlds.gearNote', { tier })}</p>
+      {/* The first pick says one thing (where he fights and what to beat): the numbers come with the next visit. */}
+      {!firstPick && (
+        <>
+          <div className={s.inset}>
+            <div className={s.statRow}>
+              <span className={s.statSub}>{t('worlds.enemyHit', { hit: formatNumber(threat.enemyHit), hp: formatNumber(threat.playerHp) })}</span>
+            </div>
+            <div className={s.statRow}>
+              <span className={s.statSub}>{t('worlds.yourHit', { hit: formatNumber(threat.playerHit), hp: formatNumber(threat.enemyHp) })}</span>
+            </div>
+            <div className={s.statRow}>
+              <span className={s.statSub}>
+                {t('worlds.boss', { name: def.boss.name })} · {formatNumber(threat.bossHp)} HP
+              </span>
+            </div>
+          </div>
+          <p className={s.rewardLine}>
+            {t('worlds.rewards', { gold: formatNumber(r.gold), xp: formatNumber(r.xp), items: formatNumber(r.items) })}
+          </p>
+          <p className={s.note}>{t('worlds.gearNote', { tier })}</p>
+        </>
+      )}
       <div className={s.actions}>
         {here ? (
           <button className="btn gray" disabled>

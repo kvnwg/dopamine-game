@@ -57,11 +57,12 @@ export function WorldsPanel() {
         <span className={s.title}>{t('worlds.title')}</span>
         <span className={s.best}>{best > 0 ? t('worlds.best', { n: best }) : t('worlds.bestNone')}</span>
       </div>
-      <p className={s.sub}>{t('worlds.sub')}</p>
+      <p className={s.sub}>{t(first ? 'worlds.subFirst' : 'worlds.sub')}</p>
       <div className={s.scroll}>
         {/* What's next, and (past World 20) the Endless Dump above the worlds. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(3 * var(--px))', marginBottom: 'calc(4 * var(--px))' }}>
-          {!first && <GoalsCard />}
+          {/* (Not during the tutorial: rebirths and the Dump mean nothing in a new game's first minute.) */}
+          {!first && !safeStart && <GoalsCard />}
           {(g.stage.highestCleared >= DATA.worlds.length - 2 || g.dump.bestEver > 0 || g.rebirths > 0) && <DumpCard />}
         </div>
         <div className={s.grid}>

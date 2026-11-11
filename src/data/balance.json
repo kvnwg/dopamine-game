@@ -452,6 +452,7 @@
     "fallbackStageSeconds": 75,
     "fallbackEnemiesPerWave": 4,
     "adDoubleMinAwayMinutes": 30,
+    "doubleGems": { "perHour": 10, "max": 80 },
     "minAwaySecondsForPopup": 60,
     "maxTickGapSeconds": 5,
     "rollSlowdown": 10,
@@ -577,10 +578,10 @@
   "mockAds": {
     "watchSeconds": 1.5
   },
+  "midgame": { "gapMinutes": 6, "firstVisitMinutes": 10, "sessionMinutes": 3, "minWorld": 3 },
   "tutorial": {
-    "warmupRarities": ["junk", "shiny"],
-    "warmupSpinSeconds": 1.3,
-    "warmupRestSeconds": 0.7,
+    "warmupRarities": ["junk"],
+    "warmupTurbo": true,
     "beginnerAfterRolls": 8,
     "beginnerAfterEquips": 3,
     "beginnerAfterSeconds": 35,
@@ -1157,6 +1158,7 @@
       "perDay": 3,
       "max": 6,
       "adPerDay": 1,
+      "bonusGems": 100,
       "start": 3
     },
     "fightSpeed": 2,
@@ -1526,5 +1528,26 @@
       { "floor": 75, "gems": 100, "stars": 8 },
       { "floor": 100, "gems": 150, "stars": 12 }
     ]
+  },
+  "boosts": {
+    "unlockMinutes": 3,
+    "quickDive": { "hours": 2, "perDay": 3, "gems": [50, 100, 200] },
+    "potionBrew": { "mult": 3, "minutes": 5, "perDay": 3, "gems": [60] },
+    "ductTapeReel": { "minutes": 15, "perDay": 2, "gems": [120] },
+    "rebirthBlessing": { "speedMult": 2, "minutes": 10, "perDay": 3, "gems": [80] },
+    "bossRage": { "atkMult": 1.5, "afterLosses": 2, "perDay": 3, "gems": [60] },
+    "encore": { "minMult": 25, "minutes": 3, "perDay": 2, "gems": [80] },
+    "polish": { "minRarity": "mythic", "perDay": 3, "gems": [100] },
+    "goldTopUp": { "maxShortPct": 25, "maxMinutes": 10, "perDay": 3, "gems": [20] },
+    "bonusCrate": {
+      "everyHours": 4,
+      "perDay": 3,
+      "gems": [40],
+      "rewards": [
+        { "kind": "bags", "minutes": 10, "min": 10, "weight": 45 },
+        { "kind": "coins", "minutes": 10, "min": 100, "weight": 35 },
+        { "kind": "potion", "seconds": 120, "weight": 20 }
+      ]
+    }
   }
 }

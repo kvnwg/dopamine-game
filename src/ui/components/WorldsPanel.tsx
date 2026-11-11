@@ -40,9 +40,6 @@ export function WorldsPanel() {
   const here = g.battle.stage;
   // (Past World 20 the best "world" is a Dump floor: the header counts the 20 worlds.)
   const best = Math.min(g.stage.highestCleared, DATA.worlds.length);
-  // Before the first pick (a new game's raccoon waits for it), no threat ratings: at level 1 every world
-  // reads as deadly (he levels up through the waves), and World 1 says where to start.
-  const first = !g.stage.chosen;
   // During the tutorial he can't fall in World 1 (combat.ts): no scary rating on it.
   const safeStart = !tutorialOver(g);
   const threats = useMemo(
@@ -57,12 +54,12 @@ export function WorldsPanel() {
         <span className={s.title}>{t('worlds.title')}</span>
         <span className={s.best}>{best > 0 ? t('worlds.best', { n: best }) : t('worlds.bestNone')}</span>
       </div>
-      <p className={s.sub}>{t(first ? 'worlds.subFirst' : 'worlds.sub')}</p>
+      <p className={s.sub}>{t('worlds.sub')}</p>
       <div className={s.scroll}>
         {/* What's next, and (past World 20) the Endless Dump above the worlds. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(3 * var(--px))', marginBottom: 'calc(4 * var(--px))' }}>
           {/* (Not during the tutorial: rebirths and the Dump mean nothing in a new game's first minute.) */}
-          {!first && !safeStart && <GoalsCard />}
+          {!safeStart && <GoalsCard />}
           {(g.stage.highestCleared >= DATA.worlds.length - 2 || g.dump.bestEver > 0 || g.rebirths > 0) && <DumpCard />}
         </div>
         <div className={s.grid}>
@@ -74,7 +71,6 @@ export function WorldsPanel() {
               <button
                 key={w.id}
                 className={`${s.card} ${isHere ? s.cardHere : ''}`}
-                data-intro={n === 1 ? 'world1' : undefined}
                 style={{ ['--tc' as string]: THREAT_COLOR[level] } as CSSProperties}
                 onClick={() => {
                   haptics.impact('light');
@@ -85,7 +81,7 @@ export function WorldsPanel() {
                   <Thumb world={n} />
                   <span className={s.num}>{n}</span>
                   {isHere ? (
-                    <span className={s.here}>{first ? t('worlds.startHere') : t('worlds.here')}</span>
+                    <span className={s.here}>{t('worlds.here')}</span>
                   ) : n <= best ? (
                     <CheckIcon size="md" className={s.done} />
                   ) : null}
@@ -93,7 +89,7 @@ export function WorldsPanel() {
                 <div className={s.info}>
                   <span className={s.name}>{w.name}</span>
                   <div className={s.row}>
-                    {!first && !(n === 1 && safeStart) && <ThreatChip level={level} />}
+                    {!(n === 1 && safeStart) && <ThreatChip level={level} />}
                     <span className={s.gold}>
                       <CoinIcon />×{formatNumber(worldRewards(n).gold)}
                     </span>

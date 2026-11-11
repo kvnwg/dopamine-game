@@ -400,6 +400,113 @@
   filter: none !important;
 }
 
+/* ------------------------------------------------------------ a new game's first upgrades (FirstBuy.tsx) */
+.firstBuy {
+  position: relative;
+  flex: none;
+  height: calc(22 * var(--px));
+  padding: var(--px) calc(2 * var(--px));
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--px));
+  animation: lastIn 300ms steps(4) backwards;
+}
+/* The price is in: a gold edge blinking a pixel out. */
+.firstBuyReady {
+  box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 0 calc(2 * var(--px)) #ffc233;
+  animation: lastIn 300ms steps(4) backwards, firstBuyGlow 0.8s steps(2) 300ms infinite;
+}
+@keyframes firstBuyGlow {
+  50% { box-shadow: var(--pixel-edge), 0 calc(2 * var(--px)) 0 0 rgba(10, 6, 20, 0.45), 0 0 0 calc(2 * var(--px)) #fff3a0; }
+}
+.firstBuyTile {
+  flex: none;
+  width: calc(18 * var(--px));
+  height: calc(18 * var(--px));
+  display: grid;
+  place-items: center;
+  background: #34b553;
+  box-shadow: var(--pixel-edge);
+}
+.firstBuyBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--px);
+  font-family: var(--font-display);
+}
+.firstBuyLabel {
+  font-size: 26px;
+  line-height: 1;
+  color: #8b7d72;
+}
+.firstBuyName {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.firstBuyName em {
+  font-style: normal;
+  font-size: 32px;
+  color: #3a8f25;
+}
+/* Gold toward the price: an ink trough, 60 art pixels across, the count on top. */
+.firstBuyBar {
+  position: relative;
+  width: calc(60 * var(--px));
+  max-width: 100%;
+  height: calc(5 * var(--px));
+  background: #3b3350;
+  box-shadow: var(--pixel-edge);
+}
+.firstBuyFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--fill) * var(--px));
+  max-width: 100%;
+  background: linear-gradient(180deg, #fff28c 0 var(--px), #f5c638 var(--px) calc(100% - var(--px)), #ef8a22 calc(100% - var(--px)) 100%);
+}
+.firstBuyCount {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+}
+.firstBuyBtn {
+  flex: none;
+  flex-direction: column;
+  gap: 0;
+  min-width: calc(34 * var(--px));
+  min-height: calc(17 * var(--px));
+  padding: 0 calc(3 * var(--px));
+}
+.firstBuyWord {
+  font-size: 40px;
+  line-height: 1.05;
+}
+.firstBuyPrice {
+  display: flex;
+  align-items: center;
+  gap: var(--px);
+  font-size: 32px;
+  line-height: 1.05;
+}
+@media (prefers-reduced-motion: reduce) {
+  .firstBuy,
+  .firstBuyReady {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------ the rarest roll ever */
 
 /* ------------------------------------------------------------ equipped gear (the Bag tab; also a drop target) */
@@ -458,4 +565,20 @@
 }
 .lastOdds[data-rarity='concept'] {
   background: linear-gradient(90deg, #ffffff, #ff5252, #ffd54f, #69f0ae, #40c4ff, #e040fb, #ffffff);
+}
+/* ------------------------------------------------------------ the Boosts button (its panel holds the rewarded ads) */
+.boostsBtn {
+  position: relative;
+  flex: none;
+  white-space: nowrap;
+}
+/* A Bonus Crate is waiting. */
+.boostsDot {
+  position: absolute;
+  top: calc(-2 * var(--px));
+  right: calc(-2 * var(--px));
+  width: calc(4 * var(--px));
+  height: calc(4 * var(--px));
+  background: #ff3d3d;
+  box-shadow: var(--pixel-edge);
 }

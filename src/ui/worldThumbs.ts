@@ -8,8 +8,13 @@
  * The band is centered on the same row of every set's scene: legacy-frame row 39 (roofs down to the
  * yards), placed for the set's own frame with legacyRow (sceneryTypes.ts, worldLook.ts). A set drawn
  * for the 6 px frame fills the band with exactly the rows the 9 px previews showed, 1.5 times finer.
+ *
+ * None are made while the title screen holds the game: a new game's Worlds tab sits under it, and its
+ * 20 previews took about 1.5 s of a mid-range phone's time right as the title came up (the title
+ * stuttered and PLAY answered late). They start on PLAY, in the phone's idle moments.
  */
 import { useEffect, useState } from 'react';
+import { whenStarted } from '../app/session';
 import { crop, type PixelBuf } from '../render/pixel/buf';
 import { pixelUrl } from '../render/pixel';
 import { composeWorld, legacyRow, worldArt } from '../render/worldLook';
@@ -94,8 +99,22 @@ function pump(): void {
   } finally {
     // (One failing preview never stops the rest.)
     waiting.delete(key);
-    setTimeout(pump, 16);
+    later(pump);
   }
+}
+
+/** Runs `fn` when the phone has a moment (idle time where the browser offers it), or soon after. */
+function later(fn: () => void): void {
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o: { timeout: number }) => number }).requestIdleCallback;
+  if (ric) ric(fn, { timeout: 250 });
+  else setTimeout(fn, 16);
+}
+
+/** Starts making the waiting previews, once the game has started (not under the title screen). */
+function startPump(): void {
+  if (pumping) return;
+  pumping = true;
+  whenStarted(() => later(pump));
 }
 
 /** A world's preview, made in the background (null until it is ready). */
@@ -112,10 +131,7 @@ export function useWorldThumb(world: number, kind: ThumbKind): Art | null {
     const list = waiting.get(key) ?? [];
     list.push((a) => alive && setArt(a));
     waiting.set(key, list);
-    if (!pumping) {
-      pumping = true;
-      setTimeout(pump, 0);
-    }
+    startPump();
     return () => {
       alive = false;
     };

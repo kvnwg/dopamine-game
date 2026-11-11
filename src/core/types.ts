@@ -3,6 +3,7 @@ import type { Feature, ItemSchema, SubstatSchema, ItemEnchantSchema, HeistReward
 import type { HeistNodeKind, LocationId, Rarity, Slot, StatId } from '../data';
 import type { RollDrama } from './systems/luck';
 import type { HaulSize } from './systems/haul';
+import type { BoostId } from './systems/boosts';
 
 export type Item = z.infer<typeof ItemSchema>;
 export type Substat = z.infer<typeof SubstatSchema>;
@@ -172,7 +173,21 @@ export type CoreEvent =
   | { type: 'dailyNew'; day: string }
   | { type: 'dailyClaimed'; id: string; gems: number }
   | { type: 'dailyChest'; gems: number }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** A boost was taken (systems/boosts.ts): after its ad, or for `gems` Gems. */
+  | { type: 'boostUsed'; id: BoostId; via: 'ad' | 'gems'; gems: number }
+  /** A timed boost ran out. */
+  | { type: 'boostEnded'; id: 'potionBrew' | 'ductTapeReel' | 'rebirthBlessing' }
+  /** A Rebirth Blessing started with the new run: fast spins until `endsAt`. */
+  | { type: 'blessingStarted'; endsAt: number }
+  /** Polish (a boost) raised an item's enchantment, or gave it a new one. */
+  | { type: 'itemPolished'; uid: number; enchants: ItemEnchant[] }
+  /** A Gold top-up (a boost) paid the gold an upgrade was short of. */
+  | { type: 'goldTopUp'; gold: number }
+  /** A Quick Dive rolled `rolls` items at once; `kept` rare finds went to the bag (the best one, `best`). */
+  | { type: 'quickDive'; rolls: number; kept: number; best: Item | null }
+  /** A Bonus Crate paid `amount` Trash Bags or gold, or a Luck Potion of `amount` seconds. */
+  | { type: 'crateOpened'; kind: 'bags' | 'coins' | 'potion'; amount: number };
 
 /** The Alley crew: the pigeon, the sewer rats, the seagull, Raccoon Mafia's recruits and the Gluten Golem. */
 export type CrewHelper = 'pigeon' | 'rats' | 'gull' | 'mafia' | 'golem';
@@ -180,6 +195,8 @@ export type CrewHelper = 'pigeon' | 'rats' | 'gull' | 'mafia' | 'golem';
 export type GameAction =
   /** A new game's first tap: the padlock comes off the dumpster and it starts rolling. */
   | { type: 'openDumpster' }
+  /** Takes a boost: after its rewarded ad, or for its Gem price (`uid`: the item to polish, `upgradeId`: the upgrade to top up). */
+  | { type: 'boost'; id: BoostId; via: 'ad' | 'gems'; uid?: number; upgradeId?: string }
   /** The tutorial has introduced a feature that opened (its tab or button was tapped, or its moment passed). */
   | { type: 'featureSeen'; feature: Feature }
   | { type: 'equipItem'; uid: number }
@@ -204,7 +221,7 @@ export type GameAction =
   | { type: 'resume' }
   | { type: 'snapshot' }
   | { type: 'boot' }
-  | { type: 'collectOffline'; doubled: boolean }
+  | { type: 'collectOffline'; doubled: boolean; via?: 'ad' | 'gems' }
   | { type: 'setSetting'; key: SettingKey; value: boolean }
   | { type: 'setVolume'; key: VolumeKey; value: number }
   // ---- heists: start a run with a ticket, then Go stop by stop
@@ -215,7 +232,7 @@ export type GameAction =
   | { type: 'heistChoose'; index: number }
   | { type: 'heistLeaveShop' }
   /** New perk options (the first reroll of a run is free, then balance.heist.rerolls.gems Gems). */
-  | { type: 'heistReroll' }
+  | { type: 'heistReroll'; via?: 'ad' | 'gems' }
   /** Second Chance after a knockout: back at 50% HP (the ad is free once per run). */
   | { type: 'heistRevive'; via: 'ad' | 'gems' }
   /** No Second Chance: the run is lost (keeps part of its rewards); heistClaim banks them. */
@@ -225,7 +242,8 @@ export type GameAction =
   /** Walks away now: a loss, banked at once. */
   | { type: 'heistAbandon' }
   /** +1 ticket from a rewarded ad (once a day). */
-  | { type: 'heistAdTicket' }
+  /** The daily bonus ticket, for an ad or Gems. */
+  | { type: 'heistAdTicket'; via?: 'ad' | 'gems' }
   /** A Dodge tap: makes a boss's heavy hit that is winding up miss. */
   | { type: 'dodge' }
   /** Into the Endless Dump: its endless floors, or this week's Weekly Dive. */

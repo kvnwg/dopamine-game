@@ -5,13 +5,14 @@
  * Bag tab; items are equipped by dragging them up onto the raccoon.
  *
  * Layout (800 stage px below the battle, no scrolling): the machine card (a row of info, the reel bank
- * across the whole card, another row of info; Reel.tsx), the last roll and the rarest-roll line. The
- * machine is the same size for one to five reels: the reels share its width.
+ * across the whole card, another row of info; Reel.tsx), the last roll and, during a new game's
+ * tutorial, the first-upgrade card (FirstBuy.tsx). The machine is the same size for one to five reels:
+ * the reels share its width.
  */
 import { useMemo, type CSSProperties } from 'react';
 import { BAL, DATA, SLOTS } from '../../data';
 import {
-  currentLuck, drySpell, dumpsterUpgradeReady, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
+  boostBlocked, currentLuck, encoreOffer, drySpell, dumpsterUpgradeReady, formatDuration, formatNumber, isUpgrade, itemName, luckyEvery, rarityAtLeast, wornPower,
 } from '../../core';
 import { useGame } from '../../app/store';
 import { rarityColor } from '../../render/art';
@@ -21,10 +22,11 @@ import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { seeFeature, useFeatureView } from '../features';
 import { useUi } from '../uiStore';
-import { ArrowDownIcon, ArrowUpIcon, BookIcon, BoltIcon, CheckIcon, CloverIcon, ClockIcon } from './Icons';
+import { ArrowDownIcon, ArrowUpIcon, BookIcon, BoltIcon, CheckIcon, CloverIcon, ClockIcon, PotionIcon } from './Icons';
 import { enchantColor, ItemIcon } from './ItemIcon';
 import { PixelArt } from './PixelArt';
 import { DumpsterLock } from './DumpsterLock';
+import { FirstBuy } from './FirstBuy';
 import { ReelBank } from './Reel';
 import s from './alley.module.css';
 
@@ -89,12 +91,10 @@ function LastRoll() {
     return wornPower(g, it) - (worn ? wornPower(g, worn) : 0);
   });
   const sparkle = useMemo(() => sparkleArt(), []);
-  // A new game's first step is a world; the padlock waits for it.
-  const onWorld = useGame((g) => g.stage.chosen);
   if (!last) {
     return (
       <div className={`${s.last} card`}>
-        <span className={s.waiting}>{t(onWorld ? 'roll.firstRoll' : 'roll.firstWorld')}</span>
+        <span className={s.waiting}>{t('roll.firstRoll')}</span>
       </div>
     );
   }
@@ -187,7 +187,8 @@ export function AlleyPanel() {
   const endsAt = useGame((g) => g.dumpster.upgradeEndsAt);
   const bags = useGame((g) => Math.floor(g.currencies.bags));
   const luck = useGame((g) => currentLuck(g, now));
-  const boostEnds = useGame((g) => g.luckBoostEndsAt);
+  // A Luck Potion or a Potion Brew (a boost): the badge glows and counts down the longer one.
+  const boostEnds = useGame((g) => Math.max(g.luckBoostEndsAt ?? 0, g.boosts.brewEndsAt ?? 0) || null);
   const boostLeft = boostEnds !== null ? Math.max(0, (boostEnds - now) / 1000) : 0;
   const boosted = boostLeft > 0;
   const dry = useGame((g) => g.dumpster.dryStreak);
@@ -201,7 +202,17 @@ export function AlleyPanel() {
   const dumpsterView = useFeatureView('dumpster');
   const luckView = useFeatureView('luck');
   const codexView = useFeatureView('codex');
-  const open = (p: 'upgrade' | 'luck' | 'codex') => {
+  const boostsView = useFeatureView('boosts');
+  // On a phone the Boosts button leaves the turbo count room for its number only.
+  const wide = useUi((u) => u.wide);
+  const turboShort = boostsView !== 'locked' && !wide;
+  // A Bonus Crate waiting, or a timed boost running (its time shows on the button).
+  // (A dot for a waiting crate, an Encore on offer, or Boss Rage offered.)
+  const crateReady = useGame(
+    (g) => boostBlocked(g, 'bonusCrate', now) === null || (encoreOffer(g, now) !== null && boostBlocked(g, 'encore', now) === null) || boostBlocked(g, 'bossRage', now) === null,
+  );
+  const boostTimer = useGame((g) => Math.max(g.boosts.brewEndsAt ?? 0, g.boosts.reelEndsAt ?? 0, g.boosts.blessEndsAt ?? 0) - now);
+  const open = (p: 'upgrade' | 'luck' | 'codex' | 'boosts') => {
     haptics.impact('light');
     seeFeature(p === 'upgrade' ? 'dumpster' : p);
     useUi.getState().openPopup(p);
@@ -242,6 +253,19 @@ export function AlleyPanel() {
       <span className={s.luckWord}>{boosted ? formatDuration(boostLeft) : t('roll.luckLabel')}</span>
     </button>
   );
+  // The Boosts panel (its rewarded ads live there, never over the reels: CrazyGames' rule).
+  const boostsBtn = boostsView !== 'locked' && (
+    <button
+      className={`btn small purple ${s.boostsBtn}`}
+      onClick={() => open('boosts')}
+      data-intro="boosts"
+      data-new={boostsView === 'intro' || undefined}
+    >
+      <PotionIcon />
+      {boostTimer > 0 ? formatDuration(boostTimer / 1000) : t('boosts.button')}
+      {crateReady && <span className={s.boostsDot} aria-hidden />}
+    </button>
+  );
   const pity = pityOn && <span className={s.pity}>{t('roll.pity', { n: Math.max(1, spell - dry) })}</span>;
   const codex = (
     <button className={s.mini} onClick={() => open('codex')} aria-label={t('roll.codex')} data-intro="codex" data-new={codexView === 'intro' || undefined}>
@@ -255,11 +279,12 @@ export function AlleyPanel() {
         <div className={s.wideRow}>
           {title}
           {upgradeBtn}
+          {boostsBtn}
           <span className={s.grow} />
           {bags > 0 && dumpsterView !== 'locked' && (
             <div className={s.statLine}>
               <BoltIcon />
-              <span className={s.bonusOn}>{t('roll.turbo', { n: formatNumber(bags) })}</span>
+              <span className={s.bonusOn}>{turboShort ? formatNumber(bags) : t('roll.turbo', { n: formatNumber(bags) })}</span>
             </div>
           )}
         </div>
@@ -278,6 +303,7 @@ export function AlleyPanel() {
         )}
       </div>
       <LastRoll />
+      <FirstBuy />
     </div>
   );
 }

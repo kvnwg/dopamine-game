@@ -63,7 +63,17 @@ export interface GameData {
   alleyPerksById: Map<string, AlleyPerkDef>;
 }
 
+/**
+ * Whether the data files are checked against their schemas as they load. A production build skips it:
+ * the tests and every development start check the same bundled files, and the check hands back exactly
+ * the data it was given (tests/data.test.ts), while it was the biggest part of a phone's start (about
+ * 0.3 s of a mid-range one). Tests check data they make up, too. Node tools (tsx, no Vite: no
+ * import.meta.env) always check.
+ */
+const CHECK_DATA = !import.meta.env?.PROD || import.meta.env?.MODE === 'test';
+
 function parse<T extends z.ZodTypeAny>(name: string, schema: T, raw: unknown): z.infer<T> {
+  if (!CHECK_DATA) return raw as z.infer<T>;
   const res = schema.safeParse(raw);
   if (!res.success) {
     const issues = res.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');

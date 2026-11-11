@@ -1,7 +1,8 @@
 /** Key-value storage: @capacitor/preferences on native, localStorage on web. */
 import { Preferences } from '@capacitor/preferences';
 import type { KeyValueStorage } from '../core/save';
-import { isNative } from './platform';
+import { CrazyGamesStorage } from './crazygames';
+import { isCrazyGames, isNative } from './platform';
 
 export class LocalStorageService implements KeyValueStorage {
   async get(key: string) {
@@ -40,5 +41,6 @@ export class PreferencesStorageService implements KeyValueStorage {
 }
 
 export function createStorage(): KeyValueStorage {
+  if (isCrazyGames) return new CrazyGamesStorage();
   return isNative() ? new PreferencesStorageService() : new LocalStorageService();
 }

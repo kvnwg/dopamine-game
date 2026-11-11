@@ -291,10 +291,9 @@ export function enterDump(d: GameState, mode: 'endless' | 'weekly', ev: CoreEven
   if (d.heist?.run || !endlessOpen(d)) return false;
   const floor = mode === 'weekly' ? d.dump.weekly.floor : entryFloor(d);
   const world = dumpWorld(floor);
-  if (d.dump.mode === mode && d.battle.stage === world && d.stage.chosen) return false;
+  if (d.dump.mode === mode && d.battle.stage === world) return false;
   d.dump.mode = mode;
   const s = d.stage;
-  s.chosen = true;
   if (!isDump(d.battle.stage)) s.returnTo = d.battle.stage;
   const push = mode === 'weekly' ? floor > d.dump.weekly.best : world > s.highestCleared;
   s.mode = push ? 'push' : 'farm';

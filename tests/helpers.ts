@@ -13,7 +13,6 @@ export function freshState(seed = 1, now = T0, locked = false): GameState {
   if (!locked) {
     st.features.unlocked.push('roll');
     st.features.seen.push('roll');
-    st.stage.chosen = true;
     st.battle.phase = 'walking';
     st.battle.phaseTime = BAL.combat.walkSeconds;
   }

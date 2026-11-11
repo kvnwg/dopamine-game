@@ -30,3 +30,4 @@ export * from './systems/endless';
 export * from './systems/legend';
 export * from './systems/daily';
 export * from './systems/goals';
+export * from './systems/boosts';

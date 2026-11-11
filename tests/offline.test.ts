@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyAction, currentRate, fallbackRate, offlineReward, recordRewards, Rng, tick, computeElapsed, MS_PER_HOUR,
-  MS_PER_MINUTE, type GameState,
+  MS_PER_MINUTE, offlineDoubleGems, type GameState,
 } from '../src/core';
 import { BAL } from '../src/data';
 import { freshState, T0 } from './helpers';
@@ -65,6 +65,28 @@ describe('pause / resume', () => {
     const collected = applyAction(r.state, { type: 'collectOffline', doubled: true }, rng, T0 + 2 * MS_PER_HOUR);
     expect(collected.state.currencies.bags).toBe(st.currencies.bags + p.bags * 2);
     expect(collected.state.offline.pending).toBeNull();
+  });
+
+  it('the double can be paid with Gems instead of the ad: 10 per hour away, at most 80, and not without them', () => {
+    expect(offlineDoubleGems(30 * MS_PER_MINUTE)).toBe(BAL.offline.doubleGems.perHour / 2);
+    expect(offlineDoubleGems(2 * MS_PER_HOUR)).toBe(2 * BAL.offline.doubleGems.perHour);
+    expect(offlineDoubleGems(48 * MS_PER_HOUR)).toBe(BAL.offline.doubleGems.max);
+    const rng = new Rng(1);
+    const st = pausedState({ bags: 6, coins: 200, xp: 40 });
+    const r = applyAction(st, { type: 'resume' }, rng, T0 + 2 * MS_PER_HOUR);
+    const p = r.state.offline.pending!;
+    const cost = offlineDoubleGems(p.awayMs);
+    const poor = structuredClone(r.state);
+    poor.currencies.gems = cost - 1;
+    const refused = applyAction(poor, { type: 'collectOffline', doubled: true, via: 'gems' }, rng, T0 + 2 * MS_PER_HOUR).state;
+    expect(refused.offline.pending).not.toBeNull();
+    expect(refused.currencies.gems).toBe(cost - 1);
+    const rich = structuredClone(r.state);
+    rich.currencies.gems = cost + 5;
+    const paid = applyAction(rich, { type: 'collectOffline', doubled: true, via: 'gems' }, rng, T0 + 2 * MS_PER_HOUR).state;
+    expect(paid.currencies.gems).toBe(5);
+    expect(paid.currencies.bags).toBe(st.currencies.bags + p.bags * 2);
+    expect(paid.offline.pending).toBeNull();
   });
 
   it('does not offer the ad double for short absences', () => {

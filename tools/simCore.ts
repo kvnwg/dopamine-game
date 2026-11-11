@@ -246,14 +246,12 @@ export function simulate(opts: SimOptions): SimResult {
       act({ type: 'afterBoss', next: true });
     }
 
-    // A new game's raccoon waits for his first world: the player picks World 1 when the Worlds tab opens.
-    if (!state.stage.chosen) {
-      if (state.features.unlocked.includes('worlds')) act({ type: 'travel', world: 1 });
-      continue;
-    }
-
-    // (In the Endless Dump the floors come one after another by themselves.)
-    if (opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead' && !isDump(state.battle.stage)) {
+    // (The Worlds tab opens once World 1's boss has fallen: no jumping ahead before that. In the
+    // Endless Dump the floors come one after another by themselves.)
+    if (
+      opts.jump !== false && elapsed >= nextJump && state.battle.phase !== 'dead' && state.features.unlocked.includes('worlds')
+      && !isDump(state.battle.stage)
+    ) {
       nextJump = elapsed + 10_000;
       let target = 0;
       for (let w = worldCount(); w > state.battle.stage; w--) {

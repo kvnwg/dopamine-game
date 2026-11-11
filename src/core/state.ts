@@ -41,9 +41,11 @@ export const ItemSchema = z.object({
 /**
  * What a new game opens one by one (src/core/systems/features.ts): the dumpster itself (the player's
  * tap knocks its padlock off), then the Bag, luck, Upgrades, Worlds, the Codex, the dumpster's own
- * upgrades, Rebirth, Heists and the Upgrades screen's Perks page.
+ * upgrades, Rebirth, Heists, the Upgrades screen's Perks page and the Roll tab's Boosts.
  */
-export const FEATURES = ['roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks', 'endless', 'legend', 'daily'] as const;
+export const FEATURES = [
+  'roll', 'bag', 'luck', 'upgrades', 'worlds', 'codex', 'dumpster', 'rebirth', 'heist', 'perks', 'boosts', 'endless', 'legend', 'daily',
+] as const;
 export const FeatureSchema = z.enum(FEATURES);
 export type Feature = z.infer<typeof FeatureSchema>;
 
@@ -321,6 +323,33 @@ export const PerkStateSchema = z.object({
 });
 export type PerkState = z.infer<typeof PerkStateSchema>;
 
+/**
+ * Boosts (systems/boosts.ts): how many times each was taken on `day` (a local dayKey), when the timed
+ * ones end (null: off), and when the next Bonus Crate is ready.
+ */
+export const BoostStateSchema = z.object({
+  day: z.string(),
+  used: z.record(z.string(), z.number().int().nonnegative()),
+  brewEndsAt: z.number().nullable(),
+  reelEndsAt: z.number().nullable(),
+  crateAt: z.number(),
+  /** Rebirth Blessing: taken, waiting for the next rebirth; then when its fast spins end. */
+  blessReady: z.boolean().default(false),
+  blessEndsAt: z.number().nullable().default(null),
+  /** Boss Rage: the world it's offered for (lost there `afterLosses` times in a row), and the world it's on for. */
+  rageOffer: z.number().int().nullable().default(null),
+  rageWorld: z.number().int().nullable().default(null),
+  /** Encore: the last big chain's tokens (each reel's) and when that spin started. */
+  encore: z.object({ tokens: z.array(z.array(z.number())), mult: z.number(), at: z.number() }).nullable().default(null),
+});
+export type BoostState = z.infer<typeof BoostStateSchema>;
+
+export function freshBoosts(): BoostState {
+  return {
+    day: '', used: {}, brewEndsAt: null, reelEndsAt: null, crateAt: 0, blessReady: false, blessEndsAt: null, rageOffer: null, rageWorld: null, encore: null,
+  };
+}
+
 /** A run with no loaves and no perks (a new game, and every rebirth). */
 export function freshPerks(): PerkState {
   return {
@@ -432,12 +461,8 @@ export const GameStateSchema = z.object({
     showToughHint: z.boolean(),
     /** Losses in a row in this world: it is retried until worlds.lossesBeforeBack, then it falls back. */
     losses: z.number().int().nonnegative().default(0),
-    /**
-     * A world has been picked. A new game's raccoon waits in his street (the battle idle) until the
-     * player picks his first world on the Worlds tab (Kevin: "raccoon doesn't start attacking until u
-     * show and select a world"). Saves from before this are already fighting.
-     */
-    chosen: z.boolean().default(true),
+    // (Saves from Nov 2026 also carry `chosen`: whether the first world had been picked yet. A new game
+    // starts in World 1's fight now, so it is dropped on load, and such a raccoon starts fighting.)
   }),
   battle: BattleSchema,
   dumpster: z.object({
@@ -540,6 +565,8 @@ export const GameStateSchema = z.object({
   dump: DumpStateSchema.default(freshDump),
   legend: LegendStateSchema.default(freshLegend),
   daily: DailyStateSchema.default(() => ({ day: '', tasks: [], chest: false })),
+  /** Saves from before Boosts start with none taken (a broken value starts over too: it only holds timers). */
+  boosts: BoostStateSchema.default(freshBoosts).catch(freshBoosts),
 });
 
 export type GameState = z.infer<typeof GameStateSchema>;
@@ -585,13 +612,13 @@ export function createInitialState(now: number, seed: number): GameState {
     equipped: emptyEquipment(),
     inventory: [],
     nextItemUid: 1,
-    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0, chosen: false },
+    stage: { current: 1, highestCleared: 0, mode: 'push', returnTo: 1, powerAtDeath: null, showToughHint: false, losses: 0 },
     battle: {
       stage: 1,
       wave: 0,
-      // Waiting for the player to pick a world (stage.chosen).
-      phase: 'idle',
-      phaseTime: 0,
+      // A new game lands in the fight: he walks into World 1's first wave as the title opens.
+      phase: 'walking',
+      phaseTime: BAL.combat.walkSeconds,
       playerHp: BAL.player.base.HP,
       playerAtkProgress: 0,
       enemies: [],
@@ -626,11 +653,12 @@ export function createInitialState(now: number, seed: number): GameState {
     lifetime: { kills: 0, wavesCleared: 0, bossesBeaten: 0, itemsRecycled: 0, itemsEquipped: 0 },
     settings: { haptics: true, sound: true, music: true, soundVolume: 1, musicVolume: 1, reduceFlashing: false, reduceMotion: false },
     heist: initialHeist(BAL.heist.tickets.start, dayKey(now)),
-    // Worlds is open from the start (features.ts); the rest opens one at a time.
-    features: { unlocked: ['worlds'], seen: ['worlds'] },
+    // Everything starts locked and opens one thing at a time (features.ts); the dumpster's padlock is the first tap.
+    features: { unlocked: [], seen: [] },
     perks: freshPerks(),
     dump: freshDump(),
     legend: freshLegend(),
     daily: { day: '', tasks: [], chest: false },
+    boosts: freshBoosts(),
   };
 }

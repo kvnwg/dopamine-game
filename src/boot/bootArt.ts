@@ -248,11 +248,11 @@ ${cloudWidths.map((w) => `@keyframes bt-cloud${w} { to { transform: translateX(c
  * Leaving (src/ui/boot.ts): the logo glides onto the title's own logo while the bar folds away
  * (transforms only), then, with the logo still, the rest fades and shows the title under it.
  */
-#boot .bt-logo { transition: transform 0.48s cubic-bezier(0.22, 0.8, 0.24, 1); will-change: transform; }
+#boot .bt-logo { transition: transform 0.34s cubic-bezier(0.22, 0.8, 0.24, 1); will-change: transform; }
 #boot[data-glide] { pointer-events: none; }
-#boot[data-glide] .bt-load { transform: scaleY(0); transform-origin: 50% 0; transition: transform 0.2s ease-in; }
-#boot[data-done] .bt-bg, #boot[data-done] .bt-sky, #boot[data-done] .bt-street { opacity: 0; transition: opacity 0.35s ease-out; }
-#boot[data-fade] { opacity: 0; pointer-events: none; transition: opacity 0.4s ease-out; }
+#boot[data-glide] .bt-load { transform: scaleY(0); transform-origin: 50% 0; transition: transform 0.16s ease-in; }
+#boot[data-done] .bt-bg, #boot[data-done] .bt-sky, #boot[data-done] .bt-street { opacity: 0; transition: opacity 0.24s ease-out; }
+#boot[data-fade] { opacity: 0; pointer-events: none; transition: opacity 0.3s ease-out; }
 #boot img, #boot .bt-px { image-rendering: pixelated; image-rendering: crisp-edges; }
 #boot .bt-top {
   position: relative;

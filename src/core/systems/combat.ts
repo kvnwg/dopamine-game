@@ -11,6 +11,7 @@ import type { Rng } from '../rng';
 import type { EnemyState, GameState, HeistFight, PerkState } from '../state';
 import type { CoreEvent, CrewHelper, Stats } from '../types';
 import { combatEffects, type CombatEffects } from './enchants';
+import { rageAfterClear, rageAfterDeath } from './boostHooks';
 import { addXp } from './progression';
 import { recordRewards } from './offline';
 import { earnBread, NO_PERKS, perkFoes, perkFx, perksWorldStart, type PerkFx } from './perks';
@@ -219,13 +220,17 @@ function runOnHit(c: Ctx, uid: number, crit: boolean, killed: boolean) {
   }
 }
 
-/** An Alley hit: Hold My Soda (an Alley perk) multiplies it while the raccoon is low. */
+/**
+ * An Alley hit: Hold My Soda (an Alley perk) multiplies it while the raccoon is low, and Boss Rage (a
+ * boost, boosts.ts) while it's on for this world.
+ */
 function alleyRoll(c: Ctx, target: EnemyState): { amount: number; crit: boolean } {
   const roll = rollAttack(c.stats.ATK, target.def, c.stats.CRIT, c.stats.CRIT_DMG, c.rng, c.k);
   // An Armored floor: only crits get through properly.
   if (c.twist === 'armored' && !roll.crit) roll.amount *= BAL.endless.twists.armored.nonCritPct / 100;
   const fx = c.perk;
   if (fx && fx.rageMult > 1 && (c.d.battle.playerHp / Math.max(1, c.stats.HP)) * 100 < fx.rageBelowPct) roll.amount *= fx.rageMult;
+  if (c.d.boosts.rageWorld === c.d.battle.stage) roll.amount *= BAL.boosts.bossRage.atkMult;
   return roll;
 }
 
@@ -304,6 +309,16 @@ export function inTutorial(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll'> 
   return d.dumpster.beginner.state !== 'done' && d.rebirths === 0 && !(d.legend?.count ?? 0) && d.roll.count < BAL.tutorial.overAtRolls;
 }
 
+/**
+ * A first-run raccoon can't fall in World 1 until its boss has fallen once (he holds on at 1 HP): he is
+ * fighting there from the game's first second, undressed, and the tutorial ends about when that boss
+ * arrives, so without this a new player's first minute could end on a K.O. From World 2 on, and in
+ * World 1 once it's beaten, he falls and tries again as ever.
+ */
+export function firstWorldSafe(d: Pick<GameState, 'dumpster' | 'rebirths' | 'roll' | 'stage'>): boolean {
+  return inTutorial(d) || (d.rebirths === 0 && d.stage.highestCleared === 0);
+}
+
 /** `unavoidable`: a charge, which can't be dodged or blocked. */
 function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoidable = false) {
   const { d, stats, rng, ev } = c;
@@ -320,10 +335,9 @@ function enemyAttack(c: Ctx, e: EnemyState, mult: number, heavy: boolean, unavoi
   let amount = computeDamage(e.atk * mult, stats.DEF, false, 100, rollVariance(rng), c.k);
   if (c.run && c.run.fx.armorPct) amount *= Math.max(0.1, 1 - c.run.fx.armorPct / 100);
   d.battle.playerHp -= amount;
-  // A new game's raccoon starts on World 1 before the dumpster is even open (Kevin's order), still
-  // undressed: there, until the tutorial is over, he holds on at 1 HP instead of falling. (Sent further
-  // on his own, he falls and tries again as ever.)
-  if (!c.run && d.battle.playerHp < 1 && d.battle.stage === 1 && inTutorial(d)) d.battle.playerHp = 1;
+  // A new game's raccoon is fighting in World 1 before the dumpster is even open, still undressed:
+  // there he holds on at 1 HP instead of falling (firstWorldSafe).
+  if (!c.run && d.battle.playerHp < 1 && d.battle.stage === 1 && firstWorldSafe(d)) d.battle.playerHp = 1;
   ev.push({ type: 'enemyHit', enemyUid: e.uid, amount, heavy });
   if (c.run) {
     if (d.battle.playerHp <= 0) {
@@ -404,8 +418,10 @@ function onWaveCleared(c: Ctx) {
 }
 
 /**
- * The world's boss is down. The first clear pays Gems and a Luck Potion. Then the battle stops and
- * asks: this world again, or the next one (see resolveAfterBoss)?
+ * The world's boss is down. The first clear this run pays a Luck Potion, and the first clear ever (past
+ * the best world beaten in any run, `heist.bestWorld`, which a rebirth keeps) also pays Gems: a rebirth
+ * starts the worlds over, and paying their Gems again every run gave away about 1,000 Gems an hour.
+ * Then the battle stops and asks: this world again, or the next one (see resolveAfterBoss)?
  */
 function onWorldCleared(c: Ctx) {
   const { d, ev, now } = c;
@@ -414,8 +430,9 @@ function onWorldCleared(c: Ctx) {
   const firstTime = world > s.highestCleared;
   if (firstTime) {
     s.highestCleared = world;
+    const firstEver = world > (d.heist?.bestWorld ?? 0);
     if (d.heist) d.heist.bestWorld = Math.max(d.heist.bestWorld, world);
-    const gems = BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world;
+    const gems = firstEver ? BAL.worlds.firstClearGems + BAL.worlds.firstClearGemsPerWorld * world : 0;
     d.currencies.gems += gems;
     ev.push({ type: 'worldFirstClear', world, gems });
     addLuckBoost(d, now, potionSeconds(d), ev);
@@ -424,6 +441,7 @@ function onWorldCleared(c: Ctx) {
   }
   // Half-Eaten Bread Loaves: the first time this world's boss falls this run (perks open).
   earnBread(d, world, ev);
+  rageAfterClear(d, world);
   d.lifetime.bossesBeaten += 1;
   ev.push({ type: 'stageClear', stage: world, firstTime });
   ev.push({ type: 'bossWin', stage: world });
@@ -480,6 +498,7 @@ function onDeathResolved(d: GameState, ev: CoreEvent[]) {
   s.showToughHint = d.dumpster.beginner.state === 'done';
   if (push) s.powerAtDeath = playerPower(d);
   s.losses += 1;
+  rageAfterDeath(d, world, s.losses, push);
   if (s.losses < BAL.worlds.lossesBeforeBack) {
     s.mode = push ? 'push' : 'farm';
     startStage(d, world, ev, push);
@@ -498,9 +517,9 @@ export function combatTick(d: GameState, rng: Rng, now: number, ev: CoreEvent[],
   const stats = computeStats(d);
   if (b.playerHp > stats.HP) b.playerHp = stats.HP;
 
-  // A new game's raccoon waits in his street until a world is picked (stage.chosen).
-  if (b.phase === 'idle' || !d.stage.chosen) {
-    b.playerHp = stats.HP;
+  // (A save from when a new game's raccoon waited for his first world to be picked: he starts fighting.)
+  if (b.phase === 'idle') {
+    startStage(d, b.stage, ev, d.stage.mode === 'push');
     return;
   }
 

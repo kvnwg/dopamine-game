@@ -1,12 +1,13 @@
 import type { CSSProperties } from 'react';
 import { DATA, SLOTS, type Rarity } from '../../data';
-import { enchantRarity, formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
-import { dispatch, useGameWhen } from '../../app/store';
+import { boostBlocked, enchantRarity, formatNumber, formatStatValue, itemFlavor, itemName, itemOddsOneIn, scrapValue, type Item, gearPowerMult, gearScale } from '../../core';
+import { dispatch, useGame, useGameWhen } from '../../app/store';
 import { rarityColor } from '../../render/art';
 import { uiBitArt } from '../../render/icons';
 import { haptics } from '../../services';
 import { enchantLabel, fmtOdds } from '../components/AlleyPanel';
-import { ArrowDownIcon, ArrowUpIcon, CheckIcon, LockIcon, PowerIcon, TrashIcon } from '../components/Icons';
+import { BoostButtons } from '../components/BoostButtons';
+import { ArrowDownIcon, ArrowUpIcon, CheckIcon, LockIcon, PowerIcon, StarIcon, TrashIcon } from '../components/Icons';
 import { enchantColor, ItemIcon } from '../components/ItemIcon';
 import { PixelArt } from '../components/PixelArt';
 import { enchantDesc } from '../components/RevealLayer';
@@ -37,6 +38,8 @@ const TONE: Partial<Record<Rarity, 'gold' | 'purple' | 'red' | 'green' | 'blue'>
 export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => void }) {
   // Redrawn when what it shows changes, not with every battle tick.
   const g = useGameWhen((x) => [x.inventory, x.equipped, x.upgrades, x.perks, x.rebirths, x.player.level, x.stage, x.battle.stage]);
+  // Polish (a boost) can be taken for this item now (Mythic or better, room to grow, some left today).
+  const polishOk = useGame((x) => x.features.unlocked.includes('boosts') && boostBlocked(x, 'polish', Date.now(), { uid }) === null);
   const equippedMap = g.equipped;
   const bag = g.inventory;
   const { item, equipped } = findItem(equippedMap, bag, uid);
@@ -140,6 +143,17 @@ export function ItemDetailPopup({ uid, onClose }: { uid: number; onClose: () => 
         </div>
       )}
       <p className={s.flavor}>“{itemFlavor(item)}”</p>
+      {/* Polish (a boost): a Mythic-or-better item gets +1 tier on an enchantment, or a new one. */}
+      {polishOk && (
+        <div className={s.boostOffer}>
+          <StarIcon size="nav" />
+          <div className={s.boostOfferText}>
+            <b>{t('boosts.polish')}</b>
+            <span>{t('boosts.polishText')}</span>
+          </div>
+          <BoostButtons id="polish" target={{ uid: item.uid }} column />
+        </div>
+      )}
       <div className={s.actions}>
         {equipped ? (
           <span className={s.equippedTag}>

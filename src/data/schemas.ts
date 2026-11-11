@@ -106,7 +106,12 @@ export const HeistBalanceSchema = z.object({
   /** Heists open with this many rebirths (until then the Heist tab shows what is coming). */
   unlockRebirths: z.number().int().nonnegative(),
   /** Free tickets: `perDay` at each local midnight, never more than `max`; one more a day from an ad. */
-  tickets: z.object({ perDay: z.number().int().positive(), max: z.number().int().positive(), adPerDay: z.number().int().nonnegative(), start: z.number().int().nonnegative() }),
+  tickets: z.object({
+    perDay: z.number().int().positive(), max: z.number().int().positive(), adPerDay: z.number().int().nonnegative(),
+    /** Gems for the daily bonus ticket instead of its ad. */
+    bonusGems: nonNeg,
+    start: z.number().int().nonnegative(),
+  }),
   /** Run fights tick this many times per game tick (the spec's 2x speed). */
   fightSpeed: z.number().int().positive(),
   nodesPerAct: z.number().int().positive(),
@@ -487,6 +492,8 @@ export const BalanceSchema = z.object({
     fallbackStageSeconds: positive,
     fallbackEnemiesPerWave: positive,
     adDoubleMinAwayMinutes: nonNeg,
+    /** Gems to double the offline haul instead of watching the ad: perHour of time away, at most max. */
+    doubleGems: z.object({ perHour: nonNeg, max: nonNeg }),
     minAwaySecondsForPopup: nonNeg,
     maxTickGapSeconds: positive,
     /**
@@ -666,6 +673,13 @@ export const BalanceSchema = z.object({
     }),
   }),
   mockAds: z.object({ watchSeconds: nonNeg }),
+  /**
+   * CrazyGames' midgame ads (src/app/crazygames.ts), at two transitions only: a Heist won, and moving on
+   * from a world's first clear in a run from `minWorld`. At most one every `gapMinutes` (none that soon
+   * after a rewarded ad either), none in a player's first `firstVisitMinutes` of play or a visit's first
+   * `sessionMinutes`.
+   */
+  midgame: z.object({ gapMinutes: nonNeg, firstVisitMinutes: nonNeg, sessionMinutes: nonNeg, minWorld: z.number().int().positive() }),
   heist: HeistBalanceSchema,
   /** Alley perks: a run's Half-Eaten Bread Loaves buy them on the Upgrades screen's Perks page (core/systems/perks.ts). */
   perks: PerksBalanceSchema,
@@ -680,6 +694,45 @@ export const BalanceSchema = z.object({
   /** The Weekly Dive: the same rules and floors for everyone this week (core/systems/endless.ts). */
   weekly: WeeklyBalanceSchema,
   /**
+   * Boosts (core/systems/boosts.ts): taken for a rewarded ad or Gems, each `perDay` times a day either way.
+   * `gems` is the price of each use in a day (the last one repeats). They open `unlockMinutes` into the
+   * game, after the tutorial.
+   */
+  boosts: z.object({
+    unlockMinutes: nonNeg,
+    /** Offline rolls for `hours` away, right now. */
+    quickDive: z.object({ hours: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** Luck times `mult` for `minutes` (on top of every other luck). */
+    potionBrew: z.object({ mult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** One more reel for `minutes` (never past roll.maxReels). */
+    ductTapeReel: z.object({ minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** Taken before a rebirth: the new run's first `minutes` spin `speedMult` times as fast. */
+    rebirthBlessing: z.object({ speedMult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** After `afterLosses` losses in a row at a world: the raccoon's hits times `atkMult` for the next try there. */
+    bossRage: z.object({ atkMult: positive, afterLosses: z.number().int().positive(), perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** A spin with a luck token chain of `minMult` or more can be played again (its tokens) for `minutes` after. */
+    encore: z.object({ minMult: positive, minutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** A find of `minRarity` or rarer: +1 tier on an enchantment (or a new one). */
+    polish: z.object({ minRarity: RaritySchema, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** Short of an upgrade by `maxShortPct`% of its price or less (and `maxMinutes` of gold at most): the missing gold. */
+    goldTopUp: z.object({ maxShortPct: positive, maxMinutes: positive, perDay: z.number().int().positive(), gems: z.array(nonNeg).min(1) }),
+    /** A crate every `everyHours`: one of `rewards` by weight (bags or gold: `minutes` of the current rate, at least `min`). */
+    bonusCrate: z.object({
+      everyHours: positive,
+      perDay: z.number().int().positive(),
+      gems: z.array(nonNeg).min(1),
+      rewards: z
+        .array(
+          z.discriminatedUnion('kind', [
+            z.object({ kind: z.literal('bags'), minutes: positive, min: nonNeg, weight: positive }),
+            z.object({ kind: z.literal('coins'), minutes: positive, min: nonNeg, weight: positive }),
+            z.object({ kind: z.literal('potion'), seconds: positive, weight: positive }),
+          ]),
+        )
+        .min(1),
+    }),
+  }),
+  /**
    * The first-run tutorial (new games only). Beginner's luck: one scripted spin early on, its first
    * reel chaining `beginnerTokens` into a `beginnerRarity` item. It comes once the raccoon has put
    * on `beginnerAfterEquips` items (the tutorial's Equip best), `beginnerAfterRolls` items have rolled
@@ -693,13 +746,12 @@ export const BalanceSchema = z.object({
     /**
      * A new game's first spins warm the player up before the tutorial's own find (Kevin: "get them
      * accustomed a bit first to rolling"): one everyday find per spin, at these rarities in turn.
-     * They are quick ones, `warmupSpinSeconds` of spinning and `warmupRestSeconds` on the find, so
-     * the first Legendary isn't a long wait (Kevin: "we're still waiting so long for the first
-     * legendary to appear").
+     * One is enough to show what an everyday find looks like before the Legendary; with
+     * `warmupTurbo` it spins at a Trash Bag's turbo speed without spending one (Kevin: "we're still
+     * waiting so long for the first legendary to appear").
      */
     warmupRarities: z.array(RaritySchema),
-    warmupSpinSeconds: positive,
-    warmupRestSeconds: positive,
+    warmupTurbo: z.boolean().default(false),
     beginnerAfterRolls: z.number().int().positive(),
     beginnerAfterEquips: z.number().int().positive(),
     beginnerAfterSeconds: nonNeg,

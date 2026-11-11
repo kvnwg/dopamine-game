@@ -18,6 +18,7 @@ import type { GameState } from '../state';
 import type { CoreEvent, Item, RollPlacement } from '../types';
 import { rarityAtLeast, snap } from '../util';
 import { registerCodex } from './codex';
+import { offerEncore } from './boostHooks';
 import { rollItemLevel, rollSlot } from './dumpster';
 import { rarityBump, rollEnchants } from './enchants';
 import { createItem, itemName, pickBaseItem, recycleRewards } from './loot';
@@ -40,12 +41,14 @@ type PerkPick = Partial<Pick<GameState, 'perks'>>;
  * Seconds for one spin cycle (spin + rest) at the current Spin Speed; turbo spins are faster. Alley perks
  * go on top, past the usual floor (Greased Gears doubles the speed, Bootleg Reel slows every spin).
  */
-export function spinCycle(state: Pick<GameState, 'upgrades'> & PerkPick, turbo = false): number {
+export function spinCycle(state: Pick<GameState, 'upgrades'> & PerkPick & Partial<Pick<GameState, 'boosts'>>, turbo = false): number {
   const r = BAL.roll;
   const levels = upgradeEffects(state).rollSpeed;
   const cycle = Math.max(r.minCycleSeconds, (r.spinSeconds + r.restSeconds) * Math.pow(1 - r.speedPerLevel, levels));
   const base = turbo ? Math.max(r.minTurboCycleSeconds, cycle / (r.turboSpeedMult + upgradeEffects(state).turboPower)) : cycle;
-  return base * perkSpinMult(state);
+  // A Rebirth Blessing (a boost) running: its fast spins, past the usual floor like Greased Gears.
+  const blessed = state.boosts?.blessEndsAt != null ? 1 / BAL.boosts.rebirthBlessing.speedMult : 1;
+  return base * perkSpinMult(state) * blessed;
 }
 
 /** The share of a cycle spent spinning (the rest is the pause on the result). */
@@ -178,9 +181,13 @@ function decidePlacement(d: GameState, item: Item): RollPlacement {
   return worst >= 0 && item.power > d.inventory[worst].power ? 'bag' : 'scrapped';
 }
 
-/** How many reels roll at once (1, plus the Extra Reel upgrade and Bootleg Reel, an Alley perk). */
-export function reelCount(state: Pick<GameState, 'upgrades'> & PerkPick): number {
-  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels) + Math.round(perkFx(state).extraReels)));
+/**
+ * How many reels roll at once: 1, plus the Extra Reel upgrade, Bootleg Reel (an Alley perk) and, while
+ * it's rented (`rental`), the Duct-Tape Reel boost (boosts.ts), never past roll.maxReels.
+ */
+export function reelCount(state: Pick<GameState, 'upgrades'> & PerkPick & Partial<Pick<GameState, 'boosts'>>, rental = true): number {
+  const rented = rental && state.boosts?.reelEndsAt != null ? 1 : 0;
+  return Math.max(1, Math.min(BAL.roll.maxReels, 1 + Math.round(upgradeEffects(state).reels) + Math.round(perkFx(state).extraReels) + rented));
 }
 
 /** Lucky and golden are decided once per spin and cover every reel. The tutorial spin is neither. */
@@ -211,7 +218,7 @@ function rollSpinLuck(d: GameState, rng: Rng, now: number): { lucky: boolean; go
 
 /**
  * A warm-up find's slot (startSpin): one that neither the tutorial's own find nor anything found so
- * far takes, so the tutorial's first Equip best puts every one of them on, and none is a second
+ * far takes, so it is always an upgrade waiting for the tutorial's Equip best, and never a second
  * traffic cone.
  */
 function warmupSlot(d: GameState, rng: Rng, spin: readonly Item[]): Slot {
@@ -334,8 +341,9 @@ export function tokenMult(all: ReadonlyArray<readonly number[]>, reel: number, c
  */
 export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]): void {
   const { lucky, golden, luck } = rollSpinLuck(d, rng, now);
-  // A new game's first spins warm up: quick everyday finds climbing BAL.tutorial.warmupRarities, each
-  // for a slot of its own (no tokens, nothing scripted). Then the tutorial scripts two spins: its own find (rollReelItem gives the
+  // A new game's first spin warms up: an everyday find (BAL.tutorial.warmupRarities: no tokens, nothing
+  // scripted, for a slot of its own: warmupSlot), quick, so the tutorial's own find isn't the very
+  // first thing the reels do. Then the tutorial scripts two spins: its own find (rollReelItem gives the
   // tutorial item) and, a little later, beginner's luck: its first reel chains BAL.tutorial's tokens
   // into a rare item. The reels rest on either find while it waits in the bag to be put on (rollTick
   // ends the rest when it goes).
@@ -366,6 +374,8 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
   d.dumpster.forcedTokensAll = false;
   d.dumpster.forcedReelTokens = null;
   const matched = comboSteps(tokens);
+  // A big chain anywhere: this spin's tokens are on offer as an Encore for a few minutes (boosts.ts).
+  if (!scripted && !warmup) offerEncore(d, tokens, Math.max(...tokens.map((_, i) => tokenMult(tokens, i, matched))), now);
   for (let i = 0; i < n; i++) {
     const mults = tokens[i];
     const beginner = scripted === 'beginner' && i === 0;
@@ -381,17 +391,17 @@ export function startSpin(d: GameState, rng: Rng, now: number, ev: CoreEvent[]):
     rolled.push({ item, mults });
   }
   // The finds decide the pace: a build-up (a scripted spin always has one, and its find the reveal)
-  // needs the spin's full length, and the warm-up spins roll at their own quick pace (the bags wait).
+  // needs the spin's full length. The warm-up spin is a quick one of its own (`warmupTurbo`: turbo
+  // speed, and the bags wait), so the Legendary after it comes in the game's first seconds.
   const judged = judgeFinds(d, rolled.map((r) => r.item), currentLuck(d, now));
   if (scripted) judged.drama[0] ??= 'big';
   const buildsUp = scripted !== null || judged.tease > 0 || judged.drama.some((x) => x !== null);
   const turbo = d.currencies.bags >= 1 && !buildsUp && !warmup;
   if (turbo) d.currencies.bags -= 1;
-  const cycle = spinCycle(d, turbo);
-  const baseSpinSeconds = warmup ? Math.min(BAL.tutorial.warmupSpinSeconds, cycle * spinShare()) : cycle * spinShare();
-  const restSeconds = warmup
-    ? BAL.tutorial.warmupRestSeconds
-    : scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
+  // (The warm-up goes by as fast as a turbo spin, but isn't one: no bag spent, no TURBO badge.)
+  const cycle = spinCycle(d, turbo || (warmup !== null && BAL.tutorial.warmupTurbo));
+  const baseSpinSeconds = cycle * spinShare();
+  const restSeconds = scripted ? Math.max(cycle - baseSpinSeconds, BAL.tutorial.holdSeconds) : cycle - baseSpinSeconds;
   const stepSeconds = tokenStepSeconds(baseSpinSeconds);
   const reels = rolled.map((r, i) => ({
     item: r.item, odds: itemOddsOneIn(r.item), mults: r.mults, landAt: baseSpinSeconds + r.mults.length * stepSeconds, landed: false,
@@ -426,6 +436,24 @@ export function beginnerLuckDue(d: GameState): boolean {
   const open = d.dumpster.openedAtMs;
   const longEnough = open === null || d.playTimeMs - open >= t.beginnerAfterSeconds * 1000;
   return longEnough && d.roll.count >= t.beginnerAfterRolls && d.lifetime.itemsEquipped >= t.beginnerAfterEquips;
+}
+
+/**
+ * How close beginner's luck is, 0 to 1, for the tutorial's meter (it fills while the player waits,
+ * so the wait has an end in sight): the least of what beginnerLuckDue waits for (rolls, items worn,
+ * seconds since the padlock), or the rolls that bring it regardless, whichever is further along.
+ * 1 exactly when the next spin is it (and from then on).
+ */
+export function beginnerLuckCharge(d: GameState): number {
+  const t = BAL.tutorial;
+  if (d.dumpster.beginner.state !== 'pending') return 1;
+  if (d.rebirths > 0 || d.legend.count > 0) return 0;
+  if (beginnerLuckDue(d)) return 1;
+  const open = d.dumpster.openedAtMs;
+  const time = open === null || t.beginnerAfterSeconds <= 0 ? 1 : (d.playTimeMs - open) / (t.beginnerAfterSeconds * 1000);
+  const main = Math.min(time, d.roll.count / t.beginnerAfterRolls, d.lifetime.itemsEquipped / t.beginnerAfterEquips);
+  // (Not due yet, so never quite full.)
+  return Math.max(0, Math.min(0.99, Math.max(main, d.roll.count / t.beginnerAtRolls)));
 }
 
 /**

@@ -8,11 +8,14 @@ import { bus } from '../app/eventBus';
 import { gameStore, getGame } from '../app/store';
 import { haptics } from '../services';
 import { audio } from '../services/audio';
+import { afterBattle } from './battleLoad';
 import { installButtonJuice } from './juice';
 
 export function installSound(): () => void {
-  // The recorded sounds decode now, so they're ready by the first tap.
-  void audio.preload();
+  // The recordings the title screen plays first (PLAY, then the padlock) load now; the rest once the
+  // battle's code has arrived (or after a few seconds), so they don't slow its download (battleLoad.ts).
+  void audio.preloadFirst(['title_start', 'lock_tap', 'lock_break']);
+  void afterBattle(4000).then(() => audio.preload());
   // Taps in quick succession climb a step each (tap 1, tap 2, tap 3...), like a combo.
   let streak = 0;
   let lastTap = 0;

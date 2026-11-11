@@ -71,6 +71,20 @@ export function affordableUpgrades(state: Pick<GameState, 'upgrades' | 'rebirths
   );
 }
 
+/**
+ * The cheapest tier open to buy (unlocked, not maxed), affordable or not, with its price: what the
+ * Roll tab offers a new player before the Upgrades screen opens (ui FirstBuy). Null once all are owned.
+ */
+export function cheapestUpgrade(state: Pick<GameState, 'upgrades' | 'rebirths'>): { def: UpgradeDef; price: number } | null {
+  let best: { def: UpgradeDef; price: number } | null = null;
+  for (const def of BAL.upgrades) {
+    if (!upgradeUnlocked(state, def) || upgradeLevel(state, def.id) >= def.max) continue;
+    const price = upgradePrice(state, def);
+    if (!best || price < best.price) best = { def, price };
+  }
+  return best;
+}
+
 export function buyUpgrade(d: GameState, id: string, ev: CoreEvent[]): boolean {
   const def = upgradeDef(id);
   if (!def || !upgradeUnlocked(d, def)) return false;

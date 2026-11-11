@@ -228,6 +228,39 @@ export function installRollController(): () => void {
         case 'upgradeBought':
           haptics.impact('light');
           break;
+        // Boosts (the Boosts panel): what each gave. (A crate's Luck Potion says itself: luckBoost.)
+        case 'quickDive':
+          ui.toast(t(e.kept > 0 ? 'toast.quickDive' : 'toast.quickDiveNone', { n: formatNumber(e.rolls), kept: e.kept }), 'good');
+          if (e.kept > 0) audio.jingle(3);
+          break;
+        case 'boostUsed': {
+          const B = BAL.boosts;
+          const g = getGame();
+          if (e.id === 'potionBrew') ui.toast(t('toast.potionBrew', { mult: B.potionBrew.mult, minutes: B.potionBrew.minutes }), 'good');
+          if (e.id === 'ductTapeReel') ui.toast(t('toast.ductTapeReel', { minutes: B.ductTapeReel.minutes }), 'good');
+          if (e.id === 'encore') ui.toast(t('toast.encore'), 'good');
+          if (e.id === 'bossRage') ui.toast(t('toast.bossRage', { pct: Math.round((B.bossRage.atkMult - 1) * 100), n: g.boosts.rageWorld ?? g.battle.stage }), 'good');
+          if (e.id === 'rebirthBlessing') ui.toast(t('toast.blessingReady'), 'good');
+          if (e.id !== 'quickDive' && e.id !== 'bonusCrate' && e.id !== 'goldTopUp' && e.id !== 'polish') audio.jingle(3);
+          break;
+        }
+        case 'blessingStarted':
+          ui.toast(t('toast.blessingStarted', { mult: BAL.boosts.rebirthBlessing.speedMult, minutes: BAL.boosts.rebirthBlessing.minutes }), 'good');
+          break;
+        case 'itemPolished':
+          ui.toast(t('toast.polished'), 'good');
+          audio.jingle(3);
+          break;
+        case 'goldTopUp':
+          ui.toast(t('toast.goldTopUp', { gold: formatNumber(e.gold) }), 'good');
+          break;
+        case 'crateOpened':
+          if (e.kind === 'bags') ui.toast(t('toast.crateBags', { n: formatNumber(e.amount) }), 'good');
+          if (e.kind === 'coins') ui.toast(t('toast.crateCoins', { n: formatNumber(e.amount) }), 'good');
+          break;
+        case 'boostEnded':
+          ui.toast(t(e.id === 'potionBrew' ? 'toast.brewEnded' : e.id === 'ductTapeReel' ? 'toast.reelEnded' : 'toast.blessingEnded'), 'info');
+          break;
         case 'rebirth':
           // The unlock card (UnlockedFx) follows the burst.
           useUi.setState({ rebirthFx: e.count, tab: 'alley', unlocked: e.unlocked.length ? { count: e.count, ids: e.unlocked } : null });

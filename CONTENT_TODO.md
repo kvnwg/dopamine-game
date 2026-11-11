@@ -44,7 +44,7 @@ Everything below is placeholder writing generated for Milestone 1, in the game's
 | gloves | Kid's Boxing Gloves | Fists of the Garage Champion | Signed by a nine-year-old. |
 | gloves | Lost Mittens | Mittens of the Unmatched | Neither one matches. Both are legendary. |
 | gloves | Baseball Mitt | Mitt of the Little League Hero | Never caught a ball. Caught feelings. |
-| sneakers | Crocs | Crocs of Sport Mode | Heel strap engaged. It's over for you. |
+| sneakers | Swamp Clogs | Swamp Clogs of Sport Mode | Heel strap engaged. It's over for you. |
 | sneakers | Flip-Flops | Sandals of Infinite Flap | Flip. Flop. Gone. |
 | sneakers | Roller Skates | Skates of the Cul-de-Sac | Three wheels. Faith in the fourth. |
 | sneakers | Bunny Slippers | Slippers of the Midnight Fridge Raid | The ears flop when you run. |

@@ -20,6 +20,8 @@ import {
   heistAbandon, heistAdTicket, heistBoot, heistChoose, heistClaim, heistDecline, heistGo, heistLeaveShop, heistReroll, heistRevive,
   heistsOpen, heistTick, refreshTickets, startHeist,
 } from './systems/heist';
+import { blessRebirth } from './systems/boostHooks';
+import { expireBoosts, takeBoost } from './systems/boosts';
 import { checkFeatures, markFeatureSeen, openDumpster } from './systems/features';
 import { collectOffline, onPause, onResume, snapshotForSave } from './systems/offline';
 import { buyPerk } from './systems/perks';
@@ -50,6 +52,7 @@ function run(state: GameState, rng: Rng, fn: (d: GameState, ev: CoreEvent[]) => 
 /** Advance the simulation by `ticks` fixed ticks of 100ms each. */
 export function tick(state: GameState, input: { ticks: number }, rng: Rng, now: number): StepResult<GameState> {
   return run(state, rng, (d, ev) => {
+    expireBoosts(d, now, ev);
     for (let i = 0; i < input.ticks; i++) {
       d.playTimeMs += TICK_MS;
       // A heist's battle replaces the Alley's while the run is on (the reels keep rolling).
@@ -79,6 +82,9 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'openDumpster':
         openDumpster(d, ev);
         break;
+      case 'boost':
+        if (d.features.unlocked.includes('boosts')) takeBoost(d, action.id, action.via, rng, now, ev, { uid: action.uid, upgradeId: action.upgradeId });
+        break;
       case 'featureSeen':
         markFeatureSeen(d, action.feature);
         break;
@@ -104,7 +110,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         buyPerk(d, action.id, ev);
         break;
       case 'rebirth':
-        doRebirth(d, ev);
+        if (doRebirth(d, ev)) blessRebirth(d, now, ev);
         break;
       case 'travel':
         travelTo(d, action.world, ev);
@@ -125,6 +131,8 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         onPause(d, now);
         break;
       case 'resume':
+        // (A reel rented before leaving that ran out meanwhile doesn't roll offline.)
+        expireBoosts(d, now, ev);
         onResume(d, now, ev, rng);
         checkUpgrade(d, now, ev);
         refreshTickets(d, now, ev);
@@ -132,7 +140,8 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
       case 'boot':
         // Loaded from a save: restart the current stage cleanly (mid-heist, the waiting one), then pay out offline time.
         if (d.heist.run) heistBoot(d);
-        else if (d.stage.chosen) startStage(d, d.battle.stage, ev, d.battle.stage > d.stage.highestCleared);
+        else startStage(d, d.battle.stage, ev, d.battle.stage > d.stage.highestCleared);
+        expireBoosts(d, now, ev);
         onResume(d, now, ev, rng);
         checkUpgrade(d, now, ev);
         refreshTickets(d, now, ev);
@@ -142,7 +151,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         snapshotForSave(d, now);
         break;
       case 'collectOffline':
-        collectOffline(d, action.doubled, ev);
+        collectOffline(d, action.doubled, ev, action.via);
         break;
       case 'setSetting':
         d.settings[action.key] = action.value;
@@ -163,7 +172,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         heistLeaveShop(d, rng);
         break;
       case 'heistReroll':
-        heistReroll(d, rng);
+        heistReroll(d, rng, action.via);
         break;
       case 'heistRevive':
         heistRevive(d, action.via, ev);
@@ -178,7 +187,7 @@ export function applyAction(state: GameState, action: GameAction, rng: Rng, now:
         heistAbandon(d, rng, now, ev);
         break;
       case 'heistAdTicket':
-        if (heistsOpen(d)) heistAdTicket(d, now, ev);
+        if (heistsOpen(d)) heistAdTicket(d, now, ev, action.via);
         break;
       case 'dodge':
         if (!d.heist.run) dodge(d, ev);
@@ -234,7 +243,6 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       d.stage.mode = 'push';
       d.stage.powerAtDeath = null;
       d.stage.showToughHint = false;
-      d.stage.chosen = true;
       startStage(d, stage, ev, true);
       break;
     }
@@ -287,7 +295,6 @@ function applyCheat(d: GameState, cheat: Extract<GameAction, { type: 'cheat' }>[
       d.legend.runDeepest = Math.max(d.legend.runDeepest, floor - 1);
       d.dump.floor = floor;
       d.dump.mode = 'endless';
-      d.stage.chosen = true;
       d.stage.mode = 'push';
       if (endlessOpen(d)) startStage(d, dumpWorld(floor), ev, true);
       break;

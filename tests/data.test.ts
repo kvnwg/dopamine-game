@@ -9,6 +9,14 @@ import worlds from '../src/data/worlds.json';
 import strings from '../src/data/strings.en.json';
 import assets from '../src/data/assets.json';
 import enchants from '../src/data/enchants.json';
+import itemsHeadgear from '../src/data/itemsHeadgear.json';
+import itemsClothes from '../src/data/itemsClothes.json';
+import itemsArms from '../src/data/itemsArms.json';
+import itemsCarry from '../src/data/itemsCarry.json';
+import heist from '../src/data/heist.json';
+import heistEvents from '../src/data/heistEvents.json';
+import * as S from '../src/data/schemas';
+import type { z } from 'zod';
 
 const raw = { balance, items, affixes, themes, enemies, worlds, strings, assets, enchants };
 
@@ -27,6 +35,30 @@ describe('game data', () => {
     const uniques = DATA.items.filter((i) => i.unique);
     expect(uniques).toHaveLength(7);
     for (const u of uniques) expect(u.unlock, u.id).toBeGreaterThanOrEqual(4);
+  });
+
+  it('every bundled file comes out of its schema unchanged, so a production build can skip the check (data/index.ts)', () => {
+    const files: Array<[string, z.ZodTypeAny, unknown]> = [
+      ['balance', S.BalanceSchema, balance],
+      ['items', S.ItemsSchema, [...items, ...itemsHeadgear, ...itemsClothes, ...itemsArms, ...itemsCarry]],
+      ['affixes', S.AffixesFileSchema, affixes],
+      ['themes', S.ThemesSchema, themes],
+      ['enemies', S.EnemiesSchema, enemies],
+      ['worlds', S.WorldsSchema, worlds],
+      ['strings', S.StringsSchema, strings],
+      ['assets', S.AssetsSchema, assets],
+      ['enchants', S.EnchantsSchema, enchants],
+      ['heist', S.HeistFileSchema, heist],
+      ['heistEvents', S.HeistEventsSchema, heistEvents],
+    ];
+    // (Key order aside: a default filled in or a field dropped would show here.)
+    const norm = (v: unknown): unknown =>
+      Array.isArray(v)
+        ? v.map(norm)
+        : v && typeof v === 'object'
+          ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm((v as Record<string, unknown>)[k])]))
+          : v;
+    for (const [name, schema, raw] of files) expect(norm(schema.parse(raw)), name).toEqual(norm(raw));
   });
 
   it('rejects malformed data with a readable error', () => {

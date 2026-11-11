@@ -376,3 +376,16 @@
   flex: 1 1 100%;
   width: auto;
 }
+/* The Buy button, and under it a Gold top-up (a boost) when an upgrade is a little out of reach. */
+.buyCol {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.topUpLabel {
+  font-size: 26px;
+  text-align: center;
+  color: #7a6a60;
+}

@@ -320,3 +320,7 @@
     animation: none;
   }
 }
+/* The Rebirth Blessing, just above the Rebirth button. */
+.rbBless {
+  margin: 0 calc(3 * var(--px));
+}

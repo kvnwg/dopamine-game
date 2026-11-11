@@ -4,6 +4,7 @@ import { CodexPopup } from './CodexPopup';
 import { ItemDetailPopup } from './ItemDetailPopup';
 import { SavePopup } from './SavePopup';
 import { AdminPopup } from './AdminPopup';
+import { BoostsPopup } from './BoostsPopup';
 import { LuckPopup } from './LuckPopup';
 import { OfflinePopup } from './OfflinePopup';
 import { SettingsPopup } from './SettingsPopup';
@@ -45,6 +46,8 @@ export function PopupLayer() {
       return <DumpPopup onClose={close} />;
     case 'daily':
       return <DailyPopup onClose={close} />;
+    case 'boosts':
+      return <BoostsPopup onClose={close} />;
     default:
       return null;
   }

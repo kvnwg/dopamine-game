@@ -4,13 +4,15 @@
  * place's one-liner, and a big Start button that spends a ticket. A rewarded ad gives +1 ticket once a day.
  */
 import { useState, type CSSProperties } from 'react';
+import { BAL } from '../../data';
 import { canStartHeist, formatNumber, heistAdTicketAvailable, heistsOpen } from '../../core';
 import { useGame } from '../../app/store';
 import { ads, haptics } from '../../services';
+import { useAdReady } from '../adReady';
 import { useNow } from '../hooks';
 import { t } from '../i18n';
 import { useWorldThumb } from '../worldThumbs';
-import { BagIcon, LockIcon, StarIcon, TvIcon } from './Icons';
+import { BagIcon, GemIcon, LockIcon, StarIcon, TvIcon } from './Icons';
 import { PixelArt } from './PixelArt';
 import {
   LOCATIONS, NodeIcon, TICKETS_MAX, TICKETS_PER_DAY, Ico, clockText, heistDispatch, heistOf, locationInfo, locationOpen, msToMidnight,
@@ -106,6 +108,9 @@ function HeistLocked() {
   );
 }
 
+/** Gems for the daily bonus ticket (the alternative to its ad). */
+const BONUS_TICKET_GEMS = BAL.heist.tickets.bonusGems;
+
 export function HeistLobby() {
   // (Two components, so the hooks below never change in number when Heists open mid-view.)
   const locked = useGame((g) => !heistsOpen(g));
@@ -127,10 +132,18 @@ function HeistLobbyOpen() {
     haptics.impact('heavy');
     heistDispatch({ type: 'heistStart', location: sel });
   };
+  const adReady = useAdReady('heist_ticket');
+  const gems = useGame((g) => g.currencies.gems);
   const adTicket = async () => {
     if (!adOk) return;
     const r = await ads.showRewarded('heist_ticket');
     if (r.rewarded) heistDispatch({ type: 'heistAdTicket' });
+  };
+  // The Gem price for the same daily bonus ticket (CrazyGames asks every rewarded ad for an alternative).
+  const gemTicket = () => {
+    if (!adOk || gems < BONUS_TICKET_GEMS) return;
+    haptics.impact('medium');
+    heistDispatch({ type: 'heistAdTicket', via: 'gems' });
   };
 
   return (
@@ -156,10 +169,22 @@ function HeistLobbyOpen() {
         <b>{locationInfo(sel).name}:</b> {locationInfo(sel).blurb}
       </p>
       <div className={s.lobbyActions}>
-        <button className={`btn blue small ${s.adBtn}`} disabled={!adOk} onClick={adTicket}>
-          <TvIcon />
-          {adOk || full ? t('heistUi.adTicket') : t('heistUi.adUsed')}
-        </button>
+        {/* The day's bonus ticket, for an ad or Gems; once it's taken (or the tickets are full) both hide. */}
+        {adOk && adReady && (
+          <button className={`btn blue small ${s.adBtn}`} onClick={adTicket}>
+            <TvIcon />
+            {t('heistUi.adTicket')}
+          </button>
+        )}
+        {adOk && (
+          <button className={`btn gold small ${s.adBtn}`} disabled={gems < BONUS_TICKET_GEMS} onClick={gemTicket} aria-label={t('heistUi.adTicket')}>
+            +1
+            <span className={s.cost}>
+              <GemIcon size="sm" />
+              {BONUS_TICKET_GEMS}
+            </span>
+          </button>
+        )}
         <button className={`btn ${canStart ? 'gold breathe' : 'gray'} ${s.startBtn}`} disabled={!canStart} onClick={start}>
           {tickets > 0 ? t('heistUi.start') : t('heistUi.noTickets')}
           {tickets > 0 && (

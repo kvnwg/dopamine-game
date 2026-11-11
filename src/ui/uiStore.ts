@@ -22,7 +22,8 @@ export interface TokenFlightState {
   step: number;
 }
 
-export type PopupKind = 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll' | 'save' | 'admin' | 'dump' | 'daily';
+export type PopupKind =
+  | 'settings' | 'codex' | 'odds' | 'upgrade' | 'itemDetail' | 'luck' | 'world' | 'scrapAll' | 'save' | 'admin' | 'dump' | 'daily' | 'boosts';
 
 /** A full-screen announcement: the Endless Dump opening, a new rarity tier, a Legend, a deep milestone. */
 export interface Announce {
